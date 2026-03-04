@@ -9,13 +9,20 @@ def parse_form_datetime_as_school_tz(dt_str, tz_name=None, fmt='%Y-%m-%dT%H:%M')
     """
     Parse datetime string from form as school timezone, return UTC.
     Form inputs (e.g. datetime-local) are assumed to be in school time (Eastern).
+    Tries multiple formats for robustness: %Y-%m-%dT%H:%M, %Y-%m-%d, %Y-%m-%d %H:%M
     """
     if not dt_str or not dt_str.strip():
         return None
     import pytz
     tz = pytz.timezone(tz_name or 'America/New_York')
-    dt = datetime.strptime(dt_str.strip(), fmt)
-    return tz.localize(dt).astimezone(pytz.UTC)
+    s = dt_str.strip()
+    for try_fmt in (fmt, '%Y-%m-%dT%H:%M', '%Y-%m-%d', '%Y-%m-%d %H:%M'):
+        try:
+            dt = datetime.strptime(s, try_fmt)
+            return tz.localize(dt).astimezone(pytz.UTC)
+        except ValueError:
+            continue
+    return None
 
 def calculate_assignment_status(assignment):
     """

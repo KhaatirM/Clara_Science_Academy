@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 1, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 4, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,47 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 1, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 4, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release adds <strong>Student Assistants</strong>: School Administrators can assign a student to help with attendance and grades for a class. All assistant actions are logged, and teachers and admins get alerts when grades or past attendance are changed. Students can now <strong>view grade and feedback</strong> in the assignment view modal when their work is graded. We also set up <strong>email notifications</strong> so the system can send emails (e.g. Assignment Graded, Announcements) from donotrespond@clarascienceacademy.org. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release fixes several reported bugs: <strong>Assignment editing</strong> no longer errors when editing quiz or discussion assignments—you're now redirected to the correct editor. <strong>PDF and document downloads</strong> work reliably for students and teachers; the 403 errors when viewing or downloading assignment files are resolved. <strong>Google Sign-In</strong> now completes successfully without the "Missing code verifier" error. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- March 4, 2026 - Bug Fixes: Assignment Edit, PDF Download, Google OAuth -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-bug me-2"></i>Bug Fixes – Assignment Edit, PDF Download & Google Sign-In – March 4, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment edit – Quiz and Discussion redirect:</strong> Editing a quiz or discussion assignment no longer shows an error. Teachers and administrators are now redirected to the correct editor (quiz editor for quizzes, view assignment for discussions) instead of the PDF/Paper edit form, which does not apply to those assignment types.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment edit – Date parsing:</strong> Due date and other date fields now accept multiple formats (e.g. date-only or datetime). The edit form no longer fails with "Invalid date format" when the browser sends a slightly different format.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment edit – Missing class:</strong> If an assignment's class information is missing, the edit page now shows a clear message and redirects instead of throwing an error.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF/document download – 403 errors fixed:</strong> Teachers, School Administrators, and students can now view and download assignment PDFs and documents without getting 403 Forbidden. File path resolution was improved so files are found correctly even when the app is deployed to different servers or directories.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF/document download – Student access:</strong> Students enrolled in a class can reliably download assignment attachments. Authorization and file path logic were updated so students no longer see 403 or "file not found" when accessing documents uploaded by teachers or administrators.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Sign-In – "Missing code verifier" fixed:</strong> Signing in with Google no longer fails with the "invalid_grant - Missing code verifier" error. The OAuth flow now correctly persists the PKCE code verifier across the redirect to Google and back, so authentication completes successfully.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Editing assignments works for all types. PDFs and documents display and download correctly for everyone. Google Sign-In is reliable for users who prefer logging in with their Google account.</p>
+                        </div>
+                    </div>
+
                     <!-- March 1, 2026 - Student Assistant, Grade Feedback, Email -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-person-badge me-2"></i>Student Assistant, Grade Feedback & Email – March 1, 2026</h6>
@@ -896,11 +930,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar01_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar04_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar01_2026', 'true');
+            sessionStorage.setItem('updateModalShownMar04_2026', 'true');
         }, 500);
     }
 });

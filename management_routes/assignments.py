@@ -2463,10 +2463,22 @@ def edit_assignment(assignment_id):
     """Edit an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
+
+    # Quiz and discussion assignments use different edit flows - redirect to avoid errors
+    if assignment.assignment_type == 'quiz':
+        flash("Use the quiz editor to edit this assignment.", "info")
+        return redirect(url_for('management.create_quiz_assignment') + f'?edit={assignment_id}')
+    if assignment.assignment_type == 'discussion':
+        flash("Discussion assignments are edited through the discussion management interface.", "info")
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
     
     # Authorization check - Directors and School Administrators can edit any assignment
     if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to edit this assignment.", "danger")
+        return redirect(url_for('management.assignments_and_grades'))
+
+    if not class_obj:
+        flash("Assignment class information not found. Cannot edit.", "danger")
         return redirect(url_for('management.assignments_and_grades'))
     
     if request.method == 'POST':
@@ -3344,8 +3356,8 @@ def grant_assignment_redo(assignment_id):
     """Grant redo permission for an assignment to selected students"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Only allow redos for PDF/Paper assignments
-    if assignment.assignment_type not in ['PDF', 'Paper', 'pdf', 'paper']:
+    # Only allow redos for PDF/Paper assignments (include pdf_paper - used when creating new PDF/Paper assignments)
+    if assignment.assignment_type not in ['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper']:
         return jsonify({'success': False, 'message': 'Redos are only available for PDF/Paper assignments.'})
     
     # Authorization check - Teachers, School Admins, and Directors

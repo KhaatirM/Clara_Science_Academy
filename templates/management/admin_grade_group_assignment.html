@@ -28,6 +28,9 @@
             <button type="button" class="btn btn-sm btn-outline-info" onclick="printGradebook()">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
+                <i class="bi bi-question-circle me-1"></i>Grading Help
+            </button>
             <button onclick="goBack()" class="btn-grading-back">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </button>
@@ -378,6 +381,31 @@
     </form>
 </div>
 
+<!-- Grading Help Modal -->
+<div class="modal fade" id="gradingHelpModal" tabindex="-1" aria-labelledby="gradingHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="gradingHelpModalLabel">
+                    <i class="bi bi-question-circle me-2"></i>Grading Fields Guide (Group Assignment)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Use this guide to correctly record grades for each student in the group.</p>
+                <div class="mb-3">
+                    <h6><i class="bi bi-star text-primary me-2"></i>Points Earned</h6>
+                    <p class="mb-0">Points each student earned out of 100. Use the quick buttons (A, B, C, D) or enter a value. Enter 0 for no credit. Each student in the group receives an individual grade.</p>
+                </div>
+                <div class="mb-0">
+                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
+                    <p class="mb-0">Optional comment visible to the student. Add constructive feedback on their contribution to the group work.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Import functions from individual assignment grading page
 function goBack() {
@@ -485,6 +513,19 @@ function updateAverage() {
 
 // Handle form submission with AJAX
 document.addEventListener('DOMContentLoaded', function() {
+    // Show grading help modal on first visit
+    const helpKey = 'gradingHelpSeen_admin_group';
+    if (!sessionStorage.getItem(helpKey)) {
+        const modalEl = document.getElementById('gradingHelpModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                sessionStorage.setItem(helpKey, '1');
+            }, { once: true });
+        }
+    }
+    
     // Update all score visuals
     document.querySelectorAll('.score-input').forEach(input => {
         updateScoreVisual(input);

@@ -1708,16 +1708,29 @@ def view_class(class_id):
         current_app.logger.error(f"Error loading group assignments: {str(e)}")
         group_assignments = []
     
-    # Combine both types with type indicator
+    # Combine both types with type indicator and derive display status string
     all_assignments = []
     for assignment in assignments:
         assignment.assignment_type = 'individual'
-        assignment.graded_status = calculate_assignment_graded_status(assignment)
+        stats = calculate_assignment_graded_status(assignment)
+        # Convert stats dict to template-expected string: 'Graded', 'Active', or else 'Awaiting Grade'
+        if stats['total_students'] > 0 and stats['graded_count'] >= stats['total_students']:
+            assignment.graded_status = 'Graded'
+        elif assignment.status == 'Active' or assignment.status == 'Upcoming':
+            assignment.graded_status = 'Active'
+        else:
+            assignment.graded_status = 'Awaiting Grade'
         all_assignments.append(assignment)
     
     for group_assignment in group_assignments:
         group_assignment.assignment_type = 'group'
-        group_assignment.graded_status = calculate_group_assignment_graded_status(group_assignment)
+        stats = calculate_group_assignment_graded_status(group_assignment)
+        if stats['total_students'] > 0 and stats['graded_count'] >= stats['total_students']:
+            group_assignment.graded_status = 'Graded'
+        elif group_assignment.status == 'Active' or group_assignment.status == 'Upcoming':
+            group_assignment.graded_status = 'Active'
+        else:
+            group_assignment.graded_status = 'Awaiting Grade'
         all_assignments.append(group_assignment)
     
     # Sort by due date

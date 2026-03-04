@@ -76,6 +76,9 @@
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportGradesCSV()">
                 <i class="bi bi-download me-1"></i>Export CSV
             </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
+                <i class="bi bi-question-circle me-1"></i>Grading Help
+            </button>
             <button onclick="goBack()" class="btn-grading-back">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </button>
@@ -296,6 +299,31 @@
             </div>
         </div>
     </form>
+</div>
+
+<!-- Grading Help Modal -->
+<div class="modal fade" id="gradingHelpModal" tabindex="-1" aria-labelledby="gradingHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="gradingHelpModalLabel">
+                    <i class="bi bi-question-circle me-2"></i>Grading Fields Guide (Discussion)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Use this guide to grade discussion participation.</p>
+                <div class="mb-3">
+                    <h6><i class="bi bi-star text-primary me-2"></i>Score</h6>
+                    <p class="mb-0">Points earned for participation in the discussion. Base this on quality and quantity of posts, engagement with peers, and meeting discussion requirements.</p>
+                </div>
+                <div class="mb-0">
+                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback/Comment</h6>
+                    <p class="mb-0">Optional feedback on the student's participation. Highlight strengths and areas for improvement.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

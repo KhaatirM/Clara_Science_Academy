@@ -23,9 +23,14 @@
         </div>
     </div>
 
-    <div class="alert alert-info student-assistant-alert mb-4">
-        <i class="bi bi-info-circle me-2"></i>
-        Your actions are logged. Changing a grade that was already entered will alert the teacher and administrators.
+    <div class="alert alert-info student-assistant-alert mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span>
+            <i class="bi bi-info-circle me-2"></i>
+            Your actions are logged. Changing a grade that was already entered will alert the teacher and administrators.
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
+            <i class="bi bi-question-circle me-1"></i>What does each field mean?
+        </button>
     </div>
 
     <form method="POST" class="card student-assistant-grade-card">
@@ -36,6 +41,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Student</th>
+                            <th style="width: 180px;">Submitted?</th>
                             <th style="width: 140px;">Score (0–{{ total_points }})</th>
                             <th>Comment</th>
                         </tr>
@@ -43,10 +49,20 @@
                     <tbody>
                         {% for s in students %}
                         {% set g = grades_by_student.get(s.id) %}
+                        {% set sub = submissions.get(s.id) %}
                         {% set grade_data = (g.grade_data|from_json) if g and g.grade_data else {} %}
                         <tr>
                             <td>
                                 <span class="fw-medium">{{ s.first_name }} {{ s.last_name }}</span>
+                            </td>
+                            <td>
+                                <select name="submission_type_{{ s.id }}" class="form-select form-select-sm">
+                                    <option value="not_submitted" {% if not sub or sub.submission_type == 'not_submitted' %}selected{% endif %}>Not submitted</option>
+                                    <option value="in_person" {% if sub and sub.submission_type == 'in_person' %}selected{% endif %}>Yes (paper/in-person)</option>
+                                    <option value="online" {% if sub and sub.submission_type == 'online' %}selected{% endif %}>Yes (online)</option>
+                                </select>
+                                <input type="text" name="submission_notes_{{ s.id }}" class="form-control form-control-sm mt-1" placeholder="Notes (e.g. late)"
+                                       value="{{ sub.submission_notes if sub and sub.submission_notes else '' }}">
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" max="{{ total_points }}" name="score_{{ s.id }}"
@@ -55,7 +71,7 @@
                             </td>
                             <td>
                                 <input type="text" name="comment_{{ s.id }}" class="form-control form-control-sm"
-                                       placeholder="Optional" value="{{ grade_data.get('feedback', '') }}">
+                                       placeholder="Optional feedback" value="{{ grade_data.get('feedback', '') }}">
                             </td>
                         </tr>
                         {% endfor %}
@@ -70,4 +86,48 @@
         </div>
     </form>
 </div>
+
+<!-- Grading Help Modal -->
+<div class="modal fade" id="gradingHelpModal" tabindex="-1" aria-labelledby="gradingHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="gradingHelpModalLabel">
+                    <i class="bi bi-question-circle me-2"></i>Grading Fields Guide
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Use this guide to correctly record grades so the teacher doesn't have to double-check.</p>
+                <div class="mb-3">
+                    <h6><i class="bi bi-clipboard-check text-primary me-2"></i>Submitted?</h6>
+                    <p class="mb-1"><strong>Not submitted</strong> — The student did not turn in the assignment. Leave score blank or enter 0. The teacher will know not to look for it.</p>
+                    <p class="mb-1"><strong>Yes (paper/in-person)</strong> — The student turned in a physical paper or handed it in during class.</p>
+                    <p class="mb-0"><strong>Yes (online)</strong> — The student submitted digitally through the app.</p>
+                </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-star text-primary me-2"></i>Score</h6>
+                    <p class="mb-0">Points the student earned out of {{ total_points }}. Only enter a score if the student submitted work. Use 0 for not submitted or no credit.</p>
+                </div>
+                <div class="mb-0">
+                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Comment</h6>
+                    <p class="mb-0">Optional feedback visible to the student. Add notes like "Great work!" or "Needs improvement on section 2."</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show grading help modal on first visit (session storage)
+    if (!sessionStorage.getItem('gradingHelpSeen_student_assistant')) {
+        const modal = new bootstrap.Modal(document.getElementById('gradingHelpModal'));
+        modal.show();
+        document.getElementById('gradingHelpModal').addEventListener('hidden.bs.modal', function() {
+            sessionStorage.setItem('gradingHelpSeen_student_assistant', '1');
+        }, { once: true });
+    }
+});
+</script>
 {% endblock %}

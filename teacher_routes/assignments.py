@@ -246,6 +246,14 @@ def edit_assignment(assignment_id):
     """Edit an existing assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
+
+    # Quiz and discussion assignments use different edit flows - redirect to avoid errors
+    if assignment.assignment_type == 'quiz':
+        flash("Use the quiz editor to edit this assignment.", "info")
+        return redirect(url_for('teacher.create_quiz_assignment') + f'?edit={assignment_id}')
+    if assignment.assignment_type == 'discussion':
+        flash("Discussion assignments are edited through the discussion interface.", "info")
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
     
     if not class_obj:
         flash("Assignment class information not found.", "danger")

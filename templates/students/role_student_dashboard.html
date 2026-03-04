@@ -429,14 +429,22 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
             </div>
         `;
         
-        // Show Grade & Feedback card
+        // Show Grade & Feedback card - scroll into view when there is written feedback
         const gradeFeedbackCard = document.getElementById('viewGradeFeedbackCard');
         const gradeDisplayEl = document.getElementById('viewGradeDisplay');
         const gradeFeedbackEl = document.getElementById('viewGradeFeedback');
         if (gradeFeedbackCard && gradeDisplayEl && gradeFeedbackEl) {
             gradeFeedbackCard.style.display = 'block';
             gradeDisplayEl.textContent = gradeDisplay && gradeDisplay.trim() ? gradeDisplay : 'Graded';
-            gradeFeedbackEl.textContent = gradeFeedback && gradeFeedback.trim() ? gradeFeedback.replace(/\\n/g, '\n') : 'No written feedback.';
+            const feedbackText = gradeFeedback && gradeFeedback.trim() ? gradeFeedback.replace(/\\n/g, '\n') : '';
+            gradeFeedbackEl.textContent = feedbackText || 'No written feedback.';
+            // Scroll feedback card into view when modal is shown (if there is feedback)
+            if (feedbackText) {
+                modalElement.addEventListener('shown.bs.modal', function scrollToFeedback() {
+                    gradeFeedbackCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    modalElement.removeEventListener('shown.bs.modal', scrollToFeedback);
+                }, { once: true });
+            }
         }
         
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
@@ -1704,6 +1712,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <div class="card h-100 shadow-sm">
                                     <div class="card-body">
                                         <h6 class="card-title">{{ assignment.title }}</h6>
+                                        <div class="mb-1">
+                                            {% if assignment.assignment_type == 'quiz' %}
+                                            <span class="badge bg-warning bg-opacity-20 text-dark border border-warning" style="font-size: 0.7rem;"><i class="bi bi-question-circle me-1"></i>Quiz</span>
+                                            {% elif assignment.assignment_type == 'discussion' %}
+                                            <span class="badge bg-info bg-opacity-20 text-dark border border-info" style="font-size: 0.7rem;"><i class="bi bi-chat-dots me-1"></i>Discussion</span>
+                                            {% else %}
+                                            <span class="badge bg-primary bg-opacity-20 text-dark border border-primary" style="font-size: 0.7rem;"><i class="bi bi-file-earmark-text me-1"></i>PDF/Paper</span>
+                                            {% endif %}
+                                        </div>
                                         <p class="card-text small text-muted">
                                             {{ assignment.description or 'No description provided.' }}
                                         </p>
@@ -2144,6 +2161,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                         </div>
                                                         <div class="flex-grow-1">
                                                             <h6 class="card-title mb-1" style="font-weight: 600; font-size: 1rem;">{{ assignment.title }}</h6>
+                                                            <div class="mb-1">
+                                                                {% if assignment.assignment_type == 'quiz' %}
+                                                                <span class="badge bg-warning bg-opacity-20 text-dark border border-warning" style="font-size: 0.7rem;"><i class="bi bi-question-circle me-1"></i>Quiz</span>
+                                                                {% elif assignment.assignment_type == 'discussion' %}
+                                                                <span class="badge bg-info bg-opacity-20 text-dark border border-info" style="font-size: 0.7rem;"><i class="bi bi-chat-dots me-1"></i>Discussion</span>
+                                                                {% else %}
+                                                                <span class="badge bg-primary bg-opacity-20 text-dark border border-primary" style="font-size: 0.7rem;"><i class="bi bi-file-earmark-text me-1"></i>PDF/Paper</span>
+                                                                {% endif %}
+                                                            </div>
                                                             <p class="card-text small text-muted mb-2" style="font-size: 0.85rem; line-height: 1.4;">
                                                                 {{ (assignment.description or 'No description provided.')[:80] }}{% if assignment.description and assignment.description|length > 80 %}...{% endif %}
                                                             </p>
@@ -2687,7 +2713,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         {% endif %}
 
     {% elif section == 'assignments' %}
-        <!-- Modern Assignments View -->
+        <!-- Modern Assignments View - Simplified -->
         <div class="student-assignments-header mb-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                 <div>
@@ -2700,13 +2726,13 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 </div>
             </div>
             
-            <!-- Filter Section -->
+            <!-- Simplified Filter - Class + Status only, collapsible extra filters -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-3">
                     <form method="GET" action="{{ url_for('student.student_assignments') }}" id="assignmentFilterForm" class="row g-3 align-items-end">
-                        <div class="col-12 col-md-3">
+                        <div class="col-12 col-sm-4 col-md-3">
                             <label for="filterClass" class="form-label small fw-bold">
-                                <i class="bi bi-book me-1"></i>Filter by Class
+                                <i class="bi bi-book me-1"></i>Class
                             </label>
                             <select name="class_id" id="filterClass" class="form-select form-select-sm">
                                 <option value="">All Classes</option>
@@ -2717,36 +2743,39 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-12 col-md-2">
+                        <div class="col-12 col-sm-4 col-md-3">
                             <label for="filterStatus" class="form-label small fw-bold">
-                                <i class="bi bi-funnel me-1"></i>Status
+                                <i class="bi bi-funnel me-1"></i>Show
                             </label>
                             <select name="status" id="filterStatus" class="form-select form-select-sm">
-                                <option value="">All Statuses</option>
-                                <option value="Active" {% if filter_status == 'Active' %}selected{% endif %}>Active</option>
-                                <option value="Inactive" {% if filter_status == 'Inactive' %}selected{% endif %}>Inactive</option>
-                                <option value="Voided" {% if filter_status == 'Voided' %}selected{% endif %}>Voided</option>
+                                <option value="">All</option>
+                                <option value="Active" {% if filter_status == 'Active' %}selected{% endif %}>To Do (Active)</option>
+                                <option value="Upcoming" {% if filter_status == 'Upcoming' %}selected{% endif %}>Upcoming</option>
+                                <option value="Inactive" {% if filter_status == 'Inactive' %}selected{% endif %}>Completed / Past</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-2">
-                            <label for="filterStartDate" class="form-label small fw-bold">
-                                <i class="bi bi-calendar3 me-1"></i>Start Date
-                            </label>
-                            <input type="date" name="start_date" id="filterStartDate" class="form-control form-control-sm" value="{{ filter_start_date }}">
-                        </div>
-                        <div class="col-12 col-md-2">
-                            <label for="filterEndDate" class="form-label small fw-bold">
-                                <i class="bi bi-calendar3 me-1"></i>End Date
-                            </label>
-                            <input type="date" name="end_date" id="filterEndDate" class="form-control form-control-sm" value="{{ filter_end_date }}">
-                        </div>
-                        <div class="col-12 col-md-3">
+                        <div class="col-12 col-sm-4 col-md-2">
                             <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="bi bi-search me-1"></i>Apply Filters
+                                <i class="bi bi-funnel me-1"></i>Apply
                             </button>
-                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-secondary btn-sm w-100 mt-2">
-                                <i class="bi bi-x-circle me-1"></i>Clear Filters
+                        </div>
+                        <div class="col-12">
+                            <a class="btn btn-link btn-sm text-muted p-0" data-bs-toggle="collapse" href="#assignmentDateFilters" role="button">
+                                <i class="bi bi-calendar-range me-1"></i>Date range (optional)
                             </a>
+                            <div class="collapse mt-2" id="assignmentDateFilters">
+                                <div class="row g-2">
+                                    <div class="col-6 col-md-3">
+                                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ filter_start_date }}" placeholder="From">
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ filter_end_date }}" placeholder="To">
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -3011,6 +3040,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% endif %}
                             </div>
                             {% endif %}
+                            {# Feedback callout for graded assignments #}
+                            {% set _gf = grades.get(assignment.id) %}
+                            {% if _gf and _gf.grade_data %}
+                                {% set _gfd = _gf.grade_data|from_json %}
+                                {% set _feedback_text = _gfd.get('feedback') or _gfd.get('comment') or '' %}
+                                {% if _feedback_text %}
+                                <div class="mt-2 p-2 rounded bg-light border-start border-primary border-3">
+                                    <small class="fw-bold text-primary d-block mb-1"><i class="bi bi-chat-left-text me-1"></i>Teacher feedback</small>
+                                    <p class="mb-0 small text-muted">{{ (_feedback_text[:120] ~ '...' if _feedback_text|length > 120 else _feedback_text) }}</p>
+                                    <a href="#" class="small" onclick="event.preventDefault(); var btn=this.closest('.student-assignment-card').querySelector('.btn-student-view'); if(btn) btn.click();">View full feedback →</a>
+                                </div>
+                                {% endif %}
+                            {% endif %}
                         </div>
 
                         <!-- Card Footer -->
@@ -3033,6 +3075,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% set _grade_display = 'Graded' %}
                             {% endif %}
                             {% set _grade_feedback = _gdata.get('feedback') or _gdata.get('comment') or '' %}
+                            {% set _ext_req = extension_requests_by_assignment.get(assignment.id) if not is_group else none %}
                             <button type="button" class="btn btn-sm btn-student-view" 
                                     data-assignment-id="{{ assignment.id }}"
                                     data-assignment-title="{{ assignment.title|replace("'", "\\'") }}"
@@ -3048,6 +3091,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     onclick="viewAssignmentFromButton(this)">
                                 <i class="bi bi-eye me-1"></i>View
                             </button>
+                            {% if not is_group and not _g and not _ext_req %}
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="openExtensionRequestModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '' }}')">
+                                <i class="bi bi-clock-history me-1"></i>Request Extension
+                            </button>
+                            {% elif not is_group and _ext_req %}
+                            <span class="badge bg-{{ 'success' if _ext_req.status == 'Approved' else 'info' }} px-2 py-1">
+                                <i class="bi bi-clock-history me-1"></i>{{ 'Extension approved' if _ext_req.status == 'Approved' else 'Extension requested' }}
+                            </span>
+                            {% endif %}
                             {% if assignment.assignment_type == 'quiz' %}
                                 {% if submission and attempts_remaining and attempts_remaining > 0 %}
                                     <button type="button" class="btn btn-sm btn-student-action" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}', true)" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; color: white; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);">
@@ -3218,6 +3270,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 </a>
                                 {% endif %}
                             </div>
+                            {% endif %}
+                            {# Feedback callout for graded inactive assignments #}
+                            {% set _gf2 = grades.get(assignment.id) %}
+                            {% if _gf2 and _gf2.grade_data %}
+                                {% set _gfd2 = _gf2.grade_data|from_json %}
+                                {% set _feedback_text2 = _gfd2.get('feedback') or _gfd2.get('comment') or '' %}
+                                {% if _feedback_text2 %}
+                                <div class="mt-2 p-2 rounded bg-light border-start border-primary border-3">
+                                    <small class="fw-bold text-primary d-block mb-1"><i class="bi bi-chat-left-text me-1"></i>Teacher feedback</small>
+                                    <p class="mb-0 small text-muted">{{ (_feedback_text2[:120] ~ '...' if _feedback_text2|length > 120 else _feedback_text2) }}</p>
+                                    <a href="#" class="small" onclick="event.preventDefault(); var btn=this.closest('.student-assignment-card').querySelector('.btn-student-view'); if(btn) btn.click();">View full feedback →</a>
+                                </div>
+                                {% endif %}
                             {% endif %}
                         </div>
 

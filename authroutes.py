@@ -736,6 +736,10 @@ def google_login():
         
         # Store the state in session to verify in callback
         session['oauth_state'] = state
+        # Store code_verifier for PKCE - required when exchanging the auth code in the callback
+        # (Flow is recreated on callback, so we must persist the verifier across the redirect)
+        if hasattr(flow, 'code_verifier') and flow.code_verifier:
+            session['oauth_code_verifier'] = flow.code_verifier
         
         # Log the Google login initiation
         get_log_activity()(
@@ -779,20 +783,31 @@ def google_callback():
             flash('Invalid login session. Please try again.', 'danger')
             return redirect(url_for('auth.login'))
         
+        # Get code_verifier for PKCE - must match the one used when generating the auth URL.
+        # If missing (e.g. session expired between redirect and callback), Google will reject with "Missing code verifier"
+        code_verifier = session.get('oauth_code_verifier')
+        
         # Try to get client secret from environment variable first (for production)
         client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
+        
+        flow_kwargs = {
+            'state': state,
+            'redirect_uri': url_for('auth.google_callback', _external=True),
+        }
+        if code_verifier:
+            flow_kwargs['code_verifier'] = code_verifier
+            flow_kwargs['autogenerate_code_verifier'] = False
         
         if client_secret_json:
             # Parse JSON from environment variable
             try:
                 client_config = json.loads(client_secret_json)
                 
-                # Create OAuth flow with the stored state from config
+                # Create OAuth flow with the stored state and code_verifier
                 flow = Flow.from_client_config(
                     client_config,
                     scopes=None,  # Don't need to specify scopes for callback
-                    state=state,
-                    redirect_uri=url_for('auth.google_callback', _external=True)
+                    **flow_kwargs
                 )
             except json.JSONDecodeError as e:
                 current_app.logger.error(f"Invalid JSON in GOOGLE_CLIENT_SECRET_JSON: {str(e)}")
@@ -803,8 +818,7 @@ def google_callback():
             flow = Flow.from_client_secrets_file(
                 current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE'),
                 scopes=None,  # Don't need to specify scopes for callback
-                state=state,
-                redirect_uri=url_for('auth.google_callback', _external=True)
+                **flow_kwargs
             )
         
         # Fetch the token using the authorization response
@@ -888,8 +902,9 @@ def google_callback():
             
             flash(f'Welcome back, {user.first_name or google_given_name}! Logged in successfully with Google.', 'success')
             
-            # Clear the OAuth state from session
+            # Clear the OAuth state and code_verifier from session
             session.pop('oauth_state', None)
+            session.pop('oauth_code_verifier', None)
             
             return redirect(url_for('auth.dashboard'))
         else:
@@ -917,8 +932,9 @@ def google_callback():
                 'warning'
             )
             
-            # Clear the OAuth state from session
+            # Clear the OAuth state and code_verifier from session
             session.pop('oauth_state', None)
+            session.pop('oauth_code_verifier', None)
             
             return redirect(url_for('auth.login'))
             
@@ -945,8 +961,9 @@ def google_callback():
             # If logging fails, continue anyway
             pass
         
-        # Clear the OAuth state from session
+        # Clear the OAuth state and code_verifier from session
         session.pop('oauth_state', None)
+        session.pop('oauth_code_verifier', None)
         
         # If user is already logged in, redirect to dashboard (login succeeded)
         if current_user.is_authenticated:

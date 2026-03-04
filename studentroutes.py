@@ -685,7 +685,10 @@ def student_assignments():
     if not current_school_year:
         flash("No active school year found.", "warning")
         return render_template('students/role_student_dashboard.html', 
-                             **create_template_context(student, 'assignments', 'assignments'))
+                             **create_template_context(student, 'assignments', 'assignments',
+                                 inactive_assignments=[], active_assignments=[], upcoming_assignments=[],
+                                 grades={}, extension_requests_by_assignment={}, classes=[],
+                                 filter_class_id=None, filter_status='', filter_start_date='', filter_end_date=''))
     
     # Get student's enrolled classes
     enrollments = Enrollment.query.filter_by(
@@ -755,8 +758,16 @@ def student_assignments():
         student_id=student.id,
         is_used=False
     ).join(Assignment).filter(
-        Assignment.assignment_type.in_(['PDF', 'Paper', 'pdf', 'paper'])
+        Assignment.assignment_type.in_(['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper'])
     ).all()
+    
+    # Extension requests (pending or approved) for quick "can request" check
+    extension_requests = ExtensionRequest.query.filter_by(
+        student_id=student.id
+    ).filter(
+        ExtensionRequest.status.in_(['Pending', 'Approved'])
+    ).all()
+    extension_requests_by_assignment = {r.assignment_id: r for r in extension_requests}
     
     # Separate assignments into 3 categories: Inactive, Active, and Upcoming
     inactive_assignments = []  # Assignments with status='Inactive' - students can't turn them in
@@ -922,6 +933,7 @@ def student_assignments():
                              today=today,
                              classes=classes,
                              redo_opportunities=redo_opportunities,
+                             extension_requests_by_assignment=extension_requests_by_assignment,
                              filter_class_id=filter_class_id,
                              filter_status=filter_status,
                              filter_start_date=filter_start_date,
@@ -2984,15 +2996,24 @@ def submit_group_assignment(assignment_id):
         return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
 
 def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
-    """Resolve actual file path: try stored path, then assignments subfolder, then root."""
+    """Resolve actual file path: try stored path, then assignments subfolder, then root.
+    Uses absolute paths for portability when app is deployed to different locations."""
     if file_path_stored and os.path.exists(file_path_stored):
         return file_path_stored
     if not filename:
         return None
-    for candidate in [
-        os.path.join(upload_folder, 'assignments', filename),
-        os.path.join(upload_folder, filename),
-    ]:
+    upload_abs = os.path.abspath(upload_folder) if upload_folder else None
+    if not upload_abs:
+        return None
+    candidates = [
+        os.path.join(upload_abs, 'assignments', filename),
+        os.path.join(upload_abs, filename),
+    ]
+    if file_path_stored:
+        base = os.path.basename(file_path_stored)
+        if base and base != filename:
+            candidates.insert(1, os.path.join(upload_abs, 'assignments', base))
+    for candidate in candidates:
         if os.path.exists(candidate):
             return candidate
     return None
@@ -3005,8 +3026,13 @@ def download_assignment_file(assignment_id):
     """Download assignment attachment file. Use ?index=N for Nth document when multiple are attached."""
     assignment = Assignment.query.get_or_404(assignment_id)
 
+    student_id = getattr(current_user, 'student_id', None)
+    if not student_id:
+        from flask import abort
+        abort(403, description="Your account is not properly linked. Please contact your administrator.")
+    student = Student.query.get_or_404(student_id)
+
     # Check if student is enrolled in this class
-    student = Student.query.get_or_404(current_user.student_id)
     enrollment = Enrollment.query.filter_by(
         student_id=student.id,
         class_id=assignment.class_id,

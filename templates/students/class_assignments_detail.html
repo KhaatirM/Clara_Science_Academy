@@ -209,6 +209,12 @@
                                                         <i class="fas fa-check-circle me-1"></i>
                                                         {{ assignment.due_date.strftime('%m/%d/%Y') }}
                                                     </span>
+                                                {% elif status == 'Voided' %}
+                                                    <!-- Voided assignments: show date only, not overdue -->
+                                                    <span class="badge bg-secondary bg-opacity-20 text-muted border border-secondary">
+                                                        <i class="fas fa-ban me-1"></i>
+                                                        {{ assignment.due_date.strftime('%m/%d/%Y') }}
+                                                    </span>
                                                 {% elif days_until_due < 0 %}
                                                     <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">
                                                         <i class="fas fa-exclamation-triangle me-1"></i>

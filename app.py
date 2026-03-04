@@ -364,16 +364,27 @@ def create_app(config_class=None):
         return render_template('shared/home.html')
 
     def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
-        """Resolve actual file path: try stored path, then assignments subfolder, then root."""
+        """Resolve actual file path: try stored path, then assignments subfolder, then root.
+        Uses absolute paths for portability when app is deployed to different locations."""
         import os
         if file_path_stored and os.path.exists(file_path_stored):
             return file_path_stored
         if not filename:
             return None
-        for candidate in [
-            os.path.join(upload_folder, 'assignments', filename),
-            os.path.join(upload_folder, filename),
-        ]:
+        # Ensure upload_folder is absolute for consistent resolution across deployments
+        upload_abs = os.path.abspath(upload_folder) if upload_folder else None
+        if not upload_abs:
+            return None
+        candidates = [
+            os.path.join(upload_abs, 'assignments', filename),
+            os.path.join(upload_abs, filename),
+        ]
+        # If stored path exists but points elsewhere, also try extracting basename (for migration scenarios)
+        if file_path_stored:
+            base = os.path.basename(file_path_stored)
+            if base and base != filename:
+                candidates.insert(1, os.path.join(upload_abs, 'assignments', base))
+        for candidate in candidates:
             if os.path.exists(candidate):
                 return candidate
         return None
@@ -390,28 +401,34 @@ def create_app(config_class=None):
         class_obj = assignment.class_info
 
         # Check authorization - teachers/admins can view files for their classes
-        if class_obj:
-            # Directors and School Administrators have access
-            if current_user.role in ['Director', 'School Administrator']:
-                pass  # Authorized
-            elif current_user.role == 'Student':
-                # Check if student is enrolled in the class
+        # Directors and School Administrators always have access (including when class_obj is None)
+        if current_user.role in ['Director', 'School Administrator']:
+            pass  # Authorized
+        elif class_obj:
+            if current_user.role == 'Student':
+                # Students must use student.download_assignment_file; this route supports them for shared views
+                student_id = getattr(current_user, 'student_id', None)
+                if not student_id:
+                    current_app.logger.warning(f"Student user {current_user.id} has no student_id linked")
+                    abort(403, description="Your account is not properly linked. Please contact your administrator.")
                 enrollment = Enrollment.query.filter_by(
                     class_id=class_obj.id,
-                    student_id=current_user.student_id if hasattr(current_user, 'student_id') else None,
+                    student_id=student_id,
                     is_active=True
                 ).first()
                 if not enrollment:
-                    abort(403, description="You are not authorized to access this file")
+                    abort(403, description="You are not enrolled in this class")
             else:
                 # For teachers, check if they're assigned to the class
                 from models import TeacherStaff, class_additional_teachers, class_substitute_teachers
 
                 teacher = None
-                if current_user.teacher_staff_id:
+                if getattr(current_user, 'teacher_staff_id', None):
                     teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
 
                 if not teacher:
+                    # Teacher without teacher_staff_id - log for debugging; still deny
+                    current_app.logger.warning(f"Teacher user {current_user.id} has no teacher_staff_id")
                     abort(403, description="You are not authorized to access this file")
 
                 # Check if teacher is primary, additional, or substitute
@@ -429,6 +446,9 @@ def create_app(config_class=None):
 
                 if not is_authorized:
                     abort(403, description="You are not authorized to access this file")
+        else:
+            # No class_obj and user is not Director/School Administrator
+            abort(403, description="You are not authorized to access this file")
 
         # Build list of documents: use attachment_list if any, else legacy single attachment
         docs = []

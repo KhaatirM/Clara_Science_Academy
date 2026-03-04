@@ -218,9 +218,38 @@ def grade_assignment(class_id, assignment_id):
             if g.student_id in student_ids:
                 existing_grades[g.student_id] = g
 
-        total_points = assignment.total_points if assignment.total_points else 100.0
+        raw_pts = assignment.total_points if assignment.total_points else 100.0
+        total_points = raw_pts if raw_pts >= 10 else 100.0
         changes = []
         for student_id in student_ids:
+            # Handle submission status (Submitted / Not Submitted)
+            submission_type = request.form.get(f'submission_type_{student_id}')
+            submission_notes = request.form.get(f'submission_notes_{student_id}', '').strip()
+            if submission_type:
+                submission = Submission.query.filter_by(
+                    student_id=student_id,
+                    assignment_id=assignment_id
+                ).first()
+                if submission_type in ['in_person', 'online']:
+                    if submission:
+                        submission.submission_type = submission_type
+                        submission.submission_notes = submission_notes
+                        submission.marked_at = datetime.utcnow()
+                    else:
+                        submission = Submission(
+                            student_id=student_id,
+                            assignment_id=assignment_id,
+                            submission_type=submission_type,
+                            submission_notes=submission_notes,
+                            marked_by=None,  # Student assistant - no teacher_staff
+                            marked_at=datetime.utcnow(),
+                            submitted_at=datetime.utcnow(),
+                            file_path=None
+                        )
+                        db.session.add(submission)
+                elif submission_type == 'not_submitted' and submission:
+                    db.session.delete(submission)
+
             score_val = request.form.get(f'score_{student_id}')
             if score_val is None or score_val == '':
                 continue
@@ -301,11 +330,14 @@ def grade_assignment(class_id, assignment_id):
     # GET: show grading form (simplified - one score per student)
     grades = Grade.query.filter_by(assignment_id=assignment_id).all()
     grades_by_student = {g.student_id: g for g in grades}
-    submissions = {s.assignment_id: s for s in Submission.query.filter(
+    submissions = {s.student_id: s for s in Submission.query.filter(
         Submission.assignment_id == assignment_id,
         Submission.student_id.in_(student_ids)
     ).all()} if student_ids else {}
 
+    # Use assignment total_points; if < 10 (e.g. 1.0 from misconfigured quiz), use 100 for typical grading scale
+    raw_points = assignment.total_points if assignment.total_points else 100.0
+    total_points = raw_points if raw_points >= 10 else 100.0
     return render_template(
         'management/student_assistant_grade_assignment.html',
         class_obj=class_obj,
@@ -313,7 +345,7 @@ def grade_assignment(class_id, assignment_id):
         students=students,
         grades_by_student=grades_by_student,
         submissions=submissions,
-        total_points=assignment.total_points or 100.0
+        total_points=total_points
     )
 
 

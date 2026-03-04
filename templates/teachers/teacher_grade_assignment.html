@@ -37,6 +37,9 @@
             <button type="button" class="btn btn-sm btn-outline-info" onclick="printGradebook()">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
+                <i class="bi bi-question-circle me-1"></i>Grading Help
+            </button>
             <button onclick="goBack()" class="btn-grading-back">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </button>
@@ -252,7 +255,7 @@
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkMarkNotSubmitted()">
                             <i class="bi bi-x-lg me-1"></i>Mark All as Not Submitted
                         </button>
-                        {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper'] %}
+                        {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper'] %}
                         <button type="button" class="btn btn-sm btn-outline-warning" onclick="bulkGrantRedo()">
                             <i class="bi bi-arrow-repeat me-1"></i>Bulk Grant Redos
                         </button>
@@ -479,7 +482,7 @@
                                 </div>
                             </div>
                             
-                            {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper'] %}
+                            {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper'] %}
                             <!-- Redo Button (Only for PDF/Paper assignments) -->
                             <div class="row g-3 mt-2">
                                 <div class="col-12">
@@ -521,6 +524,41 @@
     </form>
 </div>
 <!-- Styles for Manual Submission Tracking and Quick Grading -->
+
+<!-- Grading Help Modal -->
+<div class="modal fade" id="gradingHelpModal" tabindex="-1" aria-labelledby="gradingHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="gradingHelpModalLabel">
+                    <i class="bi bi-question-circle me-2"></i>Grading Fields Guide
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Use this guide to correctly record grades and submission status.</p>
+                <div class="mb-3">
+                    <h6><i class="bi bi-clipboard-check text-primary me-2"></i>Submission Status</h6>
+                    <p class="mb-1"><strong>Not Submitted</strong> — Student did not turn in the assignment. No grade needed unless giving a zero.</p>
+                    <p class="mb-1"><strong>Submitted (Paper/In-Person)</strong> — Student handed in a physical paper or turned it in during class.</p>
+                    <p class="mb-1"><strong>Submitted (Online)</strong> — Student submitted digitally through the app.</p>
+                </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-sticky text-primary me-2"></i>Submission Notes</h6>
+                    <p class="mb-0">Optional notes such as "Turned in late," "Resubmitted," or "Excused absence."</p>
+                </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-star text-primary me-2"></i>Points Earned</h6>
+                    <p class="mb-0">Points the student earned out of the total. Use the quick buttons (A, B, C, D) or presets (100, 90, 80, 70, 0) for speed. Enter 0 for no credit or not submitted.</p>
+                </div>
+                <div class="mb-0">
+                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
+                    <p class="mb-0">Optional comment visible to the student. Add constructive feedback to help them improve.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -662,6 +700,19 @@ function updateGradedCount() {
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('gradingForm');
+    
+    // Show grading help modal on first visit
+    const helpKey = 'gradingHelpSeen_teacher';
+    if (!sessionStorage.getItem(helpKey)) {
+        const modalEl = document.getElementById('gradingHelpModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                sessionStorage.setItem(helpKey, '1');
+            }, { once: true });
+        }
+    }
     
     // Initialize character counters
     document.querySelectorAll('.comment-input').forEach(textarea => {

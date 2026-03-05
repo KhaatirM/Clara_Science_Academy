@@ -1,13 +1,16 @@
 """
 Notification creation helpers. Used by management, teachers, etc.
+Creates in-app notifications and sends matching emails via donotrespond@clarascienceacademy.org.
 """
 
+from flask import has_request_context, request
+
 from extensions import db
-from models import Notification, Student, TeacherStaff
+from models import Notification, Student, TeacherStaff, User
 
 
 def create_notification(user_id, notification_type, title, message, link=None):
-    """Create a notification for one user."""
+    """Create a notification for one user and send an email to their school email."""
     notification = Notification()
     notification.user_id = user_id
     notification.type = notification_type
@@ -16,6 +19,23 @@ def create_notification(user_id, notification_type, title, message, link=None):
     notification.link = link
     db.session.add(notification)
     db.session.commit()
+
+    # Send email to the user's school email (google_workspace_email or email)
+    try:
+        user = User.query.get(user_id)
+        if user:
+            from .email_service import send_notification_email
+            # Use absolute URL for links in email so they work when clicked
+            email_link = link
+            if link and link.startswith('/') and has_request_context():
+                base = getattr(request, 'url_root', '') or ''
+                email_link = (base.rstrip('/') + link) if base else link
+            send_notification_email(user, title, message, link=email_link)
+    except Exception as e:
+        # Don't fail notification creation if email fails (e.g. MAIL_PASSWORD not set)
+        from flask import current_app
+        current_app.logger.warning('Could not send notification email to user %s: %s', user_id, e)
+
     return notification
 
 

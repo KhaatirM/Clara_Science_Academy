@@ -607,8 +607,8 @@ def admin_manage_group(group_id):
                                 f'Current: {current_count}, trying to add: {new_members_count}.',
                                 'danger'
                             )
-                            return redirect(url_for('management.admin_manage_group', group_id=group_id))
-                    
+                            return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
+                
                     added_count = 0
                     skipped_count = 0
                     
@@ -656,6 +656,7 @@ def admin_manage_group(group_id):
                     return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
                 else:
                     flash('Please select at least one student.', 'warning')
+                    return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
             
             elif action == 'remove_student':
                 student_id = request.form.get('student_id')
@@ -668,7 +669,7 @@ def admin_manage_group(group_id):
                         db.session.delete(member)
                         db.session.commit()
                         flash('Student removed from group successfully!', 'success')
-                        return redirect(url_for('management.admin_manage_group', group_id=group_id))
+                        return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
             
             elif action == 'set_leader':
                 student_id = request.form.get('student_id')
@@ -685,7 +686,7 @@ def admin_manage_group(group_id):
                         member.is_leader = True
                         db.session.commit()
                         flash('Group leader updated successfully!', 'success')
-                        return redirect(url_for('management.admin_manage_group', group_id=group_id))
+                        return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
             
             elif action == 'edit_group':
                 name = request.form.get('name')
@@ -703,12 +704,8 @@ def admin_manage_group(group_id):
                 flash('Group updated successfully!', 'success')
                 return redirect(url_for('management.admin_class_groups', class_id=group.class_id))
         
-        return render_template('teachers/teacher_manage_group.html',
-                             group=group,
-                             current_members=current_members,
-                             enrolled_students=enrolled_students,
-                             current_member_ids=current_member_ids,
-                             role_prefix=True)
+        # Redirect GET requests to class groups page (use popup flow there, not the old standalone page)
+        return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
     
     except Exception as e:
         print(f"Error managing group: {e}")

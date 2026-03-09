@@ -131,7 +131,8 @@ from .communications import (
     management_create_announcement as management_create_announcement_func,
     management_schedule_announcement as management_schedule_announcement_func,
     admin_manage_group as admin_manage_group_func,
-    admin_delete_group as admin_delete_group_func
+    admin_delete_group as admin_delete_group_func,
+    admin_create_group_contract as admin_create_group_contract_func
 )
 from .administration import (
     settings as settings_func, 
@@ -885,6 +886,14 @@ def admin_manage_group_route(group_id):
 def admin_delete_group_route(group_id):
     """Admin delete group route - delegates to communications module"""
     return admin_delete_group_func(group_id)
+
+# Add alias for admin create group contract route
+@management_blueprint.route('/group/<int:group_id>/contract/create', methods=['GET', 'POST'], endpoint='admin_create_group_contract')
+@login_required
+@management_required
+def admin_create_group_contract_route(group_id):
+    """Admin create group contract route - delegates to communications module"""
+    return admin_create_group_contract_func(group_id)
 
 # Add aliases for void/unvoid assignment routes
 @management_blueprint.route('/void-assignment/<int:assignment_id>', methods=['POST'], endpoint='void_assignment_for_students')

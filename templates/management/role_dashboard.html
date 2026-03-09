@@ -4752,11 +4752,18 @@
                     {% endif %}
                   </div>
                 </div>
-                <button class="btn-dismiss-student" 
-                        onclick="dismissStudentConcern({{ alert.student_user_id }})"
-                        title="Dismiss this student's concerns">
-                  <i class="bi bi-x-lg"></i>
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-sm btn-print-concerns" 
+                          onclick="printStudentConcerns({{ alert.student_user_id }})"
+                          title="Print student's missing items">
+                    <i class="bi bi-printer me-1"></i>Print
+                  </button>
+                  <button class="btn-dismiss-student" 
+                          onclick="dismissStudentConcern({{ alert.student_user_id }})"
+                          title="Dismiss this student's concerns">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div class="academic-concern-body">
@@ -4791,6 +4798,11 @@
 </div>
 
 <script>
+  var ACADEMIC_CONCERN_LOGO_URL = (function(){
+    var a = document.createElement('a');
+    a.href = "{{ url_for('static', filename='img/clara_logo.png', _external=True) }}";
+    return a.href;
+  })();
   function showAcademicDetailsModal() {
     // Close the toast
     var toastElement = document.getElementById('academicAlertToast');
@@ -4816,6 +4828,8 @@
       .then(data => {
         const container = document.getElementById(`student-details-${studentId}`);
         if (data.success) {
+          window._academicDetailsCache = window._academicDetailsCache || {};
+          window._academicDetailsCache[studentId] = data.student;
           container.innerHTML = formatStudentDetails(data.student);
         } else {
           container.innerHTML = '<div class="alert alert-danger">Error loading student details.</div>';
@@ -4971,6 +4985,107 @@
     html += '</div></div>';
     
     return html;
+  }
+  
+  function printStudentConcerns(studentId) {
+    const card = document.querySelector(`.academic-concern-card[data-student-id="${studentId}"]`);
+    const studentName = card ? (card.getAttribute('data-student-name') || 'Student') : 'Student';
+    let student = (window._academicDetailsCache || {})[studentId];
+    
+    if (!student) {
+      fetch(`/management/student/${studentId}/details/data`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            window._academicDetailsCache = window._academicDetailsCache || {};
+            window._academicDetailsCache[studentId] = data.student;
+            doPrintStudentConcerns(data.student, studentName);
+          } else {
+            alert('Please wait for student details to load, then try again.');
+          }
+        })
+        .catch(() => alert('Error loading student details. Please try again.'));
+      return;
+    }
+    doPrintStudentConcerns(student, studentName);
+  }
+  
+  function doPrintStudentConcerns(student, studentName) {
+    const logoUrl = (typeof ACADEMIC_CONCERN_LOGO_URL !== 'undefined' && ACADEMIC_CONCERN_LOGO_URL) 
+      ? ACADEMIC_CONCERN_LOGO_URL 
+      : (window.location.origin + '/static/img/clara_logo.png');
+    const printDate = new Date().toLocaleDateString();
+    const studentId = student.student_id ? String(student.student_id) : '—';
+    
+    let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Academic Concern - ' + escapeHtml(studentName) + '</title>';
+    html += '<style>body{font-family:\'Times New Roman\',Times,serif;font-size:9pt;margin:0;padding:0;color:#000}';
+    html += '.pdf-header-table{width:100%;border-collapse:collapse;margin-bottom:0.5cm;border:none}';
+    html += '.pdf-header-table td{padding:0;vertical-align:top;border:none;box-sizing:border-box}';
+    html += '.student-column{width:33%;border:1px solid #000;border-right:none;padding:0}';
+    html += '.central-column{width:34%;text-align:center;padding:8px 0;border-top:1px solid #000;border-bottom:1px solid #000}';
+    html += '.school-column{width:33%;border:1px solid #000;border-left:none;padding:0}';
+    html += '.central-column h1{font-size:18pt;font-weight:bold;margin:10px 0 0 0;padding:5px 0;text-decoration:underline;text-decoration-thickness:2px;text-transform:uppercase;font-family:\'Times New Roman\',Times,serif}';
+    html += '.logo-overlay-container{width:100px;height:100px;margin:0 auto}.logo-overlay-container img{width:100%;height:100%;object-fit:contain}';
+    html += '.info-grid-table{width:100%;border-collapse:collapse;font-size:8.5pt}.info-grid-table td{border:none;padding:4px 6px;vertical-align:middle}';
+    html += '.info-grid-table .label-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:2px solid #000;border-bottom:none;font-weight:bold;background:#fff}';
+    html += '.info-grid-table .value-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:none;border-bottom:2px solid #000;font-weight:normal;background:#fff}';
+    html += '.section-title{font-size:11pt;font-weight:bold;margin:1rem 0 0.5rem;border-bottom:1px solid #000;padding-bottom:3px}';
+    html += 'ul{list-style:none;padding:0;margin:0}li{padding:0.4rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}';
+    html += '.status{font-size:0.85rem}.status.failing{color:#721c24}.status.missing{color:#856404}';
+    html += '@media print{body{margin:0.5in}}</style></head><body style="max-width:8.5in;margin:0 auto;padding:0.5in">';
+    
+    html += '<table class="pdf-header-table"><tr>';
+    html += '<td class="student-column"><table class="info-grid-table">';
+    html += '<tr><td class="label-cell" colspan="2">Student Name:</td></tr>';
+    html += '<tr><td class="value-cell" colspan="2">' + escapeHtml(studentName) + '</td></tr>';
+    html += '<tr><td class="label-cell">Student ID:</td><td class="label-cell">Date:</td></tr>';
+    html += '<tr><td class="value-cell">' + escapeHtml(studentId) + '</td><td class="value-cell">' + escapeHtml(printDate) + '</td></tr>';
+    html += '<tr><td class="label-cell" colspan="2">Current GPA / Potential GPA:</td></tr>';
+    html += '<tr><td class="value-cell" colspan="2">' + (student.current_gpa != null ? student.current_gpa.toFixed(2) : 'N/A') + ' / ' + (student.hypothetical_gpa != null ? student.hypothetical_gpa.toFixed(2) : 'N/A') + '</td></tr>';
+    html += '</table></td>';
+    html += '<td class="central-column"><div class="logo-overlay-container"><img src="' + escapeHtml(logoUrl) + '" alt="Clara Science Academy"></div>';
+    html += '<h1>ACADEMIC CONCERN</h1></td>';
+    html += '<td class="school-column"><table class="info-grid-table">';
+    html += '<tr><td class="label-cell" colspan="2">School Name & Address:</td></tr>';
+    html += '<tr><td class="value-cell" colspan="2"><strong><em>Clara Science Academy</em></strong><br>3015 East Bessemer Ave<br>Greensboro, NC 27405</td></tr>';
+    html += '<tr><td class="label-cell" colspan="2">Ph:</td></tr>';
+    html += '<tr><td class="value-cell" colspan="2">866-728-2751</td></tr>';
+    html += '</table></td></tr></table>';
+    
+    html += '<div class="section-title">Assignments Requiring Attention</div>';
+    
+    if (student.missing_assignments && Object.keys(student.missing_assignments).length > 0) {
+      for (const [className, assignments] of Object.entries(student.missing_assignments)) {
+        html += '<div class="section-title" style="margin-top:1rem">' + escapeHtml(className) + '</div><ul>';
+        assignments.forEach(a => {
+          const statusClass = (a.status === 'failing' ? 'failing' : 'missing');
+          const statusText = a.status === 'failing' ? ('Failing (' + (a.score !== 'N/A' && a.score != null ? a.score + '%' : '—') + ')') : 'Missing';
+          const typeLabel = a.assignment_type ? (a.assignment_type.replace('group_','').toUpperCase()) : '';
+          html += '<li><strong>' + escapeHtml(a.title) + '</strong>' + (typeLabel ? ' <em>(' + typeLabel + ')</em>' : '') + '<br>';
+          html += '<span class="status ' + statusClass + '">' + statusText + '</span>';
+          html += ' &middot; Due: ' + escapeHtml(a.due_date || '—') + '</li>';
+        });
+        html += '</ul>';
+      }
+    } else {
+      html += '<p>No missing or failing assignments found.</p>';
+    }
+    
+    html += '<p style="margin-top:2rem;font-size:0.85rem;color:#999">Printed from Clara Science Academy &middot; ' + new Date().toLocaleDateString() + '</p>';
+    html += '</body></html>';
+    
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); w.close(); }, 250);
+  }
+  
+  function escapeHtml(s) {
+    if (!s) return '';
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
   }
   
   // Dismiss individual assignment from concerns

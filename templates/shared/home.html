@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 4, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 9, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,39 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 4, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 9, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release includes <strong>student dashboard improvements</strong>: Grades to Improve is now a button and popup on the Assignments tab (no sidebar link), with a redesigned modal and teal gradient button. The Student Home tab is restructured—Recent Activity is now <strong>Notifications</strong>, Upcoming Assignments and Notifications sit side by side, and Quick Actions has been removed. Plus several bug fixes: <strong>Assignment editing</strong> redirects correctly for quiz/discussion types; <strong>PDF/document downloads</strong> work reliably; <strong>Google Sign-In</strong> is fixed. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release adds a <strong>Print option</strong> in the Academic Concerns popup for School Administrators and Teachers—print a paper list of each student's missing and failing assignments to hand to them. The printout uses the same transcript-style header as report cards, with <strong>ACADEMIC CONCERN</strong> as the title. Plus the student dashboard improvements (Grades to Improve button, Notifications, restructured Home) and bug fixes from earlier. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- March 9, 2026 - Academic Concerns Print -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-printer me-2"></i>Academic Concerns – Print Option – March 9, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Print button:</strong> School Administrators and Teachers now see a <strong>Print</strong> button on each student card in the Academic Concerns popup (the one that appears when students have academic alerts). Click it to print a paper copy of that student's missing and failing assignments.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Printout contents:</strong> The printout lists the student's name, Student ID, date, Current GPA, and Potential GPA. Below that, it shows all assignments requiring attention grouped by class—each item includes assignment title, type (e.g. PDF, Quiz), status (Missing or Failing with score), and due date. You can hand this sheet to the student so they know exactly what to complete.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Transcript-style header:</strong> The printout uses the same professional header layout as the student transcript and report cards: 3-column table with student info on the left, Clara Science Academy logo and <strong>ACADEMIC CONCERN</strong> title in the center, and school address on the right. It looks official and matches other school documents.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Visible Print button:</strong> The Print button on each student card has a teal gradient background so it stands out clearly on the light grey header. No more hunting for it.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and administrators can easily print a paper checklist of missing work for each at-risk student, using the same professional format as transcripts and report cards.</p>
+                        </div>
+                    </div>
+
                     <!-- March 4, 2026 - Student Dashboard: Grades to Improve, Home tab -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-graph-down-arrow me-2"></i>Student Dashboard – Grades to Improve & Home Tab – March 4, 2026</h6>
@@ -964,11 +990,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar04_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar09_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar04_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownMar09_2026', 'true');
         }, 500);
     }
 });

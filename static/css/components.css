@@ -6468,6 +6468,24 @@
     box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
+/* Print button in academic concerns header - visible on light grey card header */
+.btn-print-concerns {
+    white-space: nowrap;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+}
+.btn-print-concerns:hover {
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important;
+    color: white !important;
+    box-shadow: 0 3px 12px rgba(13, 148, 136, 0.45);
+    transform: translateY(-1px);
+}
+
 .btn-dismiss-assignment {
     width: 32px;
     height: 32px;

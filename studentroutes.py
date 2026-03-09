@@ -684,11 +684,14 @@ def student_assignments():
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
     if not current_school_year:
         flash("No active school year found.", "warning")
+        low_grade_data = _get_low_grade_data(student)
         return render_template('students/role_student_dashboard.html', 
                              **create_template_context(student, 'assignments', 'assignments',
                                  inactive_assignments=[], active_assignments=[], upcoming_assignments=[],
                                  grades={}, extension_requests_by_assignment={}, classes=[],
-                                 filter_class_id=None, filter_status='', filter_start_date='', filter_end_date=''))
+                                 filter_class_id=None, filter_status='', filter_start_date='', filter_end_date='',
+                                 show_low_grades=request.args.get('show_low_grades') == '1'),
+                             **low_grade_data)
     
     # Get student's enrolled classes
     enrollments = Enrollment.query.filter_by(
@@ -924,6 +927,7 @@ def student_assignments():
         elif group_assignment.status == 'Active':
             active_assignments.append(assignment_data)
     
+    low_grade_data = _get_low_grade_data(student)
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
                              inactive_assignments=inactive_assignments,
@@ -937,7 +941,9 @@ def student_assignments():
                              filter_class_id=filter_class_id,
                              filter_status=filter_status,
                              filter_start_date=filter_start_date,
-                             filter_end_date=filter_end_date))
+                             filter_end_date=filter_end_date,
+                             show_low_grades=request.args.get('show_low_grades') == '1'),
+                         **low_grade_data)
 
 @student_blueprint.route('/assignments/class/<int:class_id>')
 @login_required
@@ -1072,6 +1078,142 @@ def student_classes():
                               my_classes=classes,
                               grades=grades,
                               assistant_for_classes=assistant_for_classes))
+
+
+def _get_low_grade_data(student):
+    """Helper: returns low_grade_assignments, threshold, low_grade_summary, low_grade_classes for a student."""
+    threshold = getattr(current_user, 'low_grade_threshold', None)
+    if threshold is None:
+        threshold = 70
+
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    class_ids = []
+    if school_year:
+        enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).join(Class).filter(
+            Class.school_year_id == school_year.id
+        ).all()
+        class_ids = [e.class_id for e in enrollments]
+
+    low_grade_assignments = []
+    grades = []
+    if class_ids:
+        grades = Grade.query.filter_by(student_id=student.id).join(Assignment).filter(
+            Assignment.class_id.in_(class_ids),
+            Assignment.status != 'Voided'
+        ).all()
+
+    for grade in grades:
+        if grade.is_voided or not grade.assignment:
+            continue
+        try:
+            grade_data = json.loads(grade.grade_data)
+            score = grade_data.get('points_earned') or grade_data.get('score')
+            if score is None:
+                continue
+            total_points = grade.assignment.total_points or 100.0
+            if total_points <= 0:
+                continue
+            percentage = float(score) / float(total_points) * 100
+            if percentage < threshold:
+                feedback = grade_data.get('feedback') or grade_data.get('comment') or grade_data.get('comments') or ''
+                low_grade_assignments.append({
+                    'assignment': grade.assignment,
+                    'class_name': grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown',
+                    'class_id': grade.assignment.class_id,
+                    'percentage': round(percentage, 1),
+                    'letter': get_letter_grade(percentage),
+                    'points_earned': float(score),
+                    'total_points': float(total_points),
+                    'feedback': feedback.strip() if feedback else '',
+                    'assignment_type': getattr(grade.assignment, 'assignment_type', 'pdf') or 'pdf',
+                    'graded_at': grade.graded_at,
+                    'is_group': False
+                })
+        except (json.JSONDecodeError, ValueError, TypeError):
+            continue
+
+    if class_ids:
+        group_grades = GroupGrade.query.filter_by(student_id=student.id).join(GroupAssignment).filter(
+            GroupAssignment.class_id.in_(class_ids),
+            GroupAssignment.status != 'Voided'
+        ).all()
+        for grade in group_grades:
+            if grade.is_voided or not grade.group_assignment:
+                continue
+            try:
+                grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                score = grade_data.get('points_earned') or grade_data.get('score')
+                if score is None:
+                    continue
+                total_points = grade.group_assignment.total_points or 100.0
+                if total_points <= 0:
+                    continue
+                percentage = float(score) / float(total_points) * 100
+                if percentage < threshold:
+                    feedback = grade_data.get('feedback') or grade_data.get('comment') or grade_data.get('comments') or ''
+                    low_grade_assignments.append({
+                        'assignment': grade.group_assignment,
+                        'class_name': grade.group_assignment.class_info.name if grade.group_assignment.class_info else 'Unknown',
+                        'class_id': grade.group_assignment.class_id,
+                        'percentage': round(percentage, 1),
+                        'letter': get_letter_grade(percentage),
+                        'points_earned': float(score),
+                        'total_points': float(total_points),
+                        'feedback': feedback.strip() if feedback else '',
+                        'assignment_type': getattr(grade.group_assignment, 'assignment_type', 'pdf') or 'pdf',
+                        'graded_at': grade.graded_at,
+                        'is_group': True
+                    })
+            except (json.JSONDecodeError, ValueError, TypeError):
+                continue
+
+    low_grade_assignments.sort(key=lambda x: x['graded_at'] or datetime.min, reverse=True)
+    low_grade_summary = {'avg_percentage': None, 'count': len(low_grade_assignments)}
+    if low_grade_assignments:
+        low_grade_summary['avg_percentage'] = round(
+            sum(i['percentage'] for i in low_grade_assignments) / len(low_grade_assignments), 1
+        )
+    low_grade_classes = sorted(set(i['class_name'] for i in low_grade_assignments))
+    return {
+        'low_grade_assignments': low_grade_assignments,
+        'threshold': threshold,
+        'low_grade_summary': low_grade_summary,
+        'low_grade_classes': low_grade_classes
+    }
+
+
+@student_blueprint.route('/low-grades')
+@login_required
+@student_required
+def low_grades():
+    """Redirect to Assignments with modal open (Grades to Improve is now a modal on Assignments tab)."""
+    return redirect(url_for('student.student_assignments', show_low_grades=1))
+
+
+@student_blueprint.route('/update-low-grade-threshold', methods=['POST'])
+@login_required
+@student_required
+def update_low_grade_threshold():
+    """Update the student's low grade threshold (0-100)."""
+    if current_user.role != 'Student':
+        return jsonify({'success': False, 'message': 'Not authorized'}), 403
+    try:
+        val = request.form.get('threshold') or (request.json.get('threshold') if request.is_json else None)
+        if val is None:
+            return jsonify({'success': False, 'message': 'Threshold required'}), 400
+        threshold = int(val)
+        if threshold < 0 or threshold > 100:
+            return jsonify({'success': False, 'message': 'Threshold must be between 0 and 100'}), 400
+        current_user.low_grade_threshold = threshold
+        db.session.commit()
+        return jsonify({'success': True, 'threshold': threshold})
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Invalid threshold'}), 400
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating low grade threshold: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @student_blueprint.route('/grades')
 @login_required
@@ -1794,11 +1936,16 @@ def student_settings():
             if all_grades:
                 gpa = calculate_gpa(all_grades)
     
+    low_grade_threshold = getattr(current_user, 'low_grade_threshold', None)
+    if low_grade_threshold is None:
+        low_grade_threshold = 70
+
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'settings', 'settings',
                             school_year=current_school_year,
                             enrollments=enrollments,
-                            gpa=gpa))
+                            gpa=gpa,
+                            low_grade_threshold=low_grade_threshold))
 
 @student_blueprint.route('/class/<int:class_id>')
 @login_required
@@ -2616,6 +2763,8 @@ def view_discussion(assignment_id):
             if replies_match:
                 min_replies = int(replies_match.group(1))
     
+    allow_student_edit_posts = getattr(assignment, 'allow_student_edit_posts', False)
+
     return render_template('students/view_discussion.html',
                          **create_template_context(student, 'assignments', 'assignments'),
                          assignment=assignment,
@@ -2624,7 +2773,8 @@ def view_discussion(assignment_id):
                          student_replies=student_replies,
                          min_initial_posts=min_initial_posts,
                          min_replies=min_replies,
-                         allow_student_threads=allow_student_threads)
+                         allow_student_threads=allow_student_threads,
+                         allow_student_edit_posts=allow_student_edit_posts)
 
 
 @student_blueprint.route('/discussion/<int:assignment_id>/create-thread', methods=['POST'], endpoint='create_discussion_thread')
@@ -2713,11 +2863,14 @@ def view_discussion_thread(thread_id):
         DiscussionPost.created_at.asc()
     ).all()
     
+    allow_student_edit_posts = getattr(assignment, 'allow_student_edit_posts', False)
+
     return render_template('students/view_discussion_thread.html',
                          **create_template_context(student, 'assignments', 'assignments'),
                          assignment=assignment,
                          thread=thread,
-                         posts=posts)
+                         posts=posts,
+                         allow_student_edit_posts=allow_student_edit_posts)
 
 
 @student_blueprint.route('/discussion/thread/<int:thread_id>/reply', methods=['POST'], endpoint='reply_to_discussion_thread')
@@ -2777,6 +2930,131 @@ def reply_to_thread(thread_id):
         current_app.logger.error(f"Error posting reply: {e}")
         flash(f'Error posting reply: {str(e)}', 'danger')
         return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+
+
+@student_blueprint.route('/discussion/thread/<int:thread_id>/edit', methods=['GET', 'POST'], endpoint='edit_discussion_thread')
+@login_required
+@student_required
+def edit_discussion_thread(thread_id):
+    """Edit a discussion thread (only if assignment allows and student owns it)"""
+    student = Student.query.get_or_404(current_user.student_id)
+    thread = DiscussionThread.query.get_or_404(thread_id)
+    assignment = thread.assignment
+
+    if assignment.assignment_type != 'discussion':
+        flash("This is not a discussion assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+
+    if not getattr(assignment, 'allow_student_edit_posts', False):
+        flash("Editing posts is not allowed for this discussion.", "warning")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+
+    if thread.student_id != student.id:
+        flash("You can only edit your own posts.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+
+    if assignment.status != 'Active':
+        flash("This discussion is no longer active.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+
+    if request.method == 'POST':
+        thread_title = request.form.get('thread_title', '').strip()
+        thread_content = request.form.get('thread_content', '').strip()
+
+        if not thread_title or not thread_content:
+            flash("Please provide both a title and content.", "danger")
+            return redirect(url_for('student.edit_discussion_thread', thread_id=thread_id))
+
+        try:
+            thread.title = thread_title
+            thread.content = thread_content
+            db.session.commit()
+            flash('Thread updated successfully!', 'success')
+            return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error editing thread: {e}")
+            flash(f'Error updating thread: {str(e)}', 'danger')
+            return redirect(url_for('student.edit_discussion_thread', thread_id=thread_id))
+
+    return render_template('students/edit_discussion_thread.html',
+                         **create_template_context(student, 'assignments', 'assignments'),
+                         assignment=assignment,
+                         thread=thread)
+
+
+@student_blueprint.route('/discussion/post/<int:post_id>/edit', methods=['GET', 'POST'], endpoint='edit_discussion_post')
+@login_required
+@student_required
+def edit_discussion_post(post_id):
+    """Edit a discussion post/reply (only if assignment allows and student owns it)"""
+    student = Student.query.get_or_404(current_user.student_id)
+    post = DiscussionPost.query.get_or_404(post_id)
+    thread = post.thread
+    assignment = thread.assignment
+
+    if assignment.assignment_type != 'discussion':
+        flash("This is not a discussion assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+
+    if not getattr(assignment, 'allow_student_edit_posts', False):
+        flash("Editing posts is not allowed for this discussion.", "warning")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread.id))
+
+    if post.student_id != student.id:
+        flash("You can only edit your own posts.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread.id))
+
+    if post.is_teacher_post:
+        flash("Teacher posts cannot be edited by students.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread.id))
+
+    if assignment.status != 'Active':
+        flash("This discussion is no longer active.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread.id))
+
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+
+    if request.method == 'POST':
+        post_content = request.form.get('post_content', '').strip()
+
+        if not post_content:
+            flash("Please provide content for your post.", "danger")
+            return redirect(url_for('student.edit_discussion_post', post_id=post_id))
+
+        try:
+            post.content = post_content
+            db.session.commit()
+            flash('Post updated successfully!', 'success')
+            return redirect(url_for('student.view_discussion_thread', thread_id=thread.id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error editing post: {e}")
+            flash(f'Error updating post: {str(e)}', 'danger')
+            return redirect(url_for('student.edit_discussion_post', post_id=post_id))
+
+    return render_template('students/edit_discussion_post.html',
+                         **create_template_context(student, 'assignments', 'assignments'),
+                         assignment=assignment,
+                         thread=thread,
+                         post=post)
+
 
 @student_blueprint.route('/submit/<int:assignment_id>', methods=['POST'])
 @login_required

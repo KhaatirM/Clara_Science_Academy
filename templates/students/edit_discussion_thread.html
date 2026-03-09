@@ -1,0 +1,154 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/discussion.css') }}">
+<style>
+    .edit-thread-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <div class="edit-thread-header">
+        <a href="{{ url_for('student.view_discussion_thread', thread_id=thread.id) }}" class="btn btn-light btn-sm mb-3">
+            <i class="bi bi-arrow-left me-2"></i>Back to Thread
+        </a>
+        <h2 class="mb-0">
+            <i class="bi bi-pencil-square me-2"></i>Edit Discussion Thread
+        </h2>
+        <p class="mb-0 opacity-90 mt-2">{{ assignment.title }}</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" id="editThreadForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="thread_title" class="form-label fw-semibold">Thread Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="thread_title" name="thread_title" 
+                           value="{{ thread.title }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="thread_content" class="form-label fw-semibold">Your Post <span class="text-danger">*</span></label>
+                    <div class="discussion-editor-mode-toggle">
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-mode active" data-mode="text">
+                            <i class="bi bi-chat-text me-1"></i>Text
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-mode" data-mode="code">
+                            <i class="bi bi-code-slash me-1"></i>Code
+                        </button>
+                    </div>
+                    <div class="discussion-editor-code-options" id="threadCodeOptions">
+                        <label for="thread_code_lang">Language:</label>
+                        <select class="form-select form-select-sm" id="thread_code_lang" style="width: auto;">
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="java">Java</option>
+                            <option value="cpp">C++</option>
+                            <option value="c">C</option>
+                            <option value="html">HTML</option>
+                            <option value="css">CSS</option>
+                            <option value="sql">SQL</option>
+                            <option value="text">Plain Text</option>
+                        </select>
+                    </div>
+                    <div class="discussion-editor-text-area" id="threadTextArea">
+                        <textarea class="form-control" id="thread_content" name="thread_content" rows="10" required>{{ thread.content }}</textarea>
+                    </div>
+                    <div class="discussion-editor-code-area" id="threadCodeArea">
+                        <div class="code-editor-wrapper">
+                            <pre class="line-numbers-display" id="threadLineNumbers">1</pre>
+                            <textarea class="form-control code-textarea" id="thread_code_content" rows="12"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                    <a href="{{ url_for('student.view_discussion_thread', thread_id=thread.id) }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var form = document.getElementById('editThreadForm');
+    if (!form) return;
+    var isCodeMode = false;
+    var textArea = document.getElementById('thread_content');
+    var codeTextarea = document.getElementById('thread_code_content');
+    var lineNumbers = document.getElementById('threadLineNumbers');
+    var textAreaWrap = document.getElementById('threadTextArea');
+    var codeArea = document.getElementById('threadCodeArea');
+    var codeOptions = document.getElementById('threadCodeOptions');
+
+    // Parse [DISCUSSION_CODE:lang] prefix if present
+    var rawContent = textArea ? textArea.value : '';
+    if (rawContent.indexOf('[DISCUSSION_CODE:') === 0) {
+        var firstNewline = rawContent.indexOf('\n');
+        var langMatch = rawContent.match(/\[DISCUSSION_CODE:(\w+)\]/);
+        if (langMatch && firstNewline >= 0) {
+            var lang = langMatch[1];
+            var code = rawContent.substring(firstNewline + 1);
+            var langSelect = document.getElementById('thread_code_lang');
+            if (langSelect) langSelect.value = lang;
+            if (codeTextarea) codeTextarea.value = code;
+            isCodeMode = true;
+            textAreaWrap.classList.add('hide');
+            codeArea.classList.add('show');
+            codeOptions.classList.add('show');
+            form.querySelectorAll('.btn-mode').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.mode === 'code');
+            });
+        }
+    }
+
+    function updateLineNumbers(val) {
+        var lines = (val || '').split('\n').length;
+        lineNumbers.textContent = lines ? Array.from({length: lines}, (_, i) => i + 1).join('\n') : '1';
+    }
+
+    form.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            isCodeMode = this.dataset.mode === 'code';
+            form.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            textAreaWrap.classList.toggle('hide', isCodeMode);
+            codeArea.classList.toggle('show', isCodeMode);
+            codeOptions.classList.toggle('show', isCodeMode);
+            textArea.removeAttribute('required');
+            codeTextarea.removeAttribute('required');
+            if (isCodeMode) {
+                codeTextarea.setAttribute('required', 'required');
+                updateLineNumbers(codeTextarea.value);
+            } else {
+                textArea.setAttribute('required', 'required');
+            }
+        });
+    });
+
+    if (codeTextarea) codeTextarea.addEventListener('input', function() { updateLineNumbers(this.value); });
+    if (lineNumbers && codeTextarea) updateLineNumbers(codeTextarea.value);
+
+    form.addEventListener('submit', function(e) {
+        if (isCodeMode) {
+            var lang = document.getElementById('thread_code_lang').value || 'text';
+            var code = codeTextarea.value;
+            if (!code.trim()) { e.preventDefault(); return; }
+            textArea.value = '[DISCUSSION_CODE:' + lang + ']\n' + code;
+        }
+    });
+})();
+</script>
+{% endblock %}

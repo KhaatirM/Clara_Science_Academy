@@ -32,6 +32,10 @@ class User(db.Model, UserMixin):
     # Theme preference: default, light, dark, snowy, autumn, spring, summer, ocean, forest, holiday, etc.
     # When tech sets site_theme_override (SystemConfig), that overrides this for everyone.
     theme_preference = db.Column(db.String(50), nullable=True, default='default')
+
+    # Low grade threshold for students (0-100): show assignments graded below this percentage.
+    # E.g. 70 = "show assignments below 70%". Null = feature disabled.
+    low_grade_threshold = db.Column(db.Integer, nullable=True)
     
     # Google OAuth tokens (encrypted)
     _google_refresh_token = db.Column(db.String(512), nullable=True)
@@ -626,6 +630,9 @@ class Assignment(db.Model):
 
     # NEW FIELD: To link the internal assignment to the external Google Classroom Coursework
     google_coursework_id = db.Column(db.String(100), unique=True, nullable=True)
+
+    # Discussion assignment settings (only used when assignment_type='discussion')
+    allow_student_edit_posts = db.Column(db.Boolean, default=False, nullable=False)
 
     class_info = db.relationship('Class', backref='assignments', lazy=True)
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)

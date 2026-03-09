@@ -226,6 +226,11 @@
                 <div class="flex-grow-1">
                     <h5 class="mb-2">
                         {{ thread.title }}
+                        {% if allow_student_edit_posts and thread.student_id == student.id and assignment.status == 'Active' %}
+                        <a href="{{ url_for('student.edit_discussion_thread', thread_id=thread.id) }}" class="btn btn-sm btn-outline-primary ms-2" onclick="event.stopPropagation();" title="Edit your post">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% endif %}
                         {% if thread.is_pinned %}
                             <i class="bi bi-pin-fill text-warning ms-2" title="Pinned"></i>
                         {% endif %}

@@ -107,6 +107,29 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: theme_preference column check failed (may already exist): {e}")
 
+        # Add user.low_grade_threshold column if missing (for student "Grades to Improve" feature)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(user)"))
+                    columns = [row[1] for row in r]
+                    if 'low_grade_threshold' not in columns:
+                        conn.execute(text("ALTER TABLE user ADD COLUMN low_grade_threshold INTEGER"))
+                        conn.commit()
+                        print("Added user.low_grade_threshold column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'user' AND column_name = 'low_grade_threshold'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text('ALTER TABLE "user" ADD COLUMN low_grade_threshold INTEGER'))
+                        conn.commit()
+                        print("Added user.low_grade_threshold column.")
+        except Exception as e:
+            print(f"Note: low_grade_threshold column check failed (may already exist): {e}")
+
         # Optional: run one-off production DB fix only when explicitly requested.
         # Prefer Flask-Migrate for schema changes: flask db migrate / flask db upgrade
         if os.environ.get('RUN_PRODUCTION_DB_FIX', '').strip() == '1':

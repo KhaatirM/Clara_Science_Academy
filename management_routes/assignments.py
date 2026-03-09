@@ -493,6 +493,7 @@ def create_discussion_assignment():
         min_replies = request.form.get('min_replies', type=int) or 2
         require_peer_response = request.form.get('require_peer_response') == 'on'
         allow_student_threads = request.form.get('allow_student_threads') == 'on'
+        allow_student_edit_posts = request.form.get('allow_student_edit_posts') == 'on'
         
         # Rubric (optional)
         use_rubric = request.form.get('use_rubric') == 'on'
@@ -554,7 +555,8 @@ def create_discussion_assignment():
                 assignment_type='discussion',
                 assignment_context=assignment_context,
                 total_points=total_points,
-                created_by=current_user.id
+                created_by=current_user.id,
+                allow_student_edit_posts=allow_student_edit_posts
             )
             
             db.session.add(new_assignment)

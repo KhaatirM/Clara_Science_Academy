@@ -506,11 +506,45 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 4, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release fixes several reported bugs: <strong>Assignment editing</strong> no longer errors when editing quiz or discussion assignments—you're now redirected to the correct editor. <strong>PDF and document downloads</strong> work reliably for students and teachers; the 403 errors when viewing or downloading assignment files are resolved. <strong>Google Sign-In</strong> now completes successfully without the "Missing code verifier" error. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release includes <strong>student dashboard improvements</strong>: Grades to Improve is now a button and popup on the Assignments tab (no sidebar link), with a redesigned modal and teal gradient button. The Student Home tab is restructured—Recent Activity is now <strong>Notifications</strong>, Upcoming Assignments and Notifications sit side by side, and Quick Actions has been removed. Plus several bug fixes: <strong>Assignment editing</strong> redirects correctly for quiz/discussion types; <strong>PDF/document downloads</strong> work reliably; <strong>Google Sign-In</strong> is fixed. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- March 4, 2026 - Student Dashboard: Grades to Improve, Home tab -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-graph-down-arrow me-2"></i>Student Dashboard – Grades to Improve & Home Tab – March 4, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grades to Improve – Moved to Assignments:</strong> Grades to Improve is no longer a sidebar tab. It now lives as a <strong>button</strong> on the Assignments tab. Click it to open a popup modal showing assignments graded below your chosen threshold. The old sidebar link has been removed.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grades to Improve – Redesigned popup:</strong> The popup modal has been fully redesigned: dashboard-style layout with stats bar (count and average), threshold pills, filters, and sort options. Cards show assignment details with severity colors (red/orange/yellow by grade). The backdrop uses a nature green tint. The modal is wider (98% viewport) and the Close button sits in the far right corner.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grades to Improve – New button style:</strong> The "Grades to Improve" button on the Assignments tab has a teal gradient background, subtle shadow, and hover effect. When you have low-grade assignments, a white badge shows the count. The button stands out without cluttering the page.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Home – Recent Activity → Notifications:</strong> The "Recent Activity" section on the Student Home tab has been renamed to <strong>Notifications</strong>. It displays the same content (notifications and past-due fallback) but with a bell icon and clearer naming.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Home – Side-by-side layout:</strong> Upcoming Assignments and Notifications now appear side by side on medium and larger screens. On small screens they stack. This gives both sections equal prominence and a cleaner, more scannable layout.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Home – Quick Actions removed:</strong> The Quick Actions card (class shortcuts) has been removed from the Student Home tab. Students can still access classes via the Classes tab or other navigation.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Grades to Improve is easier to find and use from the Assignments tab, with a cleaner modal design. The Student Home tab is simpler and better organized, with Notifications and Upcoming Assignments displayed side by side.</p>
+                        </div>
+                    </div>
+
                     <!-- March 4, 2026 - Bug Fixes: Assignment Edit, PDF Download, Google OAuth -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-bug me-2"></i>Bug Fixes – Assignment Edit, PDF Download & Google Sign-In – March 4, 2026</h6>
@@ -930,11 +964,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar04_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar04_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar04_2026', 'true');
+            sessionStorage.setItem('updateModalShownMar04_2026_v2', 'true');
         }, 500);
     }
 });

@@ -1466,27 +1466,6 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </div>
                 </div>
 
-                <!-- Quick Links Card -->
-                <div class="student-links-card">
-                    <div class="student-links-header">
-                        <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
-                    </div>
-                    <div class="student-links-body">
-                        {% if student.enrollments %}
-                            {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
-                            {% for enrollment in active_enrollments[:5] %}
-                                {% set class = enrollment.class_info %}
-                                <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="student-link-btn">
-                                    <i class="bi bi-book me-2"></i>
-                                    <span>{{ class.name }}</span>
-                                    <i class="bi bi-chevron-right ms-auto"></i>
-                                </a>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted">You are not yet enrolled in any classes.</p>
-                        {% endif %}
-                    </div>
-                </div>
             </div>
 
             <!-- Right Column -->
@@ -1535,41 +1514,43 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 </div>
                 {% endif %}
                 
-                <!-- Upcoming Assignments Card -->
-                <div class="student-upcoming-card mb-4">
-                    <div class="student-upcoming-header">
-                        <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Assignments</h5>
-                    </div>
-                    <div class="student-upcoming-body">
-                        {% if upcoming_assignments %}
-                            {% for assignment in upcoming_assignments[:5] %}
-                            <div class="student-assignment-item">
-                                <div class="student-assignment-icon">
-                                    <i class="bi bi-journal-text"></i>
-                                </div>
-                                <div class="student-assignment-info">
-                                    <h6 class="student-assignment-title">{{ assignment.title }}</h6>
-                                    <p class="student-assignment-class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
-                                </div>
-                                <div class="student-assignment-due">
-                                    <span class="badge bg-warning">Due: {{ assignment.due_date.strftime('%m/%d') if assignment.due_date else 'N/A' }}</span>
-                                </div>
+                <!-- Upcoming Assignments & Notifications - Side by side -->
+                <div class="row g-3 g-md-4 mb-4">
+                    <div class="col-12 col-md-6">
+                        <div class="student-upcoming-card h-100">
+                            <div class="student-upcoming-header">
+                                <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Assignments</h5>
                             </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center py-3">No upcoming assignments</p>
-                        {% endif %}
+                            <div class="student-upcoming-body">
+                                {% if upcoming_assignments %}
+                                    {% for assignment in upcoming_assignments[:5] %}
+                                    <div class="student-assignment-item">
+                                        <div class="student-assignment-icon">
+                                            <i class="bi bi-journal-text"></i>
+                                        </div>
+                                        <div class="student-assignment-info">
+                                            <h6 class="student-assignment-title">{{ assignment.title }}</h6>
+                                            <p class="student-assignment-class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
+                                        </div>
+                                        <div class="student-assignment-due">
+                                            <span class="badge bg-warning">Due: {{ assignment.due_date.strftime('%m/%d') if assignment.due_date else 'N/A' }}</span>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted text-center py-3 mb-0">No upcoming assignments</p>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Recent Activity Card -->
-                <div class="student-activity-card">
-                    <div class="student-activity-header">
-                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Activity</h5>
-                    </div>
-                    <div class="student-activity-body">
-                        <div class="student-activity-timeline">
-                            {% if notifications and notifications|length > 0 %}
+                    <div class="col-12 col-md-6">
+                        <div class="student-activity-card h-100">
+                            <div class="student-activity-header">
+                                <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
+                            </div>
+                            <div class="student-activity-body">
+                                <div class="student-activity-timeline">
+                                    {% if notifications and notifications|length > 0 %}
                                 {% for notification in notifications[:5] %}
                                 <div class="student-activity-item">
                                     <div class="student-activity-dot"></div>
@@ -1591,9 +1572,11 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     </div>
                                 </div>
                                 {% endfor %}
-                            {% else %}
-                                <p class="text-muted text-center py-3">No recent activity</p>
-                            {% endif %}
+                                    {% else %}
+                                        <p class="text-muted text-center py-3 mb-0">No notifications</p>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2714,6 +2697,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
     {% elif section == 'assignments' %}
         <!-- Modern Assignments View - Simplified -->
+        <style>
+            .btn-grades-to-improve { background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #0d9488 100%); color: white !important; border: none; padding: 0.5rem 1.25rem; font-weight: 600; border-radius: 12px; box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35); transition: transform 0.2s, box-shadow 0.2s; }
+            .btn-grades-to-improve:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(15, 118, 110, 0.45); color: white !important; filter: brightness(1.05); }
+            .btn-grades-to-improve:active { transform: translateY(0); }
+            .btn-grades-to-improve .badge-gti { background: rgba(255,255,255,0.95); color: #0f766e; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.85rem; }
+        </style>
         <div class="student-assignments-header mb-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                 <div>
@@ -2724,6 +2713,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         <i class="bi bi-clipboard-check me-2"></i>Track and complete your coursework
                     </p>
                 </div>
+                <button type="button" class="btn btn-grades-to-improve" data-bs-toggle="modal" data-bs-target="#lowGradesModal">
+                    <i class="bi bi-graph-down-arrow me-2"></i>Grades to Improve
+                    {% if low_grade_assignments %}
+                    <span class="badge-gti ms-2">{{ low_grade_assignments|length }}</span>
+                    {% endif %}
+                </button>
             </div>
             
             <!-- Simplified Filter - Class + Status only, collapsible extra filters -->
@@ -2781,6 +2776,184 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 </div>
             </div>
         </div>
+
+        <!-- Grades to Improve Modal - Redesigned -->
+        <style>
+            body:has(#lowGradesModal.show) .modal-backdrop { background: #1e3a2f !important; opacity: 0.9; }
+            #lowGradesModal .modal-content { border: none; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; }
+            #lowGradesModal .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e5e7eb; background: #fff; }
+            #lowGradesModal .modal-header .modal-title { font-weight: 600; font-size: 1.25rem; color: #0f172a; }
+            #lowGradesModal .modal-body { padding: 0; background: #f8fafc; }
+            #lowGradesModal .lg-stats-bar { display: flex; flex-wrap: wrap; gap: 1.5rem; padding: 1rem 1.5rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
+            #lowGradesModal .lg-stat { display: flex; flex-direction: column; gap: 0.15rem; }
+            #lowGradesModal .lg-stat-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+            #lowGradesModal .lg-stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+            #lowGradesModal .lg-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; padding: 1rem 1.5rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
+            #lowGradesModal .lg-controls .form-label { margin: 0; font-size: 0.8rem; font-weight: 600; color: #475569; }
+            #lowGradesModal .lg-threshold-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+            #lowGradesModal .lg-threshold-pills .btn { border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; }
+            #lowGradesModal .lg-threshold-pills .btn.active,
+            #lowGradesModal .lg-threshold-pills .btn-teal { background: #0d9488 !important; color: #fff !important; border-color: #0d9488 !important; }
+            #lowGradesModal .lg-content { padding: 1.5rem; max-height: 60vh; overflow-y: auto; }
+            #lowGradesModal .lg-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 0.75rem; transition: box-shadow 0.2s, border-color 0.2s; }
+            #lowGradesModal .lg-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); border-color: #cbd5e1; }
+            #lowGradesModal .lg-card.sev-critical { border-left: 4px solid #dc2626; }
+            #lowGradesModal .lg-card.sev-high { border-left: 4px solid #ea580c; }
+            #lowGradesModal .lg-card.sev-moderate { border-left: 4px solid #ca8a04; }
+            #lowGradesModal .lg-card-title { font-weight: 600; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.35rem; }
+            #lowGradesModal .lg-card-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.75rem; color: #64748b; }
+            #lowGradesModal .lg-card-grade { font-size: 1.25rem; font-weight: 700; color: #dc2626; }
+            #lowGradesModal .lg-card-feedback { font-size: 0.85rem; color: #475569; padding: 0.5rem 0.75rem; background: #f1f5f9; border-radius: 8px; margin-top: 0.5rem; border-left: 3px solid #94a3b8; }
+            #lowGradesModal .lg-empty { text-align: center; padding: 3rem 2rem; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; }
+            #lowGradesModal .lg-empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.6; }
+            #lowGradesModal .form-select-sm { width: auto; min-width: 140px; font-size: 0.85rem; }
+        </style>
+        <div class="modal fade" id="lowGradesModal" tabindex="-1" aria-labelledby="lowGradesModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: min(1400px, 98vw); width: 98vw;">
+                <div class="modal-content">
+                    <div class="modal-header border-0 pb-0 d-flex justify-content-between align-items-center w-100">
+                        <h5 class="modal-title mb-0" id="lowGradesModalLabel"><i class="bi bi-bullseye me-2"></i>Grades to Improve</h5>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg me-1"></i>Close</button>
+                    </div>
+                    <div class="modal-body pt-0">
+                        <div class="lg-stats-bar">
+                            <div class="lg-stat">
+                                <span class="lg-stat-value">{{ low_grade_assignments|length }}</span>
+                                <span class="lg-stat-label">Below {{ threshold }}%</span>
+                            </div>
+                            {% if low_grade_assignments and low_grade_summary.avg_percentage is not none %}
+                            <div class="lg-stat">
+                                <span class="lg-stat-value">{{ "%.1f"|format(low_grade_summary.avg_percentage) }}%</span>
+                                <span class="lg-stat-label">Average</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="lg-controls">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <label class="form-label mb-0">Threshold:</label>
+                                <div class="lg-threshold-pills" id="lowGradeThresholdPillsModal">
+                                    {% for pct in [50, 60, 70, 75, 80, 85, 90] %}
+                                    <button type="button" class="btn {% if threshold == pct %}active{% else %}btn-outline-secondary{% endif %}" data-threshold="{{ pct }}">{{ pct }}%</button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% if low_grade_assignments %}
+                            <div class="d-flex align-items-center gap-2 flex-wrap ms-md-auto">
+                                <label class="form-label mb-0">Filter:</label>
+                                <select id="lowGradesFilterClassModal" class="form-select form-select-sm">
+                                    <option value="">All classes</option>
+                                    {% for c in low_grade_classes %}
+                                    <option value="{{ c }}">{{ c }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label class="form-label mb-0">Sort:</label>
+                                <select id="lowGradesSortModal" class="form-select form-select-sm">
+                                    <option value="recent">Most recent first</option>
+                                    <option value="oldest">Oldest first</option>
+                                    <option value="lowest">Lowest grade first</option>
+                                    <option value="highest">Highest grade first</option>
+                                    <option value="class">By class</option>
+                                </select>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="lg-content">
+                            <div id="lowGradesNoMatchesModal" class="alert alert-info d-none mb-3"><i class="bi bi-funnel me-2"></i>No assignments match the selected class filter.</div>
+                            {% if low_grade_assignments %}
+                            <div id="lowGradesCardContainerModal">
+                                {% for item in low_grade_assignments %}
+                                {% set severity = 'critical' if item.percentage < 50 else ('high' if item.percentage < 60 else 'moderate') %}
+                                <div class="lg-card sev-{{ severity }} low-grade-item" data-class="{{ item.class_name }}" data-pct="{{ item.percentage }}" data-date="{{ item.graded_at.isoformat() if item.graded_at else '' }}">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <h6 class="lg-card-title text-truncate" title="{{ item.assignment.title }}">{{ item.assignment.title }}</h6>
+                                            <div class="lg-card-meta">
+                                                <span>{{ item.class_name }}</span>
+                                                {% if item.assignment_type %}<span>·</span><span>{% if item.assignment_type == 'pdf' %}PDF/Paper{% else %}{{ item.assignment_type|title }}{% endif %}</span>{% endif %}
+                                                {% if item.is_group %}<span>·</span><span>Group</span>{% endif %}
+                                                {% if item.graded_at %}<span>·</span><span>Graded {{ item.graded_at.strftime('%b %d, %Y') }}</span>{% endif %}
+                                            </div>
+                                            {% if item.points_earned is not none and item.total_points %}
+                                            <small class="text-muted">{{ "%.1f"|format(item.points_earned) }} / {{ "%.0f"|format(item.total_points) }} pts</small>
+                                            {% endif %}
+                                            {% if item.feedback %}
+                                            <div class="lg-card-feedback mt-2"><i class="bi bi-chat-quote me-1"></i>{{ item.feedback[:200] }}{% if item.feedback|length > 200 %}...{% endif %}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                                            <span class="lg-card-grade">{{ item.percentage }}%</span>
+                                            <span class="badge bg-secondary">{{ item.letter }}</span>
+                                            <a href="{{ url_for('student.student_assignments') }}?class_id={{ item.class_id }}" class="btn btn-sm btn-outline-primary mt-1" data-bs-dismiss="modal">View</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="lg-empty">
+                                <div class="lg-empty-icon">🎯</div>
+                                <h5 class="fw-bold text-success mb-2">You're on track!</h5>
+                                <p class="text-muted mb-3">None of your graded assignments fall below {{ threshold }}%.</p>
+                                <a href="{{ url_for('student.student_grades') }}" class="btn btn-success" data-bs-dismiss="modal"><i class="bi bi-graph-up-arrow me-2"></i>View all grades</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = document.getElementById('lowGradesModal');
+            if (modal && {{ 'true' if show_low_grades else 'false' }}) {
+                var bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            }
+            var pills = document.getElementById('lowGradeThresholdPillsModal');
+            var filterClass = document.getElementById('lowGradesFilterClassModal');
+            var sortSelect = document.getElementById('lowGradesSortModal');
+            var container = document.getElementById('lowGradesCardContainerModal');
+            if (pills) {
+                pills.querySelectorAll('[data-threshold]').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var val = this.dataset.threshold;
+                        if (this.classList.contains('active')) return;
+                        var orig = this.innerHTML;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving';
+                        this.disabled = true;
+                        var fd = new FormData();
+                        fd.append('threshold', val);
+                        fd.append('csrf_token', '{{ csrf_token() }}');
+                        fetch("{{ url_for('student.update_low_grade_threshold') }}", { method: 'POST', body: fd, headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' } })
+                        .then(function(r) { return r.json(); }).then(function(data) {
+                            if (data.success) window.location.reload();
+                            else { this.innerHTML = orig; this.disabled = false; alert(data.message || 'Failed'); }
+                        }.bind(this)).catch(function() { this.innerHTML = orig; this.disabled = false; }.bind(this));
+                    });
+                });
+            }
+            function applyFilterSort() {
+                if (!container) return;
+                var items = Array.from(container.querySelectorAll('.low-grade-item'));
+                var fv = filterClass ? filterClass.value : '';
+                var sv = sortSelect ? sortSelect.value : 'recent';
+                var nm = document.getElementById('lowGradesNoMatchesModal');
+                items.forEach(function(el) { el.style.display = (!fv || el.dataset.class === fv) ? '' : 'none'; });
+                var vis = items.filter(function(el) { return el.style.display !== 'none'; });
+                if (nm) nm.classList.toggle('d-none', vis.length > 0 || !fv);
+                vis.sort(function(a, b) {
+                    if (sv === 'class') return (a.dataset.class || '').localeCompare(b.dataset.class || '');
+                    if (sv === 'lowest') return parseFloat(a.dataset.pct) - parseFloat(b.dataset.pct);
+                    if (sv === 'highest') return parseFloat(b.dataset.pct) - parseFloat(a.dataset.pct);
+                    if (sv === 'oldest') return (a.dataset.date || '').localeCompare(b.dataset.date || '');
+                    return (b.dataset.date || '').localeCompare(a.dataset.date || '');
+                });
+                vis.forEach(function(el) { container.appendChild(el); });
+            }
+            if (filterClass) filterClass.addEventListener('change', applyFilterSort);
+            if (sortSelect) sortSelect.addEventListener('change', applyFilterSort);
+        });
+        </script>
 
         <!-- Upcoming Assignments Section -->
         <div class="mb-5">
@@ -4379,6 +4552,18 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             </div>
                             
                             <div class="preference-section">
+                                <label for="low_grade_threshold" class="label-modern">
+                                    <i class="bi bi-graph-down-arrow me-2"></i>Grades to Improve Threshold
+                                </label>
+                                <select class="select-modern" id="low_grade_threshold" name="low_grade_threshold">
+                                    {% for pct in [50, 60, 70, 75, 80, 85, 90] %}
+                                    <option value="{{ pct }}" {% if (current_user.low_grade_threshold or 70) == pct %}selected{% endif %}>Below {{ pct }}%</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted d-block mt-1">Shows assignments graded below this percentage on <a href="{{ url_for('student.low_grades') }}">Grades to Improve</a>.</small>
+                            </div>
+                            
+                            <div class="preference-section">
                                 <label for="language" class="label-modern">
                                     <i class="bi bi-translate me-2"></i>Language
                                 </label>
@@ -4603,18 +4788,34 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
             btn.disabled = true;
-            
+
             const theme = document.getElementById('theme_preference').value;
+            const thresholdEl = document.getElementById('low_grade_threshold');
+            const threshold = thresholdEl ? thresholdEl.value : null;
             const csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
             const formData = new FormData();
             formData.append('theme', theme);
             if (csrfToken) formData.append('csrf_token', csrfToken);
-            
-            fetch("{{ url_for('auth.update_theme') }}", {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-CSRFToken': csrfToken || '' }
-            }).then(() => {
+
+            const promises = [
+                fetch("{{ url_for('auth.update_theme') }}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': csrfToken || '' }
+                })
+            ];
+            if (threshold !== null) {
+                const thresholdForm = new FormData();
+                thresholdForm.append('threshold', threshold);
+                if (csrfToken) thresholdForm.append('csrf_token', csrfToken);
+                promises.push(fetch("{{ url_for('student.update_low_grade_threshold') }}", {
+                    method: 'POST',
+                    body: thresholdForm,
+                    headers: { 'X-CSRFToken': csrfToken || '' }
+                }));
+            }
+
+            Promise.all(promises).then(() => {
                 const preferences = {
                     notifications: {
                         assignments: document.getElementById('notifAssignments').checked,

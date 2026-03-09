@@ -1576,7 +1576,7 @@ class GroupAssignment(db.Model):
     
     # Group-specific fields
     group_size_min = db.Column(db.Integer, default=2)  # Minimum students per group
-    group_size_max = db.Column(db.Integer, default=4)  # Maximum students per group
+    group_size_max = db.Column(db.Integer, nullable=True)  # Maximum students per group; NULL = unlimited
     allow_individual = db.Column(db.Boolean, default=False)  # Allow individual submissions
     collaboration_type = db.Column(db.String(20), default='group')  # 'group', 'individual', 'both'
     selected_group_ids = db.Column(db.Text, nullable=True)  # JSON string of selected group IDs (null = all groups)

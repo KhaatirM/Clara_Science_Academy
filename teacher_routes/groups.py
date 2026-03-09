@@ -106,11 +106,10 @@ def create_group(class_id):
     return redirect(url_for('teacher.groups.class_groups', class_id=class_id))
 
 def _get_class_group_size_max(class_id):
-    """Return the smallest group_size_max across all group assignments for this class (most restrictive)."""
+    """Return the smallest group_size_max across all group assignments for this class (most restrictive). None = unlimited."""
     assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
-    if not assignments:
-        return None
-    return min(ga.group_size_max for ga in assignments if ga.group_size_max is not None)
+    max_vals = [ga.group_size_max for ga in assignments if ga.group_size_max is not None]
+    return min(max_vals) if max_vals else None
 
 
 @bp.route('/groups/<int:group_id>/add-member', methods=['POST'])

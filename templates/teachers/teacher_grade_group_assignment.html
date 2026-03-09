@@ -35,7 +35,7 @@
           {% endif %}
         </div>
         <div class="col-12 col-md-6">
-          <strong>Group Size:</strong> {{ group_assignment.group_size_min }} - {{ group_assignment.group_size_max }} students
+          <strong>Group Size:</strong> {{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max or '∞' }} students
         </div>
         <div class="col-12 col-md-6">
           <strong>Type:</strong> 

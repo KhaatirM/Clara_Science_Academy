@@ -32,6 +32,7 @@ def run_database_fix():
                 'fix_production_assignment_columns_postgres.py',
                 'fix_school_day_attendance_table.py',
                 'fix_allow_student_edit_posts_column.py',
+                'fix_group_size_max_nullable.py',
                 'fix_bug_report_table_schema.py',
                 'fix_class_table_schema.py',
                 'fix_production_voided_fields.py',

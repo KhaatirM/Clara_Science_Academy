@@ -2137,7 +2137,8 @@ def admin_create_group_pdf_assignment(class_id):
         assignment_status = request.form.get('assignment_status', 'Active').strip()
         assignment_category = request.form.get('assignment_category', '').strip()
         group_size_min = request.form.get('group_size_min', 2)
-        group_size_max = request.form.get('group_size_max', 4)
+        group_size_max_raw = request.form.get('group_size_max', '').strip()
+        group_size_max = int(group_size_max_raw) if group_size_max_raw else None  # Blank = unlimited
         allow_individual = 'allow_individual' in request.form
         collaboration_type = request.form.get('collaboration_type', 'group')
         
@@ -2238,7 +2239,7 @@ def admin_create_group_pdf_assignment(class_id):
             late_penalty_max_days=late_penalty_max_days,
             grade_scale=grade_scale,
             group_size_min=int(group_size_min),
-            group_size_max=int(group_size_max),
+            group_size_max=group_size_max,
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
@@ -2294,7 +2295,8 @@ def admin_create_group_quiz_assignment(class_id):
         semester = request.form.get('semester', '')
         academic_period_id = request.form.get('academic_period_id')
         group_size_min = request.form.get('group_size_min', 2)
-        group_size_max = request.form.get('group_size_max', 4)
+        group_size_max_raw = request.form.get('group_size_max', '').strip()
+        group_size_max = int(group_size_max_raw) if group_size_max_raw else None  # Blank = unlimited
         allow_individual = 'allow_individual' in request.form
         collaboration_type = request.form.get('collaboration_type', 'group')
         
@@ -2344,7 +2346,7 @@ def admin_create_group_quiz_assignment(class_id):
             school_year_id=current_school_year.id if current_school_year else None,
             assignment_type='quiz',
             group_size_min=int(group_size_min),
-            group_size_max=int(group_size_max),
+            group_size_max=group_size_max,
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
@@ -2441,7 +2443,8 @@ def admin_create_group_discussion_assignment(class_id):
         semester = request.form.get('semester', '')
         academic_period_id = request.form.get('academic_period_id')
         group_size_min = request.form.get('group_size_min', 2)
-        group_size_max = request.form.get('group_size_max', 4)
+        group_size_max_raw = request.form.get('group_size_max', '').strip()
+        group_size_max = int(group_size_max_raw) if group_size_max_raw else None  # Blank = unlimited
         allow_individual = 'allow_individual' in request.form
         collaboration_type = request.form.get('collaboration_type', 'group')
         
@@ -2493,7 +2496,7 @@ def admin_create_group_discussion_assignment(class_id):
             school_year_id=current_school_year.id if current_school_year else None,
             assignment_type='discussion',
             group_size_min=int(group_size_min),
-            group_size_max=int(group_size_max),
+            group_size_max=group_size_max,
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,

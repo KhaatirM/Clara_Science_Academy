@@ -4586,17 +4586,16 @@ def admin_edit_group_assignment(assignment_id):
                 else:
                     group_assignment.grade_scale = None
 
-                # Group size
-                min_size = request.form.get('min_group_size')
-                max_size = request.form.get('max_group_size')
-                if min_size and max_size:
-                    try:
-                        group_assignment.min_group_size = int(min_size)
-                        group_assignment.max_group_size = int(max_size)
-                    except ValueError:
-                        flash('Invalid group size values.', 'error')
-                        return render_template('management/admin_edit_group_assignment.html',
-                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
+                # Group size (group_size_min, group_size_max; blank max = unlimited)
+                min_size = request.form.get('min_group_size', '').strip()
+                max_size = request.form.get('max_group_size', '').strip()
+                try:
+                    group_assignment.group_size_min = int(min_size) if min_size else 2
+                    group_assignment.group_size_max = int(max_size) if max_size else None  # Blank = unlimited
+                except ValueError:
+                    flash('Invalid group size values.', 'error')
+                    return render_template('management/admin_edit_group_assignment.html',
+                                         group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
 
                 group_assignment.assignment_type = request.form.get('assignment_type', group_assignment.assignment_type)
                 group_assignment.collaboration_type = request.form.get('collaboration_type', group_assignment.collaboration_type)

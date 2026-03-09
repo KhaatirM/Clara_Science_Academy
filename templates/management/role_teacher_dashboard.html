@@ -2335,13 +2335,13 @@ function markAllPresent() {
     html += '.central-column{width:34%;text-align:center;padding:8px 0;border-top:1px solid #000;border-bottom:1px solid #000}';
     html += '.school-column{width:33%;border:1px solid #000;border-left:none;padding:0}';
     html += '.central-column h1{font-size:18pt;font-weight:bold;margin:10px 0 0 0;padding:5px 0;text-decoration:underline;text-decoration-thickness:2px;text-transform:uppercase;font-family:\'Times New Roman\',Times,serif}';
-    html += '.logo-overlay-container{width:100px;height:100px;margin:0 auto}.logo-overlay-container img{width:100%;height:100%;object-fit:contain}';
+    html += '.logo-overlay-container{width:100px;height:100px;margin:0 auto;background:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact}.logo-overlay-container img{width:100%;height:100%;object-fit:contain;background:#fff;print-color-adjust:exact}';
     html += '.info-grid-table{width:100%;border-collapse:collapse;font-size:8.5pt}.info-grid-table td{border:none;padding:4px 6px;vertical-align:middle}';
     html += '.info-grid-table .label-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:2px solid #000;border-bottom:none;font-weight:bold;background:#fff}';
     html += '.info-grid-table .value-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:none;border-bottom:2px solid #000;font-weight:normal;background:#fff}';
     html += '.section-title{font-size:11pt;font-weight:bold;margin:1rem 0 0.5rem;border-bottom:1px solid #000;padding-bottom:3px}';
     html += 'ul{list-style:none;padding:0;margin:0}li{padding:0.4rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}';
-    html += '.status{font-size:0.85rem}.status.failing{color:#721c24}.status.missing{color:#856404}';
+    html += '.status{font-size:0.85rem}.status.failing{color:#721c24}.status.missing{color:#856404}.status.awaiting{color:#0d6efd}';
     html += '@media print{body{margin:0.5in}}</style></head><body style="max-width:8.5in;margin:0 auto;padding:0.5in">';
     
     html += '<table class="pdf-header-table"><tr>';
@@ -2368,8 +2368,9 @@ function markAllPresent() {
       for (const [className, assignments] of Object.entries(student.missing_assignments)) {
         html += '<div class="section-title" style="margin-top:1rem">' + escapeHtml(className) + '</div><ul>';
         assignments.forEach(a => {
-          const statusClass = (a.status === 'failing' ? 'failing' : 'missing');
-          const statusText = a.status === 'failing' ? ('Failing (' + (a.score !== 'N/A' && a.score != null ? a.score + '%' : '—') + ')') : 'Missing';
+          const isAwaiting = a.status === 'awaiting_grade' || a.score === 'Awaiting Grade';
+          const statusClass = isAwaiting ? 'awaiting' : (a.status === 'failing' ? 'failing' : 'missing');
+          const statusText = isAwaiting ? 'Awaiting Grade' : (a.status === 'failing' ? ('Failing (' + (a.score !== 'N/A' && a.score != null && a.score !== 'Awaiting Grade' ? a.score + '%' : '—') + ')') : 'Missing');
           const typeLabel = a.assignment_type ? (a.assignment_type.replace('group_','').toUpperCase()) : '';
           html += '<li><strong>' + escapeHtml(a.title) + '</strong>' + (typeLabel ? ' <em>(' + typeLabel + ')</em>' : '') + '<br>';
           html += '<span class="status ' + statusClass + '">' + statusText + '</span>';
@@ -2388,7 +2389,8 @@ function markAllPresent() {
     w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); w.close(); }, 250);
+    // Delay print to allow logo image to load (prevents blacked-out logo)
+    setTimeout(() => { w.print(); w.close(); }, 800);
   }
   
   function escapeHtml(s) {

@@ -2873,6 +2873,15 @@ def view_student_details_data(student_id):
                 
                 if is_at_risk:
                     class_name = g.assignment.class_info.name
+                    # Detect "awaiting grade": score is 0 but student has submitted (don't show 0%)
+                    awaiting_grade = False
+                    if status == 'failing' and score == 0:
+                        sub = Submission.query.filter_by(
+                            student_id=student.id,
+                            assignment_id=g.assignment_id
+                        ).first()
+                        if sub and sub.submission_type in ('online', 'in_person'):
+                            awaiting_grade = True
                     
                     if class_name not in missing_assignments_by_class:
                         missing_assignments_by_class[class_name] = []
@@ -2880,8 +2889,8 @@ def view_student_details_data(student_id):
                     missing_assignments_by_class[class_name].append({
                         'title': g.assignment.title,
                         'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
-                        'status': status,
-                        'score': score if score is not None else 'N/A',
+                        'status': 'awaiting_grade' if awaiting_grade else status,
+                        'score': 'Awaiting Grade' if awaiting_grade else (score if score is not None else 'N/A'),
                         'assignment_type': g.assignment.assignment_type
                     })
                         

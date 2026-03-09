@@ -1938,29 +1938,28 @@ def admin_class_groups(class_id):
         class_obj = Class.query.get_or_404(class_id)
         
         # Get all groups for this class
-        groups = StudentGroup.query.filter_by(class_id=class_id).all()
+        groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
         
         # Get enrolled students for this class
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        enrolled_students = [enrollment.student for enrollment in enrollments]
+        enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
         
-        # Get group members for each group and add member_count to group objects
-        group_data = []
+        # Add members_list and member_count to each group (template expects group.members_list with {student, is_leader})
         for group in groups:
             members = StudentGroupMember.query.filter_by(group_id=group.id).all()
-            member_students = [member.student for member in members]
-            # Add member_count as an attribute to the group object for template access
-            group.member_count = len(member_students)
-            group_data.append({
-                'group': group,
-                'members': member_students,
-                'member_count': len(member_students)
-            })
+            group.members_list = []
+            for m in members:
+                if m.student:
+                    group.members_list.append({
+                        'student': m.student,
+                        'is_leader': m.is_leader
+                    })
+            group.member_count = len(group.members_list)
         
         return render_template('teachers/teacher_class_groups.html',
                              class_obj=class_obj,
                              groups=groups,
-                             group_data=group_data,
+                             students=enrolled_students,
                              enrolled_students=enrolled_students,
                              role_prefix=True)
     

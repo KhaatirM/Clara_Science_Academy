@@ -349,8 +349,12 @@ def create_app(config_class=None):
         flash('Invalid request. Please try again.', 'danger')
         return redirect(url_for('auth.login'))
 
-    @app.route('/')
+    @app.route('/', methods=['GET', 'POST'])
     def home():
+        # Forms in base.html (contact, survey) have no action so submit to current URL.
+        # They're meant to be handled by JS; if a POST reaches us, redirect to GET.
+        if request.method == 'POST':
+            return redirect(url_for('home'))
         # Check for maintenance mode - handle case where table might not exist
         maintenance = None
         try:

@@ -239,9 +239,13 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
 
-@auth_blueprint.route('/')
-@auth_blueprint.route('/home')
+@auth_blueprint.route('/', methods=['GET', 'POST'])
+@auth_blueprint.route('/home', methods=['GET', 'POST'])
 def home():
+    # Forms in base.html (contact, survey) have no action so submit to current URL.
+    # They're meant to be handled by JS; if a POST reaches us, redirect to GET.
+    if request.method == 'POST':
+        return redirect(url_for('auth.home'))
     return render_template('shared/home.html')
 
 @auth_blueprint.route('/dashboard')

@@ -18,6 +18,7 @@ import calendar as cal
 from datetime import datetime, timedelta
 import sys
 import os
+from utils.grade_helpers import get_points_earned
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'scripts'))
 from google_classroom_service import get_google_service
 from googleapiclient.errors import HttpError
@@ -1216,7 +1217,7 @@ def assignments_and_grades():
                                         grade_dict = json.loads(grade.grade_data)
                                     if grade_dict.get('is_voided'):
                                         continue
-                                    score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                    score_val = get_points_earned(grade_dict)
                                     if score_val is not None and str(score_val).strip() != '':
                                         total_score += float(score_val)
                                         graded_with_score += 1
@@ -1251,7 +1252,7 @@ def assignments_and_grades():
                                         grade_dict = json.loads(grade.grade_data)
                                     if grade_dict.get('is_voided'):
                                         continue
-                                    score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                    score_val = get_points_earned(grade_dict)
                                     if score_val is not None and str(score_val).strip() != '':
                                         total_score += float(score_val)
                                         graded_with_score += 1

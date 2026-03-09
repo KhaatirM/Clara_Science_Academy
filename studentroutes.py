@@ -39,6 +39,17 @@ student_blueprint = Blueprint('student', __name__)
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'pptx', 'md'}
 
+
+def _get_points_earned(grade_data):
+    """Safely get points_earned or score (handles 0 correctly)."""
+    if grade_data is None:
+        return None
+    val = grade_data.get('points_earned')
+    if val is not None:
+        return val
+    return grade_data.get('score')
+
+
 def allowed_file(filename):
     """Checks if the file's extension is in the allowed set."""
     return '.' in filename and \
@@ -189,7 +200,7 @@ def get_grade_trends(student_id, class_id, limit=10):
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
             # Always use assignment's total_points as source of truth
-            score = grade_data.get('score') or grade_data.get('points_earned')
+            score = _get_points_earned(grade_data)
             if score is not None:
                 # Always use assignment's total_points, not stored value in grade_data
                 total_points = grade.assignment.total_points if grade.assignment and grade.assignment.total_points else 100.0
@@ -496,7 +507,7 @@ def student_dashboard():
                 continue
             percentage = None
             grade_data = json.loads(g.grade_data)
-            score = grade_data.get('score') or grade_data.get('points_earned')
+            score = _get_points_earned(grade_data)
             if score is not None:
                 total_points = g.assignment.total_points if g.assignment and g.assignment.total_points else 100.0
                 if total_points and total_points > 0:
@@ -521,7 +532,7 @@ def student_dashboard():
                 continue
             try:
                 gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-                score = gdata.get('score') or gdata.get('points_earned')
+                score = _get_points_earned(gdata)
                 if score is not None:
                     total_points = g.group_assignment.total_points if (g.group_assignment and g.group_assignment.total_points) else 100.0
                     if total_points and total_points > 0:
@@ -630,7 +641,7 @@ def student_dashboard():
         recent_grades.append({
             'assignment': grade.assignment,
             'class_name': grade.assignment.class_info.name,
-            'score': grade_data.get('score', 'N/A')
+            'score': _get_points_earned(grade_data) if grade_data else 'N/A'
         })
     
     # Failing classes: class average < 70%
@@ -1034,7 +1045,7 @@ def student_classes():
                 continue
             try:
                 grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-                points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                points_earned = _get_points_earned(grade_data)
                 if points_earned is not None:
                     points_earned = float(points_earned)
                     total_points = g.assignment.total_points if (g.assignment and g.assignment.total_points) else 100.0
@@ -1056,7 +1067,7 @@ def student_classes():
                 continue
             try:
                 grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-                points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                points_earned = _get_points_earned(grade_data)
                 if points_earned is not None:
                     points_earned = float(points_earned)
                     total_points = g.group_assignment.total_points if (g.group_assignment and g.group_assignment.total_points) else 100.0
@@ -1107,7 +1118,7 @@ def _get_low_grade_data(student):
             continue
         try:
             grade_data = json.loads(grade.grade_data)
-            score = grade_data.get('points_earned') or grade_data.get('score')
+            score = _get_points_earned(grade_data)
             if score is None:
                 continue
             total_points = grade.assignment.total_points or 100.0
@@ -1142,7 +1153,7 @@ def _get_low_grade_data(student):
                 continue
             try:
                 grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                score = grade_data.get('points_earned') or grade_data.get('score')
+                score = _get_points_earned(grade_data)
                 if score is None:
                     continue
                 total_points = grade.group_assignment.total_points or 100.0
@@ -1355,7 +1366,7 @@ def student_grades():
                 percentage = None  # Initialize to avoid UnboundLocalError
                 grade_data = json.loads(grade.grade_data)
                 # Always use assignment's total_points as source of truth
-                score = grade_data.get('score') or grade_data.get('points_earned')
+                score = _get_points_earned(grade_data)
                 if score is not None:
                     # Always use assignment's total_points, not stored value in grade_data
                     total_points = grade.assignment.total_points if grade.assignment and grade.assignment.total_points else 100.0
@@ -1454,7 +1465,7 @@ def student_grades():
                     if grade and not grade.is_voided:
                         try:
                             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            points_earned = _get_points_earned(grade_data)
                             if points_earned is not None:
                                 total_pts = assignment.total_points if (assignment.total_points and assignment.total_points > 0) else 100.0
                                 pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
@@ -1474,7 +1485,7 @@ def student_grades():
                     if group_grade and not group_grade.is_voided:
                         try:
                             grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            points_earned = _get_points_earned(grade_data)
                             if points_earned is not None:
                                 total_pts = group_assignment.total_points if (group_assignment.total_points and group_assignment.total_points > 0) else 100.0
                                 pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
@@ -1551,7 +1562,7 @@ def student_grades():
                     if grade and not grade.is_voided:
                         try:
                             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            points_earned = _get_points_earned(grade_data)
                             if points_earned is not None:
                                 total_pts = assignment.total_points if (assignment.total_points and assignment.total_points > 0) else 100.0
                                 pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
@@ -1571,7 +1582,7 @@ def student_grades():
                     if group_grade and not group_grade.is_voided:
                         try:
                             grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            points_earned = _get_points_earned(grade_data)
                             if points_earned is not None:
                                 total_pts = group_assignment.total_points if (group_assignment.total_points and group_assignment.total_points > 0) else 100.0
                                 pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
@@ -2014,7 +2025,7 @@ def view_class(class_id):
             continue
         try:
             gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-            points_earned = gdata.get('points_earned') or gdata.get('score')
+            points_earned = _get_points_earned(gdata)
             if points_earned is None:
                 continue
             points_earned = float(points_earned)
@@ -2110,10 +2121,10 @@ def get_class_assignments_api(class_id):
             status = 'Graded'
             status_class = 'success'
         elif has_submission and is_past_due:
-            status = 'Submitted (Late)'
+            status = 'Awaiting Grade'
             status_class = 'warning'
         elif has_submission:
-            status = 'Submitted'
+            status = 'Awaiting Grade'
             status_class = 'info'
         elif is_past_due:
             status = 'Past Due'
@@ -2142,7 +2153,7 @@ def get_class_assignments_api(class_id):
             'status_class': status_class,
             'has_submission': has_submission,
             'has_grade': has_grade,
-            'grade_score': grade.get('score', None) if grade else None,
+            'grade_score': _get_points_earned(grade) if grade else None,
             'grade_percentage': grade.get('percentage', None) if grade else None,
             'days_remaining': (assignment.due_date.date() - today.date()).days if assignment.due_date and assignment.due_date.date() >= today.date() else None,
             'days_overdue': (today.date() - assignment.due_date.date()).days if assignment.due_date and assignment.due_date.date() < today.date() else None
@@ -2585,7 +2596,7 @@ def get_quiz_details(assignment_id):
     if grade and grade.grade_data:
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            score = grade_data.get('score') or grade_data.get('points_earned')
+            score = _get_points_earned(grade_data)
             # Always use assignment's total_points as source of truth, not stored value
             total_points = assignment.total_points if assignment.total_points else 100.0
             # Always recalculate percentage using assignment's actual total_points

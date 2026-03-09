@@ -21,6 +21,7 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo
 import json
 from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
+from utils.grade_helpers import get_points_earned
 
 bp = Blueprint('assignments', __name__)
 
@@ -846,7 +847,7 @@ def assignments_and_grades():
                                         grade_dict = json.loads(grade.grade_data)
                                     if grade_dict.get('is_voided'):
                                         continue
-                                    score_value = grade_dict.get('score') or grade_dict.get('points_earned')
+                                    score_value = get_points_earned(grade_dict)
                                     if score_value is not None:
                                         try:
                                             points_float = float(score_value)
@@ -947,7 +948,7 @@ def assignments_and_grades():
                                     grade_dict = json.loads(g.grade_data)
                                 if grade_dict.get('is_voided'):
                                     continue
-                                score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                score_val = get_points_earned(grade_dict)
                                 if score_val is not None and str(score_val).strip() != '':
                                     graded_grades.append(grade_dict)
                                     try:
@@ -996,7 +997,7 @@ def assignments_and_grades():
                                     grade_dict = json.loads(gg.grade_data)
                                 if grade_dict.get('is_voided'):
                                     continue
-                                score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                score_val = get_points_earned(grade_dict)
                                 if score_val is not None and str(score_val).strip() != '':
                                     graded_group_grades.append(grade_dict)
                                     try:
@@ -1057,7 +1058,7 @@ def assignments_and_grades():
                             if grade:
                                 try:
                                     grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                                    points_earned = grade_data.get('score') or grade_data.get('points_earned')
+                                    points_earned = get_points_earned(grade_data)
                                     # Always use assignment's total_points as source of truth
                                     total_points = assignment.total_points if assignment.total_points else 100.0
                                     
@@ -1142,7 +1143,7 @@ def assignments_and_grades():
                                 if group_grade:
                                     try:
                                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                                        points_earned = grade_data.get('score') or grade_data.get('points_earned')
+                                        points_earned = get_points_earned(grade_data)
                                         # Always use group_assignment's total_points as source of truth
                                         total_points = group_assignment.total_points if group_assignment.total_points else 100.0
                                         
@@ -1199,8 +1200,8 @@ def assignments_and_grades():
                             if grade_info.get('is_voided', False):
                                 continue
                             grade = grade_info.get('grade')
-                            # Only process valid numeric grades
-                            if grade and grade != 'Not Graded' and grade != 'N/A' and grade != 'Not in Group' and grade != 'Not Assigned' and grade != 'No Group' and grade is not None:
+                            # Only process valid numeric grades (include 0 - use explicit checks)
+                            if grade is not None and grade != 'Not Graded' and grade != 'N/A' and grade != 'Not in Group' and grade != 'Not Assigned' and grade != 'No Group':
                                 try:
                                     grade_num = float(grade)
                                     total_score += grade_num

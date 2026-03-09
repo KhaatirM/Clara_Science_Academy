@@ -2180,7 +2180,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                             {% elif assignment_status == 'Past Due' %}
                                                                         <span class="badge bg-danger ms-2" style="font-size: 0.7rem;">Past due</span>
                                                             {% elif assignment_status == 'Submitted or Awaiting Grade' %}
-                                                                        <span class="badge bg-info ms-2" style="font-size: 0.7rem;">Submitted</span>
+                                                                        <span class="badge bg-info ms-2" style="font-size: 0.7rem;">Awaiting Grade</span>
                                                             {% elif assignment_status == 'Extended' %}
                                                                         <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">Extended</span>
                                                             {% elif days_remaining > 0 %}
@@ -2218,7 +2218,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                             {% endif %}
                                                         {% elif assignment_status == 'Submitted or Awaiting Grade' %}
                                                             <span class="badge bg-info" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
-                                                                <i class="bi bi-paper-plane me-1"></i>Submitted
+                                                                <i class="bi bi-hourglass-split me-1"></i>Awaiting Grade
                                                             </span>
                                                         {% elif assignment_status == 'Past Due' %}
                                                             <span class="badge bg-danger" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
@@ -3164,8 +3164,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         <span class="badge grade-badge grade-f">F</span>
                                     {% endif %}
                                 {% elif grade_percentage is not none and grade_percentage == 0 %}
-                                    {# Show Overdue if graded with 0 #}
-                                    <span class="badge bg-danger">Overdue</span>
+                                    {# Show F when graded with 0 #}
+                                    <span class="badge grade-badge grade-f">F</span>
                                 {% elif student_status == 'completed' %}
                                     {# Fallback: No grade data but marked completed #}
                                     <span class="badge bg-danger">Overdue</span>
@@ -3403,7 +3403,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         <span class="badge grade-badge grade-f">F</span>
                                     {% endif %}
                                 {% elif grade_percentage is not none and grade_percentage == 0 %}
-                                    <span class="badge bg-danger">Graded</span>
+                                    <span class="badge grade-badge grade-f">F</span>
                                 {% elif student_status == 'Submitted or Awaiting Grade' %}
                                     <span class="badge bg-info">Awaiting Grade</span>
                                 {% else %}

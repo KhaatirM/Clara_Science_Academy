@@ -601,7 +601,7 @@
                                             {% elif grade == 'N/A' or grade is none %}
                                                 <span class="badge bg-danger bg-opacity-20 text-dark border border-danger" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">N/A</span>
                                             {% else %}
-                                                {% set grade_num = grade|float if grade and grade != 'Not Graded' and grade != 'Not in Group' and grade != 'Not Assigned' and grade != 'No Group' else None %}
+                                                {% set grade_num = grade|float if grade is not none and grade != 'Not Graded' and grade != 'Not in Group' and grade != 'Not Assigned' and grade != 'No Group' else None %}
                                                 {% if grade_num is not none and grade_num >= 90 %}
                                                     <span class="badge bg-success bg-opacity-20 text-dark border border-success" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; font-weight: 600;">{{ grade }}</span>
                                                 {% elif grade_num is not none and grade_num >= 80 %}
@@ -635,7 +635,7 @@
                                             {% elif grade == 'N/A' or grade is none %}
                                                 <span class="badge bg-danger bg-opacity-20 text-dark border border-danger" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">N/A</span>
                                             {% else %}
-                                                {% set grade_num = grade|float if grade and grade != 'Not Graded' and grade != 'Not in Group' and grade != 'Not Assigned' else None %}
+                                                {% set grade_num = grade|float if grade is not none and grade != 'Not Graded' and grade != 'Not in Group' and grade != 'Not Assigned' else None %}
                                                 {% if grade_num is not none and grade_num >= 90 %}
                                                     <span class="badge bg-success bg-opacity-20 text-dark border border-success" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; font-weight: 600;" title="{{ grade_info.get('group_name', 'N/A') }}">{{ grade }}</span>
                                                 {% elif grade_num is not none and grade_num >= 80 %}

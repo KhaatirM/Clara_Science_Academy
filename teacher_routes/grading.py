@@ -12,6 +12,7 @@ from models import (
 )
 import json
 from datetime import datetime
+from utils.grade_helpers import get_points_earned
 
 bp = Blueprint('grading', __name__)
 
@@ -200,8 +201,10 @@ def grade_assignment(assignment_id):
         try:
             # Parse the JSON grade_data
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            # Get points earned from grade_data
-            points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+            # Get points earned from grade_data (use helper to handle 0 correctly)
+            points_earned = get_points_earned(grade_data)
+            if points_earned is None:
+                points_earned = 0
             # Always use assignment's total_points as source of truth, not stored value
             total_points = assignment_total_points
             # Always recalculate percentage using assignment's actual total_points
@@ -374,7 +377,7 @@ def grade_statistics(assignment_id):
     for grade in grades:
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            score = grade_data.get('score') or grade_data.get('points_earned')
+            score = get_points_earned(grade_data)
             
             if score is not None:
                 stats['graded_count'] += 1

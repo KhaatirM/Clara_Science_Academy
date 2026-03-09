@@ -8,6 +8,7 @@ from decorators import management_required
 from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance, SchoolYear, AcademicPeriod, StudentAssistant, StudentAssistantActionLog
 from datetime import datetime
 import json
+from utils.grade_helpers import get_points_earned
 
 
 bp = Blueprint('classes', __name__)
@@ -1097,8 +1098,7 @@ def class_grades(class_id):
             if grade:
                 try:
                     grade_data = json.loads(grade.grade_data)
-                    # Get points earned from grade_data (support both 'points_earned' and 'score' for backward compatibility)
-                    points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                    points_earned = get_points_earned(grade_data)
                     # Always use assignment's total_points as source of truth
                     total_points = assignment.total_points if assignment.total_points else 100.0
                     
@@ -1204,8 +1204,7 @@ def class_grades(class_id):
                     if group_grade:
                         try:
                             grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
-                            # Get points earned from grade_data (support both 'points_earned' and 'score' for backward compatibility)
-                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            points_earned = get_points_earned(grade_data)
                             # Always use group_assignment's total_points as source of truth
                             total_points = group_assignment.total_points if group_assignment.total_points else 100.0
                             

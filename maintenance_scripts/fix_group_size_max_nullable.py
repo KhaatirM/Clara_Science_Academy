@@ -15,7 +15,8 @@ from sqlalchemy import text
 
 
 def fix_group_size_max_nullable():
-    """Make group_assignment.group_size_max nullable (NULL = unlimited)."""
+    """Make group_assignment.group_size_max nullable (NULL = unlimited).
+    Also clear accidental default of 4 where limit was left blank by user."""
     app = create_app()
     with app.app_context():
         dialect = db.engine.dialect.name
@@ -33,8 +34,32 @@ def fix_group_size_max_nullable():
                     print("Column already nullable or unchanged:", e)
                 else:
                     print("Error:", e)
+
+            # Clear accidental default 4 (user left limit blank) so groups become unlimited
+            try:
+                result = db.session.execute(text(
+                    "UPDATE group_assignment SET group_size_max = NULL WHERE group_size_max = 4"
+                ))
+                db.session.commit()
+                n = getattr(result, 'rowcount', 0) or 0
+                if n > 0:
+                    print(f"Cleared accidental max=4 limit on {n} group assignment(s) - now unlimited")
+            except Exception as e:
+                db.session.rollback()
+                print("Note: Could not clear default 4 values:", e)
         else:
-            print("SQLite: column is typically nullable by default. No change needed.")
+            # SQLite
+            try:
+                result = db.session.execute(text(
+                    "UPDATE group_assignment SET group_size_max = NULL WHERE group_size_max = 4"
+                ))
+                db.session.commit()
+                n = getattr(result, 'rowcount', 0) or 0
+                if n > 0:
+                    print(f"Cleared accidental max=4 limit on {n} group assignment(s) - now unlimited")
+            except Exception as e:
+                db.session.rollback()
+                print("Note: Could not clear default 4 values:", e)
 
 
 if __name__ == "__main__":

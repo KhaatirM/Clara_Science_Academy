@@ -79,7 +79,6 @@ from .classes import (
     class_grades as class_grades_func,
     manage_class_roster as manage_class_roster_func,
     class_grades_view as class_grades_view_func,
-    admin_class_group_assignments as admin_class_group_assignments_func,
     admin_class_deadline_reminders as admin_class_deadline_reminders_func,
     admin_class_analytics as admin_class_analytics_func,
     admin_class_360_feedback as admin_class_360_feedback_func,
@@ -654,8 +653,8 @@ def class_grades_view_route(class_id):
 @login_required
 @management_required
 def admin_class_group_assignments_route(class_id):
-    """Admin class group assignments route - delegates to classes module"""
-    return admin_class_group_assignments_func(class_id)
+    """Redirect to Assignments & Grades with class pre-selected (group assignments consolidated there)."""
+    return redirect(url_for('management.assignments_and_grades', class_id=class_id))
 
 @management_blueprint.route('/class/<int:class_id>/deadline-reminders', endpoint='admin_class_deadline_reminders')
 @login_required

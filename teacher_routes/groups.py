@@ -519,7 +519,7 @@ def save_group_assignment(class_id):
         
         # Redirect to appropriate page based on user role
         if admin_view:
-            return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+            return redirect(url_for('management.assignments_and_grades', class_id=class_id))
         else:
             return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         

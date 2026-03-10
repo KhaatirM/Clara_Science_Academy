@@ -530,6 +530,19 @@
                         <div class="section-header-line"></div>
                     </div>
                     <div class="section-body">
+                        {% if admin_view and accessible_classes %}
+                        <div class="mb-4">
+                            <label for="class_id" class="form-label fw-semibold">
+                                <i class="bi bi-house-door me-1 text-primary"></i>Class <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select form-select-lg" id="class_id" name="class_id" required onchange="window.location.href=this.options[this.selectedIndex].dataset.url">
+                                {% for c in accessible_classes %}
+                                <option value="{{ c.id }}" data-url="{{ url_for('management.classes.admin_create_group_pdf_assignment', class_id=c.id) }}" {% if class_obj and c.id == class_obj.id %}selected{% endif %}>{{ c.name }}{% if c.subject %} ({{ c.subject }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Changing class will reload the form with that class's groups.</small>
+                        </div>
+                        {% endif %}
                         <div class="mb-4">
                             <label for="title" class="form-label fw-semibold">
                                 <i class="bi bi-type me-1 text-success"></i>Assignment Title <span class="text-danger">*</span>

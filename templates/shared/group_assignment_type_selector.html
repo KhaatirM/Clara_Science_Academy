@@ -20,12 +20,12 @@
                         </div>
                         <div class="flex-shrink-0">
                             {% if admin_view %}
-                                <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
-                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                <a href="{{ url_for('management.assignments_and_grades', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments & Grades
                                 </a>
                             {% else %}
-                                <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
-                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                <a href="{{ url_for('teacher.dashboard.assignments_and_grades', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments & Grades
                                 </a>
                             {% endif %}
                         </div>

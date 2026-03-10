@@ -24,7 +24,7 @@
                             <ol class="breadcrumb breadcrumb-light mb-0">
                                 {% if current_user.role in ['Director', 'School Administrator'] %}
                                 <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
-                                <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_obj.id) }}">Group Assignments</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('management.assignments_and_grades', class_id=class_obj.id) }}">Assignments & Grades</a></li>
                                 {% else %}
                                 <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}">Assignments & Grades</a></li>
                                 <li class="breadcrumb-item"><a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}">View Assignment</a></li>

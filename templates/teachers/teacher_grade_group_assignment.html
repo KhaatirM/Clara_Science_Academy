@@ -6,8 +6,8 @@
     <h3 class="mb-2 mb-md-0"><i class="bi bi-check-circle me-2"></i>Grade Assignment: {{ group_assignment.title }}</h3>
     <div class="d-flex gap-2">
       {% if admin_view %}
-        <a href="{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
+        <a href="{{ url_for('management.assignments_and_grades', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Assignments & Grades
         </a>
       {% else %}
         <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">

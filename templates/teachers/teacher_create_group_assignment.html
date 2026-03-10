@@ -21,7 +21,7 @@
                             <ol class="breadcrumb breadcrumb-light mb-0">
                                 {% if request.args.get('admin_view') == 'true' %}
                                 <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
-                                <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}">Group Assignments</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('management.assignments_and_grades', class_id=class_item.id) }}">Group Assignments</a></li>
                                 {% else %}
                                 <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}">Assignments & Grades</a></li>
                                 <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.group_assignment_select_class') }}">Select Class</a></li>
@@ -40,7 +40,7 @@
                             <i class="bi bi-info-circle me-1"></i>What you should know
                         </button>
                         {% if request.args.get('admin_view') == 'true' %}
-                        <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-light btn-sm">
+                        <a href="{{ url_for('management.assignments_and_grades', class_id=class_item.id) }}" class="btn btn-light btn-sm">
                             <i class="bi bi-arrow-left me-1"></i>Back
                         </a>
                         {% else %}
@@ -432,7 +432,7 @@
                         </div>
                         <div class="submit-actions">
                             {% if request.args.get('admin_view') == 'true' %}
-                            <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-outline-secondary btn-lg">
+                            <a href="{{ url_for('management.assignments_and_grades', class_id=class_item.id) }}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
                             {% else %}

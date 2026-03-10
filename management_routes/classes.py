@@ -9,6 +9,7 @@ from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Att
 from datetime import datetime
 import json
 from utils.grade_helpers import get_points_earned
+from .utils import allowed_file
 
 
 bp = Blueprint('classes', __name__)
@@ -2118,6 +2119,7 @@ def admin_create_group_pdf_assignment(class_id):
     import json
     
     class_obj = Class.query.get_or_404(class_id)
+    accessible_classes = Class.query.order_by(Class.name).all()
     
     # Get current school year and academic periods
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
@@ -2159,11 +2161,16 @@ def admin_create_group_pdf_assignment(class_id):
         elif grade_scale_preset == 'lenient':
             grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": False})
         
+        # Use class_id from form if provided, otherwise from URL
+        effective_class_id = request.form.get('class_id', type=int) or class_id
+        class_obj = Class.query.get_or_404(effective_class_id)
+        
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
             return render_template('shared/create_group_pdf_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods,
+                                 accessible_classes=accessible_classes,
                                  admin_view=True)
         
         try:
@@ -2175,6 +2182,7 @@ def admin_create_group_pdf_assignment(class_id):
             return render_template('shared/create_group_pdf_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods,
+                                 accessible_classes=accessible_classes,
                                  admin_view=True)
         
         # Handle file upload
@@ -2189,11 +2197,11 @@ def admin_create_group_pdf_assignment(class_id):
             if file and file.filename and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 timestamp = str(int(time.time()))
-                attachment_filename = f"group_assignment_{class_id}_{timestamp}_{filename}"
+                attachment_filename = f"group_assignment_{effective_class_id}_{timestamp}_{filename}"
                 attachment_original_filename = file.filename
                 
-                # Create uploads directory if it doesn't exist
-                upload_dir = os.path.join(current_app.static_folder, 'uploads')
+                # Create uploads directory if it doesn't exist (use UPLOAD_FOLDER for consistency)
+                upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', current_app.static_folder or ''), 'group_assignments')
                 os.makedirs(upload_dir, exist_ok=True)
                 
                 attachment_file_path = os.path.join(upload_dir, attachment_filename)
@@ -2221,7 +2229,7 @@ def admin_create_group_pdf_assignment(class_id):
         group_assignment = GroupAssignment(
             title=title,
             description=description,
-            class_id=class_id,
+            class_id=effective_class_id,
             due_date=due_date,
             open_date=open_date,
             close_date=close_date,
@@ -2258,11 +2266,12 @@ def admin_create_group_pdf_assignment(class_id):
         db.session.commit()
         
         flash(f'Group PDF assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades', class_id=effective_class_id))
     
     return render_template('shared/create_group_pdf_assignment.html',
                          class_obj=class_obj,
                          academic_periods=academic_periods,
+                         accessible_classes=accessible_classes,
                          admin_view=True)
 
 
@@ -2406,7 +2415,7 @@ def admin_create_group_quiz_assignment(class_id):
         
         db.session.commit()
         flash(f'Group quiz assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades', class_id=class_id))
     
     return render_template('shared/create_group_quiz_assignment.html',
                          class_obj=class_obj,
@@ -2526,7 +2535,7 @@ def admin_create_group_discussion_assignment(class_id):
         
         db.session.commit()
         flash(f'Group discussion assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades', class_id=class_id))
     
     return render_template('shared/create_group_discussion_assignment.html',
                          class_obj=class_obj,

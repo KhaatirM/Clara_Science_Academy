@@ -543,7 +543,7 @@ function scrollToSubmissions() {
 
 function goBack() {
   {% if admin_view %}
-    window.location.href = "{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}";
+    window.location.href = "{{ url_for('management.assignments_and_grades', class_id=group_assignment.class_id) }}";
   {% else %}
     window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades', class_id=group_assignment.class_id) }}";
   {% endif %}

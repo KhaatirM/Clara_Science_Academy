@@ -36,7 +36,8 @@ bp = Blueprint('assignments', __name__)
 @management_required
 def assignment_type_selector():
     """Assignment type selection page for management"""
-    return render_template('shared/assignment_type_selector.html')
+    preselected_class_id = request.args.get('class_id', type=int)
+    return render_template('shared/assignment_type_selector.html', preselected_class_id=preselected_class_id)
 
 
 
@@ -4133,7 +4134,7 @@ def admin_view_group_assignment(assignment_id):
     except Exception as e:
         print(f"Error viewing group assignment: {e}")
         flash('Error accessing group assignment details.', 'error')
-        return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+        return redirect(url_for('management.assignments_and_grades', class_id=group_assignment.class_id))
 
 
 
@@ -4146,7 +4147,7 @@ def admin_view_group_assignment(assignment_id):
 @login_required
 def admin_grade_group_assignment(assignment_id):
     """Grade a group assignment - Allows teachers and administrators."""
-    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff, Student
+    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff, Student, GroupSubmission
     from teacher_routes.utils import is_authorized_for_class
     from types import SimpleNamespace
     import json
@@ -4244,6 +4245,12 @@ def admin_grade_group_assignment(assignment_id):
         ).all()
         extensions_dict = {ext.student_id: ext for ext in extensions}
         
+        # Build group submission status: group_id -> 'online' | 'not_submitted'
+        group_submission_status = {}
+        for sub in GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all():
+            if sub.group_id and (sub.attachment_file_path or sub.attachment_filename):
+                group_submission_status[sub.group_id] = 'online'
+        
         # Calculate statistics
         total_students = len(all_students)
         graded_count = len([g for g in grades_by_student.values() if g.get('score', 0) > 0])
@@ -4320,6 +4327,8 @@ def admin_grade_group_assignment(assignment_id):
                     score = request.form.get(key)
                     comments_key = f"comments_{gid}_{student_id}"
                     comments = request.form.get(comments_key, '')
+                    submission_type_key = f"submission_type_{gid}_{student_id}"
+                    submission_type = request.form.get(submission_type_key, '').strip() or None
                     if not score:
                         continue
                     try:
@@ -4345,6 +4354,8 @@ def admin_grade_group_assignment(assignment_id):
                         'percentage': round(percentage, 2),
                         'letter_grade': letter_grade
                     }
+                    if submission_type in ('online', 'in_person', 'not_submitted'):
+                        grade_data['submission_type'] = submission_type
                     save_group_id = None if gid == 0 else gid
                     existing_grade = GroupGrade.query.filter_by(
                         group_assignment_id=assignment_id,
@@ -4436,11 +4447,12 @@ def admin_grade_group_assignment(assignment_id):
                              graded_count=graded_count,
                              average_score=average_score,
                              total_points=assignment_total_points,
+                             group_submission_status=group_submission_status,
                              today=datetime.now().date())
     except Exception as e:
         print(f"Error grading group assignment: {e}")
         flash('Error accessing group assignment grading.', 'error')
-        return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+        return redirect(url_for('management.assignments_and_grades', class_id=group_assignment.class_id))
 
 
 
@@ -4485,7 +4497,7 @@ def admin_delete_group_assignment(assignment_id):
         flash(f'Error deleting assignment: {str(e)}', 'danger')
     
     # Redirect back to the appropriate page
-    return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+    return redirect(url_for('management.assignments_and_grades', class_id=group_assignment.class_id))
 
 
 
@@ -4630,7 +4642,7 @@ def admin_edit_group_assignment(assignment_id):
             class_id = ga.class_id if ga else None
             if class_id:
                 if current_user.role in ['Director', 'School Administrator']:
-                    return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+                    return redirect(url_for('management.assignments_and_grades', class_id=class_id))
                 return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         except Exception:
             pass

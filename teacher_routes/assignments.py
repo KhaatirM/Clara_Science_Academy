@@ -34,7 +34,8 @@ def allowed_file(filename):
 @teacher_required
 def assignment_type_selector():
     """Assignment type selection page"""
-    return render_template('shared/assignment_type_selector.html')
+    preselected_class_id = request.args.get('class_id', type=int)
+    return render_template('shared/assignment_type_selector.html', preselected_class_id=preselected_class_id)
 
 @bp.route('/assignment/add', methods=['GET', 'POST'])
 @login_required

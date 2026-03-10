@@ -1015,12 +1015,11 @@ function grantExtensions(assignmentId) {
 }
 
 function createAssignment() {
-    // Redirect to assignment creation
-    // Use the correct route based on user role
+    // Redirect to assignment creation; pass class_id when viewing a specific class
     {% if current_user.role in ['Director', 'School Administrator'] %}
-    window.location.href = "{{ url_for('management.assignment_type_selector') }}";
+    window.location.href = "{{ url_for('management.assignment_type_selector') }}{% if selected_class %}?class_id={{ selected_class.id }}{% endif %}";
     {% else %}
-    window.location.href = "{{ url_for('teacher.assignments.assignment_type_selector') }}";
+    window.location.href = "{{ url_for('teacher.assignments.assignment_type_selector') }}{% if selected_class %}?class_id={{ selected_class.id }}{% endif %}";
     {% endif %}
 }
 

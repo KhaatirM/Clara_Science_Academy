@@ -289,10 +289,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     showAssignmentContextModal();
                 } else if (target === 'group') {
                     {% if current_user.role in ['Director', 'School Administrator'] %}
-                        window.location.href = `{{ url_for('management.group_assignment_type_selector') }}`;
+                        {% if preselected_class_id %}
+                        window.location.href = "{{ url_for('management.admin_group_assignment_type_selector', class_id=preselected_class_id) }}";
+                        {% else %}
+                        window.location.href = "{{ url_for('management.group_assignment_type_selector') }}";
+                        {% endif %}
                     {% else %}
-                        // For teachers, redirect to class selection for group assignments
-                        window.location.href = `{{ url_for('teacher.groups.group_assignment_select_class') }}`;
+                        {% if preselected_class_id %}
+                        window.location.href = "{{ url_for('teacher.group_assignment_type_selector', class_id=preselected_class_id) }}";
+                        {% else %}
+                        window.location.href = "{{ url_for('teacher.groups.group_assignment_select_class') }}";
+                        {% endif %}
                     {% endif %}
                 }
             });

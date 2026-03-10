@@ -36,7 +36,7 @@
       {% endif %}
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <a href="{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('management.assignments_and_grades', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back
       </a>
       <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">

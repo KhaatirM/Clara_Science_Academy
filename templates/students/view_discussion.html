@@ -280,7 +280,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="createThreadForm" method="POST" action="{{ url_for('student.create_discussion_thread', assignment_id=assignment.id) }}">
+            <form id="createThreadForm" method="POST" action="{{ url_for('student.create_discussion_thread', assignment_id=assignment.id) }}" enctype="multipart/form-data">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
@@ -324,6 +324,14 @@
                             </div>
                         </div>
                         <div class="form-text">Be thoughtful and respectful. Use <strong>Code</strong> mode for sharing code snippets with line numbers.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="thread_attachments" class="form-label fw-semibold">
+                            <i class="bi bi-paperclip me-1"></i>Attachments
+                        </label>
+                        <input type="file" class="form-control" id="thread_attachments" name="attachments" 
+                               multiple accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.md">
+                        <div class="form-text">Upload images or documents (PDF, Word, Excel, PowerPoint, text, images). Multiple files allowed.</div>
                     </div>
                 </div>
                 <div class="modal-footer">

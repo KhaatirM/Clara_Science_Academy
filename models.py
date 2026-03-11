@@ -870,12 +870,34 @@ class DiscussionPost(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_teacher_post = db.Column(db.Boolean, default=False, nullable=False)
-    
+
     thread = db.relationship('DiscussionThread', backref='posts', lazy=True)
     student = db.relationship('Student', backref='discussion_posts', lazy=True)
-    
+
     def __repr__(self):
         return f"DiscussionPost(Thread: {self.thread_id}, Student: {self.student_id})"
+
+
+class DiscussionAttachment(db.Model):
+    """
+    Model for file attachments on discussion threads and posts.
+    An attachment belongs to either a thread (initial post) or a reply (post).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(db.Integer, db.ForeignKey('discussion_thread.id'), nullable=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('discussion_post.id'), nullable=True)
+    attachment_filename = db.Column(db.String(255), nullable=False)
+    attachment_original_filename = db.Column(db.String(255), nullable=True)
+    attachment_file_path = db.Column(db.String(500), nullable=True)
+    attachment_file_size = db.Column(db.Integer, nullable=True)
+    attachment_mime_type = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    thread = db.relationship('DiscussionThread', backref='attachments', lazy=True)
+    post = db.relationship('DiscussionPost', backref='attachments', lazy=True)
+
+    def __repr__(self):
+        return f"DiscussionAttachment(Thread: {self.thread_id}, Post: {self.post_id}, File: {self.attachment_original_filename})"
 
 
 class Grade(db.Model):

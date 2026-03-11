@@ -25,7 +25,10 @@ class Config:
         'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'app.db')
         
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
+    # Use UPLOAD_FOLDER from env for persistent storage (e.g. Render disk at /data/uploads).
+    # Without this, uploads go to project/static/uploads, which is EPHEMERAL on PaaS (Render, Heroku).
+    # Files work right after upload but disappear after restart/redeploy. Set to a persistent path to fix.
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
     
     # Debug mode - only enable in development environment
     # NEVER set DEBUG=True in production for security reasons
@@ -70,9 +73,13 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = ('Clara Science Academy', os.environ.get('MAIL_USERNAME') or 'donotrespond@clarascienceacademy.org')
 
-    # Ensure the upload folder exists
+    # Ensure the upload folder and subdirs exist
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
+    for subdir in ('assignments', 'group_assignments', 'discussion_attachments'):
+        d = os.path.join(UPLOAD_FOLDER, subdir)
+        if not os.path.exists(d):
+            os.makedirs(d)
 
 
 class ProductionConfig(Config):

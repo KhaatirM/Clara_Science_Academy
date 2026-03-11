@@ -391,26 +391,27 @@ def create_app(config_class=None):
         return render_template('shared/home.html')
 
     def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
-        """Resolve actual file path: try stored path, then assignments subfolder, then root.
-        Uses absolute paths for portability when app is deployed to different locations."""
+        """Resolve actual file path: try stored path (if on same host), then assignments subfolder, then root.
+        Stored paths from a different environment (e.g. Windows dev path on Linux prod) are ignored."""
         import os
-        if file_path_stored and os.path.exists(file_path_stored):
+        if file_path_stored and os.path.isabs(file_path_stored) and os.path.exists(file_path_stored):
             return file_path_stored
         if not filename:
             return None
-        # Ensure upload_folder is absolute for consistent resolution across deployments
         upload_abs = os.path.abspath(upload_folder) if upload_folder else None
         if not upload_abs:
             return None
+        # Prefer UPLOAD_FOLDER-based paths (portable across deploys); ignore stored abs path from other hosts
         candidates = [
             os.path.join(upload_abs, 'assignments', filename),
+            os.path.join(upload_abs, 'group_assignments', filename),
             os.path.join(upload_abs, filename),
         ]
-        # If stored path exists but points elsewhere, also try extracting basename (for migration scenarios)
         if file_path_stored:
             base = os.path.basename(file_path_stored)
             if base and base != filename:
                 candidates.insert(1, os.path.join(upload_abs, 'assignments', base))
+                candidates.insert(2, os.path.join(upload_abs, 'group_assignments', base))
         for candidate in candidates:
             if os.path.exists(candidate):
                 return candidate
@@ -509,6 +510,7 @@ def create_app(config_class=None):
                 })
 
         if not docs:
+            current_app.logger.warning(f"Assignment {assignment_id}: No attachment found (attachment_list={bool(attachment_list)}, legacy filename={assignment.attachment_filename})")
             abort(404, description="No attachment found for this assignment")
 
         index = request.args.get('index', type=int, default=0)
@@ -518,6 +520,10 @@ def create_app(config_class=None):
 
         file_path = doc['path']
         if not os.path.exists(file_path):
+            current_app.logger.warning(
+                f"Assignment {assignment_id} file missing: path={file_path}, UPLOAD_FOLDER={upload_folder}. "
+                "Uploads may be ephemeral (PaaS). Set UPLOAD_FOLDER to a persistent disk path."
+            )
             abort(404, description="File not found")
 
         view_mode = request.args.get('view', 'false').lower() == 'true'

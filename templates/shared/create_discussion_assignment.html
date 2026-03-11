@@ -35,7 +35,7 @@
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
                     <div>
                         <h2 class="mb-2 mb-md-0">
-                            <i class="bi bi-chat-dots me-3 text-info"></i>Create Discussion Assignment
+                            <i class="bi bi-chat-dots me-3 text-info"></i>{% if assignment %}Edit{% else %}Create{% endif %} Discussion Assignment
                         </h2>
                         <p class="mb-0">Foster critical thinking and peer engagement through structured academic discussions</p>
                     </div>
@@ -72,6 +72,7 @@
             <form method="POST" id="discussionAssignmentForm">
                 <div class="assignment-form-wrapper">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    {% if assignment %}<input type="hidden" name="edit_id" value="{{ assignment.id }}"/>{% endif %}
                     
                     <!-- Discussion Topic & Instructions -->
                     <div class="card assignment-section-card discussion-settings-card">
@@ -85,7 +86,7 @@
                                         <i class="bi bi-pencil me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control form-control-lg" id="title" name="title" 
-                                           placeholder="e.g., Climate Change: Causes and Solutions" required>
+                                           value="{{ assignment.title if assignment else '' }}" placeholder="e.g., Climate Change: Causes and Solutions" required>
                                 </div>
                                 
                                 <div class="col-12 col-md-6">
@@ -94,13 +95,9 @@
                                     </label>
                                     <select class="form-select form-select-lg" id="class_id" name="class_id" required>
                                         <option value="">Choose a class...</option>
-                                        {% if class_obj %}
-                                            <option value="{{ class_obj.id }}" selected>{{ class_obj.name }} - {{ class_obj.subject }}</option>
-                                        {% elif classes %}
-                                            {% for class in classes %}
-                                            <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
-                                            {% endfor %}
-                                        {% endif %}
+                                        {% for c in classes %}
+                                        <option value="{{ c.id }}" {% if (class_obj and c.id == class_obj.id) or (assignment and c.id == assignment.class_id) %}selected{% endif %}>{{ c.name }} - {{ c.subject }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                                 
@@ -109,7 +106,7 @@
                                         <i class="bi bi-question-circle me-1 text-info"></i>Discussion Prompt/Topic <span class="text-danger">*</span>
                                     </label>
                                     <textarea class="form-control" id="discussion_prompt" name="discussion_prompt" 
-                                              rows="4" placeholder="Enter the main question or topic for discussion..." required></textarea>
+                                              rows="4" placeholder="Enter the main question or topic for discussion..." required>{{ discussion_prompt|default('') }}</textarea>
                                     <div class="form-text">This is the central question or topic that students will discuss.</div>
                                 </div>
                                 
@@ -118,7 +115,7 @@
                                         <i class="bi bi-card-text me-1 text-primary"></i>Instructions & Guidelines
                                     </label>
                                     <textarea class="form-control" id="description" name="description" rows="5"
-                                              placeholder="Provide detailed instructions, guidelines, and expectations for the discussion..."></textarea>
+                                              placeholder="Provide detailed instructions, guidelines, and expectations for the discussion...">{{ instructions|default('') }}</textarea>
                                     <div class="form-text">Include expectations for quality, length, citation requirements, etc.</div>
                                 </div>
                             </div>
@@ -138,7 +135,7 @@
                                             <i class="bi bi-chat-left-text me-1"></i>Minimum Initial Posts <span class="text-danger">*</span>
                                         </label>
                                         <input type="number" class="form-control" id="min_initial_posts" name="min_initial_posts" 
-                                               value="1" min="1" max="10" required>
+                                               value="{{ min_initial_posts|default(1) }}" min="1" max="10" required>
                                         <div class="form-text">Number of initial discussion threads each student must create</div>
                                     </div>
                                     
@@ -147,7 +144,7 @@
                                             <i class="bi bi-reply me-1"></i>Minimum Replies <span class="text-danger">*</span>
                                         </label>
                                         <input type="number" class="form-control" id="min_replies" name="min_replies" 
-                                               value="2" min="0" max="20" required>
+                                               value="{{ min_replies|default(2) }}" min="0" max="20" required>
                                         <div class="form-text">Number of replies each student must make to classmates' posts</div>
                                     </div>
                                     
@@ -172,7 +169,7 @@
                                     </div>
                                     <div class="col-12">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="allow_student_edit_posts" name="allow_student_edit_posts">
+                                            <input class="form-check-input" type="checkbox" id="allow_student_edit_posts" name="allow_student_edit_posts" {% if assignment and assignment.allow_student_edit_posts %}checked{% endif %}>
                                             <label class="form-check-label" for="allow_student_edit_posts">
                                                 <strong>Allow students to edit their posts</strong>
                                                 <div class="form-text">If checked, students can go back and edit their thread posts and replies</div>
@@ -196,7 +193,7 @@
                                         <i class="bi bi-star me-1 text-warning"></i>Total Points <span class="text-danger">*</span>
                                     </label>
                                     <input type="number" class="form-control form-control-lg" id="total_points" name="total_points" 
-                                           value="100" min="1" step="0.1" required>
+                                           value="{{ (assignment.total_points if assignment else 100)|int }}" min="1" step="0.1" required>
                                 </div>
                                 
                                 <div class="col-12 col-md-6">
@@ -204,10 +201,11 @@
                                         <i class="bi bi-calendar-range me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select form-select-lg" id="quarter" name="quarter" required>
-                                        <option value="Q1">Q1</option>
-                                        <option value="Q2">Q2</option>
-                                        <option value="Q3">Q3</option>
-                                        <option value="Q4">Q4</option>
+                                        {% set q = (assignment.quarter if assignment else current_quarter)|string %}
+                                        <option value="Q1" {% if q in ['Q1','1'] %}selected{% endif %}>Q1</option>
+                                        <option value="Q2" {% if q in ['Q2','2'] %}selected{% endif %}>Q2</option>
+                                        <option value="Q3" {% if q in ['Q3','3'] %}selected{% endif %}>Q3</option>
+                                        <option value="Q4" {% if q in ['Q4','4'] %}selected{% endif %}>Q4</option>
                                     </select>
                                 </div>
                                 
@@ -216,8 +214,8 @@
                                         <i class="bi bi-building me-1 text-primary"></i>Assignment Context
                                     </label>
                                     <select class="form-select form-select-lg" id="assignment_context" name="assignment_context">
-                                        <option value="homework">Homework</option>
-                                        <option value="in-class">In-Class</option>
+                                        <option value="homework" {% if not assignment or (assignment.assignment_context or 'homework') != 'in-class' %}selected{% endif %}>Homework</option>
+                                        <option value="in-class" {% if assignment and assignment.assignment_context == 'in-class' %}selected{% endif %}>In-Class</option>
                                     </select>
                                 </div>
                                 
@@ -225,14 +223,14 @@
                                     <label for="due_date" class="form-label fw-semibold">
                                         <i class="bi bi-calendar-check me-1 text-danger"></i>Due Date & Time <span class="text-danger">*</span>
                                     </label>
-                                    <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" value="{% if assignment %}{{ assignment.due_date.strftime('%Y-%m-%dT%H:%M') if assignment.due_date else '' }}{% endif %}" required>
                                 </div>
                                 
                                 <div class="col-12 col-md-6">
                                     <label for="open_date" class="form-label fw-semibold">
                                         <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time <span class="text-danger">*</span>
                                     </label>
-                                    <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00" required>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00" value="{% if assignment and assignment.open_date %}{{ assignment.open_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" required>
                                     <div class="form-text">When students can start participating in the discussion</div>
                                 </div>
                                 
@@ -240,7 +238,7 @@
                                     <label for="close_date" class="form-label fw-semibold">
                                         <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time <span class="text-danger">*</span>
                                     </label>
-                                    <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00" required>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00" value="{% if assignment and assignment.close_date %}{{ assignment.close_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" required>
                                     <div class="form-text">When the discussion closes (defaults to due date if not set)</div>
                                 </div>
                             </div>
@@ -255,18 +253,18 @@
                         <div class="card-body">
                             <div class="rubric-section">
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="use_rubric" name="use_rubric">
+                                    <input class="form-check-input" type="checkbox" id="use_rubric" name="use_rubric" {% if rubric_criteria %}checked{% endif %}>
                                     <label class="form-check-label" for="use_rubric">
                                         <strong>Use rubric-based grading</strong>
                                         <div class="form-text">Enable rubric criteria for more structured assessment</div>
                                     </label>
                                 </div>
                                 
-                                <div id="rubricFields" style="display: none;">
+                                <div id="rubricFields" style="display: {{ 'block' if rubric_criteria else 'none' }};">
                                     <div class="mb-3">
                                         <label for="rubric_criteria" class="form-label fw-semibold">Rubric Criteria</label>
                                         <textarea class="form-control" id="rubric_criteria" name="rubric_criteria" rows="6"
-                                                  placeholder="Enter rubric criteria, one per line. Example:&#10;Quality of Analysis (30 points): Demonstrates deep understanding...&#10;Use of Evidence (25 points): Supports arguments with credible sources...&#10;Engagement with Peers (20 points): Meaningful responses to classmates...&#10;Writing Quality (25 points): Clear, well-organized, error-free..."></textarea>
+                                                  placeholder="Enter rubric criteria, one per line. Example:&#10;Quality of Analysis (30 points): Demonstrates deep understanding...&#10;Use of Evidence (25 points): Supports arguments with credible sources...&#10;Engagement with Peers (20 points): Meaningful responses to classmates...&#10;Writing Quality (25 points): Clear, well-organized, error-free...">{{ rubric_criteria|default('') }}</textarea>
                                         <div class="form-text">List each criterion on a new line with point values in parentheses</div>
                                     </div>
                                 </div>
@@ -277,15 +275,16 @@
                     <!-- Submit Button -->
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-check-circle me-2"></i>Create Discussion Assignment
+                            <i class="bi bi-check-circle me-2"></i>{% if assignment %}Update{% else %}Create{% endif %} Discussion Assignment
                         </button>
-                        {% if class_obj %}
+                        {% if class_obj or (assignment and assignment.class_info) %}
+                            {% set cancel_class = class_obj or (assignment.class_info if assignment else none) %}
                             {% if current_user.role in ['Director', 'School Administrator'] %}
-                                <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-secondary btn-lg">
+                                <a href="{{ url_for('management.view_class', class_id=cancel_class.id) }}" class="btn btn-secondary btn-lg">
                                     <i class="bi bi-x-circle me-2"></i>Cancel
                                 </a>
                             {% else %}
-                                <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-secondary btn-lg">
+                                <a href="{{ url_for('teacher.dashboard.view_class', class_id=cancel_class.id) }}" class="btn btn-secondary btn-lg">
                                     <i class="bi bi-x-circle me-2"></i>Cancel
                                 </a>
                             {% endif %}

@@ -548,19 +548,7 @@ function updateAverage() {
 
 // Handle form submission with AJAX
 document.addEventListener('DOMContentLoaded', function() {
-    // Show grading help modal on first visit
-    const helpKey = 'gradingHelpSeen_admin_group';
-    if (!sessionStorage.getItem(helpKey)) {
-        const modalEl = document.getElementById('gradingHelpModal');
-        if (modalEl) {
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
-            modalEl.addEventListener('hidden.bs.modal', function() {
-                sessionStorage.setItem(helpKey, '1');
-            }, { once: true });
-        }
-    }
-    
+    // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
     // Update all score visuals
     document.querySelectorAll('.score-input').forEach(input => {
         updateScoreVisual(input);

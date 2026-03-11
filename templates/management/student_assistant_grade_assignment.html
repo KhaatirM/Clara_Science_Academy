@@ -120,14 +120,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Show grading help modal on first visit (session storage)
-    if (!sessionStorage.getItem('gradingHelpSeen_student_assistant')) {
-        const modal = new bootstrap.Modal(document.getElementById('gradingHelpModal'));
-        modal.show();
-        document.getElementById('gradingHelpModal').addEventListener('hidden.bs.modal', function() {
-            sessionStorage.setItem('gradingHelpSeen_student_assistant', '1');
-        }, { once: true });
-    }
+    // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
 });
 </script>
 {% endblock %}

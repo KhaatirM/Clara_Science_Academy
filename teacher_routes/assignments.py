@@ -218,16 +218,32 @@ def add_assignment_for_class(class_id):
     context = request.args.get('context', 'homework')
     # For in-class: default due date = today at 4:00 PM EST
     default_due_date = None
+    in_class_due_date_str = None  # Always compute for JS (when user switches context)
     if context == 'in-class' and ZoneInfo:
         try:
             est = ZoneInfo('America/New_York')
             now_est = datetime.now(est)
             today_est = now_est.date()
-            default_due_date = datetime.combine(today_est, time(16, 0))
+            in_class_dt = datetime.combine(today_est, time(16, 0))
+            in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+            default_due_date = in_class_dt
         except Exception:
-            default_due_date = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+            in_class_dt = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+            in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+            default_due_date = in_class_dt
     elif context == 'in-class':
-        default_due_date = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+        in_class_dt = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+        in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+        default_due_date = in_class_dt
+    else:
+        try:
+            est = ZoneInfo('America/New_York')
+            now_est = datetime.now(est)
+            today_est = now_est.date()
+            in_class_dt = datetime.combine(today_est, time(16, 0))
+            in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+        except Exception:
+            in_class_due_date_str = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%dT%H:%M')
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     teacher = get_teacher_or_admin()
     
@@ -238,6 +254,7 @@ def add_assignment_for_class(class_id):
                          current_quarter=current_quarter,
                          context=context,
                          default_due_date=default_due_date,
+                         in_class_due_date_str=in_class_due_date_str,
                          teacher=teacher)
 
 @bp.route('/assignment/edit/<int:assignment_id>', methods=['GET', 'POST'])
@@ -253,8 +270,7 @@ def edit_assignment(assignment_id):
         flash("Use the quiz editor to edit this assignment.", "info")
         return redirect(url_for('teacher.create_quiz_assignment') + f'?edit={assignment_id}')
     if assignment.assignment_type == 'discussion':
-        flash("Discussion assignments are edited through the discussion interface.", "info")
-        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        return redirect(url_for('teacher.create_discussion_assignment') + f'?edit={assignment_id}')
     
     if not class_obj:
         flash("Assignment class information not found.", "danger")

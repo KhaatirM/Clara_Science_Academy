@@ -701,19 +701,7 @@ function updateGradedCount() {
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('gradingForm');
     
-    // Show grading help modal on first visit
-    const helpKey = 'gradingHelpSeen_teacher';
-    if (!sessionStorage.getItem(helpKey)) {
-        const modalEl = document.getElementById('gradingHelpModal');
-        if (modalEl) {
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
-            modalEl.addEventListener('hidden.bs.modal', function() {
-                sessionStorage.setItem(helpKey, '1');
-            }, { once: true });
-        }
-    }
-    
+    // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
     // Initialize character counters
     document.querySelectorAll('.comment-input').forEach(textarea => {
         updateCharCount(textarea);

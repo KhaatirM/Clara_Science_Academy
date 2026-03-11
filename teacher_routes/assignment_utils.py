@@ -1,7 +1,32 @@
 """
 Utility functions for assignment status and date calculations.
 """
+import re
 from datetime import datetime, timezone
+
+
+def parse_discussion_description(desc):
+    """Parse discussion prompt, instructions, rubric from stored description."""
+    prompt, instructions, rubric = '', '', ''
+    min_initial_posts, min_replies = 1, 2
+    if not desc:
+        return prompt, instructions, rubric, min_initial_posts, min_replies
+    m = re.search(r'\*\*Discussion Prompt:\*\*\s*\n(.*?)(?=\n\n\*\*|\Z)', desc, re.DOTALL)
+    if m:
+        prompt = m.group(1).strip()
+    m = re.search(r'\*\*Instructions:\*\*\s*\n(.*?)(?=\n\n\*\*|\Z)', desc, re.DOTALL)
+    if m:
+        instructions = m.group(1).strip()
+    m = re.search(r'\*\*Rubric:\*\*\s*\n(.*?)(?=\n\n\*\*|\Z)', desc, re.DOTALL)
+    if m:
+        rubric = m.group(1).strip()
+    m = re.search(r'Minimum (\d+) initial post', desc)
+    if m:
+        min_initial_posts = int(m.group(1))
+    m = re.search(r'Minimum (\d+) reply', desc)
+    if m:
+        min_replies = int(m.group(1))
+    return prompt, instructions, rubric, min_initial_posts, min_replies
 from models import AssignmentExtension
 
 

@@ -261,7 +261,9 @@ def system():
 
 THEME_CHOICES = [
     'default', 'light', 'dark', 'snowy', 'autumn', 'spring', 'summer',
-    'ocean', 'forest', 'holiday'
+    'ocean', 'forest', 'holiday',
+    'sunset', 'midnight', 'desert', 'lavender', 'rose', 'cherry',
+    'aurora', 'storm', 'wine', 'mint'
 ]
 
 

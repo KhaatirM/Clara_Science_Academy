@@ -612,26 +612,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Set default due date based on assignment context
-    {% if context == 'in-class' and default_due_date %}
-        // For in-class assignments, set to 4:00 PM EST today (use server value directly to avoid timezone shift)
-        document.getElementById('due_date').value = '{{ default_due_date.strftime("%Y-%m-%dT%H:%M") }}';
-        document.getElementById('due_date').readOnly = true;
-        document.getElementById('due_date').style.backgroundColor = '#e9ecef';
+    // In-class due date string (for when user switches to in-class via dropdown)
+    const IN_CLASS_DUE = {{ ('"' + in_class_due_date_str + '"') if in_class_due_date_str else 'null' }};
+    
+    function applyDueDateForContext(context) {
+        const dueInput = document.getElementById('due_date');
+        const dueDateDiv = dueInput.parentElement;
+        let infoEl = document.getElementById('inClassDueDateInfo');
         
-        // Add info message about auto-set date
-        const dueDateDiv = document.getElementById('due_date').parentElement;
-        const infoMsg = document.createElement('div');
-        infoMsg.className = 'alert alert-info mt-2 mb-0';
-        infoMsg.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>In-Class Assignment:</strong> Due date automatically set to 4:00 PM EST today.';
-        dueDateDiv.appendChild(infoMsg);
-    {% else %}
-        // For homework assignments, set to tomorrow at 11:59 PM
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(23, 59, 0, 0);
-        document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
-    {% endif %}
+        if (context === 'in-class' && IN_CLASS_DUE) {
+            dueInput.value = IN_CLASS_DUE;
+            dueInput.readOnly = true;
+            dueInput.style.backgroundColor = '#e9ecef';
+            if (!infoEl) {
+                infoEl = document.createElement('div');
+                infoEl.id = 'inClassDueDateInfo';
+                infoEl.className = 'alert alert-info mt-2 mb-0';
+                infoEl.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>In-Class Assignment:</strong> Due date automatically set to 4:00 PM EST today.';
+                dueDateDiv.appendChild(infoEl);
+            }
+        } else {
+            dueInput.readOnly = false;
+            dueInput.style.backgroundColor = '';
+            if (infoEl) infoEl.remove();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(23, 59, 0, 0);
+            dueInput.value = tomorrow.toISOString().slice(0, 16);
+        }
+    }
+    
+    // Assignment context dropdown: when changed, update due date behavior
+    document.getElementById('assignment_context').addEventListener('change', function() {
+        applyDueDateForContext(this.value);
+    });
+    
+    // Set initial due date based on assignment context
+    applyDueDateForContext('{{ context }}');
     
     // Initialize preview
     updateAssignmentPreview();

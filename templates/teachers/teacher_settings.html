@@ -142,6 +142,16 @@
                             <optgroup label="Color">
                                 <option value="ocean" {% if current_user.theme_preference == 'ocean' %}selected{% endif %}>Ocean</option>
                                 <option value="forest" {% if current_user.theme_preference == 'forest' %}selected{% endif %}>Forest</option>
+                                <option value="sunset" {% if current_user.theme_preference == 'sunset' %}selected{% endif %}>Sunset</option>
+                                <option value="midnight" {% if current_user.theme_preference == 'midnight' %}selected{% endif %}>Midnight</option>
+                                <option value="desert" {% if current_user.theme_preference == 'desert' %}selected{% endif %}>Desert</option>
+                                <option value="lavender" {% if current_user.theme_preference == 'lavender' %}selected{% endif %}>Lavender</option>
+                                <option value="rose" {% if current_user.theme_preference == 'rose' %}selected{% endif %}>Rose</option>
+                                <option value="cherry" {% if current_user.theme_preference == 'cherry' %}selected{% endif %}>Cherry Blossom</option>
+                                <option value="aurora" {% if current_user.theme_preference == 'aurora' %}selected{% endif %}>Aurora</option>
+                                <option value="storm" {% if current_user.theme_preference == 'storm' %}selected{% endif %}>Storm</option>
+                                <option value="wine" {% if current_user.theme_preference == 'wine' %}selected{% endif %}>Wine</option>
+                                <option value="mint" {% if current_user.theme_preference == 'mint' %}selected{% endif %}>Mint</option>
                             </optgroup>
                         </select>
                         <small class="text-muted d-block mt-1">Applies across the site when you're logged in.</small>

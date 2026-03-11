@@ -134,6 +134,27 @@
         <div class="post-content">
             {{ thread.content | discussion_content | safe }}
         </div>
+        {% if thread.attachments %}
+        <div class="post-attachments mt-3 pt-3 border-top">
+            <small class="text-muted d-block mb-2"><i class="bi bi-paperclip me-1"></i>Attachments:</small>
+            <div class="d-flex flex-wrap gap-2">
+                {% for att in thread.attachments %}
+                <div class="attachment-item">
+                    {% if att.attachment_mime_type and att.attachment_mime_type.startswith('image/') %}
+                    <a href="{{ url_for('student.download_discussion_attachment', attachment_id=att.id) }}" target="_blank" rel="noopener" class="d-inline-block me-2">
+                        <img src="{{ url_for('student.download_discussion_attachment', attachment_id=att.id, inline=1) }}" alt="{{ att.attachment_original_filename }}" 
+                             class="rounded" style="max-height: 120px; max-width: 200px; object-fit: contain;">
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('student.download_discussion_attachment', attachment_id=att.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i>{{ att.attachment_original_filename or att.attachment_filename }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Replies Section -->
@@ -174,6 +195,27 @@
                 <div class="post-content">
                     {{ post.content | discussion_content | safe }}
                 </div>
+                {% if post.attachments %}
+                <div class="post-attachments mt-3 pt-2 border-top">
+                    <small class="text-muted d-block mb-2"><i class="bi bi-paperclip me-1"></i>Attachments:</small>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for att in post.attachments %}
+                        <div class="attachment-item">
+                            {% if att.attachment_mime_type and att.attachment_mime_type.startswith('image/') %}
+                            <a href="{{ url_for('student.download_discussion_attachment', attachment_id=att.id) }}" target="_blank" rel="noopener" class="d-inline-block me-2">
+                                <img src="{{ url_for('student.download_discussion_attachment', attachment_id=att.id, inline=1) }}" alt="{{ att.attachment_original_filename }}" 
+                                     class="rounded" style="max-height: 120px; max-width: 200px; object-fit: contain;">
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('student.download_discussion_attachment', attachment_id=att.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i>{{ att.attachment_original_filename or att.attachment_filename }}
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         {% else %}
@@ -190,7 +232,7 @@
         <h5 class="mb-3">
             <i class="bi bi-reply me-2"></i>Post a Reply
         </h5>
-        <form method="POST" action="{{ url_for('student.reply_to_discussion_thread', thread_id=thread.id) }}" id="replyForm">
+        <form method="POST" action="{{ url_for('student.reply_to_discussion_thread', thread_id=thread.id) }}" id="replyForm" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <div class="discussion-editor-mode-toggle">
@@ -227,6 +269,14 @@
                     </div>
                 </div>
                 <div class="form-text">Be respectful. Use <strong>Code</strong> mode for sharing code snippets with line numbers.</div>
+            </div>
+            <div class="mb-3">
+                <label for="reply_attachments" class="form-label fw-semibold">
+                    <i class="bi bi-paperclip me-1"></i>Attachments
+                </label>
+                <input type="file" class="form-control" id="reply_attachments" name="attachments" 
+                       multiple accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.md">
+                <div class="form-text">Upload images or documents. Multiple files allowed.</div>
             </div>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-send me-2"></i>Post Reply

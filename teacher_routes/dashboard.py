@@ -1101,6 +1101,7 @@ def assignments_and_grades():
         selected_class = None
         class_assignments = []
         group_assignments = []
+        sorted_assignments = []
         assignment_grades = {}
         
         if class_filter and isinstance(class_filter, str) and class_filter.strip():
@@ -1188,6 +1189,21 @@ def assignments_and_grades():
                         group_assignments = group_assignments_query.all()
                     except:
                         group_assignments = []
+                    
+                    # Combine individual and group assignments, sort by due_date (most recent first)
+                    def _due_ts(d):
+                        if d is None:
+                            return 0
+                        if hasattr(d, 'timestamp'):
+                            return d.timestamp() if getattr(d, 'tzinfo', None) is None else d.replace(tzinfo=None).timestamp()
+                        from datetime import datetime as dt
+                        from datetime import date as date_cls
+                        return dt.combine(d, dt.min.time()).timestamp() if isinstance(d, date_cls) else 0
+                    sorted_assignments = (
+                        [('individual', a) for a in class_assignments] +
+                        [('group', ga) for ga in group_assignments]
+                    )
+                    sorted_assignments.sort(key=lambda x: (x[1].due_date is None, -_due_ts(x[1].due_date)))
                     
                     # Get grade data for each assignment
                     for assignment in class_assignments:
@@ -1311,8 +1327,8 @@ def assignments_and_grades():
             try:
                 enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
                 enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
-                # Combine regular and group assignments
-                all_assignments_list = list(class_assignments) + list(group_assignments) if group_assignments else list(class_assignments)
+                # Combine regular and group assignments (use sorted order)
+                all_assignments_list = [item[1] for item in sorted_assignments] if sorted_assignments else list(class_assignments or []) + list(group_assignments or [])
             except Exception as e:
                 current_app.logger.error(f"Error loading enrolled students: {e}")
                 enrolled_students = []
@@ -1503,6 +1519,7 @@ def assignments_and_grades():
                              selected_class=selected_class,
                              class_assignments_data=list(class_assignments) if selected_class and class_assignments else [],
                              group_assignments=group_assignments if selected_class else [],
+                             sorted_assignments=sorted_assignments if selected_class else [],
                              assignment_grades=assignment_grades if selected_class else {},
                              sort_by=sort_by,
                              sort_order=sort_order,

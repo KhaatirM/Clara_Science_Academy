@@ -387,19 +387,30 @@ def save_to_bank():
 @login_required
 @teacher_required
 def create_discussion_assignment():
-    """Create a discussion assignment"""
-    from teacher_routes.assignment_utils import calculate_assignment_status
+    """Create or edit a discussion assignment"""
+    from teacher_routes.assignment_utils import calculate_assignment_status, parse_discussion_description
     from .utils import get_teacher_or_admin, is_authorized_for_class
     from datetime import timezone
-    
-    # Get classes for dropdown
+
+    edit_id = request.args.get('edit', type=int)
+    assignment = None
+    if edit_id:
+        assignment = Assignment.query.get(edit_id)
+        if not assignment or assignment.assignment_type != 'discussion':
+            flash("Discussion assignment not found.", "danger")
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+        if assignment.class_info and not is_authorized_for_class(assignment.class_info):
+            flash("You are not authorized to edit this assignment.", "danger")
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+
     teacher = get_teacher_or_admin()
-    if teacher:
+    if is_admin():
+        classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+    elif teacher:
         classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).order_by(Class.name).all()
     else:
         classes = []
-    
-    # Check if coming from a specific class
+
     class_id_param = request.args.get('class_id', type=int)
     class_obj = None
     if class_id_param:
@@ -407,9 +418,11 @@ def create_discussion_assignment():
         if class_obj and not is_authorized_for_class(class_obj):
             flash("You are not authorized to access this class.", "danger")
             return redirect(url_for('teacher.dashboard.assignments_and_grades'))
-    
+    elif assignment:
+        class_obj = assignment.class_info
+
     if request.method == 'POST':
-        # Handle discussion assignment creation
+        edit_id_form = request.form.get('edit_id', type=int)
         title = request.form.get('title', '').strip()
         class_id = request.form.get('class_id', type=int)
         discussion_prompt = request.form.get('discussion_prompt', '').strip()
@@ -418,32 +431,25 @@ def create_discussion_assignment():
         quarter = request.form.get('quarter', '').strip()
         total_points = request.form.get('total_points', type=float) or 100.0
         assignment_context = request.form.get('assignment_context', 'homework')
-        
-        # Participation requirements
         min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
         min_replies = request.form.get('min_replies', type=int) or 2
-        require_peer_response = request.form.get('require_peer_response') == 'on'
-        allow_student_threads = request.form.get('allow_student_threads') == 'on'
         allow_student_edit_posts = request.form.get('allow_student_edit_posts') == 'on'
-        
-        # Rubric (optional)
         use_rubric = request.form.get('use_rubric') == 'on'
         rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
-        
-        # Open/close dates
         open_date_str = request.form.get('open_date', '').strip()
         close_date_str = request.form.get('close_date', '').strip()
-        
+
         if not all([title, class_id, discussion_prompt, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj)
-        
-        # Check authorization
+            prompt, instructions, rubric, mi, mr = parse_discussion_description(assignment.description) if assignment else ('', '', '', 1, 2)
+            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj, assignment=assignment,
+                                 discussion_prompt=prompt, instructions=instructions, rubric_criteria=rubric, min_initial_posts=mi or 1, min_replies=mr or 2, teacher=teacher)
+
         class_obj = Class.query.get(class_id)
         if not class_obj or not is_authorized_for_class(class_obj):
             flash("You are not authorized to create assignments for this class.", "danger")
-            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=None)
-        
+            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=None, assignment=assignment, teacher=teacher)
+
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
             from flask import current_app
@@ -470,8 +476,7 @@ def create_discussion_assignment():
             if rubric_criteria:
                 full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
             full_description += f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n- Minimum {min_replies} reply/replies to classmates"
-            
-            # Calculate status based on dates
+
             temp_assignment = type('obj', (object,), {
                 'status': 'Active',
                 'open_date': open_date,
@@ -479,7 +484,28 @@ def create_discussion_assignment():
                 'due_date': due_date
             })
             calculated_status = calculate_assignment_status(temp_assignment)
-            
+
+            if edit_id_form:
+                existing = Assignment.query.get(edit_id_form)
+                if existing and existing.assignment_type == 'discussion' and is_authorized_for_class(existing.class_info):
+                    existing.title = title
+                    existing.description = full_description
+                    existing.due_date = due_date
+                    existing.open_date = open_date
+                    existing.close_date = close_date
+                    existing.quarter = str(quarter)
+                    existing.class_id = class_id
+                    existing.status = calculated_status
+                    existing.assignment_context = assignment_context
+                    existing.total_points = total_points
+                    existing.allow_student_edit_posts = allow_student_edit_posts
+                    db.session.commit()
+                    flash('Discussion assignment updated successfully!', 'success')
+                    return redirect(url_for('teacher.assignments.view_assignment', assignment_id=existing.id))
+                else:
+                    flash("Discussion assignment not found or you are not authorized to edit it.", "danger")
+                    return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+
             # Create the discussion assignment
             new_assignment = Assignment(
                 title=title,
@@ -510,17 +536,22 @@ def create_discussion_assignment():
             flash(f'Error creating discussion assignment: {str(e)}', 'danger')
     
     # GET request - show the form
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get classes for the current teacher/admin
-    if is_admin():
-        classes = Class.query.all()
+    from .utils import get_current_quarter
+    current_quarter = get_current_quarter()
+    if assignment:
+        prompt, instructions, rubric, min_initial_posts, min_replies = parse_discussion_description(assignment.description)
+        class_obj = assignment.class_info
     else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    return render_template('shared/create_discussion_assignment.html', classes=classes, teacher=teacher)
+        prompt, instructions, rubric, min_initial_posts, min_replies = '', '', '', 1, 2
+    return render_template('shared/create_discussion_assignment.html',
+                         classes=classes,
+                         teacher=teacher,
+                         assignment=assignment,
+                         class_obj=class_obj,
+                         current_quarter=current_quarter,
+                         discussion_prompt=prompt,
+                         instructions=instructions,
+                         rubric_criteria=rubric,
+                         min_initial_posts=min_initial_posts,
+                         min_replies=min_replies)
 

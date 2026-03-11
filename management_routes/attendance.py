@@ -110,6 +110,67 @@ def attendance_analytics():
 
 
 # ============================================================
+# Route: /mark-all-present/<int:class_id>, methods=['POST']
+# Function: mark_all_present
+# ============================================================
+
+@bp.route('/mark-all-present/<int:class_id>', methods=['POST'])
+@login_required
+@management_required
+def mark_all_present(class_id):
+    """Mark all enrolled students as present for a class (admin override)."""
+    from datetime import datetime
+
+    class_obj = Class.query.get_or_404(class_id)
+
+    date_str = request.form.get('date')
+    if not date_str:
+        flash("Please select a date.", "danger")
+        return redirect(url_for('management.unified_attendance'))
+
+    try:
+        attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+
+        teacher_id = getattr(current_user, 'teacher_staff_id', None)
+
+        for student in students:
+            existing_attendance = Attendance.query.filter_by(
+                class_id=class_id,
+                student_id=student.id,
+                date=attendance_date
+            ).first()
+
+            if existing_attendance:
+                existing_attendance.status = 'Present'
+                existing_attendance.teacher_id = teacher_id
+            else:
+                new_attendance = Attendance(
+                    class_id=class_id,
+                    student_id=student.id,
+                    date=attendance_date,
+                    status='Present',
+                    teacher_id=teacher_id
+                )
+                db.session.add(new_attendance)
+
+        db.session.commit()
+        flash('All students marked as present!', 'success')
+        return redirect(url_for('management.unified_attendance', date=date_str))
+
+    except ValueError:
+        flash("Invalid date format.", "danger")
+        return redirect(url_for('management.unified_attendance'))
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error marking all present: {e}")
+        flash(f'Error marking all present: {str(e)}', 'danger')
+        return redirect(url_for('management.unified_attendance'))
+
+
+# ============================================================
 # Route: /unified-attendance', methods=['GET', 'POST']
 # Function: unified_attendance
 # ============================================================

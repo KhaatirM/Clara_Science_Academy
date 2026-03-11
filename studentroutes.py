@@ -26,7 +26,7 @@ from models import (
     # Attendance system
     Attendance,
     # Discussion system
-    DiscussionThread, DiscussionPost
+    DiscussionThread, DiscussionPost, DiscussionAttachment
 )
 
 # Authentication and decorators
@@ -37,7 +37,7 @@ from werkzeug.utils import secure_filename
 
 student_blueprint = Blueprint('student', __name__)
 
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'pptx', 'md'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'md'}
 
 
 def _get_points_earned(grade_data):
@@ -919,7 +919,8 @@ def student_assignments():
         )
         if student_status == 'Voided':
             continue
-        assignment_data = (group_assignment, group_submission, student_status, None, True)
+        # Include student_group so template can show group name and leader
+        assignment_data = (group_assignment, group_submission, student_status, None, True, student_group)
         is_upcoming = False
         if hasattr(group_assignment, 'open_date') and group_assignment.open_date:
             raw_open = group_assignment.open_date
@@ -937,6 +938,17 @@ def student_assignments():
             inactive_assignments.append(assignment_data)
         elif group_assignment.status == 'Active':
             active_assignments.append(assignment_data)
+    
+    # Sort each category by due_date (most recent first)
+    def _due_sort_key(item):
+        a = item[0]
+        d = getattr(a, 'due_date', None)
+        if d is None:
+            return (1, 0)
+        ts = d.timestamp() if hasattr(d, 'timestamp') else datetime.combine(d, datetime.min.time()).timestamp() if hasattr(d, 'year') else 0
+        return (0, -ts)
+    for lst in (inactive_assignments, active_assignments, upcoming_assignments):
+        lst.sort(key=_due_sort_key)
     
     low_grade_data = _get_low_grade_data(student)
     return render_template('students/role_student_dashboard.html', 
@@ -2837,6 +2849,29 @@ def create_discussion_thread(assignment_id):
         )
         
         db.session.add(new_thread)
+        db.session.flush()
+        
+        # Handle file attachments
+        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'discussion_attachments')
+        os.makedirs(upload_dir, exist_ok=True)
+        files = request.files.getlist('attachments')
+        for file in files:
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                unique_filename = f"disc_{new_thread.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                file.save(filepath)
+                att = DiscussionAttachment(
+                    thread_id=new_thread.id,
+                    post_id=None,
+                    attachment_filename=unique_filename,
+                    attachment_original_filename=filename,
+                    attachment_file_path=os.path.join('discussion_attachments', unique_filename),
+                    attachment_file_size=os.path.getsize(filepath),
+                    attachment_mime_type=file.content_type
+                )
+                db.session.add(att)
+        
         db.session.commit()
         
         flash('Discussion thread created successfully!', 'success')
@@ -2931,6 +2966,29 @@ def reply_to_thread(thread_id):
         )
         
         db.session.add(new_post)
+        db.session.flush()
+        
+        # Handle file attachments
+        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'discussion_attachments')
+        os.makedirs(upload_dir, exist_ok=True)
+        files = request.files.getlist('attachments')
+        for file in files:
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                unique_filename = f"disc_reply_{new_post.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                file.save(filepath)
+                att = DiscussionAttachment(
+                    thread_id=None,
+                    post_id=new_post.id,
+                    attachment_filename=unique_filename,
+                    attachment_original_filename=filename,
+                    attachment_file_path=os.path.join('discussion_attachments', unique_filename),
+                    attachment_file_size=os.path.getsize(filepath),
+                    attachment_mime_type=file.content_type
+                )
+                db.session.add(att)
+        
         db.session.commit()
         
         flash('Reply posted successfully!', 'success')
@@ -3285,9 +3343,8 @@ def submit_group_assignment(assignment_id):
         return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
 
 def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
-    """Resolve actual file path: try stored path, then assignments subfolder, then root.
-    Uses absolute paths for portability when app is deployed to different locations."""
-    if file_path_stored and os.path.exists(file_path_stored):
+    """Resolve actual file path: try stored path (if exists), then assignments/group_assignments subfolders, then root."""
+    if file_path_stored and os.path.isabs(file_path_stored) and os.path.exists(file_path_stored):
         return file_path_stored
     if not filename:
         return None
@@ -3296,16 +3353,86 @@ def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None
         return None
     candidates = [
         os.path.join(upload_abs, 'assignments', filename),
+        os.path.join(upload_abs, 'group_assignments', filename),
         os.path.join(upload_abs, filename),
     ]
     if file_path_stored:
         base = os.path.basename(file_path_stored)
         if base and base != filename:
             candidates.insert(1, os.path.join(upload_abs, 'assignments', base))
+            candidates.insert(2, os.path.join(upload_abs, 'group_assignments', base))
     for candidate in candidates:
         if os.path.exists(candidate):
             return candidate
     return None
+
+
+def _resolve_discussion_attachment_path(attachment):
+    """Resolve actual file path for a discussion attachment."""
+    upload_folder = current_app.config.get('UPLOAD_FOLDER')
+    if not upload_folder or not attachment:
+        return None
+    upload_abs = os.path.abspath(upload_folder)
+    if attachment.attachment_file_path:
+        full = os.path.join(upload_abs, attachment.attachment_file_path)
+        if os.path.exists(full):
+            return full
+    if attachment.attachment_filename:
+        cand = os.path.join(upload_abs, 'discussion_attachments', attachment.attachment_filename)
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+@student_blueprint.route('/discussion/attachment/<int:attachment_id>/download')
+@login_required
+def download_discussion_attachment(attachment_id):
+    """Download or view a discussion thread or post attachment. Access: enrolled student, or teacher/admin with class access."""
+    att = DiscussionAttachment.query.get_or_404(attachment_id)
+    assignment = None
+    if att.thread_id:
+        thread = DiscussionThread.query.get(att.thread_id)
+        if thread:
+            assignment = thread.assignment
+    elif att.post_id:
+        post = DiscussionPost.query.get(att.post_id)
+        if post:
+            assignment = post.thread.assignment
+    if not assignment:
+        abort(404)
+    # Access: student enrolled, or teacher/admin with class access
+    allowed = False
+    if hasattr(current_user, 'student_id') and current_user.student_id:
+        student = Student.query.get(current_user.student_id)
+        if student:
+            enrollment = Enrollment.query.filter_by(
+                student_id=student.id,
+                class_id=assignment.class_id,
+                is_active=True
+            ).first()
+            allowed = bool(enrollment)
+    elif current_user.role in ['Director', 'School Administrator']:
+        allowed = True
+    else:
+        try:
+            from teacher_routes.utils import is_authorized_for_class
+            class_obj = assignment.class_info if hasattr(assignment, 'class_info') else None
+            allowed = bool(class_obj and is_authorized_for_class(class_obj))
+        except Exception:
+            allowed = False
+    if not allowed:
+        abort(403)
+    file_path = _resolve_discussion_attachment_path(att)
+    if not file_path:
+        current_app.logger.warning(f"Discussion attachment {attachment_id} file missing")
+        abort(404)
+    inline = request.args.get('inline') == '1'
+    as_attach = not (inline and att.attachment_mime_type and att.attachment_mime_type.startswith('image/'))
+    return send_file(
+        file_path,
+        as_attachment=as_attach,
+        download_name=att.attachment_original_filename or att.attachment_filename
+    )
 
 
 @student_blueprint.route('/download-assignment-file/<int:assignment_id>')

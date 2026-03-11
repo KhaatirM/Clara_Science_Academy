@@ -13,3 +13,9 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
     healthCheckPath: /home
+    # Persistent disk: Required for assignment PDFs to survive restarts. Free plan does not support disks;
+    # upgrade to a paid plan, then uncomment the disk block. Mount path must match where uploads are stored.
+    # disk:
+    #   name: uploads
+    #   mountPath: /opt/render/project/src/static/uploads
+    #   sizeGB: 1

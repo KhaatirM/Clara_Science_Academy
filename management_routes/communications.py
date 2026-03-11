@@ -723,9 +723,16 @@ def admin_manage_group(group_id):
 @login_required
 @management_required
 def admin_delete_group(group_id):
-    """Delete a student group (Administrator access). Preserves existing grades and submissions by nulling group_id."""
+    """Delete a student group (Administrator access). Preserves existing grades and submissions by nulling group_id.
+    Removes or nulls all related data (contracts, peer evaluations, etc.) before deleting the group."""
     try:
-        from models import GroupGrade, GroupSubmission, GroupQuizAnswer
+        from models import (
+            GroupGrade, GroupSubmission, GroupQuizAnswer,
+            PeerEvaluation, GroupContract, ReflectionJournal, GroupProgress,
+            PeerReview, DraftSubmission, DraftFeedback, GroupConflict,
+            ConflictResolution, ConflictParticipant, IndividualContribution,
+            TimeTracking, CollaborationMetrics
+        )
         group = StudentGroup.query.get_or_404(group_id)
         class_id = group.class_id
 
@@ -734,10 +741,35 @@ def admin_delete_group(group_id):
         GroupSubmission.query.filter_by(group_id=group_id).update({GroupSubmission.group_id: None})
         GroupQuizAnswer.query.filter_by(group_id=group_id).update({GroupQuizAnswer.group_id: None})
 
-        # Delete all group members first
+        # Null group_id where nullable (TimeTracking)
+        TimeTracking.query.filter_by(group_id=group_id).update({TimeTracking.group_id: None})
+
+        # Delete records that reference GroupConflict (before deleting GroupConflict)
+        conflict_ids = [c.id for c in GroupConflict.query.filter_by(group_id=group_id).all()]
+        if conflict_ids:
+            ConflictResolution.query.filter(ConflictResolution.conflict_id.in_(conflict_ids)).delete(synchronize_session=False)
+            ConflictParticipant.query.filter(ConflictParticipant.conflict_id.in_(conflict_ids)).delete(synchronize_session=False)
+        GroupConflict.query.filter_by(group_id=group_id).delete()
+
+        # Delete DraftFeedback for draft submissions in this group, then delete DraftSubmissions
+        draft_ids = [d.id for d in DraftSubmission.query.filter_by(group_id=group_id).all()]
+        if draft_ids:
+            DraftFeedback.query.filter(DraftFeedback.draft_submission_id.in_(draft_ids)).delete(synchronize_session=False)
+        DraftSubmission.query.filter_by(group_id=group_id).delete()
+
+        # Delete other related records (group_id NOT NULL, cannot preserve)
+        PeerEvaluation.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        GroupContract.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        ReflectionJournal.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        GroupProgress.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        PeerReview.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        IndividualContribution.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        CollaborationMetrics.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+
+        # Delete all group members
         StudentGroupMember.query.filter_by(group_id=group_id).delete()
 
-        # Delete the group (may still fail if other tables with non-nullable group_id have rows)
+        # Delete the group
         db.session.delete(group)
         db.session.commit()
 
@@ -746,7 +778,7 @@ def admin_delete_group(group_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception("Error deleting group")
+        current_app.logger.exception("Error deleting group: %s", str(e))
         flash('Could not delete group. It may have related data (e.g. contracts, peer evaluations). Try again or contact support.', 'error')
         return redirect(url_for('management.admin_class_groups', class_id=class_id))
 

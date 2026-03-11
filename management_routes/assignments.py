@@ -461,26 +461,21 @@ def save_to_bank():
 @login_required
 @management_required
 def create_discussion_assignment():
-    """Create a discussion assignment - management version"""
+    """Create or edit a discussion assignment - management version"""
     from teacher_routes.assignment_utils import calculate_assignment_status
-    
-    # Get classes for dropdown
-    if current_user.role in ['Director', 'School Administrator']:
-        classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
-    else:
-        # For teachers, get their classes
-        if current_user.teacher_staff_id:
-            teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
-        else:
-            from models import User
-            teacher = TeacherStaff.query.join(User).filter(User.id == current_user.id).first()
-        if teacher:
-            classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).order_by(Class.name).all()
-        else:
-            classes = []
-    
+
+    edit_id = request.args.get('edit', type=int)
+    assignment = None
+    if edit_id:
+        assignment = Assignment.query.get(edit_id)
+        if not assignment or assignment.assignment_type != 'discussion':
+            flash("Discussion assignment not found.", "danger")
+            return redirect(url_for('management.assignments_and_grades'))
+
+    classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+
     if request.method == 'POST':
-        # Handle discussion assignment creation
+        edit_id_form = request.form.get('edit_id', type=int)
         title = request.form.get('title', '').strip()
         class_id = request.form.get('class_id', type=int)
         discussion_prompt = request.form.get('discussion_prompt', '').strip()
@@ -489,26 +484,18 @@ def create_discussion_assignment():
         quarter = request.form.get('quarter', '').strip()
         total_points = request.form.get('total_points', type=float) or 100.0
         assignment_context = request.form.get('assignment_context', 'homework')
-        
-        # Participation requirements
         min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
         min_replies = request.form.get('min_replies', type=int) or 2
-        require_peer_response = request.form.get('require_peer_response') == 'on'
-        allow_student_threads = request.form.get('allow_student_threads') == 'on'
         allow_student_edit_posts = request.form.get('allow_student_edit_posts') == 'on'
-        
-        # Rubric (optional)
         use_rubric = request.form.get('use_rubric') == 'on'
         rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
-        
-        # Open/close dates
         open_date_str = request.form.get('open_date', '').strip()
         close_date_str = request.form.get('close_date', '').strip()
-        
+
         if not all([title, class_id, discussion_prompt, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return render_template('shared/create_discussion_assignment.html', classes=classes)
-        
+            return render_template('shared/create_discussion_assignment.html', classes=classes, assignment=assignment, current_quarter=get_current_quarter())
+
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
             tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
@@ -519,22 +506,14 @@ def create_discussion_assignment():
             close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             if not close_date:
                 close_date = due_date
-            
-            # Get the active school year
-            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
-            if not current_school_year:
-                flash("Cannot create assignment: No active school year.", "danger")
-                return render_template('shared/create_discussion_assignment.html', classes=classes)
-            
-            # Build description with prompt and instructions
+
             full_description = f"**Discussion Prompt:**\n{discussion_prompt}\n\n"
             if description:
                 full_description += f"**Instructions:**\n{description}\n\n"
             if rubric_criteria:
                 full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
             full_description += f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n- Minimum {min_replies} reply/replies to classmates"
-            
-            # Calculate status based on dates
+
             temp_assignment = type('obj', (object,), {
                 'status': 'Active',
                 'open_date': open_date,
@@ -542,8 +521,33 @@ def create_discussion_assignment():
                 'due_date': due_date
             })
             calculated_status = calculate_assignment_status(temp_assignment)
-            
-            # Create the assignment
+
+            if edit_id_form:
+                existing = Assignment.query.get(edit_id_form)
+                if existing and existing.assignment_type == 'discussion':
+                    existing.title = title
+                    existing.description = full_description
+                    existing.due_date = due_date
+                    existing.open_date = open_date
+                    existing.close_date = close_date
+                    existing.quarter = str(quarter)
+                    existing.class_id = class_id
+                    existing.status = calculated_status
+                    existing.assignment_context = assignment_context
+                    existing.total_points = total_points
+                    existing.allow_student_edit_posts = allow_student_edit_posts
+                    db.session.commit()
+                    flash('Discussion assignment updated successfully!', 'success')
+                    return redirect(url_for('management.view_assignment', assignment_id=existing.id))
+                else:
+                    flash("Discussion assignment not found.", "danger")
+                    return redirect(url_for('management.assignments_and_grades'))
+
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash("Cannot create assignment: No active school year.", "danger")
+                return render_template('shared/create_discussion_assignment.html', classes=classes, assignment=assignment, current_quarter=get_current_quarter())
+
             new_assignment = Assignment(
                 title=title,
                 description=full_description,
@@ -560,29 +564,33 @@ def create_discussion_assignment():
                 created_by=current_user.id,
                 allow_student_edit_posts=allow_student_edit_posts
             )
-            
             db.session.add(new_assignment)
-            db.session.flush()
-            
-            # Store discussion-specific settings in a JSON field (we'll add this to Assignment model if needed)
-            # For now, we'll store it in description or create a separate table later
-            
             db.session.commit()
-            
-            # TODO: Save discussion settings, rubric, and prompts
-            # This would require additional models for discussion settings, rubric criteria, etc.
-            
             flash('Discussion assignment created successfully!', 'success')
             return redirect(url_for('management.assignments_and_grades'))
-            
+
         except Exception as e:
             db.session.rollback()
-            flash(f'Error creating discussion assignment: {str(e)}', 'danger')
-    
-    # GET request - show form
-    classes = Class.query.all()
+            flash(f'Error saving discussion assignment: {str(e)}', 'danger')
+
     current_quarter = get_current_quarter()
-    return render_template('shared/create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
+    if assignment:
+        from teacher_routes.assignment_utils import parse_discussion_description
+        prompt, instructions, rubric, min_initial_posts, min_replies = parse_discussion_description(assignment.description)
+        class_obj = assignment.class_info
+    else:
+        prompt, instructions, rubric, min_initial_posts, min_replies = '', '', '', 1, 2
+        class_obj = None
+    return render_template('shared/create_discussion_assignment.html',
+                         classes=classes,
+                         current_quarter=current_quarter,
+                         assignment=assignment,
+                         class_obj=class_obj,
+                         discussion_prompt=prompt if assignment else '',
+                         instructions=instructions if assignment else '',
+                         rubric_criteria=rubric if assignment else '',
+                         min_initial_posts=min_initial_posts,
+                         min_replies=min_replies)
 
 
 
@@ -806,6 +814,8 @@ def assignments_and_grades():
                                  unique_student_count=unique_student_count,
                                  selected_class=None,
                                  class_assignments_data=None,
+                                 group_assignments=[],
+                                 sorted_assignments=[],
                                  assignment_grades=None,
                                  sort_by=sort_by,
                                  sort_order=sort_order,
@@ -873,6 +883,7 @@ def assignments_and_grades():
         # If a specific class is selected, get detailed assignment and grade data
         selected_class = None
         class_assignments = []
+        sorted_assignments = []
         assignment_grades = {}
         
         # Handle class filter with comprehensive safety checks
@@ -927,7 +938,22 @@ def assignments_and_grades():
                         group_assignments = group_assignments_query.all()
                     except:
                         group_assignments = []
-                
+
+                    # Combine individual and group assignments, sort by due_date (most recent first)
+                    def _due_ts(d):
+                        if d is None:
+                            return 0
+                        if hasattr(d, 'timestamp'):
+                            return d.timestamp() if d.tzinfo is None else d.replace(tzinfo=None).timestamp()
+                        from datetime import datetime as dt
+                        from datetime import date as date_cls
+                        return dt.combine(d, dt.min.time()).timestamp() if isinstance(d, date_cls) else 0
+                    sorted_assignments = (
+                        [('individual', a) for a in class_assignments] +
+                        [('group', ga) for ga in group_assignments]
+                    )
+                    sorted_assignments.sort(key=lambda x: (x[1].due_date is None, -_due_ts(x[1].due_date)))
+
                 # Get grade data for each individual assignment
                 for assignment in class_assignments:
                     grades = Grade.query.filter_by(assignment_id=assignment.id).all()
@@ -1021,12 +1047,17 @@ def assignments_and_grades():
                 selected_class = None
                 pass
     
-        # Get group_assignments if they exist (for passing to template)
+        # Get group_assignments and sorted_assignments if they exist (for passing to template)
         try:
-            if not 'group_assignments' in locals():
+            if 'group_assignments' not in locals():
                 group_assignments = []
         except:
             group_assignments = []
+        try:
+            if 'sorted_assignments' not in locals():
+                sorted_assignments = []
+        except:
+            sorted_assignments = []
         
         from datetime import date
         # Get pending extension request count
@@ -1046,8 +1077,8 @@ def assignments_and_grades():
                 from models import Enrollment
                 enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
                 enrolled_students = [e.student for e in enrollments if e.student]
-                # Combine regular and group assignments for table view
-                all_assignments = list(class_assignments) + list(group_assignments) if group_assignments else list(class_assignments)
+                # Combine regular and group assignments for table view (use sorted order)
+                all_assignments = [item[1] for item in sorted_assignments] if sorted_assignments else list(class_assignments or []) + list(group_assignments or [])
                 
                 # Calculate student grades for table view
                 if view_mode == 'table':
@@ -1229,6 +1260,7 @@ def assignments_and_grades():
                              class_assignments=class_assignments,
                              class_assignments_data=class_assignments_data,
                              group_assignments=group_assignments,
+                             sorted_assignments=sorted_assignments,
                              assignment_grades=assignment_grades,
                              class_filter=class_filter,
                              sort_by=sort_by,
@@ -1629,15 +1661,21 @@ def add_assignment():
     context = request.args.get('context', 'homework')
     # For in-class: default due date = today at 4:00 PM EST
     default_due_date = None
-    if context == 'in-class':
-        try:
-            est = ZoneInfo('America/New_York')
-            now_est = datetime.now(est)
-            today_est = now_est.date()
-            default_due_date = datetime.combine(today_est, time(16, 0))
-        except Exception:
-            default_due_date = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
-    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter, context=context, default_due_date=default_due_date)
+    in_class_due_date_str = None  # Always compute for JS (when user switches context)
+    try:
+        est = ZoneInfo('America/New_York')
+        now_est = datetime.now(est)
+        today_est = now_est.date()
+        in_class_dt = datetime.combine(today_est, time(16, 0))
+        in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+        if context == 'in-class':
+            default_due_date = in_class_dt
+    except Exception:
+        in_class_dt = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+        in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+        if context == 'in-class':
+            default_due_date = in_class_dt
+    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter, context=context, default_due_date=default_due_date, in_class_due_date_str=in_class_due_date_str)
 
 
 
@@ -2473,8 +2511,7 @@ def edit_assignment(assignment_id):
         flash("Use the quiz editor to edit this assignment.", "info")
         return redirect(url_for('management.create_quiz_assignment') + f'?edit={assignment_id}')
     if assignment.assignment_type == 'discussion':
-        flash("Discussion assignments are edited through the discussion management interface.", "info")
-        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+        return redirect(url_for('management.create_discussion_assignment') + f'?edit={assignment_id}')
     
     # Authorization check - Directors and School Administrators can edit any assignment
     if current_user.role not in ['Director', 'School Administrator']:

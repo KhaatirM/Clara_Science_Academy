@@ -1,6 +1,24 @@
 /* ===== DISCUSSION ASSIGNMENT STYLES ===== */
 /* Styles for discussion assignment views */
 
+/* Fix Create Thread modal - ensure it's above overlays and fully interactive */
+#createThreadModal.modal {
+    z-index: 1060 !important;
+    pointer-events: auto !important;
+}
+#createThreadModal .modal-dialog {
+    z-index: 1061 !important;
+    pointer-events: auto !important;
+}
+#createThreadModal .modal-content {
+    pointer-events: auto !important;
+}
+/* Ensure backdrop doesn't block modal content when multiple elements stack */
+.modal-backdrop ~ .modal#createThreadModal,
+body > .modal#createThreadModal {
+    z-index: 1060 !important;
+}
+
 .discussion-container {
     max-width: 1200px;
     margin: 0 auto;

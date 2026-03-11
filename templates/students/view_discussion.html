@@ -269,8 +269,10 @@
         </div>
     {% endif %}
 </div>
+{% endblock %}
 
-<!-- Create Thread Modal -->
+{% block modals %}
+<!-- Create Thread Modal - rendered at body level to avoid stacking/overflow issues -->
 <div class="modal fade" id="createThreadModal" tabindex="-1" aria-labelledby="createThreadModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -344,7 +346,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 function viewThread(threadId) {
     window.location.href = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);

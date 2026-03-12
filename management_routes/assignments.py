@@ -735,6 +735,8 @@ def review_extension_request(request_id):
 def assignments_and_grades():
     """Combined assignments and grades view for School Administrators and Directors"""
     import json
+    # Import at function start to avoid UnboundLocalError from inner-scope shadowing
+    from models import Enrollment
     try:
         from datetime import datetime
         
@@ -1121,7 +1123,6 @@ def assignments_and_grades():
         
         if selected_class:
             try:
-                from models import Enrollment
                 enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
                 enrolled_students = [e.student for e in enrollments if e.student]
                 # Combine regular and group assignments for table view (use sorted order)

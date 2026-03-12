@@ -30,6 +30,7 @@ def run_database_fix():
             # Run the database fix scripts
             scripts_to_run = [
                 'fix_production_assignment_columns_postgres.py',
+                'fix_production_status_override_columns.py',
                 'fix_school_day_attendance_table.py',
                 'fix_allow_student_edit_posts_column.py',
                 'fix_group_size_max_nullable.py',

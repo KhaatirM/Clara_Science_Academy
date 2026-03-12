@@ -193,6 +193,15 @@
                         </div>
                     </div>
                     <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkMarkSubmissionType('in_person')">
+                            <i class="bi bi-check-all me-1"></i>Mark All Submitted (Paper)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="bulkMarkSubmissionType('online')">
+                            <i class="bi bi-cloud-upload me-1"></i>Mark All Submitted (Online)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkMarkSubmissionType('not_submitted')">
+                            <i class="bi bi-x-lg me-1"></i>Mark All Not Submitted
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
                             <i class="bi bi-ui-checks me-1"></i>Select/Deselect All
                         </button>
@@ -449,6 +458,15 @@ function toggleSelectAll() {
     const checkboxes = document.querySelectorAll('.student-select-checkbox');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
     checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+
+function bulkMarkSubmissionType(submissionType) {
+    const selects = document.querySelectorAll('select[name^="submission_type_"]');
+    selects.forEach(sel => {
+        if (sel.options[sel.selectedIndex]?.value !== submissionType) {
+            sel.value = submissionType;
+        }
+    });
 }
 
 function setLetterGrade(studentId, groupId, score) {

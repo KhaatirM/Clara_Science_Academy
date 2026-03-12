@@ -352,7 +352,6 @@
                                     <select class="form-select submission-type-select" 
                                             name="submission_type_{{ student.id }}" 
                                             data-student-id="{{ student.id }}"
-                                            {% if is_voided %}disabled{% endif %}
                                             onchange="updateSubmissionStatus(this)">
                                         <option value="not_submitted" {% if not submission %}selected{% endif %}>❌ Not Submitted</option>
                                         <option value="in_person" {% if submission and submission.submission_type == 'in_person' %}selected{% endif %}>📝 Submitted (Paper/In-Person)</option>
@@ -367,7 +366,6 @@
                                            class="form-control form-control-sm" 
                                            name="submission_notes_{{ student.id }}" 
                                            placeholder="e.g., Turned in late, Resubmitted..."
-                                           {% if is_voided %}disabled{% endif %}
                                            value="{{ submission.submission_notes if submission and submission.submission_notes else '' }}">
                                 </div>
                             </div>

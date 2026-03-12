@@ -285,9 +285,16 @@
                                 {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
                                 {% set is_autogradeable = grade_info.get('is_autogradeable', False) %}
                                 {% set current_status = assignment.status %}
-                                {% if current_status == 'Voided' %}
+                                {% set all_voided = grade_info.get('all_voided', current_status == 'Voided') %}
+                                {% set partially_voided = grade_info.get('partially_voided', False) %}
+                                {% set needs_grading = grade_info.get('needs_grading', False) %}
+                                {% if all_voided or current_status == 'Voided' %}
                                     <span class="badge bg-secondary">
                                         <i class="bi bi-slash-circle me-1"></i>Voided
+                                    </span>
+                                {% elif partially_voided %}
+                                    <span class="badge bg-secondary" title="Voided for: {{ grade_info.get('voided_student_names', [])|join(', ') }}">
+                                        <i class="bi bi-slash-circle me-1"></i>Voided for {{ grade_info.get('voided_count', 0) }} student{{ 's' if grade_info.get('voided_count', 0) != 1 else '' }}
                                     </span>
                                 {% elif current_status == 'Upcoming' %}
                                     <span class="badge bg-info">
@@ -307,6 +314,11 @@
                                     <span class="badge bg-warning">
                                         <i class="bi bi-pause-circle me-1"></i>Inactive
                                     </span>
+                                    {% if needs_grading %}
+                                        <span class="badge bg-danger ms-1">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Needs to be graded
+                                        </span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle me-1"></i>Active
@@ -390,14 +402,21 @@
                         {% set grade_info = assignment_grades.get('group_' ~ group_assignment.id, {}) %}
                         {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
                         {% set current_status = group_assignment.status %}
+                        {% set all_voided_ga = grade_info.get('all_voided', current_status == 'Voided') %}
+                        {% set partially_voided_ga = grade_info.get('partially_voided', False) %}
+                        {% set needs_grading_ga = grade_info.get('needs_grading', False) %}
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100 shadow-sm assignment-card border-info">
                                 <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
                                     <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>{{ group_assignment.title }}</h6>
                                     <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
-                                        {% if current_status == 'Voided' %}
+                                        {% if all_voided_ga or current_status == 'Voided' %}
                                             <span class="badge bg-secondary">
                                                 <i class="bi bi-slash-circle me-1"></i>Voided
+                                            </span>
+                                        {% elif partially_voided_ga %}
+                                            <span class="badge bg-secondary" title="Voided for: {{ grade_info.get('voided_student_names', [])|join(', ') }}">
+                                                <i class="bi bi-slash-circle me-1"></i>Voided for {{ grade_info.get('voided_count', 0) }} student{{ 's' if grade_info.get('voided_count', 0) != 1 else '' }}
                                             </span>
                                         {% elif current_status == 'Upcoming' %}
                                             <span class="badge bg-info bg-opacity-90">
@@ -411,6 +430,11 @@
                                             <span class="badge bg-warning text-dark">
                                                 <i class="bi bi-pause-circle me-1"></i>Inactive
                                             </span>
+                                            {% if needs_grading_ga %}
+                                                <span class="badge bg-danger ms-1">
+                                                    <i class="bi bi-exclamation-circle me-1"></i>Needs to be graded
+                                                </span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-success">
                                                 <i class="bi bi-check-circle me-1"></i>Active

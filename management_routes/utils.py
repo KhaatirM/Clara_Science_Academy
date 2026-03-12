@@ -38,6 +38,21 @@ def update_assignment_statuses():
                 # Skip voided assignments - don't change their status
                 if assignment.status == 'Voided':
                     continue
+                # Clear expired status override, then run normal logic
+                if getattr(assignment, 'status_override_until', None):
+                    until_dt = assignment.status_override_until
+                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
+                        until_dt = until_dt.replace(tzinfo=timezone.utc)
+                    if until_dt and until_dt < now:
+                        assignment.status_override = None
+                        assignment.status_override_until = None
+                # Skip if status override is active (manual override until date)
+                if getattr(assignment, 'status_override', None) and getattr(assignment, 'status_override_until', None):
+                    until_dt = assignment.status_override_until
+                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
+                        until_dt = until_dt.replace(tzinfo=timezone.utc)
+                    if until_dt and until_dt > now:
+                        continue  # Don't overwrite - teacher set temporary override
                 
                 # Get raw dates first
                 raw_open_date = assignment.open_date if hasattr(assignment, 'open_date') and assignment.open_date else None
@@ -111,6 +126,21 @@ def update_assignment_statuses():
             try:
                 if ga.status == 'Voided':
                     continue
+                # Clear expired status override
+                if getattr(ga, 'status_override_until', None):
+                    until_dt = ga.status_override_until
+                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
+                        until_dt = until_dt.replace(tzinfo=timezone.utc)
+                    if until_dt and until_dt < now:
+                        ga.status_override = None
+                        ga.status_override_until = None
+                # Skip if status override is active
+                if getattr(ga, 'status_override', None) and getattr(ga, 'status_override_until', None):
+                    until_dt = ga.status_override_until
+                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
+                        until_dt = until_dt.replace(tzinfo=timezone.utc)
+                    if until_dt and until_dt > now:
+                        continue
                 raw_open_date = getattr(ga, 'open_date', None) and ga.open_date or None
                 raw_close_date = getattr(ga, 'close_date', None) and ga.close_date or None
                 due_date = ga.due_date

@@ -98,7 +98,7 @@
                     <div class="card action-buttons-card">
                         <div class="card-body p-4">
                             <div class="d-grid gap-3">
-                                <button type="button" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
+                                <button type="submit" form="assignmentForm" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
                                     <i class="bi bi-check-circle me-2"></i>Create Assignment
                                 </button>
                                 {% if class_obj %}
@@ -117,7 +117,7 @@
             </div>
 
         <div class="col-12 col-lg-8 add-assignment-form-col">
-            <form method="POST" enctype="multipart/form-data" id="assignmentForm">
+            <form method="POST" enctype="multipart/form-data" id="assignmentForm" action="{% if class_obj %}{{ url_for('teacher.assignments.add_assignment_for_class', class_id=class_obj.id) }}{% else %}{{ url_for('management.add_assignment') }}{% endif %}">
                 <div class="assignment-form-wrapper">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
@@ -599,18 +599,8 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
     });
     
-    // Handle Create Assignment button click (button is outside form, so we need to manually submit)
-    const createAssignmentBtn = document.getElementById('createAssignmentBtn');
-    createAssignmentBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        // Validate form before submission
-        if (form.checkValidity()) {
-            form.submit();
-        } else {
-            // If form is invalid, trigger browser validation messages
-            form.reportValidity();
-        }
-    });
+    // Create Assignment button uses form="assignmentForm" and type="submit" so it natively submits the form.
+    // No click handler needed - browser validation and form submit event handle it.
     
     // In-class due date string (for when user switches to in-class via dropdown)
     const IN_CLASS_DUE = {{ ('"' + in_class_due_date_str + '"') if in_class_due_date_str else 'null' }};

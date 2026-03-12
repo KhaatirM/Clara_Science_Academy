@@ -116,6 +116,18 @@
                                     <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)<br>
                                     <small class="text-muted">Note: Status is automatically calculated based on open/close dates unless set to Voided</small>
                                 </div>
+                                <div class="mt-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="status_revert_enabled" name="status_revert_enabled" value="1" {% if assignment.status_override and assignment.status_override_until %}checked{% endif %}>
+                                        <label class="form-check-label" for="status_revert_enabled">Revert to automatic status after a set date/time</label>
+                                    </div>
+                                    <div id="status_revert_datetime_wrapper" class="mt-2" style="{% if not assignment.status_override or not assignment.status_override_until %}display: none;{% endif %}">
+                                        <label for="status_override_until" class="form-label small">Revert after (date & time):</label>
+                                        <input type="datetime-local" class="form-control form-control-sm" id="status_override_until" name="status_override_until" 
+                                               value="{% if assignment.status_override_until %}{{ assignment.status_override_until.strftime('%Y-%m-%dT%H:%M') }}{% endif %}">
+                                        <small class="text-muted">After this time, status will automatically recalculate based on open/close dates.</small>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div class="col-12 col-md-6">
@@ -359,6 +371,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Status revert checkbox: show/hide datetime picker
+    const statusRevertCheckbox = document.getElementById('status_revert_enabled');
+    const statusRevertWrapper = document.getElementById('status_revert_datetime_wrapper');
+    if (statusRevertCheckbox && statusRevertWrapper) {
+        statusRevertCheckbox.addEventListener('change', function() {
+            statusRevertWrapper.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
     const fileInput = document.getElementById('assignment_files');
     const fileUploadArea = document.getElementById('fileUploadArea');
     const filePreview = document.getElementById('filePreview');

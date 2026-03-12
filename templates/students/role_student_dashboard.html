@@ -1723,8 +1723,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                     {% endif %}
                                                 {% endfor %}
                                                 
-                                                {% if assignment_status == 'completed' %}
-                                                    <span class="badge bg-success ms-2">Completed</span>
+                                                {% if assignment_status in ('completed', 'submitted_in_person') %}
+                                                    <span class="badge bg-success ms-2">{{ 'Submitted in person' if assignment_status == 'submitted_in_person' else 'Completed' }}</span>
                                                 {% elif days_remaining > 0 %}
                                                     <span class="badge bg-success ms-2">{{ days_remaining }} days remaining</span>
                                                 {% elif days_remaining == 0 %}
@@ -2175,6 +2175,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                             {% endfor %}
                                                             {% if assignment_status == 'completed' %}
                                                                         <span class="badge bg-success ms-2" style="font-size: 0.7rem;">Completed</span>
+                                                            {% elif assignment_status == 'submitted_in_person' %}
+                                                                        <span class="badge bg-success ms-2" style="font-size: 0.7rem;">Submitted in person</span>
                                                             {% elif assignment_status == 'Voided' %}
                                                                         <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Voided</span>
                                                             {% elif assignment_status == 'Past Due' %}
@@ -2210,6 +2212,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                         {% elif assignment_status == 'completed' %}
                                                             <span class="badge bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
                                                                 <i class="bi bi-check-circle me-1"></i>Completed
+                                                            </span>
+                                                            {% if assignment_letter_grades is defined and assignment_letter_grades.get(assignment.id) %}
+                                                            <span class="badge bg-info ms-1" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                                                                <i class="bi bi-star me-1"></i>{{ assignment_letter_grades[assignment.id] }}
+                                                            </span>
+                                                            {% endif %}
+                                                        {% elif assignment_status == 'submitted_in_person' %}
+                                                            <span class="badge bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                                                                <i class="bi bi-person-check me-1"></i>Submitted in person
                                                             </span>
                                                             {% if assignment_letter_grades is defined and assignment_letter_grades.get(assignment.id) %}
                                                             <span class="badge bg-info ms-1" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
@@ -3178,9 +3189,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% elif grade_percentage is not none and grade_percentage == 0 %}
                                     {# Show F when graded with 0 #}
                                     <span class="badge grade-badge grade-f">F</span>
-                                {% elif student_status == 'completed' %}
-                                    {# Fallback: No grade data but marked completed #}
-                                    <span class="badge bg-danger">Overdue</span>
+                                {% elif student_status in ('completed', 'submitted_in_person') %}
+                                    {# Fallback: No grade data but marked completed/submitted in person #}
+                                    <span class="badge bg-success">{{ 'Submitted in person' if student_status == 'submitted_in_person' else 'Completed' }}</span>
                                 {% elif student_status == 'Submitted or Awaiting Grade' %}
                                     <span class="badge bg-info">Awaiting Grade</span>
                                 {% elif student_status == 'Past Due' %}
@@ -3345,7 +3356,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 {% set student_status = assignment_data[2] %}
                 {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
                 {% set is_group = assignment_data[4] if assignment_data|length > 4 else False %}
-                {% set student_group = assignment_data[5] if assignment_data|length > 5 else None %}
+                {% set student_group = assignment_data[5] if assignment_data|length > 5 and is_group else None %}
+                {% set has_any_grades = assignment_data[6] if is_group and assignment_data|length > 6 else (assignment_data[5] if not is_group and assignment_data|length > 5 else True) %}
                 {% set group_leader = student_group.members|selectattr('is_leader')|first if student_group and student_group.members else None %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
@@ -3427,6 +3439,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% elif grade_percentage is not none and grade_percentage == 0 %}
                                     <span class="badge grade-badge grade-f">F</span>
                                 {% elif student_status == 'Submitted or Awaiting Grade' %}
+                                    <span class="badge bg-info">Awaiting Grade</span>
+                                {% elif not has_any_grades %}
                                     <span class="badge bg-info">Awaiting Grade</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Inactive</span>

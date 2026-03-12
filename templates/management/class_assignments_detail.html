@@ -229,10 +229,10 @@
                                                    class="btn btn-outline-info btn-sm" title="Grade Assignment">
                                                     <i class="fas fa-graduation-cap"></i>
                                                 </a>
-                                                <button onclick="changeAssignmentStatus({{ assignment.id }}, '{{ assignment.status }}')" 
-                                                        class="btn btn-outline-warning btn-sm" title="Change Status">
-                                                    <i class="fas fa-toggle-on"></i>
-                                                </button>
+                                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
+                                                   class="btn btn-outline-warning btn-sm" title="Edit Assignment (incl. status)">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
                                                 <button onclick="removeAssignment({{ assignment.id }}, '{{ assignment.title }}')" 
                                                         class="btn btn-outline-danger btn-sm" title="Remove Assignment">
                                                     <i class="fas fa-trash"></i>

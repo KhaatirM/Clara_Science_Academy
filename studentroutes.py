@@ -85,7 +85,11 @@ def calculate_gpa(grades):
     return round(sum(gpa_points) / len(gpa_points), 2) if gpa_points else 0.0
 
 def get_student_assignment_status(assignment, submission, grade, student_id=None):
-    """Determine the student-facing status for an assignment."""
+    """Determine the student-facing status for an assignment.
+    
+    Submission status logic: If a grade is entered, status is 'submitted_in_person' unless
+    the student turned in online (has Submission with file_path or submission_type='online').
+    """
     from datetime import datetime
     
     # Check if assignment is voided
@@ -118,32 +122,38 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
                     # Extension deadline has passed and not graded
                     return 'Past Due'
     
-    # Check if assignment has been graded - this takes priority over due date
-    # Only return 'completed' if grade exists AND has meaningful grade data AND was actually graded
-    if grade:
-        # CRITICAL: Only consider it graded if graded_at is set (indicates actual grading occurred)
-        # This prevents assignments from being marked as "graded" when they're first created
-        if grade.graded_at is None:
-            # No graded_at timestamp means it hasn't been graded yet
-            # Continue to check submission and due date status
-            pass
-        else:
-            # Has graded_at timestamp - check if grade has actual data
-            if grade.grade_data:
-                try:
-                    import json
-                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                    # If graded_at exists, it means the assignment was actually graded (even if score is 0)
-                    # This covers both teacher-graded assignments and auto-graded quizzes
+    # Check if assignment has been graded - grade entered = submitted (in person unless online)
+    # Consider graded if: graded_at set OR grade_data exists with meaningful content
+    if grade and grade.grade_data:
+        try:
+            import json
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            # Has score/points_earned = actual grade entered (covers legacy grades without graded_at)
+            has_score = (
+                grade.graded_at or
+                (isinstance(grade_data, dict) and (
+                    grade_data.get('score') is not None or
+                    grade_data.get('points_earned') is not None
+                ))
+            )
+            if has_score or grade.graded_at:
+                # Grade was entered - show completed or submitted_in_person based on submission type
+                has_online_submission = (
+                    submission and
+                    (submission.file_path or (getattr(submission, 'submission_type', None) == 'online'))
+                )
+                if has_online_submission:
                     return 'completed'
-                except (json.JSONDecodeError, TypeError, AttributeError):
-                    # Invalid grade data, but has graded_at, so it was graded
-                    return 'completed'
-            else:
-                # Has graded_at but no grade_data - still consider it graded (edge case)
-                return 'completed'
-        # Grade record exists but has no graded_at - don't treat as completed
-        # Continue to check submission and due date status
+                # No online submission - teacher entered grade for in-person/paper submission
+                return 'submitted_in_person'
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            if grade.graded_at:
+                # Has graded_at, treat as graded
+                has_online_submission = (
+                    submission and
+                    (submission.file_path or (getattr(submission, 'submission_type', None) == 'online'))
+                )
+                return 'completed' if has_online_submission else 'submitted_in_person'
     
     # Check if assignment has been submitted
     if submission:
@@ -806,6 +816,11 @@ def student_assignments():
         # Determine student-facing status
         student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         
+        # Check if assignment has received any grades yet (teacher hasn't graded initially)
+        has_any_grades = Grade.query.filter_by(assignment_id=assignment.id).filter(
+            Grade.is_voided == False
+        ).first() is not None
+        
         # Calculate attempts remaining for quiz assignments
         attempts_remaining = None
         if assignment.assignment_type == 'quiz' and assignment.max_attempts:
@@ -815,7 +830,7 @@ def student_assignments():
             ).count()
             attempts_remaining = max(0, assignment.max_attempts - submissions_count)
         
-        assignment_data = (assignment, submission, student_status, attempts_remaining, False)  # False = individual
+        assignment_data = (assignment, submission, student_status, attempts_remaining, False, has_any_grades)  # False = individual
         
         # Skip voided assignments
         if assignment.status == 'Voided' or student_status == 'Voided':
@@ -919,8 +934,12 @@ def student_assignments():
         )
         if student_status == 'Voided':
             continue
-        # Include student_group so template can show group name and leader
-        assignment_data = (group_assignment, group_submission, student_status, None, True, student_group)
+        # Check if group assignment has received any grades yet
+        has_any_grades_ga = GroupGrade.query.filter_by(
+            group_assignment_id=group_assignment.id
+        ).filter(GroupGrade.is_voided == False).first() is not None
+        # Include student_group and has_any_grades so template can show correct badge
+        assignment_data = (group_assignment, group_submission, student_status, None, True, student_group, has_any_grades_ga)
         is_upcoming = False
         if hasattr(group_assignment, 'open_date') and group_assignment.open_date:
             raw_open = group_assignment.open_date
@@ -2023,14 +2042,14 @@ def view_class(class_id):
     # Get announcements for this class
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
     
-    # Build assignment -> letter grade for this student (only completed, non-voided)
+    # Build assignment -> letter grade for this student (completed or submitted_in_person, non-voided)
     # Use same formula as Grades tab: percentage = points_earned / total_points * 100
     assignment_letter_grades = {}
     class_percentages_for_gpa = []
     for assignment, submission, status in assignments_with_status:
         if status == 'Voided':
             continue
-        if status != 'completed':
+        if status not in ('completed', 'submitted_in_person'):
             continue
         g = grades_dict.get(assignment.id)
         if not g or not g.grade_data:

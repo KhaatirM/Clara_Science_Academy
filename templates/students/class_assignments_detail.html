@@ -37,7 +37,7 @@
     <!-- Summary stats -->
     {% set ns = namespace(completed=0, voided=0) %}
     {% for a, sub, status in assignments_with_status %}
-        {% if status == 'completed' %}{% set ns.completed = ns.completed + 1 %}{% endif %}
+        {% if status in ('completed', 'submitted_in_person') %}{% set ns.completed = ns.completed + 1 %}{% endif %}
         {% if status == 'Voided' %}{% set ns.voided = ns.voided + 1 %}{% endif %}
     {% endfor %}
     <div class="row g-2 g-md-3 mb-4">
@@ -203,8 +203,8 @@
                                                 {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                 {% set days_until_due = (due_date - today).days %}
                                                 
-                                                {% if status == 'completed' %}
-                                                    <!-- For completed assignments, just show the date without overdue status -->
+                                                {% if status in ('completed', 'submitted_in_person') %}
+                                                    <!-- For completed/submitted-in-person, just show the date without overdue status -->
                                                     <span class="badge bg-success bg-opacity-20 text-dark border border-success">
                                                         <i class="fas fa-check-circle me-1"></i>
                                                         {{ assignment.due_date.strftime('%m/%d/%Y') }}
@@ -251,6 +251,10 @@
                                                 <span class="badge bg-success bg-opacity-20 text-dark border border-success">
                                                     <i class="fas fa-check-circle me-1"></i>Completed (1/1)
                                                 </span>
+                                            {% elif status == 'submitted_in_person' %}
+                                                <span class="badge bg-success bg-opacity-20 text-dark border border-success">
+                                                    <i class="fas fa-person-booth me-1"></i>Submitted in person
+                                                </span>
                                             {% elif status == 'Past Due' %}
                                                 <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">
                                                     <i class="fas fa-exclamation-triangle me-1"></i>Past Due
@@ -286,7 +290,7 @@
                                                 {% endif %}
                                                 
                                                 <!-- Extension Request Button - Only if active, not voided, due date not reached, and not graded/submitted -->
-                                                {% if assignment.status == 'Active' and status != 'Voided' and assignment.due_date and not submission and status != 'completed' %}
+                                                {% if assignment.status == 'Active' and status != 'Voided' and assignment.due_date and not submission and status not in ('completed', 'submitted_in_person') %}
                                                     {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                     {% if due_date > today %}
                                                     <button onclick="requestExtension({{ assignment.id }}, '{{ assignment.title }}')" 

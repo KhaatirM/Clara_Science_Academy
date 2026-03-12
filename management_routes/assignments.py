@@ -939,6 +939,11 @@ def assignments_and_grades():
                     except:
                         group_assignments = []
 
+                    # Get enrolled students for voided-student computation
+                    _enrollments = Enrollment.query.filter_by(class_id=selected_class_id, is_active=True).all()
+                    _enrolled_students = [e.student for e in _enrollments if e.student]
+                    _enrolled_student_ids = {s.id for s in _enrolled_students}
+
                     # Combine individual and group assignments, sort by due_date (most recent first)
                     def _due_ts(d):
                         if d is None:
@@ -953,6 +958,10 @@ def assignments_and_grades():
                         [('group', ga) for ga in group_assignments]
                     )
                     sorted_assignments.sort(key=lambda x: (x[1].due_date is None, -_due_ts(x[1].due_date)))
+
+                    # Get enrolled students for voided-student name resolution
+                    _enrollments = Enrollment.query.filter_by(class_id=selected_class_id, is_active=True).all()
+                    _enrolled_students = [e.student for e in _enrollments if e and getattr(e, 'student', None)]
 
                 # Get grade data for each individual assignment
                 for assignment in class_assignments:
@@ -997,12 +1006,32 @@ def assignments_and_grades():
                     
                     total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
                     avg_pct = round((total_score / len(graded_grades) / total_points * 100), 1) if graded_grades and total_points > 0 else 0
+                    # Voided status: all voided (assignment level or all grades) vs partially voided
+                    all_voided = assignment.status == 'Voided'
+                    voided_grades = [g for g in grades if g.is_voided]
+                    voided_count = len(voided_grades)
+                    if not all_voided and grades:
+                        all_voided = voided_count == len(grades)
+                    partially_voided = not all_voided and voided_count > 0
+                    voided_student_names = []
+                    if partially_voided and selected_class:
+                        enr = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
+                        for e in enr:
+                            if e.student:
+                                g = next((x for x in grades if x.student_id == e.student.id and x.is_voided), None)
+                                if g:
+                                    voided_student_names.append(f"{e.student.first_name} {e.student.last_name}")
                     assignment_grades[assignment.id] = {
                         'total_submissions': total_submissions,
                         'graded_count': len(graded_grades),
                         'average_score': avg_pct,
                         'type': 'individual',
-                        'is_autogradeable': is_autogradeable
+                        'is_autogradeable': is_autogradeable,
+                        'all_voided': all_voided,
+                        'partially_voided': partially_voided,
+                        'voided_count': voided_count,
+                        'voided_student_names': voided_student_names,
+                        'needs_grading': len(graded_grades) == 0
                     }
                 
                 # Get grade data for each group assignment
@@ -1036,11 +1065,29 @@ def assignments_and_grades():
                     
                     total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
                     avg_pct_ga = round((total_score / len(graded_group_grades) / total_points_ga * 100), 1) if graded_group_grades and total_points_ga > 0 else 0
+                    # Voided status for group assignments
+                    ga_all_voided = group_assignment.status == 'Voided'
+                    ga_voided_grades = [g for g in group_grades if g.is_voided]
+                    ga_voided_count = len(ga_voided_grades)
+                    if not ga_all_voided and group_grades:
+                        ga_all_voided = ga_voided_count == len(group_grades)
+                    ga_partially_voided = not ga_all_voided and ga_voided_count > 0
+                    ga_voided_student_names = []
+                    if ga_partially_voided and selected_class:
+                        for gg in ga_voided_grades:
+                            if gg.student:
+                                ga_voided_student_names.append(f"{gg.student.first_name} {gg.student.last_name}")
+                    ga_needs_grading = len(graded_group_grades) == 0
                     assignment_grades[f'group_{group_assignment.id}'] = {
                         'total_submissions': total_group_submissions,
                         'graded_count': len(graded_group_grades),
                         'average_score': avg_pct_ga,
-                        'type': 'group'
+                        'type': 'group',
+                        'all_voided': ga_all_voided,
+                        'partially_voided': ga_partially_voided,
+                        'voided_count': ga_voided_count,
+                        'voided_student_names': ga_voided_student_names,
+                        'needs_grading': ga_needs_grading
                     }
             except (ValueError, TypeError, AttributeError) as e:
                 # Handle any conversion errors gracefully
@@ -1766,92 +1813,109 @@ def grade_assignment(assignment_id):
                             # Remove submission if marked as not submitted
                             db.session.delete(submission)
                     
-                    if score is not None:
-                        try:
-                            points_earned = float(score) if score else 0.0
-                            
-                            # Get total points from assignment (default to 100 if not set)
-                            total_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else 100.0
-                            
-                            # Calculate percentage based on points earned vs total points
-                            percentage = (points_earned / total_points * 100) if total_points > 0 else 0
-                            
-                            grade_data_dict = {
-                                'score': points_earned,
-                                'points_earned': points_earned,
-                                'total_points': total_points,
-                                'max_score': total_points,  # Keep for backward compatibility
-                                'percentage': round(percentage, 2),
-                                'comment': comment or '',
-                                'feedback': comment or '',  # Keep for backward compatibility
-                                'graded_at': datetime.utcnow().isoformat()
-                            }
-                            grade_data = json.dumps(grade_data_dict)
-                            
-                            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
-                            if grade:
-                                # Don't update grades that are already voided (preserve void status)
-                                if not grade.is_voided:
-                                    grade.grade_data = grade_data
-                                    grade.graded_at = datetime.utcnow()
-                                    # Check if grade should be voided due to late enrollment (only if not already voided)
-                                    from management_routes.late_enrollment_utils import check_and_void_grade
-                                    check_and_void_grade(grade)
-                            else:
-                                # Create grade using attribute assignment
-                                grade = Grade()
-                                grade.student_id = student.id
-                                grade.assignment_id = assignment_id
-                                grade.grade_data = grade_data
-                                grade.graded_at = datetime.utcnow()
-                                db.session.add(grade)
-                                # Check if grade should be voided due to late enrollment
-                                from management_routes.late_enrollment_utils import check_and_void_grade
-                                # Flush to get the grade ID, then check void status
-                                db.session.flush()
-                                check_and_void_grade(grade)
-                            
-                            # Check if this is a redo submission and calculate final grade
-                            redo = AssignmentRedo.query.filter_by(
-                                assignment_id=assignment_id,
+                    # Always process grade - blank/empty means 0 and not submitted
+                    try:
+                        points_earned = float(score) if (score is not None and str(score).strip()) else 0.0
+                    except (ValueError, TypeError):
+                        points_earned = 0.0
+
+                    # Get total points from assignment (default to 100 if not set)
+                    total_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else 100.0
+
+                    # Calculate percentage based on points earned vs total points
+                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+
+                    grade_data_dict = {
+                        'score': points_earned,
+                        'points_earned': points_earned,
+                        'total_points': total_points,
+                        'max_score': total_points,  # Keep for backward compatibility
+                        'percentage': round(percentage, 2),
+                        'comment': comment or '',
+                        'feedback': comment or '',  # Keep for backward compatibility
+                        'graded_at': datetime.utcnow().isoformat()
+                    }
+                    grade_data = json.dumps(grade_data_dict)
+
+                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+                    if grade:
+                        # Don't update grades that are already voided (preserve void status)
+                        if not grade.is_voided:
+                            grade.grade_data = grade_data
+                            grade.graded_at = datetime.utcnow()
+                            # Check if grade should be voided due to late enrollment (only if not already voided)
+                            from management_routes.late_enrollment_utils import check_and_void_grade
+                            check_and_void_grade(grade)
+                    else:
+                        # Create grade using attribute assignment
+                        grade = Grade()
+                        grade.student_id = student.id
+                        grade.assignment_id = assignment_id
+                        grade.grade_data = grade_data
+                        grade.graded_at = datetime.utcnow()
+                        db.session.add(grade)
+                        # Check if grade should be voided due to late enrollment
+                        from management_routes.late_enrollment_utils import check_and_void_grade
+                        # Flush to get the grade ID, then check void status
+                        db.session.flush()
+                        check_and_void_grade(grade)
+
+                    # Check if this is a redo submission and calculate final grade
+                    redo = AssignmentRedo.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=student.id,
+                        is_used=True
+                    ).first()
+
+                    if redo:
+                        # This is a redo - calculate final grade
+                        redo.redo_grade = points_earned
+
+                        # Apply late penalty if redo was late
+                        effective_redo_grade = points_earned
+                        if redo.was_redo_late:
+                            effective_redo_grade = max(0, points_earned - 10)  # 10% penalty
+
+                        # Keep higher grade
+                        if redo.original_grade:
+                            redo.final_grade = max(redo.original_grade, effective_redo_grade)
+                        else:
+                            redo.final_grade = effective_redo_grade
+
+                        # Update the grade_data with final grade
+                        final_percentage = (redo.final_grade / total_points * 100) if total_points > 0 else 0
+                        grade_data_dict['score'] = redo.final_grade
+                        grade_data_dict['points_earned'] = redo.final_grade
+                        grade_data_dict['percentage'] = round(final_percentage, 2)
+                        grade_data_dict['is_redo_final'] = True
+                        if redo.was_redo_late:
+                            grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {points_earned}% (-10%), Final: {redo.final_grade}%]"
+                        else:
+                            grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
+                        grade.grade_data = json.dumps(grade_data_dict)
+
+                    # Only auto-create in_person submission when score > 0 (blank = 0 and not submitted)
+                    if points_earned > 0:
+                        submission = Submission.query.filter_by(
+                            student_id=student.id,
+                            assignment_id=assignment_id
+                        ).first()
+                        if not submission:
+                            submission = Submission(
                                 student_id=student.id,
-                                is_used=True
-                            ).first()
-                            
-                            if redo:
-                                # This is a redo - calculate final grade
-                                redo.redo_grade = points_earned
-                                
-                                # Apply late penalty if redo was late
-                                effective_redo_grade = points_earned
-                                if redo.was_redo_late:
-                                    effective_redo_grade = max(0, points_earned - 10)  # 10% penalty
-                                
-                                # Keep higher grade
-                                if redo.original_grade:
-                                    redo.final_grade = max(redo.original_grade, effective_redo_grade)
-                                else:
-                                    redo.final_grade = effective_redo_grade
-                                
-                                # Update the grade_data with final grade
-                                final_percentage = (redo.final_grade / total_points * 100) if total_points > 0 else 0
-                                grade_data_dict['score'] = redo.final_grade
-                                grade_data_dict['points_earned'] = redo.final_grade
-                                grade_data_dict['percentage'] = round(final_percentage, 2)
-                                grade_data_dict['is_redo_final'] = True
-                                if redo.was_redo_late:
-                                    grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {points_earned}% (-10%), Final: {redo.final_grade}%]"
-                                else:
-                                    grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
-                                grade.grade_data = json.dumps(grade_data_dict)
-                            
-                            # Queue for digest notification (one per student after commit)
-                            if student.user:
-                                graded_user_ids.append(student.user.id)
-                                
-                        except ValueError:
-                            flash(f"Invalid score format for student {student.id}.", "warning")
-                            continue # Skip this student and continue with others
+                                assignment_id=assignment_id,
+                                submission_type='in_person',
+                                submission_notes='Auto-marked: grade entered',
+                                marked_by=teacher.id if teacher else None,
+                                marked_at=datetime.utcnow(),
+                                submitted_at=datetime.utcnow(),
+                                file_path=None,
+                            )
+                            db.session.add(submission)
+
+                    # Queue for digest notification (one per student after commit)
+                    if student.user and points_earned > 0:
+                        graded_user_ids.append(student.user.id)
                 
                 db.session.commit()
                 if graded_user_ids:
@@ -2531,6 +2595,8 @@ def edit_assignment(assignment_id):
         status = request.form.get('status', 'Active')
         assignment_context = request.form.get('assignment_context', 'homework')
         total_points = request.form.get('total_points', type=float)
+        status_revert_enabled = request.form.get('status_revert_enabled') == '1'
+        status_override_until_str = request.form.get('status_override_until', '').strip()
         
         if not all([title, due_date_str, quarter]):
             flash('Title, Due Date, and Quarter are required.', 'danger')
@@ -2540,7 +2606,7 @@ def edit_assignment(assignment_id):
             total_points = 100.0
         
         # Validate status
-        valid_statuses = ['Active', 'Inactive', 'Voided']
+        valid_statuses = ['Active', 'Inactive', 'Upcoming', 'Voided']
         if status not in valid_statuses:
             flash('Invalid assignment status.', 'danger')
             return redirect(request.url)
@@ -2561,6 +2627,23 @@ def edit_assignment(assignment_id):
             assignment.status = status
             assignment.assignment_context = assignment_context
             assignment.total_points = total_points
+            
+            # Status override: when "revert after" is set, lock status until that datetime
+            if status_revert_enabled and status_override_until_str:
+                try:
+                    override_until = parse_form_datetime_as_school_tz(status_override_until_str, tz_name)
+                    if override_until:
+                        assignment.status_override = status
+                        assignment.status_override_until = override_until
+                    else:
+                        assignment.status_override = None
+                        assignment.status_override_until = None
+                except (ValueError, TypeError):
+                    assignment.status_override = None
+                    assignment.status_override_until = None
+            else:
+                assignment.status_override = None
+                assignment.status_override_until = None
             
             # Handle file upload(s) - multiple (assignment_files) or single (assignment_file)
             upload_folder = current_app.config['UPLOAD_FOLDER']
@@ -3801,7 +3884,11 @@ def change_assignment_status(assignment_id):
     if current_user.role not in ['Director', 'School Administrator']:
         return jsonify({'success': False, 'message': 'You are not authorized to change assignment status.'})
     
+    # Accept both form data and JSON (some callers use JSON)
     new_status = request.form.get('status')
+    if new_status is None and request.is_json:
+        data = request.get_json(silent=True) or {}
+        new_status = data.get('status')
     
     # Validate status
     valid_statuses = ['Active', 'Inactive', 'Voided']
@@ -4142,8 +4229,11 @@ def admin_view_group_assignment(assignment_id):
                 'is_overdue': False
             }
         
-        # Determine assignment status badge
-        if all_group_grades and len(all_group_grades) > 0:
+        # Determine assignment status badge (Voided takes precedence)
+        if group_assignment.status == 'Voided':
+            assignment_status = 'Voided'
+            status_class = 'secondary'
+        elif non_voided_grades and len(non_voided_grades) > 0:
             assignment_status = 'Graded'
             status_class = 'success'
         elif group_assignment.status == 'Inactive':
@@ -4365,13 +4455,12 @@ def admin_grade_group_assignment(assignment_id):
                     comments_key = f"comments_{gid}_{student_id}"
                     comments = request.form.get(comments_key, '')
                     submission_type_key = f"submission_type_{gid}_{student_id}"
-                    submission_type = request.form.get(submission_type_key, '').strip() or None
-                    if not score:
-                        continue
+                    submission_type = request.form.get(submission_type_key, '').strip() or 'not_submitted'
+                    # Process all students - blank score = 0 and not submitted
                     try:
-                        points_earned = float(score)
-                    except ValueError:
-                        continue
+                        points_earned = float(score) if (score and str(score).strip()) else 0.0
+                    except (ValueError, TypeError):
+                        points_earned = 0.0
                     if not (0 <= points_earned <= effective_max):
                         continue
                     # UI is 0-100; if assignment total is not 100 and value looks like percentage (e.g. 85 > 10), scale to assignment total

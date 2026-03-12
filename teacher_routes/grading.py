@@ -165,6 +165,22 @@ def grade_assignment(assignment_id):
                         )
                         db.session.add(new_grade)
                     
+                    # If grade entered and no submission exists, auto-create in_person submission
+                    sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+                    if not sub:
+                        teacher_staff = get_teacher_or_admin()
+                        sub = Submission(
+                            student_id=student_id,
+                            assignment_id=assignment_id,
+                            submission_type='in_person',
+                            submission_notes='Auto-marked: grade entered',
+                            marked_by=teacher_staff.id if teacher_staff else None,
+                            marked_at=datetime.now(),
+                            submitted_at=datetime.now(),
+                            file_path=None,
+                        )
+                        db.session.add(sub)
+                    
                     grades_saved += 1
             
             db.session.commit()

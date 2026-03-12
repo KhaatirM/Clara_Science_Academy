@@ -594,6 +594,10 @@ class Assignment(db.Model):
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
     
+    # Temporary status override: when set, overrides automatic status until status_override_until passes
+    status_override = db.Column(db.String(20), nullable=True)  # Active, Inactive, Voided
+    status_override_until = db.Column(db.DateTime, nullable=True)  # When to revert to automatic status
+    
     # Assignment type: pdf, quiz, discussion
     assignment_type = db.Column(db.String(20), default='pdf', nullable=False)
     
@@ -1565,6 +1569,10 @@ class GroupAssignment(db.Model):
     
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
+    
+    # Temporary status override: when set, status is locked until status_override_until passes.
+    status_override = db.Column(db.String(20), nullable=True)
+    status_override_until = db.Column(db.DateTime, nullable=True)
     
     # Assignment type: pdf, quiz, discussion
     assignment_type = db.Column(db.String(20), default='pdf', nullable=False)

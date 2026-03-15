@@ -299,6 +299,19 @@
                                                     </button>
                                                     {% endif %}
                                                 {% endif %}
+                                                <!-- Request Redo Button - Only for inactive assignments (connects to redo dashboard) -->
+                                                {% if assignment.status == 'Inactive' and status != 'Voided' %}
+                                                    {% set _redo_req = redo_requests_by_assignment.get(assignment.id) if redo_requests_by_assignment else none %}
+                                                    {% if _redo_req %}
+                                                    <span class="badge bg-{{ 'success' if _redo_req.status == 'Approved' else 'info' }} px-2 py-1" title="Redo {{ 'approved' if _redo_req.status == 'Approved' else 'requested' }}">
+                                                        <i class="fas fa-redo me-1"></i>Redo {{ 'approved' if _redo_req.status == 'Approved' else 'requested' }}
+                                                    </span>
+                                                    {% else %}
+                                                    <button onclick="openRedoRequestModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}')" class="btn btn-request-redo btn-sm" title="Request Redo - sends request to teacher via Redo Dashboard">
+                                                        <i class="bi bi-arrow-repeat me-1"></i>Request Redo
+                                                    </button>
+                                                    {% endif %}
+                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -462,6 +475,48 @@ function requestExtension(assignmentId, title) {
         bootstrapModal.hide();
     });
 }
+
+function openRedoRequestModal(assignmentId, assignmentTitle) {
+    const modal = document.getElementById('redoRequestModal');
+    if (!modal) return;
+    const modalTitle = document.getElementById('redoRequestTitle');
+    const modalBody = document.getElementById('redoRequestBody');
+    if (modalTitle) modalTitle.textContent = `Request Redo - ${assignmentTitle}`;
+    if (modalBody) {
+        modalBody.innerHTML = `
+            <form id="redoRequestForm">
+                <input type="hidden" name="assignment_id" value="${assignmentId}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="redoReason" class="form-label">Reason for Redo Request</label>
+                    <textarea class="form-control" id="redoReason" name="reason" rows="3"
+                              placeholder="Please explain why you would like to redo this assignment..."></textarea>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Your request will be sent to your teacher. They can grant you a redo from the Redo Dashboard.
+                </div>
+            </form>
+        `;
+    }
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    const form = document.getElementById('redoRequestForm');
+    if (form) {
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            const btn = modal.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...'; }
+            fetch('/student/request-redo', { method: 'POST', body: new FormData(form) })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { alert(data.message); bootstrapModal.hide(); location.reload(); }
+                    else { alert('Error: ' + (data.message || 'Unknown error')); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Submit Request'; } }
+                })
+                .catch(err => { alert('Error: ' + err.message); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Submit Request'; } });
+        };
+    }
+}
 </script>
 
 <!-- Assignment Details Modal -->
@@ -496,6 +551,23 @@ function requestExtension(assignmentId, title) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-warning" onclick="document.getElementById('extensionRequestForm').submit()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Redo Request Modal (for inactive assignments) -->
+<div class="modal fade" id="redoRequestModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-redo me-2"></i><span id="redoRequestTitle">Request Redo</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="redoRequestBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="redoRequestForm" class="btn btn-warning"><i class="fas fa-paper-plane me-1"></i>Submit Request</button>
             </div>
         </div>
     </div>

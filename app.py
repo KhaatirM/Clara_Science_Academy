@@ -15,7 +15,7 @@ from extensions import db, login_manager, csrf, mail
 from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
-from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension, QuarterGrade, Class, Enrollment, AcademicPeriod
+from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension, QuarterGrade, Class, Enrollment, AcademicPeriod, RedoRequest
 
 # Re-export services so "from app import create_notification" etc. still work
 from services import (
@@ -129,6 +129,80 @@ def create_app(config_class=None):
                         print("Added user.low_grade_threshold column.")
         except Exception as e:
             print(f"Note: low_grade_threshold column check failed (may already exist): {e}")
+
+        # Add assignment.status_override and status_override_until if missing (for temporary status overrides)
+        for table_name in ('assignment', 'group_assignment'):
+            try:
+                with db.engine.connect() as conn:
+                    dialect = db.engine.dialect.name
+                    if dialect == 'sqlite':
+                        r = conn.execute(text(f"PRAGMA table_info({table_name})"))
+                        columns = [row[1] for row in r]
+                        if 'status_override' not in columns:
+                            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN status_override VARCHAR(20)"))
+                            conn.commit()
+                            print(f"Added {table_name}.status_override column.")
+                        if 'status_override_until' not in columns:
+                            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN status_override_until TIMESTAMP"))
+                            conn.commit()
+                            print(f"Added {table_name}.status_override_until column.")
+                    elif dialect == 'postgresql':
+                        for col_name, col_type in [('status_override', 'VARCHAR(20)'), ('status_override_until', 'TIMESTAMP')]:
+                            r = conn.execute(text(
+                                "SELECT 1 FROM information_schema.columns "
+                                "WHERE table_name = :tbl AND column_name = :col"
+                            ), {"tbl": table_name, "col": col_name})
+                            if r.fetchone() is None:
+                                conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN {col_name} {col_type}'))
+                                conn.commit()
+                                print(f"Added {table_name}.{col_name} column.")
+            except Exception as e:
+                print(f"Note: {table_name} status_override columns check failed (may already exist): {e}")
+
+        # Create redo_request table if missing (for student redo requests on inactive assignments)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='redo_request'"))
+                    if r.fetchone() is None:
+                        conn.execute(text("""
+                            CREATE TABLE redo_request (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                assignment_id INTEGER NOT NULL REFERENCES assignment(id),
+                                student_id INTEGER NOT NULL REFERENCES student(id),
+                                reason TEXT,
+                                status VARCHAR(20) DEFAULT 'Pending' NOT NULL,
+                                requested_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                reviewed_at DATETIME,
+                                reviewed_by INTEGER REFERENCES teacher_staff(id),
+                                review_notes TEXT
+                            )
+                        """))
+                        conn.commit()
+                        print("Created redo_request table.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.tables WHERE table_name = 'redo_request'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text("""
+                            CREATE TABLE redo_request (
+                                id SERIAL PRIMARY KEY,
+                                assignment_id INTEGER NOT NULL REFERENCES assignment(id),
+                                student_id INTEGER NOT NULL REFERENCES student(id),
+                                reason TEXT,
+                                status VARCHAR(20) DEFAULT 'Pending' NOT NULL,
+                                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                reviewed_at TIMESTAMP,
+                                reviewed_by INTEGER REFERENCES teacher_staff(id),
+                                review_notes TEXT
+                            )
+                        """))
+                        conn.commit()
+                        print("Created redo_request table.")
+        except Exception as e:
+            print(f"Note: redo_request table check failed (may already exist): {e}")
 
         # Optional: run one-off production DB fix only when explicitly requested.
         # Prefer Flask-Migrate for schema changes: flask db migrate / flask db upgrade

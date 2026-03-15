@@ -15,6 +15,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, func
 from datetime import datetime, timedelta, timezone, time
 import os
+import shutil
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
@@ -1009,11 +1010,14 @@ def assignments_and_grades():
                     total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
                     avg_pct = round((total_score / len(graded_grades) / total_points * 100), 1) if graded_grades and total_points > 0 else 0
                     # Voided status: all voided (assignment level or all grades) vs partially voided
+                    # Use enrolled count, not grade count: voiding creates grades for voided students only,
+                    # so comparing to len(grades) incorrectly treats "2 voided of 3 enrolled" as all voided.
                     all_voided = assignment.status == 'Voided'
                     voided_grades = [g for g in grades if g.is_voided]
                     voided_count = len(voided_grades)
-                    if not all_voided and grades:
-                        all_voided = voided_count == len(grades)
+                    enrolled_count = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).count()
+                    if not all_voided and enrolled_count > 0:
+                        all_voided = voided_count == enrolled_count
                     partially_voided = not all_voided and voided_count > 0
                     voided_student_names = []
                     if partially_voided and selected_class:
@@ -1038,7 +1042,7 @@ def assignments_and_grades():
                 
                 # Get grade data for each group assignment
                 for group_assignment in group_assignments:
-                    from models import GroupGrade, GroupSubmission
+                    from models import GroupGrade, GroupSubmission, StudentGroup, StudentGroupMember
                     group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
                     total_group_submissions = GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).count()
                     
@@ -1068,11 +1072,33 @@ def assignments_and_grades():
                     total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
                     avg_pct_ga = round((total_score / len(graded_group_grades) / total_points_ga * 100), 1) if graded_group_grades and total_points_ga > 0 else 0
                     # Voided status for group assignments
+                    # Use total applicable students (in assigned groups), not grade count - same bug as individual:
+                    # voiding creates GroupGrade records for voided students only, so len(group_grades) is wrong.
                     ga_all_voided = group_assignment.status == 'Voided'
                     ga_voided_grades = [g for g in group_grades if g.is_voided]
                     ga_voided_count = len(ga_voided_grades)
-                    if not ga_all_voided and group_grades:
-                        ga_all_voided = ga_voided_count == len(group_grades)
+                    ga_total_applicable = 0
+                    try:
+                        from models import StudentGroupMember, StudentGroup
+                        sel = group_assignment.selected_group_ids
+                        if sel:
+                            ids = json.loads(sel) if isinstance(sel, str) else sel
+                            ids = [int(x) for x in ids]
+                            members = StudentGroupMember.query.join(StudentGroup).filter(
+                                StudentGroup.id.in_(ids),
+                                StudentGroup.class_id == group_assignment.class_id,
+                                StudentGroup.is_active == True
+                            ).all()
+                        else:
+                            members = StudentGroupMember.query.join(StudentGroup).filter(
+                                StudentGroup.class_id == group_assignment.class_id,
+                                StudentGroup.is_active == True
+                            ).all()
+                        ga_total_applicable = len({m.student_id for m in members if m.student_id})
+                    except Exception:
+                        ga_total_applicable = len(group_grades)  # fallback
+                    if not ga_all_voided and ga_total_applicable > 0:
+                        ga_all_voided = ga_voided_count == ga_total_applicable
                     ga_partially_voided = not ga_all_voided and ga_voided_count > 0
                     ga_voided_student_names = []
                     if ga_partially_voided and selected_class:
@@ -1555,7 +1581,15 @@ def add_assignment():
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
+        # Support multiple classes (class_ids) or single class (class_id)
+        class_ids = [int(x) for x in request.form.getlist('class_ids') if x]
         class_id = request.form.get('class_id', type=int)
+        if class_ids:
+            pass  # Use class_ids for multi-class
+        elif class_id:
+            class_ids = [class_id]  # Single class
+        else:
+            class_ids = []
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
         status = request.form.get('status', 'Active')
@@ -1577,14 +1611,9 @@ def add_assignment():
         assignment_category = request.form.get('assignment_category', '').strip() or None
         category_weight = request.form.get('category_weight', type=float) or 0.0
         
-        print(f"DEBUG: Parsed - title={title}, class_id={class_id}, due_date={due_date_str}, quarter={quarter}, status={status}, assignment_context={assignment_context}, total_points={total_points}")
-        
-        if not all([title, class_id, due_date_str, quarter]):
-            print(f"DEBUG: Validation failed - title={title!r}, class_id={class_id!r}, due_date_str={due_date_str!r}, quarter={quarter!r}")
-            flash("Title, Class, Due Date, and Quarter are required.", "danger")
+        if not all([title, due_date_str, quarter]) or not class_ids:
+            flash("Title, Class(es), Due Date, and Quarter are required.", "danger")
             return redirect(request.url)
-        
-        print(f"DEBUG: Validation passed, proceeding to create assignment")
 
         # Type assertion for due_date_str
         assert due_date_str is not None
@@ -1620,31 +1649,8 @@ def add_assignment():
 
         # Type assertion for quarter
         assert quarter is not None
-        
-        # Create assignment using attribute assignment
-        new_assignment = Assignment()
-        new_assignment.title = title
-        new_assignment.description = description
-        new_assignment.due_date = due_date
-        new_assignment.open_date = open_date
-        new_assignment.close_date = close_date
-        new_assignment.class_id = class_id
-        new_assignment.school_year_id = current_school_year.id
-        new_assignment.quarter = str(quarter)
-        new_assignment.status = status
-        new_assignment.assignment_context = assignment_context
-        new_assignment.assignment_type = 'pdf_paper'  # Set assignment type for PDF/Paper assignments
-        new_assignment.total_points = total_points
-        new_assignment.allow_extra_credit = allow_extra_credit
-        new_assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
-        new_assignment.late_penalty_enabled = late_penalty_enabled
-        new_assignment.late_penalty_per_day = late_penalty_per_day if late_penalty_enabled else 0.0
-        new_assignment.late_penalty_max_days = late_penalty_max_days if late_penalty_enabled else 0
-        new_assignment.assignment_category = assignment_category
-        new_assignment.category_weight = category_weight
-        new_assignment.created_by = current_user.id
-        
-        # Handle file upload(s) - support multiple files via assignment_files or single assignment_file
+
+        # Save uploaded files once (can only read request.files once)
         upload_folder = current_app.config['UPLOAD_FOLDER']
         upload_dir = os.path.join(upload_folder, 'assignments')
         os.makedirs(upload_dir, exist_ok=True)
@@ -1653,7 +1659,7 @@ def add_assignment():
             single = request.files.get('assignment_file')
             if single and single.filename:
                 files_to_save = [single]
-        saved_attachments = []  # list of dicts to create AssignmentAttachment after flush
+        saved_file_data = []  # list of dicts: attachment_filename, attachment_original_filename, source_path, attachment_file_size, attachment_mime_type, sort_order
         for idx, file in enumerate(files_to_save):
             if not file or not file.filename:
                 continue
@@ -1662,39 +1668,73 @@ def add_assignment():
                 return redirect(request.url)
             assert file.filename is not None
             filename = secure_filename(file.filename)
-            unique_filename = f"assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{idx}_{filename}"
+            unique_filename = f"assignment_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{idx}_{filename}"
             filepath = os.path.join(upload_dir, unique_filename)
             try:
                 file.save(filepath)
-                saved_attachments.append({
+                saved_file_data.append({
                     'attachment_filename': unique_filename,
                     'attachment_original_filename': filename,
-                    'attachment_file_path': filepath,
+                    'source_path': filepath,
                     'attachment_file_size': os.path.getsize(filepath),
                     'attachment_mime_type': file.content_type or None,
                     'sort_order': idx,
                 })
-                if idx == 0:
-                    new_assignment.attachment_filename = unique_filename
-                    new_assignment.attachment_original_filename = filename
-                    new_assignment.attachment_file_path = filepath
-                    new_assignment.attachment_file_size = os.path.getsize(filepath)
-                    new_assignment.attachment_mime_type = file.content_type
             except Exception as e:
                 flash(f'Error saving file: {str(e)}', 'danger')
                 return redirect(request.url)
 
         try:
-            db.session.add(new_assignment)
-            db.session.flush()
-            for att_data in saved_attachments:
-                att = AssignmentAttachment(assignment_id=new_assignment.id, **att_data)
-                db.session.add(att)
+            created_count = 0
+            for cid in class_ids:
+                new_assignment = Assignment()
+                new_assignment.title = title
+                new_assignment.description = description
+                new_assignment.due_date = due_date
+                new_assignment.open_date = open_date
+                new_assignment.close_date = close_date
+                new_assignment.class_id = cid
+                new_assignment.school_year_id = current_school_year.id
+                new_assignment.quarter = str(quarter)
+                new_assignment.status = status
+                new_assignment.assignment_context = assignment_context
+                new_assignment.assignment_type = 'pdf_paper'
+                new_assignment.total_points = total_points
+                new_assignment.allow_extra_credit = allow_extra_credit
+                new_assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
+                new_assignment.late_penalty_enabled = late_penalty_enabled
+                new_assignment.late_penalty_per_day = late_penalty_per_day if late_penalty_enabled else 0.0
+                new_assignment.late_penalty_max_days = late_penalty_max_days if late_penalty_enabled else 0
+                new_assignment.assignment_category = assignment_category
+                new_assignment.category_weight = category_weight
+                new_assignment.created_by = current_user.id
+                db.session.add(new_assignment)
+                db.session.flush()
+
+                for att_idx, att_data in enumerate(saved_file_data):
+                    dest_filename = f"assignment_{cid}_{new_assignment.id}_{att_idx}_{att_data['attachment_original_filename']}"
+                    dest_path = os.path.join(upload_dir, dest_filename)
+                    shutil.copy2(att_data['source_path'], dest_path)
+                    att = AssignmentAttachment(
+                        assignment_id=new_assignment.id,
+                        attachment_filename=dest_filename,
+                        attachment_original_filename=att_data['attachment_original_filename'],
+                        attachment_file_path=dest_path,
+                        attachment_file_size=att_data['attachment_file_size'],
+                        attachment_mime_type=att_data['attachment_mime_type'],
+                        sort_order=att_data['sort_order'],
+                    )
+                    db.session.add(att)
+                    if att_idx == 0:
+                        new_assignment.attachment_filename = dest_filename
+                        new_assignment.attachment_original_filename = att_data['attachment_original_filename']
+                        new_assignment.attachment_file_path = dest_path
+                        new_assignment.attachment_file_size = att_data['attachment_file_size']
+                        new_assignment.attachment_mime_type = att_data['attachment_mime_type']
+                created_count += 1
+
             db.session.commit()
-            print(f"DEBUG: Assignment created successfully with ID: {new_assignment.id}")
-            print(f"DEBUG: Assignment details - title={new_assignment.title}, class_id={new_assignment.class_id}, quarter={new_assignment.quarter}")
-            
-            flash('Assignment created successfully.', 'success')
+            flash(f'Assignment created successfully for {created_count} class{"es" if created_count > 1 else ""}.', 'success')
             return redirect(url_for('management.assignments_and_grades'))
         except Exception as e:
             print(f"ERROR: Failed to create assignment: {e}")
@@ -3820,6 +3860,194 @@ def revoke_assignment_redo(redo_id):
         return jsonify({'success': False, 'message': f'Error revoking redo: {str(e)}'})
 
 
+# ============================================================
+# Route: /grant-redo-from-request/<int:request_id>', methods=['POST']
+# Function: grant_redo_from_request
+# ============================================================
+
+@bp.route('/grant-redo-from-request/<int:request_id>', methods=['POST'])
+@login_required
+def grant_redo_from_request(request_id):
+    """Grant redo from a student's redo request (inactive assignment)"""
+    from models import RedoRequest
+
+    req = RedoRequest.query.get_or_404(request_id)
+    if req.status != 'Pending':
+        return jsonify({'success': False, 'message': 'This request has already been reviewed.'})
+
+    assignment = Assignment.query.get_or_404(req.assignment_id)
+
+    # Authorization - same as grant_assignment_redo
+    from decorators import is_teacher_role
+    from models import class_additional_teachers, class_substitute_teachers
+
+    is_teacher = is_teacher_role(current_user.role)
+    is_admin = current_user.role in ['Director', 'School Administrator']
+
+    if is_teacher:
+        if not current_user.teacher_staff_id:
+            return jsonify({'success': False, 'message': 'Teacher record not found.'})
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        class_obj = assignment.class_info
+        if not class_obj:
+            return jsonify({'success': False, 'message': 'Assignment class not found.'})
+        is_authorized = (
+            class_obj.teacher_id == teacher.id or
+            db.session.query(class_additional_teachers).filter(
+                class_additional_teachers.c.class_id == class_obj.id,
+                class_additional_teachers.c.teacher_id == teacher.id
+            ).count() > 0 or
+            db.session.query(class_substitute_teachers).filter(
+                class_substitute_teachers.c.class_id == class_obj.id,
+                class_substitute_teachers.c.teacher_id == teacher.id
+            ).count() > 0
+        )
+        if not is_authorized:
+            return jsonify({'success': False, 'message': 'You can only grant redos for your own classes.'})
+    elif not is_admin:
+        return jsonify({'success': False, 'message': 'You are not authorized.'})
+
+    redo_deadline_str = request.form.get('redo_deadline')
+    if not redo_deadline_str:
+        return jsonify({'success': False, 'message': 'Please provide a redo deadline.'})
+
+    try:
+        redo_deadline = datetime.strptime(redo_deadline_str, '%Y-%m-%d')
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
+
+        submission = Submission.query.filter_by(
+            student_id=req.student_id,
+            assignment_id=req.assignment_id
+        ).first()
+        has_submitted = submission is not None and submission.submission_type != 'not_submitted'
+
+        if has_submitted:
+            existing = AssignmentRedo.query.filter_by(
+                assignment_id=req.assignment_id,
+                student_id=req.student_id
+            ).first()
+            if existing:
+                req.status = 'Approved'
+                req.reviewed_at = datetime.utcnow()
+                req.reviewed_by = teacher.id if teacher else None
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Redo already granted for this student.'})
+
+            grade = Grade.query.filter_by(student_id=req.student_id, assignment_id=req.assignment_id).first()
+            orig_grade = None
+            if grade and grade.grade_data:
+                try:
+                    gd = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                    orig_grade = gd.get('score') or gd.get('points_earned')
+                except (TypeError, json.JSONDecodeError):
+                    pass
+
+            redo_rec = AssignmentRedo(
+                assignment_id=req.assignment_id,
+                student_id=req.student_id,
+                granted_by=teacher.id if teacher else None,
+                redo_deadline=redo_deadline,
+                reason=req.reason or 'Granted from redo request',
+                original_grade=orig_grade
+            )
+            db.session.add(redo_rec)
+        else:
+            existing = AssignmentReopening.query.filter_by(
+                assignment_id=req.assignment_id,
+                student_id=req.student_id,
+                is_active=True
+            ).first()
+            if existing:
+                req.status = 'Approved'
+                req.reviewed_at = datetime.utcnow()
+                req.reviewed_by = teacher.id if teacher else None
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Reopening already granted for this student.'})
+
+            reopening = AssignmentReopening(
+                assignment_id=req.assignment_id,
+                student_id=req.student_id,
+                reopened_by=teacher.id if teacher else None,
+                is_active=True,
+                additional_attempts=0
+            )
+            db.session.add(reopening)
+
+        req.status = 'Approved'
+        req.reviewed_at = datetime.utcnow()
+        req.reviewed_by = teacher.id if teacher else None
+        db.session.commit()
+
+        # Notify student
+        if req.student and req.student.user:
+            from app import create_notification
+            create_notification(
+                user_id=req.student.user.id,
+                notification_type='assignment',
+                title=f'Redo Granted: {assignment.title}',
+                message=f'Your teacher granted a redo for "{assignment.title}". New deadline: {redo_deadline.strftime("%m/%d/%Y")}.',
+                link=url_for('student.student_assignments')
+            )
+
+        return jsonify({'success': True, 'message': 'Redo granted successfully. The student has been notified.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+# ============================================================
+# Route: /reject-redo-request/<int:request_id>', methods=['POST']
+# ============================================================
+
+@bp.route('/reject-redo-request/<int:request_id>', methods=['POST'])
+@login_required
+def reject_redo_request(request_id):
+    """Reject a student's redo request"""
+    from models import RedoRequest
+
+    req = RedoRequest.query.get_or_404(request_id)
+    if req.status != 'Pending':
+        return jsonify({'success': False, 'message': 'This request has already been reviewed.'})
+
+    assignment = Assignment.query.get_or_404(req.assignment_id)
+    from decorators import is_teacher_role
+    from models import class_additional_teachers, class_substitute_teachers
+
+    is_teacher = is_teacher_role(current_user.role)
+    is_admin = current_user.role in ['Director', 'School Administrator']
+
+    if is_teacher:
+        if not current_user.teacher_staff_id:
+            return jsonify({'success': False, 'message': 'Teacher record not found.'})
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        class_obj = assignment.class_info
+        if not class_obj:
+            return jsonify({'success': False, 'message': 'Assignment class not found.'})
+        is_authorized = (
+            class_obj.teacher_id == teacher.id or
+            db.session.query(class_additional_teachers).filter(
+                class_additional_teachers.c.class_id == class_obj.id,
+                class_additional_teachers.c.teacher_id == teacher.id
+            ).count() > 0 or
+            db.session.query(class_substitute_teachers).filter(
+                class_substitute_teachers.c.class_id == class_obj.id,
+                class_substitute_teachers.c.teacher_id == teacher.id
+            ).count() > 0
+        )
+        if not is_authorized:
+            return jsonify({'success': False, 'message': 'You can only act on requests for your own classes.'})
+    elif not is_admin:
+        return jsonify({'success': False, 'message': 'You are not authorized.'})
+
+    try:
+        req.status = 'Rejected'
+        req.reviewed_at = datetime.utcnow()
+        req.reviewed_by = TeacherStaff.query.get(current_user.teacher_staff_id).id if current_user.teacher_staff_id else None
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Redo request rejected.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
 
 
 # ============================================================

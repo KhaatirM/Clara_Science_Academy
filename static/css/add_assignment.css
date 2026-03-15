@@ -86,10 +86,14 @@
 }
 
 /* Form Layout - form and wrapper fill the column width */
+.add-assignment-container {
+    min-width: 0; /* Allow flex child to shrink/grow properly within main-content */
+}
 .add-assignment-container form#assignmentForm {
     display: block;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
 }
 
 .assignment-form-wrapper {
@@ -105,43 +109,196 @@
     max-width: 100%;
 }
 
-/* Two-column layout: form takes all remaining space, sidebar fixed width. Row fills container. */
+/* Class selection panel - checkbox list design */
+.class-selection-panel {
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.class-selection-actions {
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(180deg, #f8f9fa 0%, #f1f3f5 100%);
+    border-bottom: 1px solid #dee2e6;
+}
+
+.class-selection-list {
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 0.4rem;
+}
+
+.class-selection-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    margin-bottom: 0.25rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.class-selection-item:hover {
+    background: #e7f1ff;
+}
+
+.class-selection-item:last-child {
+    margin-bottom: 0;
+}
+
+.class-selection-item .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.class-selection-item .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.class-selection-label {
+    flex: 1;
+    font-weight: 500;
+    color: #212529;
+}
+
+.class-selection-item:has(.form-check-input:checked) {
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.class-selection-item:has(.form-check-input:checked):hover {
+    background: rgba(102, 126, 234, 0.12);
+}
+
+/* Form layout - balanced columns with comfortable spacing */
+.add-assignment-form-body {
+    padding: 1.75rem 2rem;
+    width: 100%;
+}
+.add-assignment-form-body .add-assignment-form-rows {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 100%;
+}
+.add-assignment-form-body .add-assignment-form-rows > .col-12:first-child,
+.add-assignment-form-body .add-assignment-form-rows > .col-12:nth-child(2) {
+    margin-bottom: 0.25rem; /* extra breathing room after title/description */
+}
+/* Ensure columns can shrink; do NOT override Bootstrap col widths */
+.add-assignment-form-rows > [class*="col-"] {
+    min-width: 0;
+}
+/* Two columns at 576px+ - Classes|Due Date, Quarter|Open Date, etc. - each row full width */
+@media (min-width: 576px) {
+    .add-assignment-form-rows > .col-sm-6 {
+        flex: 0 0 calc(50% - 0.625rem) !important;
+        max-width: calc(50% - 0.625rem) !important;
+        min-width: 0;
+    }
+}
+.add-assignment-form-body .add-assignment-label {
+    margin-bottom: 0.6rem;
+    font-size: 0.95rem;
+}
+.add-assignment-form-body .form-control,
+.add-assignment-form-body .form-select {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+}
+.add-assignment-form-body .form-control:focus,
+.add-assignment-form-body .form-select:focus {
+    padding: 0.55rem 0.8rem;
+}
+.add-assignment-form-body textarea.form-control {
+    min-height: 6rem;
+}
+.class-selection-list {
+    max-height: 160px;
+}
+
+/* Layout: flexbox so form reliably fills all available space - no unused area */
 .add-assignment-main-row {
-    display: grid !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100% !important;
+    min-width: 0 !important;
     max-width: 100% !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
     margin-bottom: 0 !important;
     box-sizing: border-box !important;
     gap: 1.25rem;
-    align-items: start;
-    grid-template-columns: 1fr 380px !important;
-    grid-template-areas: "form sidebar" !important;
+    align-items: stretch;
+}
+
+@media (min-width: 992px) {
+    .add-assignment-main-row {
+        flex-direction: row !important;
+    }
 }
 
 .add-assignment-form-col {
-    grid-area: form;
-    min-width: 0;
-    max-width: none !important; /* Override Bootstrap .col-lg-8 so form uses full grid cell */
+    order: 1;
+    flex: 1 1 0 !important; /* Takes all remaining space */
+    min-width: min(400px, 100%) !important; /* Ensure form is wide enough for side-by-side cols */
     width: 100% !important;
+    max-width: none !important;
     padding-right: 0.5rem;
+    box-sizing: border-box;
+}
+
+/* Ensure form column and all descendants expand to fill - no blank area to the right */
+.add-assignment-form-col,
+.add-assignment-form-col .assignment-form-wrapper,
+.add-assignment-form-col .assignment-section-card,
+.add-assignment-form-col .add-assignment-form-body,
+.add-assignment-form-col .add-assignment-form-rows {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Override Bootstrap row if present - prevent negative margins from constraining grid */
+.add-assignment-main-row.row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }
 
 .add-assignment-sidebar-col {
-    grid-area: sidebar;
-    min-width: 380px;
+    order: 2;
+    flex: 0 0 300px;
+    min-width: 0;
     padding-left: 0.5rem;
 }
 
-/* Stack vertically only on small screens */
-@media (max-width: 767px) {
+/* Side-by-side on large screens: form expands to fill, sidebar fixed */
+@media (min-width: 992px) {
     .add-assignment-main-row {
-        grid-template-columns: 1fr !important;
-        grid-template-areas: "form" "sidebar" !important;
+        flex-direction: row !important;
+    }
+    .add-assignment-form-col {
+        order: 1;
+        flex: 1 1 0 !important;
     }
     .add-assignment-sidebar-col {
-        min-width: 0;
+        order: 2;
+        flex: 0 0 300px !important;
+    }
+}
+
+/* Stack vertically on smaller screens - form gets full width, no unused space */
+@media (max-width: 991px) {
+    .add-assignment-sidebar-col {
+        flex: 0 0 auto;
+        max-width: none;
     }
 }
 

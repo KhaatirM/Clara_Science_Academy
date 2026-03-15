@@ -16,7 +16,7 @@ from models import (
     # Academic structure
     Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule, StudentAssistant,
     # Assignment system
-    Assignment, AssignmentAttachment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest,
+    Assignment, AssignmentAttachment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest, RedoRequest,
     # Group assignment system
     GroupAssignment, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
@@ -793,6 +793,12 @@ def student_assignments():
     ).all()
     extension_requests_by_assignment = {r.assignment_id: r for r in extension_requests}
     
+    # Redo requests (pending or approved) for inactive assignments
+    redo_requests = RedoRequest.query.filter_by(student_id=student.id).filter(
+        RedoRequest.status.in_(['Pending', 'Approved'])
+    ).all()
+    redo_requests_by_assignment = {r.assignment_id: r for r in redo_requests}
+    
     # Separate assignments into 3 categories: Inactive, Active, and Upcoming
     inactive_assignments = []  # Assignments with status='Inactive' - students can't turn them in
     active_assignments = []  # Assignments with status='Active' - students can submit
@@ -980,6 +986,7 @@ def student_assignments():
                              classes=classes,
                              redo_opportunities=redo_opportunities,
                              extension_requests_by_assignment=extension_requests_by_assignment,
+                             redo_requests_by_assignment=redo_requests_by_assignment,
                              filter_class_id=filter_class_id,
                              filter_status=filter_status,
                              filter_start_date=filter_start_date,
@@ -1028,10 +1035,17 @@ def class_assignments(class_id):
         
         assignments_with_status.append((assignment, submission, student_status))
     
+    # Redo requests for inactive assignments (Request Redo button)
+    redo_requests = RedoRequest.query.filter_by(student_id=student.id).filter(
+        RedoRequest.status.in_(['Pending', 'Approved'])
+    ).all()
+    redo_requests_by_assignment = {r.assignment_id: r for r in redo_requests}
+    
     return render_template('students/class_assignments_detail.html',
                          **create_template_context(student, 'assignments', 'assignments',
                              class_obj=class_obj,
                              assignments_with_status=assignments_with_status,
+                             redo_requests_by_assignment=redo_requests_by_assignment,
                              today=datetime.now().date()))
 
 @student_blueprint.route('/classes')
@@ -1160,6 +1174,7 @@ def _get_low_grade_data(student):
                 feedback = grade_data.get('feedback') or grade_data.get('comment') or grade_data.get('comments') or ''
                 low_grade_assignments.append({
                     'assignment': grade.assignment,
+                    'attachment_filename': getattr(grade.assignment, 'attachment_filename', None) or '',
                     'class_name': grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown',
                     'class_id': grade.assignment.class_id,
                     'percentage': round(percentage, 1),
@@ -1195,6 +1210,7 @@ def _get_low_grade_data(student):
                     feedback = grade_data.get('feedback') or grade_data.get('comment') or grade_data.get('comments') or ''
                     low_grade_assignments.append({
                         'assignment': grade.group_assignment,
+                        'attachment_filename': getattr(grade.group_assignment, 'attachment_filename', None) or '',
                         'class_name': grade.group_assignment.class_info.name if grade.group_assignment.class_info else 'Unknown',
                         'class_id': grade.group_assignment.class_id,
                         'percentage': round(percentage, 1),
@@ -2745,6 +2761,79 @@ def request_extension():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error submitting extension request for student {student.id if 'student' in locals() else 'unknown'}, assignment {assignment_id if 'assignment_id' in locals() else 'unknown'}: {e}")
+        return jsonify({'success': False, 'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+
+@student_blueprint.route('/request-redo', methods=['POST'])
+@login_required
+@student_required
+def request_redo():
+    """Student submits a redo request for an inactive assignment."""
+    try:
+        student = Student.query.get_or_404(current_user.student_id)
+        assignment_id = request.form.get('assignment_id', type=int)
+        reason = request.form.get('reason', '').strip()
+
+        if not assignment_id:
+            return jsonify({'success': False, 'message': 'Missing assignment.'}), 400
+
+        assignment = Assignment.query.get_or_404(assignment_id)
+
+        # Must be inactive (students can't submit; they request redo to get a second chance)
+        if assignment.status != 'Inactive':
+            return jsonify({'success': False, 'message': 'Redo requests are only for inactive assignments.'}), 400
+
+        # Check enrollment
+        enrollment = Enrollment.query.filter_by(
+            student_id=student.id, class_id=assignment.class_id, is_active=True
+        ).first()
+        if not enrollment:
+            return jsonify({'success': False, 'message': 'You are not enrolled in this class.'}), 403
+
+        # Check for existing pending or approved redo request
+        existing = RedoRequest.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id
+        ).filter(RedoRequest.status.in_(['Pending', 'Approved'])).first()
+
+        if existing:
+            return jsonify({'success': False, 'message': 'You already have a pending or approved redo request for this assignment.'}), 409
+
+        new_request = RedoRequest(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            reason=reason or None,
+            status='Pending'
+        )
+        db.session.add(new_request)
+        db.session.commit()
+
+        # Notify teacher and admins
+        try:
+            from app import create_notification
+            student_name = f"{student.first_name} {student.last_name}"
+            assign_title = assignment.title
+            title = "New redo request"
+            message = f'{student_name} requested a redo for "{assign_title}".'
+            redo_url = url_for('teacher.redo_dashboard') if current_user.role != 'Director' and current_user.role != 'School Administrator' else url_for('management.redo_dashboard')
+            recipients = []
+            if assignment.class_info and assignment.class_info.teacher_id:
+                teacher_user = User.query.filter_by(teacher_staff_id=assignment.class_info.teacher_id).first()
+                if teacher_user and teacher_user.id:
+                    recipients.append((teacher_user.id, redo_url))
+            for admin in User.query.filter(User.role.in_(['Director', 'School Administrator'])).all():
+                if admin.id and not any(r[0] == admin.id for r in recipients):
+                    recipients.append((admin.id, url_for('management.redo_dashboard')))
+            for user_id, link in recipients:
+                create_notification(user_id, 'assignment', title, message, link=link)
+        except Exception as notify_err:
+            current_app.logger.warning(f"Could not create redo-request notifications: {notify_err}")
+
+        return jsonify({'success': True, 'message': 'Redo request submitted successfully! Your teacher will review it on the Redo Dashboard.'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error submitting redo request: {e}")
         return jsonify({'success': False, 'message': f'An unexpected error occurred: {str(e)}'}), 500
 
 

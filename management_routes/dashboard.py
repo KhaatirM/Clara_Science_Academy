@@ -434,9 +434,9 @@ def management_dashboard():
 @bp.route('/redo-dashboard')
 @login_required
 def redo_dashboard():
-    """Dashboard showing all active redo opportunities and reopenings"""
+    """Dashboard showing all active redo opportunities, reopenings, and pending redo requests from students"""
     from datetime import datetime
-    from models import AssignmentRedo, AssignmentReopening, Assignment, Class, TeacherStaff
+    from models import AssignmentRedo, AssignmentReopening, Assignment, Class, TeacherStaff, RedoRequest
     from sqlalchemy.orm import joinedload
     
     # Authorization check
@@ -500,9 +500,30 @@ def redo_dashboard():
     
     improvement_rate = round(sum(improvements) / len(improvements), 1) if improvements else 0
     
+    # Pending redo requests from students (for inactive assignments)
+    if current_user.role == 'Teacher' and teacher:
+        class_ids = [c.id for c in classes]
+        assignment_ids = Assignment.query.filter(Assignment.class_id.in_(class_ids)).with_entities(Assignment.id).all()
+        assignment_ids = [a[0] for a in assignment_ids]
+        redo_requests = RedoRequest.query.filter(
+            RedoRequest.status == 'Pending',
+            RedoRequest.assignment_id.in_(assignment_ids)
+        ).options(
+            joinedload(RedoRequest.assignment).joinedload(Assignment.class_info),
+            joinedload(RedoRequest.student)
+        ).order_by(RedoRequest.requested_at.desc()).all()
+    else:
+        redo_requests = RedoRequest.query.filter(
+            RedoRequest.status == 'Pending'
+        ).options(
+            joinedload(RedoRequest.assignment).joinedload(Assignment.class_info),
+            joinedload(RedoRequest.student)
+        ).order_by(RedoRequest.requested_at.desc()).all()
+    
     return render_template('management/redo_dashboard.html',
                          redos=redos,
                          reopenings=reopenings,
+                         redo_requests=redo_requests,
                          classes=classes,
                          active_redos=active_redos,
                          completed_redos=completed_redos,

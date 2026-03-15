@@ -159,8 +159,10 @@
 {% block dashboard_content %}
 <script>
 // Global assignment view modal function - MUST be loaded first
-window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay, gradeFeedback) {
-    console.log('openAssignmentViewModal called with:', {assignmentId, assignmentTitle, assignmentAttachment, assignmentType});
+// isInactive: when true, assignment is inactive - show read-only + Request Redo only (no Submit/Take Quiz/Discuss)
+window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay, gradeFeedback, isInactive) {
+    isInactive = !!isInactive;
+    console.log('openAssignmentViewModal called with:', {assignmentId, assignmentTitle, assignmentAttachment, assignmentType, isInactive});
     
     const modalElement = document.getElementById('assignmentViewModal');
     
@@ -519,12 +521,24 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         }
     }
     
-    // Set enhanced action buttons based on assignment type
+    // Set enhanced action buttons based on assignment type (or inactive: read-only + Request Redo only)
     const actionButtonsElement = document.getElementById('viewActionButtons');
     if (actionButtonsElement) {
         actionButtonsElement.innerHTML = '';
         
-        if (assignmentType === 'quiz') {
+        if (isInactive) {
+            actionButtonsElement.innerHTML = `
+                <div class="alert alert-secondary border-0 mb-2">
+                    <i class="bi bi-pause-circle me-2"></i><strong>Assignment is Inactive</strong><br>
+                    <small>This assignment is closed. You can view details but cannot submit. Use "Request Redo" to ask your teacher for another chance.</small>
+                </div>
+                <div class="d-grid gap-2 mt-2">
+                    <button type="button" class="btn btn-request-redo btn-sm" onclick="openRedoRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}')">
+                        <i class="bi bi-arrow-repeat me-1"></i>Request Redo
+                    </button>
+                </div>
+            `;
+        } else if (assignmentType === 'quiz') {
             // Quiz-specific buttons with enhanced styling
             if (!hasSubmission) {
                 actionButtonsElement.innerHTML += `
@@ -974,17 +988,18 @@ function viewAssignmentFromButton(button) {
     const assignmentType = button.dataset.assignmentType || 'pdf';
     const gradeDisplay = button.dataset.gradeDisplay || '';
     const gradeFeedback = button.dataset.gradeFeedback || '';
+    const isInactive = button.dataset.isInactive === 'true';
     
-    window.viewAssignment(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay, gradeFeedback);
+    window.viewAssignment(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay, gradeFeedback, isInactive);
 }
 
 // Global view assignment function - called by View button
-window.viewAssignment = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay, gradeFeedback) {
-    console.log('viewAssignment function called with:', {assignmentId, assignmentTitle, assignmentType});
+window.viewAssignment = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay, gradeFeedback, isInactive) {
+    console.log('viewAssignment function called with:', {assignmentId, assignmentTitle, assignmentType, isInactive});
     try {
         // For all assignment types (quiz, pdf, paper, discussion), show the view modal
         if (typeof openAssignmentViewModal === 'function') {
-            openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay || '', gradeFeedback || '');
+            openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType, gradeDisplay || '', gradeFeedback || '', isInactive);
         } else {
             console.error('openAssignmentViewModal function not found');
             alert('Error: Assignment view modal not available. Please refresh the page.');
@@ -2894,7 +2909,20 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
                                             <span class="lg-card-grade">{{ item.percentage }}%</span>
                                             <span class="badge bg-secondary">{{ item.letter }}</span>
-                                            <a href="{{ url_for('student.student_assignments') }}?class_id={{ item.class_id }}" class="btn btn-sm btn-outline-primary mt-1" data-bs-dismiss="modal">View</a>
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-1"
+                                                data-assignment-id="{{ item.assignment.id }}"
+                                                data-assignment-title="{{ item.assignment.title|replace('"', '&quot;') }}"
+                                                data-assignment-description="{{ (item.assignment.description or '')|replace('"', '&quot;') }}"
+                                                data-assignment-due-date="{{ item.assignment.due_date.strftime('%Y-%m-%d') if item.assignment.due_date else 'No due date' }}"
+                                                data-assignment-quarter="{{ item.assignment.quarter or 'N/A' }}"
+                                                data-assignment-attachment="{{ item.attachment_filename|default('') }}"
+                                                data-has-submission="true"
+                                                data-has-grade="true"
+                                                data-assignment-type="{{ item.assignment_type }}"
+                                                data-grade-display="{{ item.percentage }}% ({{ item.letter }})"
+                                                data-grade-feedback="{{ item.feedback|e }}"
+                                                data-is-inactive="{{ 'true' if item.assignment.status == 'Inactive' else 'false' }}"
+                                                onclick="var m=document.getElementById('lowGradesModal'); if(m && bootstrap.Modal.getInstance(m)) bootstrap.Modal.getInstance(m).hide(); setTimeout(function(){ viewAssignmentFromButton(this); }.bind(this), 150);">View</button>
                                         </div>
                                     </div>
                                 </div>
@@ -3523,6 +3551,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% set _grade_display = 'Graded' %}
                             {% endif %}
                             {% set _grade_feedback = _gdata.get('feedback') or _gdata.get('comment') or '' %}
+                            {% set _redo_req = redo_requests_by_assignment.get(assignment.id) if not is_group and redo_requests_by_assignment else none %}
                             <button type="button" class="btn btn-sm btn-student-view" 
                                     data-assignment-id="{{ assignment.id }}"
                                     data-assignment-title="{{ assignment.title|replace("'", "\\'") }}"
@@ -3535,9 +3564,21 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     data-assignment-type="{{ assignment.assignment_type }}"
                                     data-grade-display="{{ _grade_display }}"
                                     data-grade-feedback="{{ _grade_feedback|e }}"
+                                    data-is-inactive="true"
                                     onclick="viewAssignmentFromButton(this)">
                                 <i class="bi bi-eye me-1"></i>View
                             </button>
+                            {% if not is_group %}
+                                {% if _redo_req %}
+                                    <span class="badge bg-{{ 'success' if _redo_req.status == 'Approved' else 'info' }} px-2 py-1">
+                                        <i class="bi bi-arrow-repeat me-1"></i>{{ 'Redo approved' if _redo_req.status == 'Approved' else 'Redo requested' }}
+                                    </span>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-request-redo" onclick="openRedoRequestModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}')">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Request Redo
+                                    </button>
+                                {% endif %}
+                            {% endif %}
                             {# No submit buttons for inactive assignments - students can't turn them in #}
                         </div>
                     </div>
@@ -6442,6 +6483,78 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         }, 300); // Wait 300ms for the assignment view modal to close
     }
 
+    // Redo Request Modal - for inactive assignments
+    function openRedoRequestModal(assignmentId, assignmentTitle) {
+        const assignmentViewModal = document.getElementById('assignmentViewModal');
+        if (assignmentViewModal) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const existing = bootstrap.Modal.getInstance(assignmentViewModal);
+                if (existing) existing.hide();
+            }
+        }
+        setTimeout(() => {
+            const modal = document.getElementById('redoRequestModal');
+            if (!modal) { alert('Redo request modal not found.'); return; }
+            const modalTitle = document.getElementById('redoRequestTitle');
+            const modalBody = document.getElementById('redoRequestBody');
+            if (modalTitle) modalTitle.textContent = `Request Redo - ${assignmentTitle}`;
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <form id="redoRequestForm">
+                        <input type="hidden" name="assignment_id" value="${assignmentId}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="redoReason" class="form-label">Reason for Redo Request</label>
+                            <textarea class="form-control" id="redoReason" name="reason" rows="3"
+                                      placeholder="Please explain why you would like to redo this assignment..."></textarea>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Your request will be sent to your teacher. They can grant you a redo opportunity from the Redo Dashboard.
+                        </div>
+                    </form>
+                `;
+            }
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                const bm = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
+                bm.show();
+                const form = document.getElementById('redoRequestForm');
+                if (form) {
+                    const handler = function(e) {
+                        if (!e.target.closest('button[type="submit"]')) return;
+                        e.preventDefault();
+                        const btn = modal.querySelector('button[type="submit"]');
+                        if (!btn || btn.disabled) return;
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+                        fetch('/student/request-redo', { method: 'POST', body: new FormData(form) })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert(data.message);
+                                    bm.hide();
+                                    location.reload();
+                                } else {
+                                    alert('Error: ' + (data.message || 'Unknown error'));
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="bi bi-send me-1"></i>Submit Request';
+                                }
+                            })
+                            .catch(err => {
+                                alert('An error occurred: ' + err.message);
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="bi bi-send me-1"></i>Submit Request';
+                            });
+                        modal.removeEventListener('click', handler);
+                    };
+                    modal.addEventListener('click', handler);
+                }
+            }
+        }, 300);
+    }
+
     </script>
     
     <!-- Class Assignments Modal -->
@@ -6496,6 +6609,29 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" form="extensionRequestForm" class="btn btn-info">
+                        <i class="bi bi-send me-1"></i>Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redo Request Modal (for inactive assignments) -->
+    <div class="modal fade" id="redoRequestModal" tabindex="-1" aria-labelledby="redoRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="redoRequestModalLabel">
+                        <i class="bi bi-arrow-repeat me-2"></i><span id="redoRequestTitle">Request Redo</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="redoRequestBody">
+                    <!-- Form will be injected here by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="redoRequestForm" class="btn btn-warning">
                         <i class="bi bi-send me-1"></i>Submit Request
                     </button>
                 </div>

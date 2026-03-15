@@ -33,9 +33,10 @@
         </div>
     </div>
 
-    <div class="row g-4 add-assignment-main-row">
+    <form method="POST" enctype="multipart/form-data" id="assignmentForm" action="{% if class_obj %}{{ url_for('teacher.assignments.add_assignment_for_class', class_id=class_obj.id) }}{% else %}{{ url_for('management.add_assignment') }}{% endif %}">
+    <div class="add-assignment-main-row">
         <!-- Sidebar: first child inside this row (grid-area places it on the right) -->
-        <div class="col-12 col-lg-4 add-assignment-sidebar-col">
+        <div class="add-assignment-sidebar-col">
                 <div class="assignment-sidebar">
                     <!-- Assignment Preview -->
                     <div class="card preview-card mb-4">
@@ -94,11 +95,11 @@
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
+                    <!-- Action Buttons (inside form so file uploads submit correctly) -->
                     <div class="card action-buttons-card">
                         <div class="card-body p-4">
                             <div class="d-grid gap-3">
-                                <button type="submit" form="assignmentForm" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
+                                <button type="submit" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
                                     <i class="bi bi-check-circle me-2"></i>Create Assignment
                                 </button>
                                 {% if class_obj %}
@@ -116,8 +117,7 @@
                 </div>
             </div>
 
-        <div class="col-12 col-lg-8 add-assignment-form-col">
-            <form method="POST" enctype="multipart/form-data" id="assignmentForm" action="{% if class_obj %}{{ url_for('teacher.assignments.add_assignment_for_class', class_id=class_obj.id) }}{% else %}{{ url_for('management.add_assignment') }}{% endif %}">
+        <div class="add-assignment-form-col">
                 <div class="assignment-form-wrapper">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
@@ -126,56 +126,66 @@
                         <div class="card-header bg-primary text-white">
                             <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
                         </div>
-                        <div class="card-body">
-                        <div class="row g-3">
+                        <div class="card-body add-assignment-form-body">
+                        <div class="row g-4 add-assignment-form-rows">
                             <div class="col-12">
-                                <label for="title" class="form-label fw-semibold">
+                                <label for="title" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-pencil-square me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control form-control-lg" id="title" name="title" 
-                                       placeholder="Enter a clear, descriptive assignment title..." required>
-                                <div class="form-text">Make it specific and engaging for students</div>
+                                <input type="text" class="form-control" id="title" name="title" placeholder="Enter a clear, descriptive title..." required>
                             </div>
-                            
                             <div class="col-12">
-                                <label for="description" class="form-label fw-semibold">
+                                <label for="description" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-card-text me-1 text-primary"></i>Assignment Description <span class="text-danger">*</span>
                                 </label>
-                                <textarea class="form-control" id="description" name="description" rows="4" 
-                                          placeholder="Provide detailed instructions, learning objectives, and any specific requirements..." required></textarea>
-                                <div class="form-text">Be clear about what students need to do and how they'll be graded</div>
+                                <textarea class="form-control" id="description" name="description" rows="4" placeholder="Instructions, learning objectives, and requirements..." required></textarea>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="class_id" class="form-label fw-semibold">
-                                    <i class="bi bi-book me-1 text-primary"></i>Class <span class="text-danger">*</span>
+                            <!-- Row 1: Classes | Due Date -->
+                            <div class="col-12 col-sm-6">
+                                <label for="{% if class_obj %}class_id{% else %}class_ids{% endif %}" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-book me-1 text-primary"></i>Class{% if not class_obj %}es{% endif %} <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select form-select-lg" id="class_id" name="class_id" required>
-                                    <option value="">Choose a class...</option>
-                                    {% if class_obj %}
-                                        <!-- Single class pre-selected (from teacher route) -->
+                                {% if class_obj %}
+                                    <select class="form-select" id="class_id" name="class_id" required>
                                         <option value="{{ class_obj.id }}" selected>{{ class_obj.name }} - {{ class_obj.subject }}</option>
-                                    {% elif classes %}
-                                        <!-- Multiple classes available (from management route) -->
-                                        {% for class in classes %}
-                                        <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
-                                        {% endfor %}
-                                    {% endif %}
-                                </select>
+                                    </select>
+                                {% elif classes %}
+                                    <div class="class-selection-panel">
+                                        <div class="class-selection-actions mb-1">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllClasses()">
+                                                <i class="bi bi-check-all me-1"></i>Select All
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllClasses()">
+                                                <i class="bi bi-x-lg me-1"></i>Deselect All
+                                            </button>
+                                        </div>
+                                        <div class="class-selection-list">
+                                            {% for class in classes %}
+                                            <label class="class-selection-item">
+                                                <input type="checkbox" name="class_ids" value="{{ class.id }}" class="form-check-input class-id-checkbox">
+                                                <span class="class-selection-label">{{ class.name }} – {{ class.subject }}</span>
+                                            </label>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted d-block mt-1">Select one or more classes.</small>
+                                {% else %}
+                                    <select class="form-select" id="class_id" name="class_id" required disabled>
+                                        <option value="">No classes available</option>
+                                    </select>
+                                {% endif %}
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="due_date" class="form-label fw-semibold">
+                            <div class="col-12 col-sm-6">
+                                <label for="due_date" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="quarter" class="form-label fw-semibold">
+                            <div class="col-12 col-sm-6">
+                                <label for="quarter" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-calendar3 me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select form-select-lg" id="quarter" name="quarter" required>
+                                <select class="form-select" id="quarter" name="quarter" required>
                                     <option value="">Select Quarter</option>
                                     <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
                                     <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
@@ -183,79 +193,52 @@
                                     <option value="4" {% if current_quarter == "4" %}selected{% endif %}>Quarter 4</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <!-- Assignment Availability Section -->
-                        <div class="row g-3 mt-2">
-                            <div class="col-12">
-                                <h6 class="fw-semibold text-muted mb-3">
-                                    <i class="bi bi-clock-history me-2"></i>Assignment Availability
-                                </h6>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label for="open_date" class="form-label fw-semibold">
+                            <!-- Row 2: Open Date | Close Date -->
+                            <div class="col-12 col-sm-6">
+                                <label for="open_date" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00">
-                                <div class="form-text">When students can start this assignment (leave empty for immediate availability)</div>
+                                <input type="datetime-local" class="form-control" id="open_date" name="open_date" min="2020-01-01T00:00" placeholder="Optional">
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label for="close_date" class="form-label fw-semibold">
+                            <div class="col-12 col-sm-6">
+                                <label for="close_date" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00">
-                                <div class="form-text">When this assignment closes (leave empty to close at due date)</div>
+                                <input type="datetime-local" class="form-control" id="close_date" name="close_date" min="2020-01-01T00:00" placeholder="Optional">
                             </div>
-                        </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="status" class="form-label fw-semibold">
-                                    <i class="bi bi-toggle-on me-1 text-primary"></i>Assignment Status <span class="text-danger">*</span>
+                            <div class="col-12 col-sm-6">
+                                <label for="status" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-toggle-on me-1 text-primary"></i>Status <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select form-select-lg" id="status" name="status" required>
+                                <select class="form-select" id="status" name="status" required>
                                     <option value="Active" selected>Active</option>
                                     <option value="Inactive">Inactive</option>
                                     <option value="Voided">Voided</option>
                                 </select>
-                                <div class="form-text">
-                                    <strong>Active:</strong> Students can submit work<br>
-                                    <strong>Inactive:</strong> Students cannot submit work<br>
-                                    <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)
-                                </div>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="assignment_context" class="form-label fw-semibold">
-                                    <i class="bi bi-bookmark me-1 text-primary"></i>Assignment Context <span class="text-danger">*</span>
+                            <!-- Row 3: Context | Total Points -->
+                            <div class="col-12 col-sm-6">
+                                <label for="assignment_context" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-bookmark me-1 text-primary"></i>Context <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select form-select-lg" id="assignment_context" name="assignment_context" required>
+                                <select class="form-select" id="assignment_context" name="assignment_context" required>
                                     <option value="homework" {% if context != 'in-class' %}selected{% endif %}>Homework</option>
-                                    <option value="in-class" {% if context == 'in-class' %}selected{% endif %}>IN-Class</option>
+                                    <option value="in-class" {% if context == 'in-class' %}selected{% endif %}>In-Class</option>
                                 </select>
-                                <div class="form-text">
-                                    <strong>Homework:</strong> Assignment to be completed outside of class<br>
-                                    <strong>IN-Class:</strong> Assignment to be completed during class time
-                                </div>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="total_points" class="form-label fw-semibold">
+                            <div class="col-12 col-sm-6">
+                                <label for="total_points" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-star me-1 text-primary"></i>Total Points <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" class="form-control form-control-lg" id="total_points" name="total_points" 
-                                       value="100" min="0.1" step="0.1" required>
-                                <div class="form-text">
-                                    Set the maximum points for this assignment (e.g., 50, 100, 150). 
-                                    Students will be graded out of this total. Default is 100 points.
-                                </div>
+                                <input type="number" class="form-control" id="total_points" name="total_points" value="100" min="0.1" step="0.1" required>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="assignment_category" class="form-label fw-semibold">
-                                    <i class="bi bi-tags me-1 text-primary"></i>Assignment Category
+                            <!-- Row 4: Category | Category Weight -->
+                            <div class="col-12 col-sm-6">
+                                <label for="assignment_category" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-tags me-1 text-primary"></i>Category <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select form-select-lg" id="assignment_category" name="assignment_category">
-                                    <option value="">None (Uncategorized)</option>
+                                <select class="form-select" id="assignment_category" name="assignment_category" required>
+                                    <option value="" selected>None (Uncategorized)</option>
                                     <option value="Homework">Homework</option>
                                     <option value="Tests">Tests</option>
                                     <option value="Quizzes">Quizzes</option>
@@ -264,16 +247,12 @@
                                     <option value="Participation">Participation</option>
                                     <option value="Other">Other</option>
                                 </select>
-                                <div class="form-text">Categorize for weighted grading (optional)</div>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="category_weight" class="form-label fw-semibold">
+                            <div class="col-12 col-sm-6">
+                                <label for="category_weight" class="form-label fw-semibold add-assignment-label">
                                     <i class="bi bi-percent me-1 text-primary"></i>Category Weight (%)
                                 </label>
-                                <input type="number" class="form-control form-control-lg" id="category_weight" name="category_weight" 
-                                       value="0" min="0" max="100" step="0.1">
-                                <div class="form-text">Weight percentage for this category (e.g., 20 for 20%)</div>
+                                <input type="number" class="form-control" id="category_weight" name="category_weight" value="0" min="0" max="100" step="0.1">
                             </div>
                         </div>
                         
@@ -372,11 +351,17 @@
                             </div>
                         </div>
                     </div>
+                        </div>
+                    </div>
                     </div>
                 </div>
+                <!-- Submit button at bottom for users who scroll - ensures file uploads are included -->
+                <div class="mt-4 d-lg-none">
+                    <button type="submit" class="btn btn-create-assignment btn-lg fw-bold w-100" id="createAssignmentBtnBottom">
+                        <i class="bi bi-check-circle me-2"></i>Create Assignment
+                    </button>
+                </div>
             </form>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -390,8 +375,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const assignmentPreview = document.getElementById('assignmentPreview');
     const form = document.getElementById('assignmentForm');
     
-    // If a class is pre-selected, disable the dropdown
-    if (classSelect.value && classSelect.value !== '') {
+    // If a class is pre-selected, disable the dropdown (single class mode)
+    if (classSelect && classSelect.value && classSelect.value !== '') {
         classSelect.disabled = true;
         // Add a hidden input to preserve the value when form is submitted
         const hiddenInput = document.createElement('input');
@@ -591,8 +576,18 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', updateAssignmentPreview);
     });
     
-    // Form submission
+    // Form submission - validate class_ids when using checkboxes
+    const classIdsCheckboxes = document.querySelectorAll('input[name="class_ids"]');
     form.addEventListener('submit', function(e) {
+        if (classIdsCheckboxes.length > 0) {
+            const checked = Array.from(classIdsCheckboxes).filter(cb => cb.checked);
+            if (!checked || checked.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one class.');
+                classIdsCheckboxes[0]?.closest('.class-selection-list')?.scrollIntoView({ behavior: 'smooth' });
+                return false;
+            }
+        }
         const submitBtn = document.getElementById('createAssignmentBtn');
         submitBtn.classList.add('loading');
         submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating Assignment...';
@@ -605,13 +600,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // In-class due date string (for when user switches to in-class via dropdown)
     const IN_CLASS_DUE = {{ ('"' + in_class_due_date_str + '"') if in_class_due_date_str else 'null' }};
     
+    function getInClassDueDateStr() {
+        if (IN_CLASS_DUE) return IN_CLASS_DUE;
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 0, 0);
+        return today.toISOString().slice(0, 16);
+    }
+    
     function applyDueDateForContext(context) {
         const dueInput = document.getElementById('due_date');
         const dueDateDiv = dueInput.parentElement;
         let infoEl = document.getElementById('inClassDueDateInfo');
         
-        if (context === 'in-class' && IN_CLASS_DUE) {
-            dueInput.value = IN_CLASS_DUE;
+        if (context === 'in-class') {
+            dueInput.value = getInClassDueDateStr();
             dueInput.readOnly = true;
             dueInput.style.backgroundColor = '#e9ecef';
             if (!infoEl) {
@@ -633,17 +635,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Assignment context dropdown: when changed, update due date behavior
-    document.getElementById('assignment_context').addEventListener('change', function() {
-        applyDueDateForContext(this.value);
-    });
-    
-    // Set initial due date based on assignment context
-    applyDueDateForContext('{{ context }}');
+    const assignmentContextEl = document.getElementById('assignment_context');
+    if (assignmentContextEl) {
+        assignmentContextEl.addEventListener('change', function() {
+            applyDueDateForContext(this.value);
+        });
+        // Set initial due date based on assignment context (use both server context and current dropdown value)
+        const initialContext = assignmentContextEl.value || '{{ context }}';
+        applyDueDateForContext(initialContext);
+    }
     
     // Initialize preview
     updateAssignmentPreview();
+    
+    // Select/Deselect all classes (for checkbox mode)
+    window.selectAllClasses = function() {
+        document.querySelectorAll('input[name="class_ids"]').forEach(cb => { cb.checked = true; });
+    };
+    window.deselectAllClasses = function() {
+        document.querySelectorAll('input[name="class_ids"]').forEach(cb => { cb.checked = false; });
+    };
 });
-    // Enable/disable extra credit fields
+    // Enable/disable extra credit fields (must run after DOM)
     document.getElementById('allow_extra_credit').addEventListener('change', function() {
         const extraCreditInput = document.getElementById('max_extra_credit_points');
         extraCreditInput.disabled = !this.checked;

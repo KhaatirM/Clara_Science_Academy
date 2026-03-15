@@ -1890,6 +1890,31 @@ class ExtensionRequest(db.Model):
         return f"ExtensionRequest(Assignment: {self.assignment_id}, Student: {self.student_id}, Status: {self.status})"
 
 
+class RedoRequest(db.Model):
+    """
+    Model for tracking redo requests from students for inactive assignments.
+    Teachers see these on the redo dashboard and can grant AssignmentRedo from them.
+    """
+    __tablename__ = 'redo_request'
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    reason = db.Column(db.Text, nullable=True)  # Student's reason for requesting redo
+    status = db.Column(db.String(20), default='Pending', nullable=False)  # Pending, Approved, Rejected
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    review_notes = db.Column(db.Text, nullable=True)  # Teacher's notes (optional)
+    
+    # Relationships
+    assignment = db.relationship('Assignment', backref='redo_requests')
+    student = db.relationship('Student', backref='redo_requests')
+    reviewer = db.relationship('TeacherStaff', backref='reviewed_redo_requests')
+    
+    def __repr__(self):
+        return f"RedoRequest(Assignment: {self.assignment_id}, Student: {self.student_id}, Status: {self.status})"
+
+
 class AssignmentRubric(db.Model):
     """
     Model for assignment rubrics.

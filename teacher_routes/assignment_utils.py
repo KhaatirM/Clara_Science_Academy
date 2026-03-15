@@ -183,6 +183,25 @@ def is_assignment_open_for_student(assignment, student_id):
     # Check if assignment is voided
     if assignment.status == 'Voided':
         return False
+
+    # Inactive assignments: block submission unless student has active reopening or valid redo
+    if assignment.status == 'Inactive':
+        from models import AssignmentReopening, AssignmentRedo
+        reopening = AssignmentReopening.query.filter_by(
+            assignment_id=assignment.id,
+            student_id=student_id,
+            is_active=True
+        ).first()
+        if reopening:
+            return True  # Student has been granted reopening
+        redo = AssignmentRedo.query.filter_by(
+            assignment_id=assignment.id,
+            student_id=student_id,
+            is_used=False
+        ).first()
+        if redo and redo.redo_deadline and datetime.now(timezone.utc) <= redo.redo_deadline:
+            return True  # Student has valid redo within deadline
+        return False  # Inactive and no reopening/redo - cannot submit
     
     now = datetime.now(timezone.utc)  # Use timezone-aware datetime
     

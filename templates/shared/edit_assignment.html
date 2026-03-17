@@ -145,6 +145,32 @@
                             </div>
                             
                             <div class="col-12 col-md-6">
+                                <label for="assignment_category" class="form-label fw-semibold">
+                                    <i class="bi bi-tags me-1 text-primary"></i>Category
+                                </label>
+                                <select class="form-select form-select-lg" id="assignment_category" name="assignment_category">
+                                    <option value="" {% if not assignment.assignment_category %}selected{% endif %}>None (Uncategorized)</option>
+                                    <option value="Homework" {% if assignment.assignment_category == 'Homework' %}selected{% endif %}>Homework</option>
+                                    <option value="Tests" {% if assignment.assignment_category == 'Tests' %}selected{% endif %}>Tests</option>
+                                    <option value="Quizzes" {% if assignment.assignment_category == 'Quizzes' %}selected{% endif %}>Quizzes</option>
+                                    <option value="Projects" {% if assignment.assignment_category == 'Projects' %}selected{% endif %}>Projects</option>
+                                    <option value="Labs" {% if assignment.assignment_category == 'Labs' %}selected{% endif %}>Labs</option>
+                                    <option value="Participation" {% if assignment.assignment_category == 'Participation' %}selected{% endif %}>Participation</option>
+                                    <option value="Other" {% if assignment.assignment_category == 'Other' %}selected{% endif %}>Other</option>
+                                </select>
+                                <div class="form-text">For weighted grading (e.g., Tests 40%, Homework 30%)</div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="category_weight" class="form-label fw-semibold">
+                                    <i class="bi bi-percent me-1 text-primary"></i>Category Weight (%)
+                                </label>
+                                <input type="number" class="form-control form-control-lg" id="category_weight" name="category_weight" 
+                                       value="{{ assignment.category_weight or 0 }}" min="0" max="100" step="0.1">
+                                <div class="form-text">Weight of this category in final grade (e.g., 20 for 20%)</div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
                                 <label for="total_points" class="form-label fw-semibold">
                                     <i class="bi bi-star me-1 text-primary"></i>Total Points <span class="text-danger">*</span>
                                 </label>

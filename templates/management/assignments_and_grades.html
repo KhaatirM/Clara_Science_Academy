@@ -328,25 +328,26 @@
                             <div class="card-body">
                                 <div class="mb-2 d-flex gap-2 flex-wrap">
                                     <!-- Assignment Type Badge -->
-                                    {% if assignment.assignment_type == 'quiz' %}
+                                    {% set _type = (assignment.assignment_type or '')|lower %}
+                                    {% if _type == 'quiz' %}
                                         <span class="badge bg-primary"><i class="bi bi-question-circle me-1"></i>Quiz</span>
-                                    {% elif assignment.assignment_type == 'discussion' %}
+                                    {% elif _type == 'discussion' %}
                                         <span class="badge bg-info"><i class="bi bi-chat-dots me-1"></i>Discussion</span>
-                                    {% elif assignment.assignment_type == 'project' %}
+                                    {% elif _type == 'project' %}
                                         <span class="badge bg-warning text-dark"><i class="bi bi-folder me-1"></i>Project</span>
                                     {% else %}
                                         <span class="badge bg-secondary"><i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper</span>
-                                    {% endif %}
-                                    <!-- Context Badge -->
-                                    {% if assignment.assignment_context %}
-                                        {% set context_lower = assignment.assignment_context.lower() %}
-                                        {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
-                                            <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                        {% if assignment.assignment_context %}
+                                            {% set ctx_lower = assignment.assignment_context.lower() %}
+                                            {% if 'in-class' in ctx_lower or 'in_class' in ctx_lower or 'inclass' in ctx_lower or ctx_lower.startswith('in-') or ctx_lower.startswith('in_') %}
+                                                <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
                                         {% endif %}
-                                    {% else %}
-                                        <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                        <span class="badge bg-dark"><i class="bi bi-tag me-1"></i>{{ assignment.assignment_category or 'Uncategorized' }}</span>
                                     {% endif %}
                                 </div>
                                 <div class="mb-2">
@@ -356,7 +357,7 @@
                                     </small>
                                 </div>
                                 <div class="mb-2">
-                                    <span class="badge bg-warning text-dark">{{ assignment.points }} pts</span>
+                                    <span class="badge bg-warning text-dark">{{ assignment.total_points }} pts</span>
                                 </div>
                                 <div class="mb-2">
                                     <small class="text-muted">
@@ -446,8 +447,8 @@
                                 <div class="card-body">
                                     <div class="mb-2 d-flex gap-2 flex-wrap">
                                         {% if group_assignment.assignment_context %}
-                                            {% set context_lower = group_assignment.assignment_context.lower() %}
-                                            {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
+                                            {% set gctx_lower = group_assignment.assignment_context.lower() %}
+                                            {% if 'in-class' in gctx_lower or 'in_class' in gctx_lower or 'inclass' in gctx_lower or gctx_lower.startswith('in-') or gctx_lower.startswith('in_') %}
                                                 <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
                                             {% else %}
                                                 <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
@@ -455,6 +456,7 @@
                                         {% else %}
                                             <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
                                         {% endif %}
+                                        <span class="badge bg-dark"><i class="bi bi-tag me-1"></i>{{ group_assignment.assignment_category or 'Uncategorized' }}</span>
                                     </div>
                                     <div class="mb-2">
                                         <small class="text-muted">
@@ -573,6 +575,7 @@
                                             <div class="d-flex flex-column align-items-center px-2">
                                                 <span class="small text-truncate" style="max-width: 120px;" title="{{ assignment.title }}">{{ assignment.title[:20] }}{% if assignment.title|length > 20 %}...{% endif %}</span>
                                                 <span class="badge {% if item_type == 'individual' %}bg-primary bg-opacity-20 text-dark border border-primary{% else %}bg-info bg-opacity-20 text-dark border border-info{% endif %} small mt-1">{{ 'Individual' if item_type == 'individual' else 'Group' }}</span>
+                                                {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge bg-dark bg-opacity-50 small mt-1" style="font-size: 0.65rem;">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
                                             </div>
                                         </th>
                                         {% endfor %}
@@ -704,6 +707,7 @@
                                                 <strong>{{ assignment.title }}</strong><br>
                                                 <small class="text-muted">{{ assignment.assignment_type if item_type == 'individual' else (assignment.assignment_type or 'Group Assignment') }}</small>
                                                 <span class="badge {% if item_type == 'individual' %}bg-primary{% else %}bg-info{% endif %} ms-2">{{ 'Individual' if item_type == 'individual' else 'Group' }}</span>
+                                                {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge bg-dark ms-1">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
                                             </td>
                                             <td>{{ assignment.due_date.strftime('%m/%d/%Y') if assignment.due_date else 'N/A' }}</td>
                                             <td>

@@ -234,6 +234,12 @@
     transform: scale(1.01);
 }
 
+.file-upload-zone.has-file {
+    background: linear-gradient(135deg, #d4edda 0%, #e8f5e9 100%);
+    border-color: #28a745;
+    border-style: solid;
+}
+
 .upload-icon {
     width: 60px;
     height: 60px;
@@ -910,16 +916,30 @@
                         <div class="section-header-line"></div>
                     </div>
                     <div class="section-body">
-                        <div class="file-upload-zone" id="fileUploadArea">
-                            <div class="upload-icon">
-                                <i class="bi bi-cloud-arrow-up"></i>
+                        <label for="attachment" class="file-upload-zone d-block mb-0" id="fileUploadArea" style="cursor: pointer;">
+                            <div id="fileUploadEmptyState">
+                                <div class="upload-icon">
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                </div>
+                                <h6 class="mb-1">Drop files here or click to upload</h6>
+                                <p class="text-muted small mb-0">PDF, DOC, DOCX, TXT, JPG, PNG, GIF, XLS, XLSX, PPT, PPTX</p>
+                                <p class="text-muted small mb-2">Maximum file size: 16 MB</p>
+                                <button type="button" class="btn btn-success mt-2" onclick="document.getElementById('attachment').click(); event.stopPropagation();">
+                                    <i class="bi bi-folder2-open me-1"></i> Choose Files
+                                </button>
                             </div>
-                            <h6 class="mb-1">Drop files here or click to upload</h6>
-                            <p class="text-muted small mb-0">PDF, DOC, DOCX, TXT, JPG, PNG, GIF, XLS, XLSX, PPT, PPTX</p>
-                            <p class="text-muted small">Maximum file size: 16 MB</p>
-                            <input type="file" class="d-none" id="attachment" name="attachment" 
+                            <div id="fileUploadSuccessState" style="display: none;">
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                                <h6 class="mb-1 mt-2 fw-bold text-success"><span id="fileUploadCount">1</span> file ready</h6>
+                                <p class="text-muted small mb-0" id="fileUploadFileName"></p>
+                                <p class="text-muted small mb-2">Click to change or add another file</p>
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('attachment').click(); event.stopPropagation();">
+                                    <i class="bi bi-folder2-open me-1"></i> Add or change file
+                                </button>
+                            </div>
+                            <input type="file" class="file-input-hidden" id="attachment" name="attachment" 
                                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
-                        </div>
+                        </label>
                         
                         <div id="filePreview" style="display: none;">
                             <div class="file-preview-content">
@@ -1079,9 +1099,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    removeFileBtn.addEventListener('click', () => {
+    removeFileBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         fileInput.value = '';
         filePreview.style.display = 'none';
+        // Restore empty state in upload zone
+        const emptyState = document.getElementById('fileUploadEmptyState');
+        const successState = document.getElementById('fileUploadSuccessState');
+        if (emptyState && successState) {
+            emptyState.style.display = '';
+            successState.style.display = 'none';
+        }
+        fileUploadArea.classList.remove('has-file');
     });
     
     function handleFileSelection(file) {
@@ -1093,6 +1123,24 @@ document.addEventListener('DOMContentLoaded', function() {
         fileName.textContent = file.name;
         fileSize.textContent = formatFileSize(file.size);
         filePreview.style.display = 'block';
+        
+        // Show success state in upload zone
+        const emptyState = document.getElementById('fileUploadEmptyState');
+        const successState = document.getElementById('fileUploadSuccessState');
+        const countEl = document.getElementById('fileUploadCount');
+        const fileNameEl = document.getElementById('fileUploadFileName');
+        if (emptyState && successState) {
+            emptyState.style.display = 'none';
+            successState.style.display = 'block';
+            if (countEl) countEl.textContent = '1';
+            if (fileNameEl) fileNameEl.textContent = file.name;
+        }
+        fileUploadArea.classList.add('has-file');
+        // Scroll upload zone into view so user sees the success feedback
+        fileUploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Scroll upload zone into view so user sees the success feedback
+        fileUploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fileUploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     
     function formatFileSize(bytes) {

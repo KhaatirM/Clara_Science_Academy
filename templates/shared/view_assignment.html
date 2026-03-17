@@ -379,10 +379,6 @@
                             <i class="bi bi-slash-circle"></i>
                             <span>Void</span>
                         </button>
-                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-compact btn-compact-status" title="Edit assignment (including status)">
-                            <i class="bi bi-pencil-square"></i>
-                            <span>Edit</span>
-                        </a>
                         <button class="btn btn-compact btn-compact-remove" 
                                 onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
                             <i class="bi bi-trash"></i>
@@ -571,6 +567,10 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.void_assignment_for_students', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.void_assignment', assignment_id=assignment.id) }}{% endif %}">
+                <input type="hidden" name="assignment_type" value="individual">
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                <input type="hidden" name="redirect_url" value="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}">
+                {% endif %}
                 <div class="modal-body modal-body-enhanced">
                     <div class="alert-modern alert-void">
                         <div class="alert-icon">
@@ -587,8 +587,8 @@
                             <i class="bi bi-gear me-2"></i>Void Options
                         </label>
                         
-                        <div class="option-card option-card-active" onclick="selectVoidOption('all')">
-                            <input class="form-check-input" type="radio" name="void_type" id="voidAll" value="all" checked onchange="toggleStudentSelection()">
+                        <div class="option-card option-card-active" onclick="selectVoidOption('all')" id="voidOptionAll">
+                            <input class="form-check-input" type="radio" name="void_type" id="voidAll" value="all" checked onchange="toggleStudentSelection(); updateVoidCardActiveState();">
                             <label class="option-card-label" for="voidAll">
                                 <div class="option-icon bg-danger">
                                     <i class="bi bi-people-fill"></i>
@@ -600,8 +600,8 @@
                             </label>
                         </div>
                         
-                        <div class="option-card" onclick="selectVoidOption('selected')">
-                            <input class="form-check-input" type="radio" name="void_type" id="voidSelect" value="selected" onchange="toggleStudentSelection()">
+                        <div class="option-card" onclick="selectVoidOption('selected')" id="voidOptionSelected">
+                            <input class="form-check-input" type="radio" name="void_type" id="voidSelect" value="selected" onchange="toggleStudentSelection(); updateVoidCardActiveState();">
                             <label class="option-card-label" for="voidSelect">
                                 <div class="option-icon bg-warning">
                                     <i class="bi bi-person-check-fill"></i>
@@ -1068,10 +1068,25 @@ function toggleStudentSelection() {
     const voidSelect = document.getElementById('voidSelect');
     const studentSelectionDiv = document.getElementById('studentSelectionDiv');
     
-    if (voidSelect.checked) {
+    if (voidSelect && voidSelect.checked) {
         studentSelectionDiv.style.display = 'block';
     } else {
         studentSelectionDiv.style.display = 'none';
+    }
+    updateVoidCardActiveState();
+}
+
+function updateVoidCardActiveState() {
+    // Update visual active state based on radio button selection
+    const voidModal = document.getElementById('voidModal');
+    if (!voidModal) return;
+    voidModal.querySelectorAll('.option-card').forEach(card => {
+        card.classList.remove('option-card-active');
+    });
+    const checkedRadio = voidModal.querySelector('input[name="void_type"]:checked');
+    if (checkedRadio) {
+        const card = checkedRadio.closest('.option-card');
+        if (card) card.classList.add('option-card-active');
     }
 }
 </script>
@@ -1408,8 +1423,6 @@ function selectVoidOption(type) {
         document.getElementById('voidSelect').checked = true;
     }
     toggleStudentSelection();
-    
-    // Update visual active state
 }
 
 // Helper functions for unvoid modal

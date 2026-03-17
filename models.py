@@ -638,6 +638,10 @@ class Assignment(db.Model):
     # Discussion assignment settings (only used when assignment_type='discussion')
     allow_student_edit_posts = db.Column(db.Boolean, default=False, nullable=False)
 
+    # Assignment category for weighted grading (e.g. Homework, Tests, Projects)
+    assignment_category = db.Column(db.String(50), nullable=True)
+    category_weight = db.Column(db.Float, default=0.0, nullable=False)
+
     class_info = db.relationship('Class', backref='assignments', lazy=True)
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)
     academic_period = db.relationship('AcademicPeriod', backref='assignments', lazy=True)

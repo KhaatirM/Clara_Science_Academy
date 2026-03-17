@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 4, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 17, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,55 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 4, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 17, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>assignments & grading</strong>: clearer voided badges, better student views, simplified status handling, and grading fixes. Teachers and students will see more accurate labels and smoother workflows. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>assignment badges, void/reopen/unvoid logic, and UI polish</strong>: distinct Context vs Category badges, accurate reopen status for PDF/Paper, void modal fixes, and removal of the duplicate Edit button. Teachers and administrators will see clearer labels and more reliable workflows. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+
+                    <!-- March 17, 2026 - Assignment Badges, Reopen Logic, Void/Edit Fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Assignment Badges, Reopen Logic & Void/Edit Fixes – March 17, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Two distinct assignment badges:</strong> Assignment cards now show two separate badges: <strong>Context</strong> (In-Class vs Homework) and <strong>Category</strong> (Tests, Projects, Quizzes, Labs, Participation, Other). The Category badge correlates to the category question in the PDF/Paper assignment creation form and is used for weighted grading.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Category badge for group assignments:</strong> Group assignments now always display the assignment category badge in card view, table view, and grades view—consistent with individual PDF/Paper assignments.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF/Paper edit form – Category question:</strong> The edit form for PDF/Paper assignments includes the Category and Category Weight fields. Both teacher and management edit routes correctly save assignment category when updating an assignment.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Reopen logic for PDF/Paper:</strong> Reopening now works correctly for all scenarios. For <strong>Upcoming</strong> assignments, a reopening grants early access before the open date. For <strong>Inactive</strong> assignments, students with valid extensions can still submit without needing a reopening; reopenings and redos continue to work for those past their window.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Reopen status – accurate for PDF/Paper:</strong> The Reopen modal’s student list now uses the same logic as submission access. Students who can submit (including via extensions) no longer appear as "needs reopening." Only students who truly cannot submit are flagged.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Void modal – UI fix:</strong> When selecting "Void for Selected Students Only," that option is now correctly highlighted (blue) instead of still showing "Void for Entire Class" as selected. The active choice matches the student selection section.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Duplicate Edit button removed:</strong> The assignment view page had two Edit buttons. The duplicate has been removed. Quiz assignments link to the quiz editor; PDF/Paper and discussion link to the appropriate edit form.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Void form for School Administrators:</strong> When voiding from the assignment view page, the form now correctly voids for the entire class when "Void for Entire Class" is selected. After voiding, School Administrators are redirected back to the assignment view instead of the assignments list.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Clearer assignment categorization for grading, reliable reopen and extension behavior for PDF/Paper, accurate void/unvoid/extension flows, and a cleaner assignment view with no duplicate Edit button.</p>
+                        </div>
+                    </div>
 
                     <!-- March 10, 2026 - 10 New Themes -->
                     <div class="update-section mb-4">

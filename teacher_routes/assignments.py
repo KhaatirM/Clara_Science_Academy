@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
+from teacher_routes.assignment_utils import is_assignment_open_for_student
 from models import (
     db, Class, Assignment, AssignmentAttachment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
     Grade, GroupAssignment, GroupGrade, GradeHistory, GroupSubmission, StudentGroup,
@@ -325,6 +326,11 @@ def edit_assignment(assignment_id):
             if not close_date:
                 close_date = due_date
             
+            assignment_category = request.form.get('assignment_category', '').strip() or None
+            category_weight = request.form.get('category_weight', type=float)
+            if category_weight is None:
+                category_weight = 0.0
+
             assignment.title = title
             assignment.description = description
             assignment.due_date = due_date
@@ -332,6 +338,8 @@ def edit_assignment(assignment_id):
             assignment.close_date = close_date
             assignment.quarter = quarter
             assignment.assignment_context = assignment_context
+            assignment.assignment_category = assignment_category
+            assignment.category_weight = category_weight
             assignment.total_points = total_points
             
             # Calculate status based on dates if status not explicitly set to Voided
@@ -1512,6 +1520,7 @@ def get_reopen_status(assignment_id):
         ).all()
         
         from models import Student
+        from teacher_routes.assignment_utils import is_assignment_open_for_student
         student_data = []
         
         for enrollment in enrollments:
@@ -1539,16 +1548,22 @@ def get_reopen_status(assignment_id):
             needs_reopening = False
             reason_needs_reopening = []
             
-            # Check if assignment is inactive/closed
-            if assignment.status not in ['Active']:
-                needs_reopening = True
-                reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
-            
-            # For quizzes, check if max attempts reached
-            if assignment.assignment_type == 'quiz' and assignment.max_attempts:
-                if submissions_count >= assignment.max_attempts:
+            # For quizzes: status-based + max attempts
+            if assignment.assignment_type == 'quiz':
+                if assignment.status not in ['Active']:
+                    needs_reopening = True
+                    reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
+                if assignment.max_attempts and submissions_count >= assignment.max_attempts:
                     needs_reopening = True
                     reason_needs_reopening.append(f'Max attempts ({assignment.max_attempts}) reached')
+            else:
+                # PDF/Paper, discussion, etc.: use canonical can_submit check
+                can_submit = is_assignment_open_for_student(assignment, student.id)
+                needs_reopening = not can_submit
+                if needs_reopening and assignment.status not in ['Active']:
+                    reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
+                elif needs_reopening and not reason_needs_reopening:
+                    reason_needs_reopening.append('Cannot submit (closed or outside access window)')
             
             student_data.append({
                 'student_id': student.id,

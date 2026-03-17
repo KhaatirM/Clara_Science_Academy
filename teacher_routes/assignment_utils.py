@@ -184,9 +184,16 @@ def is_assignment_open_for_student(assignment, student_id):
     if assignment.status == 'Voided':
         return False
 
-    # Inactive assignments: block submission unless student has active reopening or valid redo
+    now = datetime.now(timezone.utc)  # Use timezone-aware datetime
+
+    # Inactive assignments: block unless student has valid extension, reopening, or redo
     if assignment.status == 'Inactive':
         from models import AssignmentReopening, AssignmentRedo
+        # First check: student may have extension—is their effective close_date still valid?
+        student_close_date = get_student_close_date(assignment, student_id)
+        if student_close_date and now <= student_close_date:
+            return True  # Still within extension window
+        # Otherwise check reopening or redo
         reopening = AssignmentReopening.query.filter_by(
             assignment_id=assignment.id,
             student_id=student_id,
@@ -199,11 +206,28 @@ def is_assignment_open_for_student(assignment, student_id):
             student_id=student_id,
             is_used=False
         ).first()
-        if redo and redo.redo_deadline and datetime.now(timezone.utc) <= redo.redo_deadline:
+        if redo and redo.redo_deadline and now <= redo.redo_deadline:
             return True  # Student has valid redo within deadline
-        return False  # Inactive and no reopening/redo - cannot submit
-    
-    now = datetime.now(timezone.utc)  # Use timezone-aware datetime
+        return False  # Inactive and no extension/reopening/redo - cannot submit
+
+    # Upcoming assignments: block unless student has active reopening or valid redo
+    if assignment.status == 'Upcoming':
+        from models import AssignmentReopening, AssignmentRedo
+        reopening = AssignmentReopening.query.filter_by(
+            assignment_id=assignment.id,
+            student_id=student_id,
+            is_active=True
+        ).first()
+        if reopening:
+            return True  # Reopening grants early access
+        redo = AssignmentRedo.query.filter_by(
+            assignment_id=assignment.id,
+            student_id=student_id,
+            is_used=False
+        ).first()
+        if redo and redo.redo_deadline and now <= redo.redo_deadline:
+            return True  # Valid redo grants access
+        # Fall through to open_date check below (will return False)
     
     # Check open_date
     if assignment.open_date:

@@ -63,7 +63,7 @@
                                     <i class="bi bi-file-earmark-plus me-2"></i>Create PDF/Paper Assignment
                                 </a>
                             {% else %}
-                                <a href="{{ url_for('teacher.create_group_pdf_assignment', class_id=class_obj.id) }}" class="btn btn-create w-100">
+                                <a href="{{ url_for('teacher.groups.create_group_assignment', class_id=class_obj.id) }}" class="btn btn-create w-100">
                                     <i class="bi bi-file-earmark-plus me-2"></i>Create PDF/Paper Assignment
                                 </a>
                             {% endif %}
@@ -95,7 +95,7 @@
                                     <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
                                 </a>
                             {% else %}
-                                <a href="{{ url_for('teacher.create_group_discussion_assignment', class_id=class_obj.id) }}" class="btn btn-create w-100">
+                                <a href="{{ url_for('teacher.groups.create_group_assignment', class_id=class_obj.id) }}" class="btn btn-create w-100">
                                     <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
                                 </a>
                             {% endif %}

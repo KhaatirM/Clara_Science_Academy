@@ -1249,7 +1249,10 @@ def void_assignment_for_students(assignment_id):
         assignment_type = request.form.get('assignment_type', 'individual')
         student_ids = request.form.getlist('student_ids')
         reason = request.form.get('reason', 'Voided by administrator')
-        void_all = request.form.get('void_all', 'false').lower() == 'true'
+        void_all = request.form.get('void_all', '').lower() == 'true'
+        void_type = request.form.get('void_type', '')
+        if not void_all and void_type == 'all':
+            void_all = True
         voided_count, affected = _void_one_assignment_impl(
             assignment_id, assignment_type, student_ids, void_all, reason
         )
@@ -1270,6 +1273,9 @@ def void_assignment_for_students(assignment_id):
         if is_ajax:
             return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
         flash(message, 'success')
+        redirect_url = request.form.get('redirect_url', '').strip()
+        if redirect_url and redirect_url.startswith('/'):
+            return redirect(redirect_url)
         return redirect(url_for('management.assignments_and_grades'))
     except Exception as e:
         db.session.rollback()

@@ -22,6 +22,7 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo
 import json
 from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
+from teacher_routes.assignment_utils import is_assignment_open_for_student
 from utils.grade_helpers import get_points_earned
 
 bp = Blueprint('assignments', __name__)
@@ -2635,6 +2636,10 @@ def edit_assignment(assignment_id):
         quarter = request.form.get('quarter')
         status = request.form.get('status', 'Active')
         assignment_context = request.form.get('assignment_context', 'homework')
+        assignment_category = request.form.get('assignment_category', '').strip() or None
+        category_weight = request.form.get('category_weight', type=float)
+        if category_weight is None:
+            category_weight = 0.0
         total_points = request.form.get('total_points', type=float)
         status_revert_enabled = request.form.get('status_revert_enabled') == '1'
         status_override_until_str = request.form.get('status_override_until', '').strip()
@@ -2667,6 +2672,8 @@ def edit_assignment(assignment_id):
             assignment.quarter = str(quarter)  # Store as string to match model definition
             assignment.status = status
             assignment.assignment_context = assignment_context
+            assignment.assignment_category = assignment_category
+            assignment.category_weight = category_weight
             assignment.total_points = total_points
             
             # Status override: when "revert after" is set, lock status until that datetime
@@ -5191,16 +5198,22 @@ def admin_get_reopen_status(assignment_id):
             needs_reopening = False
             reason_needs_reopening = []
             
-            # Check if assignment is inactive/closed
-            if assignment.status not in ['Active']:
-                needs_reopening = True
-                reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
-            
-            # For quizzes, check if max attempts reached
-            if assignment.assignment_type == 'quiz' and assignment.max_attempts:
-                if submissions_count >= assignment.max_attempts:
+            # For quizzes: status-based + max attempts
+            if assignment.assignment_type == 'quiz':
+                if assignment.status not in ['Active']:
+                    needs_reopening = True
+                    reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
+                if assignment.max_attempts and submissions_count >= assignment.max_attempts:
                     needs_reopening = True
                     reason_needs_reopening.append(f'Max attempts ({assignment.max_attempts}) reached')
+            else:
+                # PDF/Paper, discussion, etc.: use canonical can_submit check
+                can_submit = is_assignment_open_for_student(assignment, student.id)
+                needs_reopening = not can_submit
+                if needs_reopening and assignment.status not in ['Active']:
+                    reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
+                elif needs_reopening and not reason_needs_reopening:
+                    reason_needs_reopening.append('Cannot submit (closed or outside access window)')
             
             student_data.append({
                 'student_id': student.id,

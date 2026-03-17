@@ -29,6 +29,7 @@ def run_database_fix():
             
             # Run the database fix scripts
             scripts_to_run = [
+                'add_missing_grade_and_assignment_columns.py',  # assignment_category, category_weight, etc.
                 'fix_production_assignment_columns_postgres.py',
                 'fix_production_status_override_columns.py',
                 'fix_school_day_attendance_table.py',

@@ -113,6 +113,37 @@ def add_missing_columns():
         else:
             print("[OK] 'total_points' column already exists in 'assignment' table")
         
+        # assignment_category and category_weight for weighted grading
+        if 'assignment_category' not in assignment_columns:
+            print("[INFO] Adding 'assignment_category' column to 'assignment' table...")
+            try:
+                db.session.execute(text("""
+                    ALTER TABLE assignment 
+                    ADD COLUMN assignment_category VARCHAR(50) NULL
+                """))
+                db.session.commit()
+                print("[OK] Successfully added 'assignment_category' column to 'assignment' table")
+            except Exception as e:
+                print(f"[ERROR] Failed to add 'assignment_category': {e}")
+                db.session.rollback()
+        else:
+            print("[OK] 'assignment_category' column already exists in 'assignment' table")
+        
+        if 'category_weight' not in assignment_columns:
+            print("[INFO] Adding 'category_weight' column to 'assignment' table...")
+            try:
+                db.session.execute(text(f"""
+                    ALTER TABLE assignment 
+                    ADD COLUMN category_weight {float_type} DEFAULT 0.0 NOT NULL
+                """))
+                db.session.commit()
+                print("[OK] Successfully added 'category_weight' column to 'assignment' table")
+            except Exception as e:
+                print(f"[ERROR] Failed to add 'category_weight': {e}")
+                db.session.rollback()
+        else:
+            print("[OK] 'category_weight' column already exists in 'assignment' table")
+        
         # Check and add columns to group_assignment table
         try:
             group_assignment_columns = [col['name'] for col in inspector.get_columns('group_assignment')]

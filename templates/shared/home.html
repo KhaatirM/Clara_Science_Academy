@@ -506,11 +506,29 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 17, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>assignment badges, void/reopen/unvoid logic, and UI polish</strong>: distinct Context vs Category badges, accurate reopen status for PDF/Paper, void modal fixes, and removal of the duplicate Edit button. Teachers and administrators will see clearer labels and more reliable workflows. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>assignment badges, void/reopen/unvoid logic, assignment document viewing, and UI polish</strong>: distinct Context vs Category badges, accurate reopen status for PDF/Paper, void modal fixes, removal of the duplicate Edit button, improved document path resolution to fix 404 errors when viewing assignments with attachments, and a notification badge on the Redo Dashboard. Teachers and administrators will see clearer labels, more reliable document access, and better visibility of pending redo requests. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+
+                    <!-- March 17, 2026 - Assignment Document 404 Fix & Redo Dashboard Badge -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>Assignment Documents & Redo Dashboard – March 17, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment document 404 fix:</strong> Assignments with uploaded documents (PDFs, etc.) that previously returned 404 errors when viewing or downloading now load correctly. Path resolution was improved to handle relative paths and fallback locations, so files are found even after deploys or when the app runs on different servers. New uploads store portable paths for reliable access.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Redo Dashboard notification badge:</strong> The Redo Dashboard button in Assignments & Grades now shows a notification badge (like Extension Requests) with the count of pending redo requests from students. Teachers see counts for their classes; Directors and School Administrators see all pending requests.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Assignment documents load reliably for students and teachers. Teachers and administrators can quickly see how many redo requests are waiting for review without opening the Redo Dashboard first.</p>
+                        </div>
+                    </div>
 
                     <!-- March 17, 2026 - Assignment Badges, Reopen Logic, Void/Edit Fixes -->
                     <div class="update-section mb-4">
@@ -1167,11 +1185,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar4_2026_assignments')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar17_2026_full')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar4_2026_assignments', 'true');
+            sessionStorage.setItem('updateModalShownMar17_2026_full', 'true');
         }, 500);
     }
 });

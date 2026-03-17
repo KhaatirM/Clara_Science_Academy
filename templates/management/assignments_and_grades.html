@@ -44,6 +44,9 @@
                 {% endif %}
                 <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.redo_dashboard') }}{% else %}{{ url_for('teacher.redo_dashboard') }}{% endif %}" class="btn btn-redo-dashboard">
                     <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
+                    {% if redo_request_count and redo_request_count > 0 %}
+                    <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 50%; min-width: 1.5rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">{{ redo_request_count }}</span>
+                    {% endif %}
                 </a>
                 <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_extension_requests') }}{% else %}{{ url_for('teacher.view_extension_requests') }}{% endif %}" class="btn btn-extension-requests">
                     <i class="bi bi-clock-history me-2"></i>Extension Requests

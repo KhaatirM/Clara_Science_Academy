@@ -10,7 +10,7 @@ from models import (
     db, Class, Assignment, Student, Grade, Submission, 
     Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff,
     class_additional_teachers, class_substitute_teachers, GroupAssignment, GroupGrade, ClassSchedule,
-    StudentAssistant, StudentAssistantActionLog
+    StudentAssistant, StudentAssistantActionLog, ExtensionRequest, RedoRequest
 )
 from sqlalchemy import or_, and_
 import json
@@ -946,6 +946,20 @@ def assignments_and_grades():
                         ExtensionRequest.status == 'Pending'
                     ).count()
             
+            # Get pending redo request count for teacher's classes
+            if is_admin():
+                pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
+            else:
+                if teacher is None:
+                    pending_redo_count = 0
+                else:
+                    class_ids = [c.id for c in accessible_classes]
+                    assignment_ids = [a.id for a in Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()]
+                    pending_redo_count = RedoRequest.query.filter(
+                        RedoRequest.assignment_id.in_(assignment_ids),
+                        RedoRequest.status == 'Pending'
+                    ).count() if assignment_ids else 0
+            
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
                                  class_assignments=class_assignments,
@@ -958,7 +972,8 @@ def assignments_and_grades():
                                  view_mode=view_mode,
                                  user_role=current_user.role if hasattr(current_user, 'role') else 'Teacher',
                                  show_class_selection=True,
-                                 extension_request_count=pending_extension_count)
+                                 extension_request_count=pending_extension_count,
+                                 redo_request_count=pending_redo_count)
         
         # Handle class filter
         selected_class = None
@@ -1374,6 +1389,20 @@ def assignments_and_grades():
                     ExtensionRequest.status == 'Pending'
                 ).count()
         
+        # Get pending redo request count for teacher's classes
+        if is_admin():
+            pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
+        else:
+            if teacher is None:
+                pending_redo_count = 0
+            else:
+                class_ids = [c.id for c in accessible_classes]
+                assignment_ids = [a.id for a in Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()]
+                pending_redo_count = RedoRequest.query.filter(
+                    RedoRequest.assignment_id.in_(assignment_ids),
+                    RedoRequest.status == 'Pending'
+                ).count() if assignment_ids else 0
+        
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              classes=accessible_classes,  # For dropdown filter
@@ -1392,6 +1421,7 @@ def assignments_and_grades():
                              class_filter=class_filter if selected_class else '',
                              today=today,
                              extension_request_count=pending_extension_count,
+                             redo_request_count=pending_redo_count,
                              # Table view data
                              enrolled_students=enrolled_students,
                              student_grades=table_student_grades if view_mode == 'table' else {},

@@ -188,11 +188,13 @@ def add_assignment_for_class(class_id):
                 unique_filename = timestamp + f"{idx}_{filename}"
                 filepath = os.path.join(upload_dir, unique_filename)
                 file.save(filepath)
+                # Store relative path (assignments/filename) so files resolve after redeploys
+                attachment_file_path_stored = os.path.join('assignments', unique_filename)
                 att = AssignmentAttachment(
                     assignment_id=new_assignment.id,
                     attachment_filename=unique_filename,
                     attachment_original_filename=filename,
-                    attachment_file_path=filepath,
+                    attachment_file_path=attachment_file_path_stored,
                     attachment_file_size=os.path.getsize(filepath),
                     attachment_mime_type=file.content_type or None,
                     sort_order=idx,
@@ -201,7 +203,7 @@ def add_assignment_for_class(class_id):
                 if idx == 0:
                     new_assignment.attachment_filename = unique_filename
                     new_assignment.attachment_original_filename = filename
-                    new_assignment.attachment_file_path = filepath
+                    new_assignment.attachment_file_path = attachment_file_path_stored
                     new_assignment.attachment_file_size = os.path.getsize(filepath)
                     new_assignment.attachment_mime_type = file.content_type
 
@@ -370,11 +372,12 @@ def edit_assignment(assignment_id):
                     unique_filename = timestamp + f"{idx}_{filename}"
                     filepath = os.path.join(upload_dir, unique_filename)
                     file.save(filepath)
+                    attachment_file_path_stored = os.path.join('assignments', unique_filename)
                     att = AssignmentAttachment(
                         assignment_id=assignment.id,
                         attachment_filename=unique_filename,
                         attachment_original_filename=filename,
-                        attachment_file_path=filepath,
+                        attachment_file_path=attachment_file_path_stored,
                         attachment_file_size=os.path.getsize(filepath),
                         attachment_mime_type=file.content_type or None,
                         sort_order=idx,
@@ -383,7 +386,7 @@ def edit_assignment(assignment_id):
                     if idx == 0:
                         assignment.attachment_filename = unique_filename
                         assignment.attachment_original_filename = filename
-                        assignment.attachment_file_path = filepath
+                        assignment.attachment_file_path = attachment_file_path_stored
                         assignment.attachment_file_size = os.path.getsize(filepath)
                         assignment.attachment_mime_type = file.content_type
 

@@ -3451,13 +3451,19 @@ def submit_group_assignment(assignment_id):
         return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
 
 def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
-    """Resolve actual file path: try stored path (if exists), then assignments/group_assignments subfolders, then root."""
+    """Resolve actual file path: try stored path (if exists), stored as relative to UPLOAD_FOLDER,
+    then assignments/group_assignments subfolders, then root."""
     if file_path_stored and os.path.isabs(file_path_stored) and os.path.exists(file_path_stored):
         return file_path_stored
-    if not filename:
-        return None
     upload_abs = os.path.abspath(upload_folder) if upload_folder else None
     if not upload_abs:
+        return None
+    # Try stored path as relative to UPLOAD_FOLDER (handles paths like "assignments/foo.pdf" across deploys)
+    if file_path_stored and not os.path.isabs(file_path_stored):
+        rel_candidate = os.path.normpath(os.path.join(upload_abs, file_path_stored))
+        if os.path.exists(rel_candidate):
+            return rel_candidate
+    if not filename:
         return None
     candidates = [
         os.path.join(upload_abs, 'assignments', filename),

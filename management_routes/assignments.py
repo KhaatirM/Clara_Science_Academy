@@ -8,7 +8,7 @@ from decorators import management_required
 from models import (
     db, Assignment, AssignmentAttachment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
     AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, QuizSection, DiscussionThread,
-    DiscussionPost, GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest,
+    DiscussionPost, GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest, RedoRequest,
     QuestionBank, QuestionBankQuestion, QuestionBankOption
 )
 from werkzeug.utils import secure_filename
@@ -809,8 +809,9 @@ def assignments_and_grades():
                             unique_student_ids.add(enrollment.student_id)
             unique_student_count = len(unique_student_ids)
             
-            # Get pending extension request count
+            # Get pending extension request count and redo request count
             pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+            pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
             
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
@@ -826,7 +827,8 @@ def assignments_and_grades():
                                  view_mode=view_mode,
                                  user_role=user_role,
                                  show_class_selection=True,
-                                 extension_request_count=pending_extension_count)
+                                 extension_request_count=pending_extension_count,
+                                 redo_request_count=pending_redo_count)
         
         # Get assignment counts and grade data for each class
         class_data = {}
@@ -1136,8 +1138,9 @@ def assignments_and_grades():
             sorted_assignments = []
         
         from datetime import date
-        # Get pending extension request count
+        # Get pending extension request count and redo request count
         pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+        pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
         
         # Create combined assignments list for grades and table views
         class_assignments_data = list(class_assignments) if class_assignments else []
@@ -1345,6 +1348,7 @@ def assignments_and_grades():
                              show_class_selection=False,
                              today=date.today(),
                              extension_request_count=pending_extension_count,
+                             redo_request_count=pending_redo_count,
                              enrolled_students=enrolled_students,
                              all_assignments=all_assignments,
                              student_grades=table_student_grades,
@@ -1716,11 +1720,13 @@ def add_assignment():
                     dest_filename = f"assignment_{cid}_{new_assignment.id}_{att_idx}_{att_data['attachment_original_filename']}"
                     dest_path = os.path.join(upload_dir, dest_filename)
                     shutil.copy2(att_data['source_path'], dest_path)
+                    # Store relative path (assignments/filename) so files resolve after redeploys
+                    attachment_file_path_stored = os.path.join('assignments', dest_filename)
                     att = AssignmentAttachment(
                         assignment_id=new_assignment.id,
                         attachment_filename=dest_filename,
                         attachment_original_filename=att_data['attachment_original_filename'],
-                        attachment_file_path=dest_path,
+                        attachment_file_path=attachment_file_path_stored,
                         attachment_file_size=att_data['attachment_file_size'],
                         attachment_mime_type=att_data['attachment_mime_type'],
                         sort_order=att_data['sort_order'],
@@ -1729,7 +1735,7 @@ def add_assignment():
                     if att_idx == 0:
                         new_assignment.attachment_filename = dest_filename
                         new_assignment.attachment_original_filename = att_data['attachment_original_filename']
-                        new_assignment.attachment_file_path = dest_path
+                        new_assignment.attachment_file_path = attachment_file_path_stored
                         new_assignment.attachment_file_size = att_data['attachment_file_size']
                         new_assignment.attachment_mime_type = att_data['attachment_mime_type']
                 created_count += 1
@@ -2717,11 +2723,13 @@ def edit_assignment(assignment_id):
                     filepath = os.path.join(upload_dir, unique_filename)
                     try:
                         file.save(filepath)
+                        # Store relative path (assignments/filename) so files resolve after redeploys
+                        attachment_file_path_stored = os.path.join('assignments', unique_filename)
                         att = AssignmentAttachment(
                             assignment_id=assignment.id,
                             attachment_filename=unique_filename,
                             attachment_original_filename=filename,
-                            attachment_file_path=filepath,
+                            attachment_file_path=attachment_file_path_stored,
                             attachment_file_size=os.path.getsize(filepath),
                             attachment_mime_type=file.content_type or None,
                             sort_order=idx,
@@ -2730,7 +2738,7 @@ def edit_assignment(assignment_id):
                         if idx == 0:
                             assignment.attachment_filename = unique_filename
                             assignment.attachment_original_filename = filename
-                            assignment.attachment_file_path = filepath
+                            assignment.attachment_file_path = attachment_file_path_stored
                             assignment.attachment_file_size = os.path.getsize(filepath)
                             assignment.attachment_mime_type = file.content_type
                     except Exception as e:

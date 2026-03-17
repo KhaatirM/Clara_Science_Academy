@@ -465,15 +465,20 @@ def create_app(config_class=None):
         return render_template('shared/home.html')
 
     def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
-        """Resolve actual file path: try stored path (if on same host), then assignments subfolder, then root.
-        Stored paths from a different environment (e.g. Windows dev path on Linux prod) are ignored."""
+        """Resolve actual file path: try stored path (if on same host), stored as relative to UPLOAD_FOLDER,
+        then assignments subfolder, then root. Stored paths from a different environment are ignored."""
         import os
         if file_path_stored and os.path.isabs(file_path_stored) and os.path.exists(file_path_stored):
             return file_path_stored
-        if not filename:
-            return None
         upload_abs = os.path.abspath(upload_folder) if upload_folder else None
         if not upload_abs:
+            return None
+        # Try stored path as relative to UPLOAD_FOLDER (handles paths like "assignments/foo.pdf" across deploys)
+        if file_path_stored and not os.path.isabs(file_path_stored):
+            rel_candidate = os.path.normpath(os.path.join(upload_abs, file_path_stored))
+            if os.path.exists(rel_candidate):
+                return rel_candidate
+        if not filename:
             return None
         # Prefer UPLOAD_FOLDER-based paths (portable across deploys); ignore stored abs path from other hosts
         candidates = [

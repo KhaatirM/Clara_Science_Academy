@@ -42,8 +42,9 @@ def run_database_fix():
                 'add_quiz_sections.py'
             ]
             
-            # Get the maintenance_scripts directory path
-            script_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'maintenance_scripts')
+            # Get the maintenance_scripts directory path and project root
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            script_dir = os.path.join(project_root, 'maintenance_scripts')
             
             all_success = True
             for script in scripts_to_run:
@@ -52,10 +53,13 @@ def run_database_fix():
                     print(f"⚠️  Script not found: {script_path}, skipping...")
                     continue
                 print(f"🔧 Running {script}...")
-                result = subprocess.run([
-                    sys.executable, 
-                    script_path
-                ], capture_output=True, text=True, timeout=60)
+                result = subprocess.run(
+                    [sys.executable, script_path],
+                    cwd=project_root,  # Ensure app is importable from project root
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
                 
                 if result.returncode == 0:
                     print(f"✅ {script} completed successfully!")

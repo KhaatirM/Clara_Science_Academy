@@ -26,6 +26,12 @@ Columns to add:
 - group_assignment.selected_group_ids
 """
 
+import sys
+import os
+
+# Ensure project root is in path (when run from maintenance_scripts/ or project/src/)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app import create_app
 from extensions import db
 from sqlalchemy import text, inspect

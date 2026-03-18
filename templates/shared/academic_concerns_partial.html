@@ -76,11 +76,62 @@
           </div>
         </div>
 
+        <!-- Concerns Toolbar: Search, Filters, Sort -->
+        <div class="concerns-toolbar mb-4">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="concerns-search">
+                <i class="bi bi-search search-icon-concerns"></i>
+                <input type="text" 
+                       id="concernsSearchInput" 
+                       class="form-control concerns-search-input" 
+                       placeholder="Search by student name, class, or assignment..."
+                       oninput="filterConcerns()">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select concerns-filter" id="concernsTypeFilter" onchange="filterConcerns()">
+                <option value="">All Alert Types</option>
+                <option value="failing">Failing Only</option>
+                <option value="missing">Missing Only</option>
+                <option value="overdue">Overdue Only</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <select class="form-select concerns-filter" id="concernsGPAFilter" onchange="filterConcerns()">
+                <option value="">All GPAs</option>
+                <option value="critical">Critical (&lt;2.0)</option>
+                <option value="warning">Warning (2.0-2.9)</option>
+                <option value="low">Below 3.0</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select concerns-filter" id="concernsSortOrder" onchange="filterConcerns()">
+                <option value="student-asc">Student Name (A-Z)</option>
+                <option value="student-desc">Student Name (Z-A)</option>
+                <option value="gpa-asc">GPA (Low to High)</option>
+                <option value="gpa-desc">GPA (High to Low)</option>
+                <option value="assignments-desc">Most Assignments First</option>
+              </select>
+            </div>
+          </div>
+          <div class="concerns-stats mt-3">
+            <span class="concerns-count-badge">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              <span id="visibleConcernsCount">{{ at_risk_alerts|length }}</span> of {{ at_risk_alerts|length }} students shown
+            </span>
+            <button class="btn btn-sm btn-concerns-reset" onclick="resetConcernsFilters()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Reset Filters
+            </button>
+          </div>
+        </div>
+
         <div class="concerns-students-container" id="concernsStudentsContainer">
           {% for alert in at_risk_alerts %}
           <div class="academic-concern-card" 
                data-student-id="{{ alert.student_user_id }}"
                data-student-name="{{ alert.student_name }}"
+               data-class-name="{{ alert.class_name }}"
                data-alert-type="{{ alert.alert_reason.lower() }}">
             <div class="academic-concern-header">
               <div class="d-flex align-items-center gap-3">
@@ -131,6 +182,16 @@
           </div>
           {% endfor %}
         </div>
+
+        <!-- No Results Message (shown when filters hide all) -->
+        <div id="noConcernsMessage" class="no-concerns-filtered" style="display: none;">
+          <i class="bi bi-filter-circle"></i>
+          <h5>No students match your filters</h5>
+          <p>Try adjusting your search criteria or reset filters</p>
+          <button class="btn btn-primary" onclick="resetConcernsFilters()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Reset Filters
+          </button>
+        </div>
       </div>
       <div class="modal-footer academic-concerns-footer">
         <button type="button" class="btn btn-academic-close" data-bs-dismiss="modal">
@@ -179,6 +240,15 @@
           window._academicDetailsCache = window._academicDetailsCache || {};
           window._academicDetailsCache[studentId] = data.student;
           container.innerHTML = formatStudentDetails(data.student);
+          var card = container.closest('.academic-concern-card');
+          if (card) {
+            if (data.student.current_gpa != null) card.dataset.gpa = String(data.student.current_gpa);
+            var ma = data.student.missing_assignments || {};
+            var count = 0;
+            for (var k in ma) count += (ma[k] || []).length;
+            card.dataset.assignmentsCount = String(count);
+          }
+          if (typeof filterConcerns === 'function') filterConcerns();
         } else {
           container.innerHTML = '<div class="alert alert-danger">Error: ' + (data.error || 'Unknown error') + '</div>';
         }
@@ -334,5 +404,74 @@
     }
     html += '</div></div>';
     return html;
+  }
+  function filterConcerns() {
+    var searchTerm = (document.getElementById('concernsSearchInput') && document.getElementById('concernsSearchInput').value) ? document.getElementById('concernsSearchInput').value.toLowerCase() : '';
+    var typeFilter = (document.getElementById('concernsTypeFilter') && document.getElementById('concernsTypeFilter').value) || '';
+    var gpaFilter = (document.getElementById('concernsGPAFilter') && document.getElementById('concernsGPAFilter').value) || '';
+    var sortOrder = (document.getElementById('concernsSortOrder') && document.getElementById('concernsSortOrder').value) || 'student-asc';
+    var studentCards = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('.academic-concern-card')) : [];
+    var visibleCount = 0;
+    var visibleCards = [];
+    studentCards.forEach(function(card) {
+      var studentName = (card.getAttribute('data-student-name') || '').toLowerCase();
+      var className = (card.getAttribute('data-class-name') || '').toLowerCase();
+      var alertType = (card.getAttribute('data-alert-type') || '');
+      var detailsDiv = card.querySelector('.student-details-placeholder');
+      var detailsText = detailsDiv ? (detailsDiv.textContent || '').toLowerCase() : '';
+      var searchMatch = !searchTerm || studentName.indexOf(searchTerm) >= 0 || className.indexOf(searchTerm) >= 0 || detailsText.indexOf(searchTerm) >= 0;
+      var typeMatch = !typeFilter || alertType.indexOf(typeFilter) >= 0;
+      var gpaVal = parseFloat(card.getAttribute('data-gpa'));
+      var gpaMatch = true;
+      if (gpaFilter && !isNaN(gpaVal)) {
+        if (gpaFilter === 'critical') gpaMatch = gpaVal < 2.0;
+        else if (gpaFilter === 'warning') gpaMatch = gpaVal >= 2.0 && gpaVal < 3.0;
+        else if (gpaFilter === 'low') gpaMatch = gpaVal < 3.0;
+      } else if (gpaFilter && isNaN(gpaVal)) { gpaMatch = false; }
+      var show = searchMatch && typeMatch && gpaMatch;
+      card.style.display = show ? 'block' : 'none';
+      if (show) { visibleCount++; visibleCards.push(card); }
+    });
+    if (sortOrder && visibleCards.length) sortStudentCards(visibleCards, sortOrder);
+    var visibleEl = document.getElementById('visibleConcernsCount');
+    if (visibleEl) visibleEl.textContent = visibleCount;
+    var noMsg = document.getElementById('noConcernsMessage');
+    var container = document.getElementById('concernsStudentsContainer');
+    if (noMsg && container) {
+      if (visibleCount === 0) { noMsg.style.display = 'block'; container.style.display = 'none'; }
+      else { noMsg.style.display = 'none'; container.style.display = 'block'; }
+    }
+  }
+  function sortStudentCards(cards, order) {
+    var container = document.getElementById('concernsStudentsContainer');
+    if (!container) return;
+    cards.sort(function(a, b) {
+      var nameA = (a.getAttribute('data-student-name') || '').toLowerCase();
+      var nameB = (b.getAttribute('data-student-name') || '').toLowerCase();
+      var gpaA = parseFloat(a.getAttribute('data-gpa'));
+      var gpaB = parseFloat(b.getAttribute('data-gpa'));
+      if (order === 'student-asc') return nameA.localeCompare(nameB);
+      if (order === 'student-desc') return nameB.localeCompare(nameA);
+      if (order === 'gpa-asc') return (isNaN(gpaA) ? 999 : gpaA) - (isNaN(gpaB) ? 999 : gpaB);
+      if (order === 'gpa-desc') return (isNaN(gpaB) ? 0 : gpaB) - (isNaN(gpaA) ? 0 : gpaA);
+      if (order === 'assignments-desc') {
+        var countA = parseInt(a.getAttribute('data-assignments-count'), 10) || 0;
+        var countB = parseInt(b.getAttribute('data-assignments-count'), 10) || 0;
+        return countB - countA;
+      }
+      return 0;
+    });
+    cards.forEach(function(c) { container.appendChild(c); });
+  }
+  function resetConcernsFilters() {
+    var searchEl = document.getElementById('concernsSearchInput');
+    if (searchEl) searchEl.value = '';
+    var typeEl = document.getElementById('concernsTypeFilter');
+    if (typeEl) typeEl.value = '';
+    var gpaEl = document.getElementById('concernsGPAFilter');
+    if (gpaEl) gpaEl.value = '';
+    var sortEl = document.getElementById('concernsSortOrder');
+    if (sortEl) sortEl.value = 'student-asc';
+    filterConcerns();
   }
 </script>

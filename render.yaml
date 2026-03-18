@@ -13,8 +13,17 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
     healthCheckPath: /home
-    # Persistent disk: Required for assignment PDFs to survive restarts. Free plan does not support disks;
-    # upgrade to a paid plan, then uncomment the disk block. Mount path must match where uploads are stored.
+    # PERSISTENT DISK (required for assignment PDFs to survive deploys)
+    # Render's filesystem is ephemeral - uploads are wiped on every deploy. Without a disk, assignment
+    # documents return 404 after redeploy. Persistent disks require a PAID plan (not available on free).
+    #
+    # To fix 404s: 1) Upgrade to a paid plan  2) In Dashboard → service → Disks → Add disk
+    #   - Name: uploads
+    #   - Mount path: /opt/render/project/src/static/uploads
+    #   - Size: 1 GB (increase as needed)
+    # 3) Re-deploy. No UPLOAD_FOLDER env var needed - default path matches the mount.
+    #
+    # Alternative: Mount at /data and set env var UPLOAD_FOLDER=/data/uploads
     # disk:
     #   name: uploads
     #   mountPath: /opt/render/project/src/static/uploads

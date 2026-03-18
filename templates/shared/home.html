@@ -506,7 +506,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 18, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>academic concerns visibility, grading accuracy for custom point values, and student assignment cards</strong>: the Academic Alert popup now appears on every teacher and administrator tab (not just Home), academic concerns correctly handle assignments with custom point values (e.g. 25 or 50 points instead of 100), and student assignment cards show who created each assignment. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>academic concerns visibility and search, grading accuracy for custom point values, student assignment cards, and assignment document 404 fixes</strong>: the Academic Alert popup appears on every teacher and administrator tab with search/filter restored, academic concerns correctly handle custom point values (e.g. 25 or 50 instead of 100), student assignment cards show who created each assignment, and documentation added for fixing assignment PDF 404s on Render after deploys. Details below.</p>
                     </div>
                 </div>
                 
@@ -528,9 +528,17 @@
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Student assignment cards – creator display:</strong> Each assignment card on the student Assignments tab now shows the <strong>teacher or school administrator who created it</strong>, matching the display on the teacher/admin side. Students see the creator's name (or username) directly on the card, so they know who assigned each task. Applies to both individual and group assignments in Upcoming, Active, and Inactive sections.
                             </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic alerts search and filters:</strong> The search and filter toolbar in the Academic Concerns modal has been restored. Teachers and administrators can search by student name, filter by type (All, Failing, Missing, Overdue), filter by GPA (All, Critical &lt;2.0, Warning 2.0–2.9, Below 3.0), sort by name/GPA/assignments count, and reset filters—making it easier to focus on the students who need the most attention.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment document 404 on Render – fix documented:</strong> Assignment PDFs and documents that return 404 after each deploy on Render (due to the ephemeral filesystem) can now be fixed by using a <strong>Persistent Disk</strong>. Documentation has been added (<code>docs/RENDER_UPLOAD_404_FIX.md</code>) explaining the cause, how to configure a Persistent Disk and mount <code>/static/uploads</code>, and optional cloud storage (S3) alternatives. <code>render.yaml</code> comments were updated with disk config examples.
+                            </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Teachers and administrators stay aware of academic concerns no matter which tab they're on. Academic alerts are accurate for all grading scales. Students can see who assigned each piece of work.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and administrators stay aware of academic concerns no matter which tab they're on, with search and filters to quickly find specific students. Academic alerts are accurate for all grading scales. Students can see who assigned each piece of work. Admins deploying to Render have clear guidance on avoiding assignment document 404s.</p>
                         </div>
                     </div>
 

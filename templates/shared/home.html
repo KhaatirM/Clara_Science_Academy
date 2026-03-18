@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 17, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 18, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,35 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 17, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 18, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>assignment badges, void/reopen/unvoid logic, assignment document viewing, and UI polish</strong>: distinct Context vs Category badges, accurate reopen status for PDF/Paper, void modal fixes, removal of the duplicate Edit button, improved document path resolution to fix 404 errors when viewing assignments with attachments, and a notification badge on the Redo Dashboard. Teachers and administrators will see clearer labels, more reliable document access, and better visibility of pending redo requests. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>academic concerns visibility, grading accuracy for custom point values, and student assignment cards</strong>: the Academic Alert popup now appears on every teacher and administrator tab (not just Home), academic concerns correctly handle assignments with custom point values (e.g. 25 or 50 points instead of 100), and student assignment cards show who created each assignment. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+
+                    <!-- March 18, 2026 - Academic Concerns Everywhere, Custom Points, Student Creator -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-exclamation-triangle me-2"></i>Academic Concerns & Student Assignments – March 18, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic concerns on every tab:</strong> The Academic Alert popup (the corner notification about students with academic concerns) now appears on <strong>every tab</strong> for teachers and school administrators—not just the Home tab. Whether you're on My Classes, Assignments & Grades, Students, or any other page, you'll see the alert if there are students who need attention. Click "View Details" to open the full modal with student cards.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic concerns – custom point values:</strong> The academic concerns logic now correctly handles assignments where teachers use <strong>custom total points</strong> (e.g. 25, 50, or 150 instead of 100). Previously, a score like 17/25 (68%) could be misidentified because the system assumed 100-point scale. The alert now uses <strong>percentage</strong> for the failing threshold (≤69%), so 17/25 correctly flags as failing while 20/25 (80%) does not.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student assignment cards – creator display:</strong> Each assignment card on the student Assignments tab now shows the <strong>teacher or school administrator who created it</strong>, matching the display on the teacher/admin side. Students see the creator's name (or username) directly on the card, so they know who assigned each task. Applies to both individual and group assignments in Upcoming, Active, and Inactive sections.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and administrators stay aware of academic concerns no matter which tab they're on. Academic alerts are accurate for all grading scales. Students can see who assigned each piece of work.</p>
+                        </div>
+                    </div>
 
                     <!-- March 17, 2026 - Assignment Document 404 Fix & Redo Dashboard Badge -->
                     <div class="update-section mb-4">
@@ -1185,11 +1207,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar17_2026_full')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar18_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar17_2026_full', 'true');
+            sessionStorage.setItem('updateModalShownMar18_2026', 'true');
         }, 500);
     }
 });

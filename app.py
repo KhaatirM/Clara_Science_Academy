@@ -360,6 +360,28 @@ def create_app(config_class=None):
                     effective = pref
         return {'effective_theme': effective}
 
+    # Inject at_risk_alerts for teacher/admin dashboard pages (shown on all tabs)
+    @app.context_processor
+    def inject_at_risk_alerts():
+        out = {'at_risk_alerts': [], 'failing_count': 0, 'overdue_count': 0}
+        if not current_user.is_authenticated:
+            return out
+        role = getattr(current_user, 'role', '') or ''
+        is_admin = role in ['Director', 'School Administrator']
+        teacher_roles = ['History Teacher', 'Science Teacher', 'Physics Teacher',
+                        'English Language Arts Teacher', 'Math Teacher', 'Substitute Teacher',
+                        'School Counselor', 'School Administrator', 'Director']
+        is_teacher = role in teacher_roles or 'Teacher' in role
+        if not (is_teacher or is_admin):
+            return out
+        try:
+            from utils.at_risk_alerts import get_at_risk_alerts_for_user
+            alerts, failing, overdue = get_at_risk_alerts_for_user()
+            return {'at_risk_alerts': alerts, 'failing_count': failing, 'overdue_count': overdue}
+        except Exception as e:
+            current_app.logger.warning(f"Context processor at_risk_alerts: {e}")
+            return out
+
     # Add CSP headers to allow necessary JavaScript execution
     @app.after_request
     def add_security_headers(response):

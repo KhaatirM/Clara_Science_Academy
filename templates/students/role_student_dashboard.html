@@ -3059,7 +3059,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <p class="student-assignment-class mb-2">
                                 <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
                             </p>
-                            
+                            <p class="student-assignment-teacher mb-2 small text-muted">
+                                <i class="bi bi-person me-1"></i>
+                                {% if assignment.creator %}
+                                    {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
+                                        {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
+                                    {% else %}
+                                        {{ assignment.creator.username }}
+                                    {% endif %}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </p>
+
                             {% if assignment.open_date %}
                             <p class="student-assignment-due mb-2">
                                 <i class="bi bi-calendar-event me-1"></i>
@@ -3246,6 +3258,18 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
                             <p class="student-assignment-card-class">
                                 <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
+                            </p>
+                            <p class="student-assignment-teacher mb-2 small text-muted">
+                                <i class="bi bi-person me-1"></i>
+                                {% if assignment.creator %}
+                                    {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
+                                        {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
+                                    {% else %}
+                                        {{ assignment.creator.username }}
+                                    {% endif %}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
                             </p>
                             <div class="student-assignment-card-meta">
                                 <span class="meta-item">
@@ -3490,6 +3514,18 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
                             <p class="student-assignment-card-class">
                                 <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
+                            </p>
+                            <p class="student-assignment-teacher mb-2 small text-muted">
+                                <i class="bi bi-person me-1"></i>
+                                {% if assignment.creator %}
+                                    {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
+                                        {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
+                                    {% else %}
+                                        {{ assignment.creator.username }}
+                                    {% endif %}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
                             </p>
                             <div class="student-assignment-card-meta">
                                 <span class="meta-item">

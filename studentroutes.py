@@ -731,8 +731,11 @@ def student_assignments():
     filter_start_date = request.args.get('start_date', '')
     filter_end_date = request.args.get('end_date', '')
     
-    # Build query for assignments
-    query = Assignment.query.filter(
+    # Build query for assignments (eager-load creator for display on cards)
+    from sqlalchemy.orm import joinedload
+    query = Assignment.query.options(
+        joinedload(Assignment.creator).joinedload(User.teacher_staff_profile)
+    ).filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
         Assignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided'])  # Show Active, Inactive, Upcoming, and Voided assignments
@@ -872,8 +875,10 @@ def student_assignments():
             # Active assignments - students can submit
             active_assignments.append(assignment_data)
     
-    # Fetch group assignments for the same classes and apply same filters
-    group_assignments_query = GroupAssignment.query.filter(
+    # Fetch group assignments for the same classes and apply same filters (eager-load creator)
+    group_assignments_query = GroupAssignment.query.options(
+        joinedload(GroupAssignment.creator).joinedload(User.teacher_staff_profile)
+    ).filter(
         GroupAssignment.class_id.in_(class_ids),
         GroupAssignment.school_year_id == current_school_year.id,
         GroupAssignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided'])

@@ -255,6 +255,11 @@
         {% include 'shared/password_change_popup.html' %}
     {% endif %}
     
+    <!-- Academic Concerns toast & modal (all teacher/admin tabs) -->
+    {% if (current_user.role in ['Director', 'School Administrator'] or current_user.role in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and at_risk_alerts %}
+        {% include 'shared/academic_concerns_partial.html' %}
+    {% endif %}
+    
     {% block modals %}{% endblock %}
     {% block scripts %}{% endblock %}
 </body>

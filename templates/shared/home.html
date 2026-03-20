@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 18, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 19, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,57 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 18, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 19, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>academic concerns visibility and search, grading accuracy for custom point values, student assignment cards, and assignment document 404 fixes</strong>: the Academic Alert popup appears on every teacher and administrator tab with search/filter restored, academic concerns correctly handle custom point values (e.g. 25 or 50 instead of 100), student assignment cards show who created each assignment, and documentation added for fixing assignment PDF 404s on Render after deploys. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>group assignment grading, voiding, submission tracking, and academic concerns</strong>: teachers and school administrators can void group assignments for specific groups or students, blank scores save as 0 in group grading, assignment cards correctly count in-person and online submissions, submission notes use a dropdown (On-Time, Late, Other), and the academic concerns popup shows a submission status badge for each assignment. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+
+                    <!-- March 19, 2026 - Group Assignments: Void, Grading, Submissions, Notes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-people me-2"></i>Group Assignments – Void, Grading & Submissions – March 19, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Void group assignments (teachers & admins):</strong> When viewing a group assignment in Assignments & Grades, teachers and school administrators can now <strong>void assignments for specific groups or individual students</strong>—not just for the entire class. The void/unvoid controls are available from the group assignment view page, so you can exclude particular groups or students from grading without affecting others.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Blank score = 0 in group grading:</strong> When grading group assignments, leaving a student's score blank now correctly saves as <strong>0</strong> and is included in grade calculations. Previously, blank scores could be skipped; now all students in the group receive a grade (including 0 when appropriate).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Submission count on assignment cards:</strong> Assignment cards now display the correct <strong>submission count</strong>. When teachers mark students as "Submit in person" or "Online," those submissions are counted. The count reflects both file uploads and manually marked in-person submissions.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Submission notes dropdown:</strong> Submission notes have been replaced with a <strong>dropdown</strong> on individual and group assignment grading pages: <strong>On-Time</strong>, <strong>Late</strong>, or <strong>Other</strong> (which reveals a text field for custom notes). This applies to teacher grading, admin grading, and student assistant grading for both individual and group assignments.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and admins have fine-grained control over group assignment voiding. Grading is more accurate with blank scores handled correctly. Submission counts reflect real work turned in. Submission notes are faster to enter with consistent options.</p>
+                        </div>
+                    </div>
+
+                    <!-- March 19, 2026 - Academic Concerns Submission Status Badge -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Academic Concerns – Submission Status Badge – March 19, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Submission status badge:</strong> Each assignment in the Academic Concerns popup (the modal that shows when students have missing or failing work) now displays a <strong>Submitted</strong> or <strong>Not Submitted</strong> badge. At a glance, you can see whether the student turned in the assignment (online or in person) before it was graded—helping you distinguish between "didn't submit" and "submitted but failed."
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Printout includes submission status:</strong> When printing a student's academic concern report, the submission status (Submitted or Not Submitted) is included for each assignment alongside the status and due date.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and administrators can quickly see which at-risk students have turned in their work versus those who haven't, making follow-up and interventions more targeted.</p>
+                        </div>
+                    </div>
 
                     <!-- March 18, 2026 - Academic Concerns Everywhere, Custom Points, Student Creator -->
                     <div class="update-section mb-4">
@@ -1215,11 +1259,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar18_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar19_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar18_2026', 'true');
+            sessionStorage.setItem('updateModalShownMar19_2026', 'true');
         }, 500);
     }
 });

@@ -362,11 +362,20 @@
                                     <label class="grade-label">
                                         <i class="bi bi-sticky"></i> Submission Notes
                                     </label>
+                                    {% set notes_val = submission.submission_notes if submission and submission.submission_notes else '' %}
+                                    {% set notes_is_other = notes_val and notes_val not in ['On-Time', 'Late'] %}
+                                    <select class="form-select form-select-sm submission-notes-type" name="submission_notes_type_{{ student.id }}" data-student-id="{{ student.id }}" onchange="toggleSubmissionNotesOther(this)">
+                                        <option value="On-Time" {% if notes_val == 'On-Time' or (not notes_val) %}selected{% endif %}>On-Time</option>
+                                        <option value="Late" {% if notes_val == 'Late' %}selected{% endif %}>Late</option>
+                                        <option value="Other" {% if notes_is_other %}selected{% endif %}>Other</option>
+                                    </select>
                                     <input type="text" 
-                                           class="form-control form-control-sm" 
+                                           class="form-control form-control-sm mt-1 submission-notes-other" 
                                            name="submission_notes_{{ student.id }}" 
-                                           placeholder="e.g., Turned in late, Resubmitted..."
-                                           value="{{ submission.submission_notes if submission and submission.submission_notes else '' }}">
+                                           placeholder="Specify (e.g., Resubmitted, Excused...)."
+                                           value="{{ notes_val if notes_is_other else '' }}"
+                                           id="submission_notes_other_{{ student.id }}"
+                                           style="display: {{ 'block' if notes_is_other else 'none' }};">
                                 </div>
                             </div>
                             
@@ -679,6 +688,17 @@ function updateCharCount(textarea) {
     }, 300);
 }
 
+// Toggle Other submission notes input when dropdown changes
+function toggleSubmissionNotesOther(selectEl) {
+    if (!selectEl) return;
+    const studentId = selectEl.getAttribute('data-student-id');
+    const otherInput = document.getElementById('submission_notes_other_' + studentId);
+    if (otherInput) {
+        otherInput.style.display = selectEl.value === 'Other' ? 'block' : 'none';
+        if (selectEl.value !== 'Other') otherInput.value = '';
+    }
+}
+
 // Update graded count
 function updateGradedCount() {
     const scoreInputs = document.querySelectorAll('.score-input');
@@ -751,6 +771,11 @@ document.addEventListener('DOMContentLoaded', function() {
         card.style.animationDelay = (index * 0.05) + 's';
         card.classList.add('card-enter');
     });
+
+    // Init submission notes Other visibility
+    document.querySelectorAll('.submission-notes-type').forEach(function(sel) {
+        toggleSubmissionNotesOther(sel);
+    });
 });
 
 // Export Functions
@@ -773,7 +798,8 @@ function exportGradesCSV() {
         const letter = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : scoreNum > 0 ? 'F' : 'N/A';
         const comment = (commentInput?.value || '').replace(/"/g, '""');
         const submissionStatus = submissionSelect?.options[submissionSelect.selectedIndex]?.text || 'Not Submitted';
-        const notes = (notesInput?.value || '').replace(/"/g, '""');
+        const notesTypeSelect = card.querySelector('select[name^="submission_notes_type_"]');
+        const notes = (notesTypeSelect?.value === 'Other' ? (notesInput?.value || '') : (notesTypeSelect?.value || 'On-Time')).replace(/"/g, '""');
         
         csv += `"${name}","","${email}","${submissionStatus}","${score}","${letter}","${comment}","${notes}"\n`;
     });

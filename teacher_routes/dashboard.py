@@ -10,7 +10,8 @@ from models import (
     db, Class, Assignment, Student, Grade, Submission, 
     Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff,
     class_additional_teachers, class_substitute_teachers, GroupAssignment, GroupGrade, ClassSchedule,
-    StudentAssistant, StudentAssistantActionLog, ExtensionRequest, RedoRequest
+    StudentAssistant, StudentAssistantActionLog, ExtensionRequest, RedoRequest,
+    StudentGroup, StudentGroupMember, GroupSubmission
 )
 from sqlalchemy import or_, and_
 import json
@@ -1591,7 +1592,8 @@ def view_student_details_data(student_id):
         
         # Separate grades by class and find missing/at-risk assignments
         grades_by_class = {}
-        
+        from utils.at_risk_alerts import _percentage_from_grade_data
+
         for g in all_grades:
             try:
                 # Ensure assignment relationship is loaded
@@ -1606,15 +1608,16 @@ def view_student_details_data(student_id):
                     grades_by_class[class_id] = []
                 grades_by_class[class_id].append(g)
                 
-                # Parse grade data
+                # Parse grade data and get percentage using assignment total_points
+                total_pts = getattr(g.assignment, 'total_points', None) or 100.0
                 if not g.grade_data:
-                    score = None
+                    percentage = None
                 else:
                     try:
                         grade_data = json.loads(g.grade_data)
-                        score = grade_data.get('score')
+                        percentage, _ = _percentage_from_grade_data(grade_data, total_pts)
                     except (json.JSONDecodeError, TypeError):
-                        score = None
+                        percentage = None
                 
                 # Check if assignment is past due or failing
                 is_overdue = g.assignment.due_date and g.assignment.due_date < datetime.utcnow()
@@ -1623,20 +1626,20 @@ def view_student_details_data(student_id):
                 is_at_risk = False
                 status = None
                 
-                if score is None:
+                if percentage is None:
                     if is_overdue:
                         is_at_risk = True
                         status = 'missing'
-                elif score <= 69:
+                elif percentage <= 69:
                     is_at_risk = True
                     status = 'failing'
                     at_risk_grades_list.append(g)
                 
                 if is_at_risk:
                     class_name = g.assignment.class_info.name
-                    # Detect "awaiting grade": score is 0 but student has submitted (don't show 0%)
+                    # Detect "awaiting grade": exclude from display per user request
                     awaiting_grade = False
-                    if status == 'failing' and score == 0:
+                    if status == 'failing' and percentage is not None and percentage == 0:
                         sub = Submission.query.filter_by(
                             student_id=student.id,
                             assignment_id=g.assignment_id
@@ -1644,19 +1647,99 @@ def view_student_details_data(student_id):
                         if sub and sub.submission_type in ('online', 'in_person'):
                             awaiting_grade = True
                     
-                    if class_name not in missing_assignments_by_class:
-                        missing_assignments_by_class[class_name] = []
-                    
-                    missing_assignments_by_class[class_name].append({
-                        'title': g.assignment.title,
-                        'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
-                        'status': 'awaiting_grade' if awaiting_grade else status,
-                        'score': 'Awaiting Grade' if awaiting_grade else (score if score is not None else 'N/A'),
-                        'assignment_type': g.assignment.assignment_type if g.assignment.assignment_type else 'pdf'
-                    })
+                    # Do not include assignments awaiting a grade
+                    if not awaiting_grade:
+                        sub = Submission.query.filter_by(
+                            student_id=student.id,
+                            assignment_id=g.assignment_id
+                        ).first()
+                        submitted = sub and sub.submission_type in ('online', 'in_person')
+                        if class_name not in missing_assignments_by_class:
+                            missing_assignments_by_class[class_name] = []
+                        missing_assignments_by_class[class_name].append({
+                            'title': g.assignment.title,
+                            'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
+                            'status': status,
+                            'score': round(percentage, 1) if percentage is not None else 'N/A',
+                            'assignment_type': g.assignment.assignment_type if g.assignment.assignment_type else 'pdf',
+                            'submission_status': 'submitted' if submitted else 'not_submitted'
+                        })
                         
             except Exception as e:
-                print(f"Error processing grade {g.id}: {e}")
+                continue
+
+        # Add group assignments for this student's classes (teacher's classes only)
+        group_assignments = GroupAssignment.query.filter(
+            GroupAssignment.class_id.in_(teacher_class_ids),
+            GroupAssignment.status != 'Voided',
+            GroupAssignment.due_date.isnot(None)
+        ).all()
+        for ga in group_assignments:
+            try:
+                membership = StudentGroupMember.query.join(StudentGroup).filter(
+                    StudentGroupMember.student_id == student.id,
+                    StudentGroup.class_id == ga.class_id
+                ).first()
+                if not membership:
+                    continue
+                group_id = membership.group_id
+                selected_ids = ga.selected_group_ids
+                if selected_ids:
+                    try:
+                        ids = json.loads(selected_ids) if isinstance(selected_ids, str) else selected_ids
+                        if group_id not in ids:
+                            continue
+                    except (TypeError, ValueError):
+                        pass
+                class_name = ga.class_info.name if ga.class_info else 'Unknown Class'
+                if class_name not in missing_assignments_by_class:
+                    missing_assignments_by_class[class_name] = []
+                grade = GroupGrade.query.filter_by(
+                    group_assignment_id=ga.id,
+                    student_id=student.id
+                ).first()
+                total_pts = getattr(ga, 'total_points', None) or 100.0
+                is_overdue = ga.due_date and ga.due_date < datetime.utcnow()
+                awaiting_grade = False
+                if grade and grade.grade_data:
+                    try:
+                        grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                        percentage, _ = _percentage_from_grade_data(grade_data, total_pts)
+                        if percentage is not None and percentage <= 69:
+                            sub = GroupSubmission.query.filter_by(
+                                group_assignment_id=ga.id,
+                                group_id=group_id
+                            ).first()
+                            if sub and (sub.attachment_file_path or sub.attachment_filename) and percentage == 0:
+                                awaiting_grade = True
+                            if not awaiting_grade:
+                                sub_type = grade_data.get('submission_type', '')
+                                grp_submitted = sub_type in ('online', 'in_person')
+                                missing_assignments_by_class[class_name].append({
+                                    'title': ga.title,
+                                    'due_date': ga.due_date.strftime('%Y-%m-%d') if ga.due_date else 'No due date',
+                                    'status': 'failing',
+                                    'score': round(percentage, 1),
+                                    'assignment_type': f'group_{ga.assignment_type or "pdf"}',
+                                    'submission_status': 'submitted' if grp_submitted else 'not_submitted'
+                                })
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                elif is_overdue and not grade:
+                    grp_sub = GroupSubmission.query.filter_by(
+                        group_assignment_id=ga.id,
+                        group_id=group_id
+                    ).first()
+                    grp_submitted = grp_sub and (grp_sub.attachment_file_path or grp_sub.attachment_filename)
+                    missing_assignments_by_class[class_name].append({
+                        'title': ga.title,
+                        'due_date': ga.due_date.strftime('%Y-%m-%d') if ga.due_date else 'No due date',
+                        'status': 'missing',
+                        'score': 'N/A',
+                        'assignment_type': f'group_{ga.assignment_type or "pdf"}',
+                        'submission_status': 'submitted' if grp_submitted else 'not_submitted'
+                    })
+            except Exception:
                 continue
 
         # Calculate Current Overall GPA

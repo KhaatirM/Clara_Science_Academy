@@ -299,7 +299,7 @@
     html += '.info-grid-table .value-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:none;border-bottom:2px solid #000;font-weight:normal;background:#fff}';
     html += '.section-title{font-size:11pt;font-weight:bold;margin:1rem 0 0.5rem;border-bottom:1px solid #000;padding-bottom:3px}';
     html += 'ul{list-style:none;padding:0;margin:0}li{padding:0.4rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}';
-    html += '.status{font-size:0.85rem}.status.failing{color:#721c24}.status.missing{color:#856404}.status.awaiting{color:#0d6efd}';
+    html += '.status{font-size:0.85rem}.status.failing{color:#721c24}.status.missing{color:#856404}.status.awaiting{color:#0d6efd}.status.submission-yes{color:#155724;font-weight:600}.status.submission-no{color:#6c757d;font-weight:600}';
     html += '@media print{body{margin:0.5in}}</style></head><body style="max-width:8.5in;margin:0 auto;padding:0.5in">';
     html += '<table class="pdf-header-table"><tr>';
     html += '<td class="student-column"><table class="info-grid-table">';
@@ -326,9 +326,13 @@
           const isAwaiting = a.status === 'awaiting_grade' || a.score === 'Awaiting Grade';
           const statusClass = isAwaiting ? 'awaiting' : (a.status === 'failing' ? 'failing' : 'missing');
           const statusText = isAwaiting ? 'Awaiting Grade' : (a.status === 'failing' ? ('Failing (' + (a.score !== 'N/A' && a.score != null && a.score !== 'Awaiting Grade' ? a.score + '%' : '—') + ')') : 'Missing');
+          const isSubmitted = (a.submission_status || 'not_submitted') === 'submitted';
+          const subStatus = isSubmitted ? 'Submitted' : 'Not Submitted';
+          const subClass = isSubmitted ? 'submission-yes' : 'submission-no';
           const typeLabel = a.assignment_type ? (a.assignment_type.replace('group_','').toUpperCase()) : '';
           html += '<li><strong>' + escapeHtml(a.title) + '</strong>' + (typeLabel ? ' <em>(' + typeLabel + ')</em>' : '') + '<br>';
           html += '<span class="status ' + statusClass + '">' + statusText + '</span>';
+          html += ' &middot; <span class="status ' + subClass + '">' + subStatus + '</span>';
           html += ' &middot; Due: ' + escapeHtml(a.due_date || '—') + '</li>';
         });
         html += '</ul>';
@@ -390,6 +394,8 @@
           if (assignment.status) {
             html += '<span class="assignment-status-pill status-' + assignment.status + '"><i class="bi bi-' + (assignment.status === 'missing' ? 'dash-circle' : 'exclamation-triangle') + '-fill"></i>' + assignment.status + '</span>';
           }
+          var subStatus = assignment.submission_status || 'not_submitted';
+          html += '<span class="assignment-submission-badge submission-' + subStatus + '" title="Submission status"><i class="bi bi-' + (subStatus === 'submitted' ? 'check-circle-fill' : 'x-circle-fill') + '"></i>' + (subStatus === 'submitted' ? 'Submitted' : 'Not Submitted') + '</span>';
           if (assignment.score !== null && assignment.score !== undefined && assignment.score !== 'N/A') {
             html += '<span class="assignment-score-badge ' + (assignment.score <= 69 ? 'score-failing' : 'score-warning') + '">' + assignment.score + '%</span>';
           } else {

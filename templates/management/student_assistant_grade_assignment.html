@@ -61,8 +61,15 @@
                                     <option value="in_person" {% if sub and sub.submission_type == 'in_person' %}selected{% endif %}>Yes (paper/in-person)</option>
                                     <option value="online" {% if sub and sub.submission_type == 'online' %}selected{% endif %}>Yes (online)</option>
                                 </select>
-                                <input type="text" name="submission_notes_{{ s.id }}" class="form-control form-control-sm mt-1" placeholder="Notes (e.g. late)"
-                                       value="{{ sub.submission_notes if sub and sub.submission_notes else '' }}">
+                                {% set notes_val = sub.submission_notes if sub and sub.submission_notes else '' %}
+                                {% set notes_is_other = notes_val and notes_val not in ['On-Time', 'Late'] %}
+                                <select class="form-select form-select-sm mt-1 submission-notes-type" name="submission_notes_type_{{ s.id }}" data-student-id="{{ s.id }}" onchange="toggleNotesOther(this)">
+                                    <option value="On-Time" {% if notes_val == 'On-Time' or (not notes_val) %}selected{% endif %}>On-Time</option>
+                                    <option value="Late" {% if notes_val == 'Late' %}selected{% endif %}>Late</option>
+                                    <option value="Other" {% if notes_is_other %}selected{% endif %}>Other</option>
+                                </select>
+                                <input type="text" name="submission_notes_{{ s.id }}" class="form-control form-control-sm mt-1 submission-notes-other" placeholder="Specify..."
+                                       value="{{ notes_val if notes_is_other else '' }}" id="notes_other_{{ s.id }}" style="display:{{ 'block' if notes_is_other else 'none' }};">
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" max="{{ total_points }}" name="score_{{ s.id }}"
@@ -119,8 +126,17 @@
 </div>
 
 <script>
+function toggleNotesOther(selectEl) {
+    if (!selectEl) return;
+    const studentId = selectEl.getAttribute('data-student-id');
+    const otherInput = document.getElementById('notes_other_' + studentId);
+    if (otherInput) {
+        otherInput.style.display = selectEl.value === 'Other' ? 'block' : 'none';
+        if (selectEl.value !== 'Other') otherInput.value = '';
+    }
+}
 document.addEventListener('DOMContentLoaded', function() {
-    // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
+    document.querySelectorAll('.submission-notes-type').forEach(function(sel) { toggleNotesOther(sel); });
 });
 </script>
 {% endblock %}

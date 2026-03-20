@@ -2016,13 +2016,29 @@ def view_group_assignment(assignment_id):
             members = StudentGroupMember.query.filter_by(group_id=group.id).all()
             total_students += len(members)
         
-        # Calculate submission statistics
-        submission_count = len(submissions)
-        late_submissions = len([s for s in submissions if s.is_late])
-        on_time_submissions = submission_count - late_submissions
+        # Calculate submission statistics: GroupSubmission + GroupGrade with in_person/online
+        import json
+        submission_student_ids = set()
+        for gs in submissions:
+            if (getattr(gs, 'attachment_file_path', None) or getattr(gs, 'attachment_filename', None)) and getattr(gs, 'group_id', None):
+                group_obj = gs.group if hasattr(gs, 'group') else None
+                if group_obj and hasattr(group_obj, 'members'):
+                    for m in group_obj.members:
+                        submission_student_ids.add(m.student_id)
+        for gg in all_group_grades:
+            if gg.grade_data and not gg.is_voided:
+                try:
+                    gd = json.loads(gg.grade_data) if isinstance(gg.grade_data, str) else gg.grade_data
+                    if gd.get('submission_type') in ('in_person', 'online'):
+                        submission_student_ids.add(gg.student_id)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        submission_count = len(submission_student_ids)
+        late_submissions = len([s for s in submissions if getattr(s, 'is_late', False)])
+        on_time_submissions = max(0, submission_count - late_submissions)
         
         # Calculate submission rate
-        submission_rate = (submission_count / len(groups) * 100) if groups else 0
+        submission_rate = (submission_count / total_students * 100) if total_students else 0
         
         # Calculate time remaining/overdue
         now = datetime.utcnow()

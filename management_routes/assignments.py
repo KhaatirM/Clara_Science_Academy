@@ -1047,7 +1047,21 @@ def assignments_and_grades():
                 for group_assignment in group_assignments:
                     from models import GroupGrade, GroupSubmission, StudentGroup, StudentGroupMember
                     group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
-                    total_group_submissions = GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).count()
+                    # Count submissions: students with GroupGrade in_person/online + group uploads (each = group's members)
+                    submission_student_ids = set()
+                    for gg in group_grades:
+                        if gg.grade_data and not gg.is_voided:
+                            try:
+                                gd = json.loads(gg.grade_data) if isinstance(gg.grade_data, str) else gg.grade_data
+                                if gd.get('submission_type') in ('in_person', 'online'):
+                                    submission_student_ids.add(gg.student_id)
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+                    for gs in GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).all():
+                        if (gs.attachment_file_path or gs.attachment_filename) and gs.group_id:
+                            for m in StudentGroupMember.query.filter_by(group_id=gs.group_id).all():
+                                submission_student_ids.add(m.student_id)
+                    total_group_submissions = len(submission_student_ids)
                     
                     graded_group_grades = []
                     total_score = 0
@@ -1828,7 +1842,9 @@ def grade_assignment(assignment_id):
                     score = request.form.get(f'score_{student.id}')
                     comment = request.form.get(f'comment_{student.id}')
                     submission_type = request.form.get(f'submission_type_{student.id}')
-                    submission_notes = request.form.get(f'submission_notes_{student.id}')
+                    notes_type = request.form.get(f'submission_notes_type_{student.id}', 'On-Time')
+                    notes_other = request.form.get(f'submission_notes_{student.id}', '').strip()
+                    submission_notes = notes_other if notes_type == 'Other' else notes_type
                     
                     # Handle manual submission tracking
                     if submission_type:
@@ -3298,13 +3314,18 @@ def void_group_grade(grade_id):
 
 @bp.route('/group-assignment/<int:assignment_id>/void', methods=['POST'])
 @login_required
-@management_required
 def void_group_assignment(assignment_id):
-    """Void a group assignment for all groups, specific groups, or specific students."""
+    """Void a group assignment for all groups, specific groups, or specific students. Teachers and admins."""
+    from teacher_routes.utils import teacher_or_management_for_group_assignment
+    return teacher_or_management_for_group_assignment(_void_group_assignment_impl)(assignment_id)
+
+
+def _void_group_assignment_impl(assignment_id):
+    """Implementation of void group assignment."""
     from datetime import datetime
     from models import GroupAssignment, GroupGrade, StudentGroup, StudentGroupMember
     import json
-    
+
     try:
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         void_scope = request.form.get('void_scope', 'all_groups')
@@ -3456,11 +3477,16 @@ def void_group_assignment(assignment_id):
 
 @bp.route('/group-assignment/<int:assignment_id>/unvoid', methods=['POST'])
 @login_required
-@management_required
 def unvoid_group_assignment(assignment_id):
-    """Unvoid a group assignment - restore all voided grades."""
+    """Unvoid a group assignment - restore all voided grades. Teachers and admins."""
+    from teacher_routes.utils import teacher_or_management_for_group_assignment
+    return teacher_or_management_for_group_assignment(_unvoid_group_assignment_impl)(assignment_id)
+
+
+def _unvoid_group_assignment_impl(assignment_id):
+    """Implementation of unvoid group assignment."""
     from models import GroupAssignment, GroupGrade
-    
+
     try:
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         unvoid_scope = request.form.get('unvoid_scope', 'all')
@@ -4435,13 +4461,26 @@ def admin_view_group_assignment(assignment_id):
         # Calculate total students in groups
         total_students = sum(len(group.members) for group in groups)
         
-        # Calculate submission statistics
-        submission_count = len(submissions)
-        late_submissions = len([s for s in submissions if s.is_late])
-        on_time_submissions = submission_count - late_submissions
+        # Calculate submission statistics: GroupSubmission + GroupGrade with in_person/online
+        submission_student_ids = set()
+        for gs in submissions:
+            if (gs.attachment_file_path or gs.attachment_filename) and gs.group_id:
+                for m in gs.group.members if gs.group else []:
+                    submission_student_ids.add(m.student_id)
+        for gg in all_group_grades:
+            if gg.grade_data and not gg.is_voided:
+                try:
+                    gd = json.loads(gg.grade_data) if isinstance(gg.grade_data, str) else gg.grade_data
+                    if gd.get('submission_type') in ('in_person', 'online'):
+                        submission_student_ids.add(gg.student_id)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        submission_count = len(submission_student_ids)
+        late_submissions = len([s for s in submissions if getattr(s, 'is_late', False)])
+        on_time_submissions = max(0, submission_count - late_submissions)
         
-        # Calculate submission rate
-        submission_rate = (submission_count / len(groups) * 100) if groups else 0
+        # Calculate submission rate (students who submitted / total students)
+        submission_rate = (submission_count / total_students * 100) if total_students else 0
         
         # Calculate time remaining/overdue
         now = datetime.utcnow()
@@ -4680,26 +4719,17 @@ def admin_grade_group_assignment(assignment_id):
                 # UI sends 0-100 scale; accept up to max(total_points, 100) so percentage-style entry always saves
                 effective_max = max(total_points, 100.0)
                 saved_count = 0
-                for key in request.form:
-                    if not key.startswith('score_'):
-                        continue
-                    parts = key.split('_')
-                    if len(parts) != 3:
-                        continue
-                    try:
-                        gid = int(parts[1])
-                        student_id = int(parts[2])
-                    except (ValueError, TypeError):
-                        continue
-                    if student_id not in valid_student_ids:
-                        continue
-                    if key not in valid_score_keys:
-                        valid_score_keys[key] = (gid, student_id)
+                # Process ALL valid (gid, student_id) pairs so blank/missing scores = 0 get saved
+                for key, (gid, student_id) in list(valid_score_keys.items()):
                     score = request.form.get(key)
                     comments_key = f"comments_{gid}_{student_id}"
                     comments = request.form.get(comments_key, '')
                     submission_type_key = f"submission_type_{gid}_{student_id}"
                     submission_type = request.form.get(submission_type_key, '').strip() or 'not_submitted'
+                    notes_type_key = f"submission_notes_type_{gid}_{student_id}"
+                    notes_type = request.form.get(notes_type_key, 'On-Time').strip()
+                    notes_other_key = f"submission_notes_{gid}_{student_id}"
+                    notes_other = request.form.get(notes_other_key, '').strip()
                     # Process all students - blank score = 0 and not submitted
                     try:
                         points_earned = float(score) if (score and str(score).strip()) else 0.0
@@ -4726,6 +4756,8 @@ def admin_grade_group_assignment(assignment_id):
                     }
                     if submission_type in ('online', 'in_person', 'not_submitted'):
                         grade_data['submission_type'] = submission_type
+                    # Submission notes: On-Time, Late, or custom text from Other
+                    grade_data['submission_notes'] = notes_other if notes_type == 'Other' else (notes_type or 'On-Time')
                     save_group_id = None if gid == 0 else gid
                     existing_grade = GroupGrade.query.filter_by(
                         group_assignment_id=assignment_id,

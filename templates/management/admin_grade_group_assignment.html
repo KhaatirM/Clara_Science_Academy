@@ -19,6 +19,7 @@
             </div>
         </div>
         <div class="d-flex gap-2">
+            {% if not is_student_assistant %}
             <a href="{{ url_for('management.admin_group_grade_statistics', assignment_id=group_assignment.id) }}" class="btn btn-sm btn-outline-info">
                 <i class="bi bi-bar-chart-fill me-1"></i>Statistics
             </a>
@@ -28,6 +29,7 @@
             <button type="button" class="btn btn-sm btn-outline-info" onclick="printGradebook()">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
+            {% endif %}
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
                 <i class="bi bi-question-circle me-1"></i>Grading Help
             </button>
@@ -335,6 +337,15 @@
                                                     <option value="in_person" {% if display_sub_type == 'in_person' %}selected{% endif %}>📝 Paper/In-person</option>
                                                     <option value="online" {% if display_sub_type == 'online' %}selected{% endif %}>📤 Online</option>
                                                 </select>
+                                                <label class="form-label small mb-0 mt-1">Notes</label>
+                                                {% set notes_val = grade_data.get('submission_notes', '') if grade_data else '' %}
+                                                {% set notes_is_other = notes_val and notes_val not in ['On-Time', 'Late'] %}
+                                                <select class="form-select form-select-sm mt-1 submission-notes-type-group" name="submission_notes_type_{{ group.id }}_{{ student_id }}" data-gid="{{ group.id }}" data-sid="{{ student_id }}" onchange="toggleGroupNotesOther(this)" title="Submission timing">
+                                                    <option value="On-Time" {% if notes_val == 'On-Time' or (not notes_val) %}selected{% endif %}>On-Time</option>
+                                                    <option value="Late" {% if notes_val == 'Late' %}selected{% endif %}>Late</option>
+                                                    <option value="Other" {% if notes_is_other %}selected{% endif %}>Other</option>
+                                                </select>
+                                                <input type="text" class="form-control form-control-sm mt-1 submission-notes-other-group" name="submission_notes_{{ group.id }}_{{ student_id }}" placeholder="Specify..." value="{{ notes_val if notes_is_other else '' }}" id="notes_other_{{ group.id }}_{{ student_id }}" style="display:{{ 'block' if notes_is_other else 'none' }};">
                                             </div>
                                         </div>
                                     </div>
@@ -411,7 +422,7 @@
                 <button type="submit" class="btn btn-success btn-lg">
                     <i class="bi bi-check-circle me-2"></i>Save All Grades
                 </button>
-                <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
+                <a href="{{ cancel_url or url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
                     <i class="bi bi-x-circle me-2"></i>Cancel
                 </a>
             </div>
@@ -439,6 +450,10 @@
                     <h6><i class="bi bi-cloud-upload text-primary me-2"></i>Submission Type</h6>
                     <p class="mb-0">How did this student submit? <strong>Online</strong> = uploaded digitally; <strong>Paper/In-person</strong> = turned in physically; <strong>Not submitted</strong> = no submission. The default reflects whether the group uploaded a file online.</p>
                 </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-chat-dots text-primary me-2"></i>Submission Notes</h6>
+                    <p class="mb-0"><strong>On-Time</strong>, <strong>Late</strong>, or <strong>Other</strong> (when Other is selected, enter a custom note in the text field).</p>
+                </div>
                 <div class="mb-0">
                     <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
                     <p class="mb-0">Optional comment visible to the student. Add constructive feedback on their contribution to the group work.</p>
@@ -451,7 +466,17 @@
 <script>
 // Import functions from individual assignment grading page
 function goBack() {
-    window.location.href = "{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}";
+    window.location.href = "{{ back_url or url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}";
+}
+function toggleGroupNotesOther(selectEl) {
+    if (!selectEl) return;
+    const gid = selectEl.getAttribute('data-gid');
+    const sid = selectEl.getAttribute('data-sid');
+    const otherInput = document.getElementById('notes_other_' + gid + '_' + sid);
+    if (otherInput) {
+        otherInput.style.display = selectEl.value === 'Other' ? 'block' : 'none';
+        if (selectEl.value !== 'Other') otherInput.value = '';
+    }
 }
 
 function toggleSelectAll() {
@@ -566,6 +591,10 @@ function updateAverage() {
 
 // Handle form submission with AJAX
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize submission notes "Other" boxes
+    document.querySelectorAll('.submission-notes-type-group').forEach(function(sel) {
+        if (sel.value === 'Other') toggleGroupNotesOther(sel);
+    });
     // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
     // Update all score visuals
     document.querySelectorAll('.score-input').forEach(input => {

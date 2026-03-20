@@ -52,13 +52,23 @@
                     <i class="bi bi-journal-text"></i>Enter Grades
                 </div>
                 <div class="card-body">
-                    <p class="card-intro">Select an assignment to enter or update grades. Changing existing grades will notify the teacher and administrators.</p>
-                    {% if assignments %}
+                    <p class="card-intro">Select an assignment to enter or update grades. Changing existing grades will notify the teacher and administrators. For group assignments, you cannot grade your own group.</p>
+                    {% if assignments or group_assignments %}
                     <div class="student-assistant-assignments-list">
                         {% for a in assignments %}
                         <div class="student-assistant-assignment-item">
                             <span class="assignment-title">{{ a.title }}</span>
                             <a href="{{ url_for('student_assistant.grade_assignment', class_id=class_obj.id, assignment_id=a.id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil-square me-1"></i>Enter grades
+                            </a>
+                        </div>
+                        {% endfor %}
+                        {% for ga in group_assignments %}
+                        <div class="student-assistant-assignment-item">
+                            <span class="assignment-title">
+                                <i class="bi bi-people-fill text-primary me-1" title="Group assignment"></i>{{ ga.title }}
+                            </span>
+                            <a href="{{ url_for('student_assistant.grade_group_assignment', class_id=class_obj.id, assignment_id=ga.id) }}" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-pencil-square me-1"></i>Enter grades
                             </a>
                         </div>

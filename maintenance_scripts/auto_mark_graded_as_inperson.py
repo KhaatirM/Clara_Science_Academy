@@ -8,14 +8,22 @@ Marks assignments as 'submitted in person' when:
 
 Leaves alone when grade is 4% or below.
 
-Run on Render Shell:
+Run on Render Shell (from project src directory):
     python maintenance_scripts/auto_mark_graded_as_inperson.py
     python maintenance_scripts/auto_mark_graded_as_inperson.py --yes   # Non-interactive
 """
 
 import json
 import argparse
+import os
+import sys
 from datetime import datetime
+
+# Add project root to path so app/models can be imported when run from Render shell
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 from app import create_app, db
 from models import Submission, Grade, Assignment

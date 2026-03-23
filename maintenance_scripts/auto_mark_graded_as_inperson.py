@@ -1,124 +1,156 @@
 """
-Automatic Submission Status Update for Graded Assignments
+Automatic Submission Status Update for Graded Assignments (Percentage-Based)
 
-This script automatically marks ALL submissions that have grades as 'in_person'.
-This is useful for retroactively updating existing data where physical papers
-were collected and graded.
+Marks assignments as 'submitted in person' when:
+  - A grade was inputted
+  - No submission status was indicated (no Submission, or submission_type='not_submitted')
+  - The grade percentage is 5% or above (points_earned / assignment.total_points >= 5%)
 
-Run this on Render Shell:
-    python auto_mark_graded_as_inperson.py
+Leaves alone when grade is 4% or below.
+
+Run on Render Shell:
+    python maintenance_scripts/auto_mark_graded_as_inperson.py
+    python maintenance_scripts/auto_mark_graded_as_inperson.py --yes   # Non-interactive
 """
 
-from app import create_app, db
-from models import Submission, Grade
+import json
+import argparse
 from datetime import datetime
 
-def auto_mark_graded_as_inperson():
-    """Automatically mark all graded submissions as in-person."""
+from app import create_app, db
+from models import Submission, Grade, Assignment
+
+
+def _get_points_earned(grade_data):
+    """Safely get points_earned or score from grade_data."""
+    if grade_data is None:
+        return None
+    val = grade_data.get('points_earned')
+    if val is not None:
+        return val
+    return grade_data.get('score')
+
+
+def auto_mark_graded_as_inperson(skip_confirm=False):
+    """Mark graded assignments (5%+) as in-person when no submission status was indicated."""
     app = create_app()
-    
+
     with app.app_context():
         try:
             print("=" * 70)
-            print("AUTO-MARK GRADED ASSIGNMENTS AS IN-PERSON SUBMISSIONS")
+            print("AUTO-MARK GRADED ASSIGNMENTS AS IN-PERSON (5%+ threshold)")
             print("=" * 70)
-            
-            # Get all submissions
-            all_submissions = Submission.query.all()
-            total_submissions = len(all_submissions)
-            
-            print(f"\n📊 Found {total_submissions} total submissions")
-            print("\n🔍 Checking which ones have grades...")
-            
+
             updated_count = 0
-            already_inperson_count = 0
-            no_grade_count = 0
-            low_grade_count = 0
-            
-            # Get all grades
-            all_grades = Grade.query.all()
-            print(f"📊 Found {len(all_grades)} total grades")
-            
-            # Process all grades and mark corresponding submissions as in_person
-            for grade in all_grades:
-                # Parse grade data to get score
+            already_has_status_count = 0
+            low_percentage_count = 0
+            no_grade_data_count = 0
+
+            # Get all non-voided grades with assignment eager-loaded
+            grades = Grade.query.join(Assignment).filter(
+                Grade.is_voided == False,
+                Assignment.status != 'Voided'
+            ).all()
+
+            print(f"\n📊 Found {len(grades)} grades to process (excluding voided)")
+
+            for grade in grades:
                 try:
-                    import json
-                    grade_data = json.loads(grade.grade_data) if grade.grade_data else {}
-                    score = grade_data.get('score', 0)
-                    
-                    # Only process if score > 2%
-                    if score <= 2:
-                        low_grade_count += 1
+                    assignment = grade.assignment
+                    if not assignment or not assignment.total_points or assignment.total_points <= 0:
                         continue
-                    
-                    # Find or create submission for this grade
+
+                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else (grade.grade_data or {})
+                    points_earned = _get_points_earned(grade_data)
+                    if points_earned is None:
+                        no_grade_data_count += 1
+                        continue
+
+                    try:
+                        points_earned = float(points_earned)
+                    except (ValueError, TypeError):
+                        no_grade_data_count += 1
+                        continue
+
+                    # Calculate percentage
+                    total_points = float(assignment.total_points)
+                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+
+                    # 4% and below: leave alone
+                    if percentage <= 4:
+                        low_percentage_count += 1
+                        continue
+
+                    # 5% and above: only update if no submission status was indicated
                     submission = Submission.query.filter_by(
                         student_id=grade.student_id,
                         assignment_id=grade.assignment_id
                     ).first()
-                    
+
+                    # Skip if submission status was already indicated (in_person or online)
+                    if submission and submission.submission_type in ('in_person', 'online'):
+                        already_has_status_count += 1
+                        continue
+
+                    # Mark as submitted in person: update existing or create new
                     if submission:
-                        # Update existing submission
-                        if submission.submission_type != 'in_person':
-                            submission.submission_type = 'in_person'
-                            if not submission.submission_notes:
-                                submission.submission_notes = 'Auto-marked as in-person (graded assignment)'
-                            updated_count += 1
-                        else:
-                            already_inperson_count += 1
+                        submission.submission_type = 'in_person'
+                        if not submission.submission_notes:
+                            submission.submission_notes = 'Auto-marked as in-person (graded 5%+)'
+                        updated_count += 1
                     else:
-                        # Create new submission record for graded assignment
                         new_submission = Submission(
                             student_id=grade.student_id,
                             assignment_id=grade.assignment_id,
                             submission_type='in_person',
-                            submission_notes='Auto-created for graded assignment (physical paper)',
-                            submitted_at=grade.graded_at if grade.graded_at else datetime.utcnow(),
+                            submission_notes='Auto-created for graded assignment (5%+)',
+                            submitted_at=grade.graded_at or datetime.utcnow(),
                             file_path=None
                         )
                         db.session.add(new_submission)
                         updated_count += 1
-                        
+
                 except Exception as e:
                     print(f"⚠️  Error processing grade {grade.id}: {e}")
                     continue
-            
-            # Show summary before committing
+
+            # Summary
             print("\n" + "=" * 70)
-            print("SUMMARY OF CHANGES")
+            print("SUMMARY")
             print("=" * 70)
             print(f"\n📝 Will update/create: {updated_count} submission(s)")
-            print(f"✅ Already marked as in-person: {already_inperson_count}")
-            print(f"⏸️  Low grade (≤2%, skipped): {low_grade_count}")
-            print(f"📊 Total grades processed: {len(all_grades)}")
-            
+            print(f"✅ Already has status (in_person/online): {already_has_status_count}")
+            print(f"⏸️  Low grade (≤4%, left alone): {low_percentage_count}")
+            print(f"📊 No parseable grade data: {no_grade_data_count}")
+
             if updated_count > 0:
-                print("\n" + "=" * 70)
-                confirm = input("\n⚠️  Proceed with updating these submissions? (yes/no): ")
-                
-                if confirm.lower() in ['yes', 'y']:
+                if skip_confirm:
                     db.session.commit()
-                    
                     print("\n" + "=" * 70)
-                    print("✅ UPDATE COMPLETE!")
+                    print("✅ UPDATE COMPLETE (--yes)")
                     print("=" * 70)
-                    print(f"\n🎉 Successfully updated {updated_count} submission(s) to 'in_person'")
-                    print("\n✨ All graded assignments are now marked as in-person submissions!")
-                    print("\nℹ️  Students can now see their submission status reflected correctly.")
+                    print(f"\n🎉 Updated {updated_count} submission(s) to 'in_person'")
                 else:
-                    db.session.rollback()
-                    print("\n❌ Update cancelled. No changes made.")
+                    print("\n" + "=" * 70)
+                    confirm = input("\n⚠️  Proceed with update? (yes/no): ")
+                    if confirm.lower() in ('yes', 'y'):
+                        db.session.commit()
+                        print(f"\n✅ Updated {updated_count} submission(s).")
+                    else:
+                        db.session.rollback()
+                        print("\n❌ Cancelled. No changes made.")
             else:
-                print("\n✅ All graded submissions are already marked as in-person!")
-                print("   Nothing to update.")
-                
+                print("\n✅ Nothing to update.")
+
         except Exception as e:
             db.session.rollback()
-            print(f"\n❌ Error during update: {e}")
+            print(f"\n❌ Error: {e}")
             import traceback
             traceback.print_exc()
 
-if __name__ == '__main__':
-    auto_mark_graded_as_inperson()
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Mark graded assignments (5%+) as submitted in person')
+    parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation prompt')
+    args = parser.parse_args()
+    auto_mark_graded_as_inperson(skip_confirm=args.yes)

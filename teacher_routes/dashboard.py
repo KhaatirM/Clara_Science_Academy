@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 import sys
 import os
 from utils.grade_helpers import get_points_earned
+from utils.academic_concern_submission import academic_concern_effective_submitted
 from management_routes.utils import update_assignment_statuses
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'scripts'))
 from google_classroom_service import get_google_service
@@ -295,12 +296,11 @@ def view_class(class_id):
     # Get recent announcements for this class
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
 
-    # Student assistant and activity log (teacher can view for their class)
-    student_assistant = None
-    assistant_action_logs = []
-    sa = StudentAssistant.query.filter_by(class_id=class_id).first()
-    if sa:
-        student_assistant = sa.student
+    # Student assistants and activity log (teacher can view for their class)
+    student_assistants = []
+    for sa in StudentAssistant.query.filter_by(class_id=class_id).all():
+        if sa.student:
+            student_assistants.append(sa.student)
     assistant_action_logs = StudentAssistantActionLog.query.filter_by(class_id=class_id).order_by(
         StudentAssistantActionLog.created_at.desc()
     ).limit(50).all()
@@ -312,7 +312,7 @@ def view_class(class_id):
         assignments=assignments,
         recent_attendance=recent_attendance,
         announcements=announcements,
-        student_assistant=student_assistant,
+        student_assistants=student_assistants,
         assistant_action_logs=assistant_action_logs
     )
 
@@ -539,38 +539,42 @@ def send_reminder(assignment_id):
     reminder_type = request.form.get('reminder_type')
     student_ids = request.form.getlist('student_ids')
     custom_message = request.form.get('custom_message', '').strip()
-    
+    redirect_to = request.form.get('next') or request.form.get('redirect_url')
+
     try:
         if reminder_type == 'all':
-            # Send to all enrolled students
             enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
             student_ids = [str(e.student_id) for e in enrollments if e.student_id]
-        
+
         if not student_ids:
             flash("No students selected to send reminder to.", "warning")
-            return redirect(url_for('teacher.dashboard.deadline_reminders'))
-        
-        # Create notifications for each student
+            dest = redirect_to or url_for('teacher.dashboard.deadline_reminders')
+            return redirect(dest)
+
+        default_msg = f"Don't forget! Assignment '{assignment.title}' is due on {assignment.due_date.strftime('%b %d, %Y at %I:%M %p')}."
+        msg = custom_message or default_msg
+
         for student_id in student_ids:
-            notification = Notification(
-                user_id=int(student_id),
-                title=f"Reminder: {assignment.title}",
-                message=custom_message or f"Don't forget! Assignment '{assignment.title}' is due on {assignment.due_date.strftime('%b %d, %Y at %I:%M %p')}.",
-                notification_type='deadline_reminder',
-                is_read=False,
-                created_at=datetime.now()
-            )
-            db.session.add(notification)
-        
+            user = User.query.filter_by(student_id=int(student_id)).first()
+            if user:
+                notification = Notification(
+                    user_id=user.id,
+                    type='deadline_reminder',
+                    title=f"Reminder: {assignment.title}",
+                    message=msg,
+                )
+                db.session.add(notification)
+
         db.session.commit()
         flash(f"Reminder sent to {len(student_ids)} student(s) successfully!", "success")
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"Error sending reminder: {str(e)}")
         flash(f"Error sending reminder: {str(e)}", "danger")
-    
-    return redirect(url_for('teacher.dashboard.deadline_reminders'))
+
+    dest = redirect_to or url_for('teacher.dashboard.deadline_reminders')
+    return redirect(dest)
 
 @bp.route('/assignments')
 @login_required
@@ -1653,7 +1657,9 @@ def view_student_details_data(student_id):
                             student_id=student.id,
                             assignment_id=g.assignment_id
                         ).first()
-                        submitted = sub and sub.submission_type in ('online', 'in_person')
+                        submitted = academic_concern_effective_submitted(
+                            student.id, g.assignment_id, g, sub
+                        )
                         if class_name not in missing_assignments_by_class:
                             missing_assignments_by_class[class_name] = []
                         missing_assignments_by_class[class_name].append({

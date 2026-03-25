@@ -1396,6 +1396,28 @@ class StudentAssistantActionLog(db.Model):
         return f"StudentAssistantActionLog({self.action_type}, Class: {self.class_id}, at {self.created_at})"
 
 
+class StudentDevice(db.Model):
+    """
+    School-issued device: laptop (typically grade 3+) or tablet (grade 2 and below),
+    assigned to exactly one student.
+    """
+    __tablename__ = 'student_device'
+    id = db.Column(db.Integer, primary_key=True)
+    device_type = db.Column(db.String(20), nullable=False)  # 'laptop' or 'tablet'
+    asset_name = db.Column(db.String(120), nullable=False, unique=True)  # e.g. CSA-Laptop-#
+    device_name = db.Column(db.String(200), nullable=True)  # manufacturer / model label
+    cord_number = db.Column(db.String(80), nullable=True)  # often matches device # in asset_name
+    operating_system = db.Column(db.String(120), nullable=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    student = db.relationship('Student', backref=db.backref('assigned_school_device', uselist=False))
+
+    def __repr__(self):
+        return f"StudentDevice({self.device_type!r}, {self.asset_name!r}, student={self.student_id})"
+
+
 class BugReport(db.Model):
     """
     Model for storing bug reports submitted by users.

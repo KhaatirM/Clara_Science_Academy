@@ -1,0 +1,40 @@
+{# Expects assistant_for_classes (list of Class). Links to new multi-class assistant console. #}
+{% if assistant_for_classes is defined and assistant_for_classes %}
+<div class="card border-0 shadow-sm mb-4 student-assistant-dashboard-promo overflow-hidden">
+    <div class="student-assistant-dashboard-promo-accent"></div>
+    <div class="card-body p-4">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="student-assistant-dashboard-icon rounded-3 flex-shrink-0">
+                        <i class="bi bi-person-badge fs-3"></i>
+                    </div>
+                    <div>
+                        <h3 class="h5 mb-1 fw-bold text-dark">Student assistant</h3>
+                        <p class="text-muted small mb-3 mb-lg-2">
+                            You can take attendance and enter grades for <strong>{{ assistant_for_classes|length }}</strong>
+                            class{% if assistant_for_classes|length != 1 %}es{% endif %}.
+                            Use the console to pick a class, or jump in below.
+                        </p>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for c in assistant_for_classes %}
+                            <a href="{{ url_for('student_assistant.class_hub', class_id=c.id) }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>{{ c.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('student_assistant.assistant_console') }}" class="btn btn-primary btn-lg shadow-sm">
+                        <i class="bi bi-grid-1x2 me-2"></i>Assistant console
+                    </a>
+                    <span class="text-muted text-center small">Overview and quick links for every class you assist</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

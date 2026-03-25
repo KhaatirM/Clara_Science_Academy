@@ -664,6 +664,30 @@ def student_dashboard():
     # Missing assignments = past due with no grade (already in past_due_assignments)
     missing_assignments = past_due_assignments
 
+    # Up Next / Requires Attention: top 5 items (overdue first, then upcoming) for immediate action
+    today_date = today.date() if hasattr(today, 'date') else today
+    up_next_items = []
+    for a in past_due_assignments:
+        due_date = a.due_date.date() if hasattr(a.due_date, 'date') else a.due_date
+        days_overdue = (today_date - due_date).days
+        up_next_items.append({
+            'assignment': a,
+            'class_name': a.class_info.name if a.class_info else 'N/A',
+            'days_offset': days_overdue,  # days overdue
+            'urgency': 'overdue',
+        })
+    for a in upcoming_assignments:
+        due_date = a.due_date.date() if hasattr(a.due_date, 'date') else a.due_date
+        days_offset = (due_date - today_date).days
+        urgency = 'due_today' if days_offset == 0 else 'due_soon'
+        up_next_items.append({
+            'assignment': a,
+            'class_name': a.class_info.name if a.class_info else 'N/A',
+            'days_offset': days_offset,
+            'urgency': urgency,
+        })
+    up_next_items = up_next_items[:5]  # Top 5 only
+
     # Announcements: all students, all, or for any of their classes
     announcements = Announcement.query.filter(
         (Announcement.target_group.in_(['all_students', 'all'])) |
@@ -692,7 +716,8 @@ def student_dashboard():
                              failing_classes=failing_classes,
                              missing_assignments=missing_assignments,
                              today=datetime.now().date(),
-                             assistant_for_classes=assistant_for_classes))
+                             assistant_for_classes=assistant_for_classes,
+                             up_next_items=up_next_items))
 
 @student_blueprint.route('/assignments')
 @login_required
@@ -2231,23 +2256,36 @@ def take_quiz(assignment_id):
     if assignment.assignment_type != 'quiz':
         flash("This is not a quiz assignment.", "danger")
         return redirect(url_for('student.student_assignments'))
+
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+
+    grade = Grade.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).first()
+    if assignment.status == 'Voided':
+        flash("This assignment is no longer available.", "warning")
+        return redirect(url_for('student.student_assignments'))
+    if grade and grade.is_voided:
+        flash(
+            "Your score for this assignment was voided. Your teacher must restore it (unvoid) before "
+            "you can open or retake this quiz — granting a reopen alone is not enough.",
+            "warning",
+        )
+        return redirect(url_for('student.student_assignments'))
     
     # If this quiz is linked to a Google Form, redirect to the form
     if assignment.google_form_linked and assignment.google_form_url:
         return render_template('shared/google_form_quiz_redirect.html',
                              assignment=assignment,
                              google_form_url=assignment.google_form_url)
-    
-    # Check if student is enrolled in the class
-    enrollment = Enrollment.query.filter_by(
-        student_id=student.id,
-        class_id=assignment.class_id,
-        is_active=True
-    ).first()
-    
-    if not enrollment:
-        flash("You are not enrolled in this class.", "danger")
-        return redirect(url_for('student.student_assignments'))
     
     # Check if assignment is still active (or has been reopened for this student)
     from models import AssignmentReopening
@@ -2270,12 +2308,6 @@ def take_quiz(assignment_id):
         student_id=student.id,
         assignment_id=assignment_id
     ).order_by(Submission.submitted_at.desc()).first()
-    
-    # Check if already graded - need this before checking attempts
-    grade = Grade.query.filter_by(
-        student_id=student.id,
-        assignment_id=assignment_id
-    ).first()
     
     # Check number of attempts (submissions)
     submissions_count = Submission.query.filter_by(

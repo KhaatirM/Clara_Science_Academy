@@ -1440,6 +1440,7 @@ def reopen_assignment(assignment_id):
             return jsonify({'success': False, 'message': 'Cannot reopen assignment: No teacher found.'})
         
         reopened_count = 0
+        skipped_voided_grade = 0
         
         for student_id in student_ids:
             try:
@@ -1454,6 +1455,14 @@ def reopen_assignment(assignment_id):
                 
                 if not enrollment:
                     continue  # Skip if not enrolled
+
+                st_grade = Grade.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                ).first()
+                if st_grade and st_grade.is_voided:
+                    skipped_voided_grade += 1
+                    continue
                 
                 # Deactivate any existing active reopenings for this student and assignment
                 existing_reopenings = AssignmentReopening.query.filter_by(
@@ -1484,14 +1493,31 @@ def reopen_assignment(assignment_id):
         
         db.session.commit()
         
+        if reopened_count == 0 and skipped_voided_grade > 0:
+            return jsonify({
+                'success': False,
+                'message': (
+                    f'No students were reopened. {skipped_voided_grade} selected student(s) have a voided grade. '
+                    'Un-void the grade (Restore assignment) first; then reopen or grant attempts will apply.'
+                ),
+                'reopened_count': 0,
+                'skipped_voided_grade': skipped_voided_grade,
+            })
+        
         message = f'Successfully reopened assignment for {reopened_count} student(s).'
         if assignment.assignment_type == 'quiz' and additional_attempts > 0:
             message += f' Each student has been granted {additional_attempts} additional attempt(s).'
+        if skipped_voided_grade:
+            message += (
+                f' Skipped {skipped_voided_grade} student(s) with voided grades '
+                '(un-void those grades first).'
+            )
         
         return jsonify({
             'success': True,
             'message': message,
-            'reopened_count': reopened_count
+            'reopened_count': reopened_count,
+            'skipped_voided_grade': skipped_voided_grade,
         })
         
     except Exception as e:
@@ -1532,6 +1558,12 @@ def get_reopen_status(assignment_id):
             
             student = enrollment.student
             
+            st_grade = Grade.query.filter_by(
+                assignment_id=assignment_id,
+                student_id=student.id,
+            ).first()
+            grade_is_voided = bool(st_grade and st_grade.is_voided)
+            
             # Get active reopening if any
             reopening = AssignmentReopening.query.filter_by(
                 assignment_id=assignment_id,
@@ -1568,6 +1600,12 @@ def get_reopen_status(assignment_id):
                 elif needs_reopening and not reason_needs_reopening:
                     reason_needs_reopening.append('Cannot submit (closed or outside access window)')
             
+            if grade_is_voided:
+                reason_needs_reopening.insert(
+                    0,
+                    'Grade voided for this student (un-void first or reopen will not apply on the student side)',
+                )
+            
             student_data.append({
                 'student_id': student.id,
                 'name': f'{student.first_name} {student.last_name}',
@@ -1577,7 +1615,8 @@ def get_reopen_status(assignment_id):
                 'needs_reopening': needs_reopening,
                 'reason_needs_reopening': ', '.join(reason_needs_reopening) if reason_needs_reopening else None,
                 'submissions_count': submissions_count,
-                'max_attempts': assignment.max_attempts if assignment.assignment_type == 'quiz' else None
+                'max_attempts': assignment.max_attempts if assignment.assignment_type == 'quiz' else None,
+                'grade_is_voided': grade_is_voided,
             })
         
         return jsonify({
@@ -1785,9 +1824,22 @@ def view_assignment_submissions(assignment_id):
             status = 'not_submitted'
             submission_type = None
         
-        # Get grade info
+        # Get grade info (active) or void metadata for display
         grade_info = None
-        if grade and not grade.is_voided:
+        void_info = None
+        if grade and grade.is_voided:
+            void_info = {
+                'reason': grade.voided_reason or '',
+                'voided_at': grade.voided_at,
+            }
+            if grade.grade_data:
+                try:
+                    import json
+                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                    void_info['score_snapshot'] = grade_data.get('percentage', grade_data.get('score'))
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        elif grade and not grade.is_voided:
             try:
                 import json
                 grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
@@ -1800,10 +1852,14 @@ def view_assignment_submissions(assignment_id):
             except (json.JSONDecodeError, TypeError):
                 grade_info = {'score': 0, 'percentage': 0, 'comment': '', 'graded_at': None}
         
+        has_grade_record = grade is not None
+        
         student_data.append({
             'student': student,
             'submission': submission,
             'grade': grade_info,
+            'void_info': void_info,
+            'has_grade_record': has_grade_record,
             'status': status,
             'submission_type': submission_type,
             'extension': extensions_dict.get(student.id)

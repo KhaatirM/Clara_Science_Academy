@@ -16,6 +16,23 @@ import json
 bp = Blueprint('student_assistant', __name__, url_prefix='/assistant')
 
 
+@bp.route('/')
+@login_required
+def assistant_console():
+    """Pick a class to work in as student assistant (especially helpful when assisting two classes)."""
+    if current_user.role != 'Student' or not getattr(current_user, 'student_id', None):
+        flash('This page is only for student assistants.', 'warning')
+        return redirect(url_for('student.student_dashboard'))
+    classes = _assistant_classes_for_user()
+    if not classes:
+        flash('You are not assigned as a student assistant for any class.', 'info')
+        return redirect(url_for('student.student_dashboard'))
+    return render_template(
+        'management/student_assistant_console.html',
+        assistant_classes=classes,
+    )
+
+
 def _is_assistant_for_class(class_id):
     """Return True if current user is a Student and is the assigned assistant for this class."""
     if not current_user.is_authenticated or current_user.role != 'Student' or not getattr(current_user, 'student_id', None):
@@ -24,6 +41,16 @@ def _is_assistant_for_class(class_id):
         class_id=class_id,
         student_id=current_user.student_id
     ).first() is not None
+
+
+def _assistant_classes_for_user():
+    """All classes the current user is a student assistant for (sorted by name). Non-students get []."""
+    if not current_user.is_authenticated or current_user.role != 'Student' or not getattr(current_user, 'student_id', None):
+        return []
+    rows = StudentAssistant.query.filter_by(student_id=current_user.student_id).all()
+    classes = [sa.class_info for sa in rows if sa.class_info]
+    classes.sort(key=lambda c: ((c.name or '').lower(), c.id))
+    return classes
 
 
 def _require_assistant(class_id):
@@ -193,7 +220,9 @@ def take_attendance(class_id):
         existing_records=existing_records,
         school_day_records=school_day_records,
         attendance_stats=attendance_stats,
-        is_student_assistant=True
+        is_student_assistant=True,
+        assistant_classes=_assistant_classes_for_user(),
+        current_class_id=class_id,
     )
 
 
@@ -347,7 +376,9 @@ def grade_assignment(class_id, assignment_id):
         students=students,
         grades_by_student=grades_by_student,
         submissions=submissions,
-        total_points=total_points
+        total_points=total_points,
+        assistant_classes=_assistant_classes_for_user(),
+        current_class_id=class_id,
     )
 
 
@@ -634,7 +665,9 @@ def grade_group_assignment(class_id, assignment_id):
         today=datetime.now().date(),
         is_student_assistant=True,
         back_url=url_for('student_assistant.class_hub', class_id=class_id),
-        cancel_url=url_for('student_assistant.class_hub', class_id=class_id)
+        cancel_url=url_for('student_assistant.class_hub', class_id=class_id),
+        assistant_classes=_assistant_classes_for_user(),
+        current_class_id=class_id,
     )
 
 
@@ -654,5 +687,7 @@ def class_hub(class_id):
         'management/student_assistant_hub.html',
         class_obj=class_obj,
         assignments=assignments,
-        group_assignments=group_assignments
+        group_assignments=group_assignments,
+        assistant_classes=_assistant_classes_for_user(),
+        current_class_id=class_id,
     )

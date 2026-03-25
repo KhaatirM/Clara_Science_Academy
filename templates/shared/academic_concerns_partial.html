@@ -162,6 +162,12 @@
                       Score: {{ (alert.score | round(1)) if alert.score is not none else '—' }}%
                     </span>
                     {% endif %}
+                    {% if alert.effective_submitted is defined %}
+                    <span class="academic-concern-badge badge-{{ 'success' if alert.effective_submitted else 'secondary' }}" title="Turn-in status for this flagged assignment (includes teacher-graded in-person)">
+                      <i class="bi bi-{{ 'check-circle-fill' if alert.effective_submitted else 'x-circle-fill' }} me-1"></i>
+                      {{ 'Submitted' if alert.effective_submitted else 'Not submitted' }}
+                    </span>
+                    {% endif %}
                   </div>
                 </div>
                 <button class="btn btn-sm btn-print-concerns" 

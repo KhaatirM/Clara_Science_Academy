@@ -125,7 +125,8 @@ def get_at_risk_alerts_for_user():
 
         at_risk_grades = db.session.query(Grade).join(Assignment).join(Student).filter(
             Student.id.in_(student_ids),
-            Grade.is_voided == False
+            Grade.is_voided == False,
+            Assignment.status != 'Voided',
         ).all()
 
         group_assignments = []
@@ -154,7 +155,8 @@ def get_at_risk_alerts_for_user():
                 ).all()
                 member_group_ids = {gm.group_id for gm in members}
                 group_grades = GroupGrade.query.filter(
-                    GroupGrade.group_assignment_id.in_(ga_ids)
+                    GroupGrade.group_assignment_id.in_(ga_ids),
+                    GroupGrade.is_voided == False,
                 ).join(StudentGroup).filter(
                     StudentGroup.id.in_(member_group_ids)
                 ).all()
@@ -201,6 +203,7 @@ def get_at_risk_alerts_for_user():
 
         seen_student_ids = set()
         total_pts_default = 100.0
+        from utils.academic_concern_submission import academic_concern_effective_submitted
 
         for grade in at_risk_grades:
             try:
@@ -227,7 +230,10 @@ def get_at_risk_alerts_for_user():
                         'assignment_type': grade.assignment.assignment_type or 'pdf',
                         'alert_reason': alert_reason,
                         'score': display_score,
-                        'due_date': grade.assignment.due_date
+                        'due_date': grade.assignment.due_date,
+                        'effective_submitted': academic_concern_effective_submitted(
+                            grade.student.id, grade.assignment_id, grade
+                        ),
                     })
                     seen_student_ids.add(grade.student.id)
             except (json.JSONDecodeError, TypeError, AttributeError):
@@ -255,6 +261,10 @@ def get_at_risk_alerts_for_user():
                         if member.student_id not in seen_student_ids:
                             student = Student.query.get(member.student_id)
                             if student:
+                                grp_eff_sub = (
+                                    isinstance(grade_data, dict)
+                                    and grade_data.get('submission_type') in ('online', 'in_person')
+                                )
                                 at_risk_alerts.append({
                                     'student_name': f"{student.first_name} {student.last_name}",
                                     'student_user_id': student.id,
@@ -263,7 +273,8 @@ def get_at_risk_alerts_for_user():
                                     'assignment_type': f"group_{ga.assignment_type}",
                                     'alert_reason': alert_reason,
                                     'score': display_score,
-                                    'due_date': ga.due_date
+                                    'due_date': ga.due_date,
+                                    'effective_submitted': bool(grp_eff_sub),
                                 })
                                 seen_student_ids.add(student.id)
             except (json.JSONDecodeError, TypeError, AttributeError):
@@ -279,7 +290,8 @@ def get_at_risk_alerts_for_user():
                     'assignment_type': missing['assignment_type'],
                     'alert_reason': 'overdue',
                     'score': None,
-                    'due_date': missing['due_date']
+                    'due_date': missing['due_date'],
+                    'effective_submitted': False,
                 })
                 seen_student_ids.add(missing['student_id'])
 

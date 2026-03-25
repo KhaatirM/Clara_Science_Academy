@@ -4,6 +4,9 @@
 {% block body_class %}take-attendance-no-nested-scroll{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_take_attendance.css') }}">
+{% if is_student_assistant %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block title %}
@@ -38,9 +41,16 @@
                 </p>
             </div>
             {% if is_student_assistant %}
-                <a href="{{ url_for('student_assistant.class_hub', class_id=class_item.id) }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Assistant Hub
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if assistant_classes is defined and assistant_classes|length > 1 %}
+                <a href="{{ url_for('student_assistant.assistant_console') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-grid-1x2 me-1"></i>All classes
                 </a>
+                {% endif %}
+                <a href="{{ url_for('student_assistant.class_hub', class_id=class_item.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Class workspace
+                </a>
+                </div>
             {% elif current_user.role in ['Director', 'School Administrator'] %}
                 <a href="{{ url_for('management.unified_attendance') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>Back to Attendance
@@ -52,6 +62,10 @@
             {% endif %}
         </div>
     </div>
+
+    {% if is_student_assistant %}
+    {% include 'management/_student_assistant_class_switcher.html' %}
+    {% endif %}
 
     <!-- Date Selector & Stats Row -->
     <div class="row g-4 mb-4">

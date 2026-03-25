@@ -429,7 +429,7 @@
         </div>
       </div>
 
-      {% if student_assistant or assistant_action_logs %}
+      {% if student_assistants or assistant_action_logs %}
       <!-- Student Assistant & Activity Log -->
       <div class="class-card-modern mt-4">
         <div class="class-card-header-modern">
@@ -439,7 +439,9 @@
           <div class="class-card-title-section-modern">
             <h5 class="class-card-title-modern">Student Assistant Activity</h5>
             <p class="class-card-subject-modern">
-              {% if student_assistant %}{{ student_assistant.first_name }} {{ student_assistant.last_name }} can take attendance and enter grades.{% endif %}
+              {% if student_assistants %}
+              {% for sa in student_assistants %}<span class="fw-semibold">{{ sa.first_name }} {{ sa.last_name }}</span>{% if not loop.last %}, {% endif %}{% endfor %} can take attendance and enter grades.
+              {% endif %}
               All actions are logged below.
             </p>
           </div>

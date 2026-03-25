@@ -91,6 +91,8 @@ from .assignments import (
     assignments_and_grades as assignments_and_grades_func,
     view_assignment as view_assignment_func,
     grade_assignment as grade_assignment_func,
+    save_student_grade as save_student_grade_func,
+    send_reminder as send_reminder_func,
     edit_assignment as edit_assignment_func,
     assignment_type_selector as assignment_type_selector_func,
     add_assignment as add_assignment_func,
@@ -359,6 +361,20 @@ def view_assignment_route(assignment_id):
 def grade_assignment_route(assignment_id):
     """Grade assignment route - delegates to assignments module"""
     return grade_assignment_func(assignment_id)
+
+@management_blueprint.route('/grade/assignment/<int:assignment_id>/student/<int:student_id>', methods=['POST'], endpoint='save_student_grade')
+@login_required
+@management_required
+def save_student_grade_route(assignment_id, student_id):
+    """Save single student grade (Speed Grader AJAX)"""
+    return save_student_grade_func(assignment_id, student_id)
+
+@management_blueprint.route('/send-reminder/<int:assignment_id>', methods=['POST'], endpoint='send_reminder')
+@login_required
+@management_required
+def send_reminder_route(assignment_id):
+    """Send deadline reminder to selected students"""
+    return send_reminder_func(assignment_id)
 
 @management_blueprint.route('/edit-assignment/<int:assignment_id>', methods=['GET', 'POST'], endpoint='edit_assignment')
 @login_required

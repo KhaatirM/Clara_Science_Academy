@@ -207,11 +207,12 @@
             {% set student = student_item.student %}
             {% set submission = student_item.submission %}
             {% set grade = student_item.grade %}
+            {% set void_info = student_item.void_info %}
                     {% set status = student_item.status %}
                     {% set submission_type = student_item.submission_type %}
                     {% set extension = student_item.extension %}
                     
-                    <div class="submission-card {{ status }}" data-status="{{ status }}" data-graded="{{ 'yes' if grade else 'no' }}">
+                    <div class="submission-card {{ status }}{% if void_info %} border-secondary{% endif %}" data-status="{{ status }}" data-graded="{{ 'yes' if student_item.has_grade_record else 'no' }}">
                         <div class="submission-info-row">
                             <div class="d-flex align-items-center">
                                 <div class="student-avatar me-3" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
@@ -239,6 +240,11 @@
                                 {% elif submission and submission_type == 'online' %}
                                     <span class="badge bg-info ms-2">
                                         <i class="bi bi-cloud-upload-fill me-1"></i>Online
+                                    </span>
+                                {% endif %}
+                                {% if void_info %}
+                                    <span class="badge bg-dark ms-2" title="{% if void_info.reason %}{{ void_info.reason }}{% else %}This student's grade is voided{% endif %}">
+                                        <i class="bi bi-slash-circle me-1"></i>Voided
                                     </span>
                                 {% endif %}
                                 {% if grade %}
@@ -283,6 +289,20 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
+                                {% if void_info %}
+                                <div class="alert alert-secondary mb-2">
+                                    <small>
+                                        <i class="bi bi-slash-circle me-1"></i>
+                                        <strong>Grade voided</strong> for this student — excluded from averages and the student cannot submit or retake until restored.
+                                        {% if void_info.reason %}
+                                        <br><em>{{ void_info.reason }}</em>
+                                        {% endif %}
+                                        {% if void_info.voided_at %}
+                                        <br><span class="text-muted">Voided {{ void_info.voided_at.strftime('%b %d, %Y') }}</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
                                 {% if extension %}
                                 <div class="alert alert-info mb-2">
                                     <small>
@@ -327,6 +347,9 @@
                         <div class="alert alert-warning mb-0">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             <strong>No submission received.</strong>
+                            {% if void_info %}
+                            <br><small class="text-dark"><i class="bi bi-slash-circle me-1"></i>This student also has a <strong>voided</strong> grade for this assignment. Reopen or extra quiz attempts will not apply until the grade is restored (Unvoid).</small>
+                            {% endif %}
                             {% if extension %}
                             <br><small>Extension granted until {{ extension.extended_due_date.strftime('%b %d, %Y at %I:%M %p') }}</small>
                             {% endif %}

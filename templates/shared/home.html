@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 19, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 25, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,75 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 19, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>group assignment grading, voiding, submission tracking, and academic concerns</strong>: teachers and school administrators can void group assignments for specific groups or students, blank scores save as 0 in group grading, assignment cards correctly count in-person and online submissions, submission notes use a dropdown (On-Time, Late, Other), and the academic concerns popup shows a submission status badge for each assignment. Details below.</p>
+                        <p class="updates-intro-text mb-0">This wave highlights <strong>academic alerts</strong> (submission status aligned with grading), <strong>voided grades and quiz reopen</strong> behavior, clearer <strong>assignment submissions</strong> for staff, and a redesigned <strong>student assistant</strong> experience when you assist multiple classes. Earlier items—Tech devices, assistant eligibility, group assignments, and more—remain below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+
+                    <!-- March 25, 2026 - Academic alerts, void/reopen, submissions, assistant console -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-stars me-2"></i>Academic Alerts, Reopen &amp; Void, Submissions, Student Assistants – March 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic concerns – submission clarity:</strong> Alert cards now include a <strong>Submitted / Not submitted</strong> badge that matches how grading works in the app: if a teacher entered a grade (including in-person paper work), it counts as submitted even when no online upload exists. The detailed student view uses the same rule. Alerts ignore <strong>voided</strong> assignments and <strong>voided group grades</strong> so they do not inflate concern lists.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Reopen &amp; voided grades (including quizzes):</strong> Granting a reopen or extra quiz attempts <strong>does not apply</strong> while a student’s grade for that assignment is <strong>voided</strong>. Those students are skipped with a clear message; the reopen list shows a warning and disables their row. Learners cannot open a voided quiz until the grade is <strong>restored (unvoid)</strong>. Submission access treats voided grades as closed.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>View Submissions (teachers &amp; admins):</strong> The submissions page for an assignment now shows when a student’s grade is <strong>voided</strong> (badge and explanation), including a note that reopening will not help until the grade is restored.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student assistant – multiple classes:</strong> Assistants who cover <strong>two classes</strong> get an <strong>Assistant console</strong> at <code>/assistant/</code>, a refreshed dashboard promo with per-class shortcuts, and an in-page <strong>class switcher</strong> on the workspace, attendance, and grading screens so moving between classes is one click.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Fewer mixed signals between grades and “submitted” in alerts; reopen and quiz retakes stay honest when work is voided; staff see void status on submissions; assistants save time when they support more than one class.</p>
+                        </div>
+                    </div>
+
+                    <!-- March 24, 2026 - Tech: Devices & CSV import -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-laptop me-2"></i>Tech – Student Devices & Bulk CSV – March 24, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Devices tab (Tech / IT):</strong> Track school-issued <strong>laptops</strong> for <strong>3rd grade and above</strong> and <strong>tablets</strong> for <strong>2nd grade and below</strong> (kindergarten counts as grade “K”). Each record includes an inventory/asset name (for example <code>CSA-Laptop-#</code> or <code>CSA-Tablet-#</code>), device name, cord number (often the same as the device number), operating system, and <strong>one assigned student</strong> per device.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Bulk upload:</strong> From the Devices page, download a <strong>CSV template</strong>, fill in rows, and <strong>Import</strong>. Rows are matched to students by internal ID (<code>student_db_id</code>) or school student ID. Existing <code>asset_name</code> values are <strong>updated</strong>; new rows create assignments. Imports run per row so one bad line does not discard the rest.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> IT can maintain a clear inventory of who has which laptop or tablet and load or refresh data from a spreadsheet.</p>
+                        </div>
+                    </div>
+
+                    <!-- March 24, 2026 - Student assistants -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-person-badge me-2"></i>Student Assistants – Eligibility & Limits – March 24, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Who can be an assistant:</strong> Directors and School Administrators choose assistants when <strong>editing a class</strong>. A student qualifies if they are <strong>enrolled in that class</strong>, <em>or</em> if they are <strong>not</strong> in the class but their grade is <strong>at or above the lowest grade</strong> set for that class (when grade levels are configured). The picker lists students with any enrollment in the <strong>same school year</strong>. If the class has no grade levels, only enrolled students may be assistants.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Limits:</strong> At most <strong>two</strong> student assistants per class. Each student may assist at most <strong>two classes</strong> at a time (other assignments count toward that cap when saving).
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Assistants can be chosen flexibly from the right grades (or from the roster) while keeping workloads fair and capped.</p>
+                        </div>
+                    </div>
 
                     <!-- March 19, 2026 - Group Assignments: Void, Grading, Submissions, Notes -->
                     <div class="update-section mb-4">
@@ -1259,11 +1321,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar19_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar25_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar19_2026', 'true');
+            sessionStorage.setItem('updateModalShownMar25_2026', 'true');
         }, 500);
     }
 });

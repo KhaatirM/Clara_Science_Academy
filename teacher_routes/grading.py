@@ -356,6 +356,100 @@ def grade_assignment(assignment_id):
                          min_initial_posts=min_initial_posts,
                          min_replies=min_replies)
 
+
+@bp.route('/grade/assignment/<int:assignment_id>/student/<int:student_id>', methods=['POST'])
+@login_required
+@teacher_required
+def save_student_grade(assignment_id, student_id):
+    """Save a single student's grade via AJAX (for Speed Grader)."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    student = Student.query.get_or_404(student_id)
+
+    if not is_authorized_for_class(assignment.class_info):
+        return jsonify({'success': False, 'error': 'Not authorized'}), 403
+
+    # Verify student is in this class
+    enrollment = Enrollment.query.filter_by(
+        class_id=assignment.class_id, student_id=student_id, is_active=True
+    ).first()
+    if not enrollment:
+        return jsonify({'success': False, 'error': 'Student not in class'}), 400
+
+    try:
+        score_val = request.form.get('score', request.json.get('score') if request.is_json else None)
+        comment = request.form.get('comment', request.json.get('comment', '')) or ''
+        submission_type = request.form.get('submission_type', request.json.get('submission_type', '')) or ''
+        notes_type = request.form.get('submission_notes_type', request.json.get('submission_notes_type', 'On-Time')) or 'On-Time'
+        notes_other = request.form.get('submission_notes', request.json.get('submission_notes', '')) or ''
+        submission_notes = notes_other if notes_type == 'Other' else notes_type
+
+        total_points = assignment.total_points if assignment.total_points else 100.0
+        try:
+            points_earned = float(score_val) if (score_val is not None and str(score_val).strip()) else 0.0
+        except (ValueError, TypeError):
+            points_earned = 0.0
+
+        # Handle submission status
+        teacher_staff = get_teacher_or_admin()
+        if submission_type:
+            sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+            if submission_type in ['in_person', 'online']:
+                if sub:
+                    sub.submission_type = submission_type
+                    sub.submission_notes = submission_notes
+                    sub.marked_by = teacher_staff.id if teacher_staff else None
+                    sub.marked_at = datetime.utcnow()
+                else:
+                    sub = Submission(
+                        student_id=student_id, assignment_id=assignment_id,
+                        submission_type=submission_type, submission_notes=submission_notes,
+                        marked_by=teacher_staff.id if teacher_staff else None,
+                        marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(),
+                        file_path=None
+                    )
+                    db.session.add(sub)
+            elif submission_type == 'not_submitted' and sub:
+                db.session.delete(sub)
+
+        # Save grade (even 0)
+        existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
+        if existing_grade and existing_grade.is_voided:
+            return jsonify({'success': True, 'message': 'Grade voided, not updated'})
+
+        percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+        grade_data = {
+            'score': points_earned, 'points_earned': points_earned,
+            'total_points': total_points, 'max_score': total_points,
+            'percentage': round(percentage, 2), 'feedback': comment, 'comment': comment,
+            'graded_at': datetime.utcnow().isoformat()
+        }
+
+        if existing_grade:
+            existing_grade.grade_data = json.dumps(grade_data)
+            existing_grade.graded_at = datetime.utcnow()
+        else:
+            new_grade = Grade(
+                assignment_id=assignment_id, student_id=student_id,
+                grade_data=json.dumps(grade_data), graded_at=datetime.utcnow()
+            )
+            db.session.add(new_grade)
+            sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+            if not sub and points_earned > 0:
+                sub = Submission(
+                    student_id=student_id, assignment_id=assignment_id,
+                    submission_type='in_person', submission_notes='Auto-marked: grade entered',
+                    marked_by=teacher_staff.id if teacher_staff else None,
+                    marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
+                )
+                db.session.add(sub)
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Saved'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @bp.route('/grades/statistics/<int:assignment_id>')
 @login_required
 @teacher_required

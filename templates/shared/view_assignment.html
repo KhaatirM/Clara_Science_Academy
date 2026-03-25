@@ -888,7 +888,7 @@
                         </div>
                         <div>
                             <div class="alert-title">Reopening Guidelines</div>
-                            <p class="alert-text">Select students to reopen this assignment for. For quiz assignments, you can grant additional attempts. Reopened assignments will be accessible even if the assignment is inactive or closed.</p>
+                            <p class="alert-text">Select students to reopen this assignment for. For quiz assignments, you can grant additional attempts. Reopened assignments will be accessible even if the assignment is inactive or closed. Students with a <strong>voided grade</strong> cannot benefit until you restore (unvoid) that grade first.</p>
                         </div>
                     </div>
                     
@@ -1160,7 +1160,8 @@ function renderReopenStudents(students, assignmentType, maxAttempts) {
     students.forEach(student => {
         const needsReopen = student.needs_reopening;
         const hasReopening = student.has_reopening;
-        const statusClass = hasReopening ? 'success' : (needsReopen ? 'warning' : '');
+        const voidedGrade = !!student.grade_is_voided;
+        const statusClass = voidedGrade ? 'danger' : (hasReopening ? 'success' : (needsReopen ? 'warning' : ''));
         
         // Build status text based on assignment type
         let statusText = '';
@@ -1173,10 +1174,14 @@ function renderReopenStudents(students, assignmentType, maxAttempts) {
         } else if (needsReopen) {
             statusText = `⚠ ${student.reason_needs_reopening || 'Needs reopening'}`;
         }
+        if (voidedGrade) {
+            const voidMsg = '⛔ Grade voided — un-void first or reopen will not apply for this student';
+            statusText = statusText ? `${voidMsg}. Also: ${statusText}` : voidMsg;
+        }
         
         html += `
             <div class="student-select-card ${statusClass ? 'border-' + statusClass : ''}">
-                <input class="form-check-input reopen-student-checkbox" type="checkbox" name="student_ids" value="${student.student_id}" id="reopenstudent${student.student_id}">
+                <input class="form-check-input reopen-student-checkbox" type="checkbox" name="student_ids" value="${student.student_id}" id="reopenstudent${student.student_id}" ${voidedGrade ? 'disabled' : ''}>
                 <label class="student-select-label" for="reopenstudent${student.student_id}">
                     <div class="student-avatar-mini">
                         ${student.name.split(' ').map(n => n[0]).join('')}
@@ -1195,8 +1200,7 @@ function renderReopenStudents(students, assignmentType, maxAttempts) {
 }
 
 function toggleAllReopenStudents(source) {
-    const checkboxes = document.querySelectorAll('.reopen-student-checkbox');
-    checkboxes.forEach(checkbox => {
+    document.querySelectorAll('.reopen-student-checkbox:not(:disabled)').forEach(checkbox => {
         checkbox.checked = source.checked;
     });
 }

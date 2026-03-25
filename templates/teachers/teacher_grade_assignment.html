@@ -260,11 +260,35 @@
                             <i class="bi bi-arrow-repeat me-1"></i>Bulk Grant Redos
                         </button>
                         {% endif %}
+                        <button type="button" class="btn btn-sm btn-bulk-reminder" onclick="bulkSendReminder()">
+                            <span class="btn-bulk-reminder-icon"><i class="bi bi-send-fill"></i></span>
+                            Send Reminder
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
                             <i class="bi bi-ui-checks me-1"></i>Select/Deselect All
                         </button>
+                        <button type="button" class="btn btn-sm btn-primary" id="speedGraderToggle" onclick="toggleSpeedGrader()">
+                            <i class="bi bi-lightning-charge-fill me-1"></i>Speed Grader
+                        </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Speed Grader Navigation Bar (sticky) -->
+            <div id="speedGraderBar" class="speed-grader-bar" style="display: none;">
+                <button type="button" class="btn btn-outline-secondary speed-grader-btn" id="speedGraderPrev" onclick="speedGraderNav(-1)">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </button>
+                <span class="speed-grader-position" id="speedGraderPosition">1 of {{ students|length }}</span>
+                <button type="button" class="btn btn-outline-secondary speed-grader-btn" id="speedGraderNext" onclick="speedGraderNav(1)">
+                    Next <i class="bi bi-chevron-right"></i>
+                </button>
+                <button type="button" class="btn btn-primary speed-grader-save-next" id="speedGraderSaveNext" onclick="speedGraderSaveAndNext()">
+                    <i class="bi bi-check-circle me-1"></i>Save & Next
+                </button>
+                <button type="button" class="btn btn-link text-muted speed-grader-exit" onclick="toggleSpeedGrader()">
+                    Exit Speed Grader
+                </button>
             </div>
             
             <div class="student-grading-cards">
@@ -301,7 +325,7 @@
                     {% endif %}
                     {% set performance_class = 'voided' if is_voided else ('excellent' if percentage_value >= 90 else ('good' if percentage_value >= 80 else ('warning' if percentage_value >= 70 else ('failing' if percentage_value > 0 else 'ungraded')))) %}
                     
-                    <div class="student-grade-card {{ performance_class }}{% if is_voided %} voided-disabled{% endif %}" data-student-id="{{ student.id }}">
+                    <div class="student-grade-card {{ performance_class }}{% if is_voided %} voided-disabled{% endif %}" id="student-card-{{ student.id }}" data-student-id="{{ student.id }}">
                         <div class="student-grade-header">
                             <!-- Bulk Select Checkbox -->
                             <div class="bulk-select-checkbox">
@@ -968,32 +992,116 @@ function autoSaveGrade(studentId) {
     }, 2000);
 }
 
+const SAVE_GRADE_URL = "{% if role_prefix == 'management' or (request.endpoint and 'management' in request.endpoint) %}{{ url_for('management.save_student_grade', assignment_id=assignment.id, student_id=0) }}{% else %}{{ url_for('teacher.grading.save_student_grade', assignment_id=assignment.id, student_id=0) }}{% endif %}".replace(/\/0$/, '');
+
 function saveGradeAjax(studentId) {
     const scoreInput = document.getElementById(`score_${studentId}`);
     const commentInput = document.querySelector(`textarea[name="comment_${studentId}"]`);
     const submissionType = document.querySelector(`select[name="submission_type_${studentId}"]`);
-    const submissionNotes = document.querySelector(`input[name="submission_notes_${studentId}"]`);
-    
+    const notesTypeSelect = document.querySelector(`select[name="submission_notes_type_${studentId}"]`);
+    const notesOtherInput = document.querySelector(`input[name="submission_notes_${studentId}"]`);
+    const submissionNotes = (notesTypeSelect?.value === 'Other' && notesOtherInput) ? notesOtherInput.value : (notesTypeSelect?.value || '');
+
     const formData = new FormData();
     formData.append('csrf_token', '{{ csrf_token() }}');
-    formData.append('student_id', studentId);
     formData.append('score', scoreInput?.value || '');
     formData.append('comment', commentInput?.value || '');
     formData.append('submission_type', submissionType?.value || '');
-    formData.append('submission_notes', submissionNotes?.value || '');
-    
-    // Show saved indicator
-    autoSaveIndicator.className = 'auto-save-indicator saved';
-    autoSaveIndicator.innerHTML = '<i class="bi bi-check-circle-fill"></i><span>Saved!</span>';
-    
-    // Hide after 2 seconds
-    setTimeout(() => {
-        autoSaveIndicator.style.display = 'none';
-    }, 2000);
-    
-    // Note: For now, this shows the UI feedback. 
-    // Actual AJAX save can be added if desired, or keep the form submit method
+    formData.append('submission_notes_type', notesTypeSelect?.value || 'On-Time');
+    formData.append('submission_notes', submissionNotes);
+
+    fetch(SAVE_GRADE_URL + '/' + studentId, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        autoSaveIndicator.className = 'auto-save-indicator saved';
+        autoSaveIndicator.innerHTML = '<i class="bi bi-check-circle-fill"></i><span>Saved!</span>';
+        if (!data.success) console.warn('Save response:', data);
+    })
+    .catch(err => {
+        autoSaveIndicator.className = 'auto-save-indicator error';
+        autoSaveIndicator.innerHTML = '<i class="bi bi-exclamation-triangle"></i><span>Save failed</span>';
+        console.error('Save error:', err);
+    });
+
+    setTimeout(() => { autoSaveIndicator.style.display = 'none'; }, 2000);
     updateDistributionChart();
+}
+
+function saveGradeAjaxSync(studentId) {
+    return new Promise((resolve, reject) => {
+        const scoreInput = document.getElementById(`score_${studentId}`);
+        const commentInput = document.querySelector(`textarea[name="comment_${studentId}"]`);
+        const submissionType = document.querySelector(`select[name="submission_type_${studentId}"]`);
+        const notesTypeSelect = document.querySelector(`select[name="submission_notes_type_${studentId}"]`);
+        const notesOtherInput = document.querySelector(`input[name="submission_notes_${studentId}"]`);
+        const submissionNotes = (notesTypeSelect?.value === 'Other' && notesOtherInput) ? notesOtherInput.value : (notesTypeSelect?.value || '');
+
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        formData.append('score', scoreInput?.value || '');
+        formData.append('comment', commentInput?.value || '');
+        formData.append('submission_type', submissionType?.value || '');
+        formData.append('submission_notes_type', notesTypeSelect?.value || 'On-Time');
+        formData.append('submission_notes', submissionNotes);
+
+        fetch(SAVE_GRADE_URL + '/' + studentId, { method: 'POST', body: formData, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => { resolve(data); })
+            .catch(reject);
+    });
+}
+
+const SPEED_GRADER_STUDENT_IDS = [{% for s in students %}{{ s.id }}{% if not loop.last %}, {% endif %}{% endfor %}];
+let speedGraderIndex = 0;
+let speedGraderActive = false;
+
+function toggleSpeedGrader() {
+    speedGraderActive = !speedGraderActive;
+    const bar = document.getElementById('speedGraderBar');
+    if (speedGraderActive && SPEED_GRADER_STUDENT_IDS.length > 0) {
+        bar.style.display = 'flex';
+        speedGraderIndex = 0;
+        speedGraderUpdateFocus();
+    } else {
+        bar.style.display = 'none';
+        document.querySelectorAll('.student-grade-card').forEach(c => c.style.display = '');
+    }
+}
+
+function speedGraderUpdateFocus() {
+    document.querySelectorAll('.student-grade-card').forEach((card, i) => {
+        const sid = parseInt(card.getAttribute('data-student-id'));
+        const idx = SPEED_GRADER_STUDENT_IDS.indexOf(sid);
+        card.style.display = (idx === speedGraderIndex) ? '' : 'none';
+    });
+    document.getElementById('speedGraderPosition').textContent = (speedGraderIndex + 1) + ' of ' + SPEED_GRADER_STUDENT_IDS.length;
+    document.getElementById('speedGraderPrev').disabled = speedGraderIndex <= 0;
+    document.getElementById('speedGraderNext').disabled = speedGraderIndex >= SPEED_GRADER_STUDENT_IDS.length - 1;
+}
+
+function speedGraderNav(delta) {
+    speedGraderIndex = Math.max(0, Math.min(SPEED_GRADER_STUDENT_IDS.length - 1, speedGraderIndex + delta));
+    speedGraderUpdateFocus();
+}
+
+async function speedGraderSaveAndNext() {
+    const sid = SPEED_GRADER_STUDENT_IDS[speedGraderIndex];
+    const btn = document.getElementById('speedGraderSaveNext');
+    btn.disabled = true;
+    try {
+        await saveGradeAjaxSync(sid);
+        if (speedGraderIndex < SPEED_GRADER_STUDENT_IDS.length - 1) {
+            speedGraderIndex++;
+            speedGraderUpdateFocus();
+        }
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 // Grade Distribution Chart
@@ -1096,6 +1204,43 @@ function toggleSelectAll() {
     checkboxes.forEach(checkbox => {
         checkbox.checked = !allChecked;
     });
+}
+
+function bulkSendReminder() {
+    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one student first using the checkboxes.');
+        return;
+    }
+    if (!confirm(`Send deadline reminder to ${selectedCheckboxes.length} selected student(s)?`)) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{% if role_prefix == 'management' or (request.endpoint and 'management' in request.endpoint) %}{{ url_for('management.send_reminder', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.dashboard.send_reminder', assignment_id=assignment.id) }}{% endif %}";
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrf_token';
+    csrf.value = '{{ csrf_token() }}';
+    form.appendChild(csrf);
+    const nextInput = document.createElement('input');
+    nextInput.type = 'hidden';
+    nextInput.name = 'next';
+    nextInput.value = window.location.href;
+    form.appendChild(nextInput);
+    const typeInput = document.createElement('input');
+    typeInput.type = 'hidden';
+    typeInput.name = 'reminder_type';
+    typeInput.value = 'selected';
+    form.appendChild(typeInput);
+    selectedCheckboxes.forEach(cb => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'student_ids';
+        inp.value = cb.value;
+        form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function bulkMarkSubmitted(submissionType) {

@@ -2807,6 +2807,7 @@ def view_student_details_data(student_id):
     
     try:
         from utils.at_risk_alerts import _percentage_from_grade_data
+        from utils.academic_concern_submission import academic_concern_effective_submitted
 
         student = Student.query.get_or_404(student_id)
         
@@ -2892,7 +2893,9 @@ def view_student_details_data(student_id):
                             student_id=student.id,
                             assignment_id=g.assignment_id
                         ).first()
-                        submitted = sub and sub.submission_type in ('online', 'in_person')
+                        submitted = academic_concern_effective_submitted(
+                            student.id, g.assignment_id, g, sub
+                        )
                         if class_name not in missing_assignments_by_class:
                             missing_assignments_by_class[class_name] = []
                         missing_assignments_by_class[class_name].append({

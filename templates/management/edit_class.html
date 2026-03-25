@@ -277,32 +277,53 @@
                 </div>
 
                 {% if current_user.role in ['School Administrator', 'Director'] %}
-                <!-- Student Assistant Card -->
+                <!-- Student Assistants (max 2 per class; student max 2 classes total) -->
                 <div class="form-card">
                     <div class="card-header-modern">
                         <div class="card-icon">
                             <i class="bi bi-person-badge"></i>
                         </div>
-                        <h3>Student Assistant</h3>
+                        <h3>Student Assistants</h3>
                     </div>
                     <div class="card-body-modern">
                         <p class="form-hint mb-3">
-                            A student assistant can take attendance and enter grades for this class only. All actions are logged and the teacher plus administrators are alerted when they change existing grades or past attendance.
+                            Up to {{ max_assistants_per_class }} students per class. Each student may be an assistant for at most <strong>2 classes</strong> at a time.
+                            An assistant may be <strong>anyone enrolled in this class</strong>, or a student <strong>not in this class</strong> whose grade is <strong>at or above the lowest grade</strong> selected for the class (when grade levels are set). The list includes students enrolled anywhere in this school year.
+                            Assistants can take attendance and enter grades for this class; actions are logged and teachers and administrators are alerted on sensitive changes.
                         </p>
-                        <label for="student_assistant_id" class="form-label-modern">
-                            <i class="bi bi-person-plus"></i>
-                            Assign student assistant
-                        </label>
-                        <select class="form-select-modern" id="student_assistant_id" name="student_assistant_id">
-                            <option value="">— None —</option>
-                            {% for s in enrolled_students %}
-                            <option value="{{ s.id }}" {% if current_student_assistant and current_student_assistant.id == s.id %}selected{% endif %}>
-                                {{ s.first_name }} {{ s.last_name }}{% if s.student_id %} ({{ s.student_id }}){% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        {% if not enrolled_students %}
-                        <small class="text-muted">No students enrolled in this class. Enroll students first to assign an assistant.</small>
+                        {% set ca = current_student_assistants if current_student_assistants is defined else [] %}
+                        {% set slot1 = ca[0] if ca|length > 0 else none %}
+                        {% set slot2 = ca[1] if ca|length > 1 else none %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="student_assistant_ids_1" class="form-label-modern">
+                                    <i class="bi bi-person-plus"></i> Assistant 1
+                                </label>
+                                <select class="form-select-modern" id="student_assistant_ids_1" name="student_assistant_ids">
+                                    <option value="">— None —</option>
+                                    {% for s in eligible_assistant_students %}
+                                    <option value="{{ s.id }}" {% if slot1 and slot1.id == s.id %}selected{% endif %}>
+                                        {{ s.first_name }} {{ s.last_name }}{% if s.grade_level %} (Grade {{ s.grade_level }}){% endif %}{% if s.student_id %} — {{ s.student_id }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="student_assistant_ids_2" class="form-label-modern">
+                                    <i class="bi bi-person-plus"></i> Assistant 2
+                                </label>
+                                <select class="form-select-modern" id="student_assistant_ids_2" name="student_assistant_ids">
+                                    <option value="">— None —</option>
+                                    {% for s in eligible_assistant_students %}
+                                    <option value="{{ s.id }}" {% if slot2 and slot2.id == s.id %}selected{% endif %}>
+                                        {{ s.first_name }} {{ s.last_name }}{% if s.grade_level %} (Grade {{ s.grade_level }}){% endif %}{% if s.student_id %} — {{ s.student_id }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        {% if not eligible_assistant_students %}
+                        <small class="text-muted d-block mt-2">No eligible students. Enroll students in this class, or set class grade levels and ensure other students in this school year have a grade on file so they can qualify by grade.</small>
                         {% endif %}
                     </div>
                 </div>

@@ -6,6 +6,14 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance, SchoolYear, AcademicPeriod, StudentAssistant, StudentAssistantActionLog
+from management_routes.student_assistant_utils import (
+    MAX_ASSISTANTS_PER_CLASS,
+    MAX_CLASSES_PER_ASSISTANT,
+    filter_eligible_assistant_candidates,
+    is_eligible_student_assistant_candidate,
+    students_in_school_year_for_assistant_pool,
+    count_assistant_classes_for_student_excluding,
+)
 from datetime import datetime
 import json
 from utils.grade_helpers import get_points_earned
@@ -438,27 +446,53 @@ def edit_class(class_id):
                     if teacher:
                         class_obj.additional_teachers.append(teacher)
             
-            # Student Assistant (School Administrator / Director only)
+            # Student Assistants — max 2 per class; grade eligibility; max 2 classes per student
             if current_user.role in ['School Administrator', 'Director']:
-                student_assistant_id = request.form.get('student_assistant_id', type=int)
-                existing_sa = StudentAssistant.query.filter_by(class_id=class_id).first()
-                is_enrolled = student_assistant_id and Enrollment.query.filter_by(
-                    class_id=class_id, student_id=student_assistant_id, is_active=True
-                ).first()
-                if student_assistant_id and is_enrolled:
-                    if existing_sa:
-                        if existing_sa.student_id != student_assistant_id:
-                            existing_sa.student_id = student_assistant_id
-                            existing_sa.assigned_by_user_id = current_user.id
-                    else:
-                        db.session.add(StudentAssistant(
-                            class_id=class_id,
-                            student_id=student_assistant_id,
-                            assigned_by_user_id=current_user.id
-                        ))
-                else:
-                    if existing_sa:
-                        db.session.delete(existing_sa)
+                raw_ids = request.form.getlist('student_assistant_ids')
+                new_ids = []
+                for x in raw_ids:
+                    if x and str(x).strip().isdigit():
+                        sid = int(x)
+                        if sid not in new_ids:
+                            new_ids.append(sid)
+                if len(new_ids) > MAX_ASSISTANTS_PER_CLASS:
+                    flash(f'At most {MAX_ASSISTANTS_PER_CLASS} student assistants per class.', 'danger')
+                    return redirect(url_for('management.edit_class', class_id=class_id))
+
+                enrollments_map = {
+                    e.student_id: e for e in Enrollment.query.filter_by(
+                        class_id=class_id, is_active=True
+                    ).all()
+                }
+                enrolled_ids = set(enrollments_map.keys())
+
+                for sid in new_ids:
+                    stu = Student.query.get(sid)
+                    if not stu:
+                        flash('Invalid student selected for assistant.', 'danger')
+                        return redirect(url_for('management.edit_class', class_id=class_id))
+                    if not is_eligible_student_assistant_candidate(class_obj, stu, enrolled_ids):
+                        flash(
+                            'Each assistant must be enrolled in this class, or not enrolled but at or above '
+                            'the minimum grade level set for this class (and the class must have grade levels).',
+                            'danger',
+                        )
+                        return redirect(url_for('management.edit_class', class_id=class_id))
+                    other_classes = count_assistant_classes_for_student_excluding(sid, exclude_class_id=class_id)
+                    if other_classes >= MAX_CLASSES_PER_ASSISTANT:
+                        flash(
+                            f'{stu.first_name} {stu.last_name} is already a student assistant for {MAX_CLASSES_PER_ASSISTANT} other classes.',
+                            'danger',
+                        )
+                        return redirect(url_for('management.edit_class', class_id=class_id))
+
+                StudentAssistant.query.filter_by(class_id=class_id).delete()
+                for sid in new_ids:
+                    db.session.add(StudentAssistant(
+                        class_id=class_id,
+                        student_id=sid,
+                        assigned_by_user_id=current_user.id,
+                    ))
             
             db.session.commit()
             flash(f'Class "{class_obj.name}" updated successfully!', 'success')
@@ -472,18 +506,25 @@ def edit_class(class_id):
     # GET request - show edit form
     teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     enrolled_students = []
-    current_student_assistant = None
+    eligible_assistant_students = []
+    current_student_assistants = []
+    max_assistants_per_class = MAX_ASSISTANTS_PER_CLASS
     if current_user.role in ['School Administrator', 'Director']:
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
         enrolled_students = [e.student for e in enrollments if e.student]
-        sa = StudentAssistant.query.filter_by(class_id=class_id).first()
-        if sa:
-            current_student_assistant = sa.student
+        enrolled_ids = {e.student_id for e in enrollments}
+        pool = students_in_school_year_for_assistant_pool(class_obj.school_year_id)
+        eligible_assistant_students = filter_eligible_assistant_candidates(
+            class_obj, pool, enrolled_ids
+        )
+        current_student_assistants = [sa.student for sa in StudentAssistant.query.filter_by(class_id=class_id).all() if sa.student]
     return render_template('management/edit_class.html',
                            class_info=class_obj,
                            available_teachers=teachers,
                            enrolled_students=enrolled_students,
-                           current_student_assistant=current_student_assistant)
+                           eligible_assistant_students=eligible_assistant_students,
+                           current_student_assistants=current_student_assistants,
+                           max_assistants_per_class=max_assistants_per_class)
 
 
 
@@ -1751,13 +1792,13 @@ def view_class(class_id):
     if teacher and current_user.teacher_staff_id == teacher.id:
         is_current_user_teacher = True
 
-    # Student assistant and activity log (teacher and School Admin/Director can view)
-    student_assistant = None
+    # Student assistants and activity log (teacher and School Admin/Director can view)
+    student_assistants = []
     assistant_action_logs = []
     if current_user.role in ['School Administrator', 'Director'] or is_current_user_teacher:
-        sa = StudentAssistant.query.filter_by(class_id=class_id).first()
-        if sa:
-            student_assistant = sa.student
+        for sa in StudentAssistant.query.filter_by(class_id=class_id).all():
+            if sa.student:
+                student_assistants.append(sa.student)
         assistant_action_logs = StudentAssistantActionLog.query.filter_by(class_id=class_id).order_by(
             StudentAssistantActionLog.created_at.desc()
         ).limit(100).all()
@@ -1773,7 +1814,7 @@ def view_class(class_id):
                          today=today,
                          is_current_user_teacher=is_current_user_teacher,
                          role_prefix=None,
-                         student_assistant=student_assistant,
+                         student_assistants=student_assistants,
                          assistant_action_logs=assistant_action_logs)
 
 

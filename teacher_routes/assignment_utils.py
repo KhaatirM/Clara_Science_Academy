@@ -184,6 +184,14 @@ def is_assignment_open_for_student(assignment, student_id):
     if assignment.status == 'Voided':
         return False
 
+    from models import Grade
+    st_grade = Grade.query.filter_by(
+        assignment_id=assignment.id,
+        student_id=student_id,
+    ).first()
+    if st_grade and getattr(st_grade, 'is_voided', False):
+        return False
+
     now = datetime.now(timezone.utc)  # Use timezone-aware datetime
 
     # Inactive assignments: block unless student has valid extension, reopening, or redo

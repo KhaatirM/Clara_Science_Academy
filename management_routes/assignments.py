@@ -9,7 +9,7 @@ from models import (
     db, Assignment, AssignmentAttachment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
     AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, QuizSection, DiscussionThread,
     DiscussionPost, GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest, RedoRequest,
-    QuestionBank, QuestionBankQuestion, QuestionBankOption
+    QuestionBank, QuestionBankQuestion, QuestionBankOption, Notification, User
 )
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, func
@@ -1793,6 +1793,132 @@ def add_assignment():
 # Route: /grade/assignment/<int:assignment_id>', methods=['GET', 'POST']
 # Function: grade_assignment
 # ============================================================
+
+def _save_single_student_grade(assignment_id, student_id):
+    """Helper: save a single student's grade. Used by AJAX Speed Grader."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    student = Student.query.get_or_404(student_id)
+    enrollment = Enrollment.query.filter_by(
+        class_id=assignment.class_id, student_id=student_id, is_active=True
+    ).first()
+    if not enrollment:
+        return None, 'Student not in class'
+
+    score_val = request.form.get('score', request.json.get('score') if request.is_json else None)
+    comment = request.form.get('comment', request.json.get('comment', '')) or ''
+    submission_type = request.form.get('submission_type', request.json.get('submission_type', '')) or ''
+    notes_type = request.form.get('submission_notes_type', request.json.get('submission_notes_type', 'On-Time')) or 'On-Time'
+    notes_other = request.form.get('submission_notes', request.json.get('submission_notes', '')) or ''
+    submission_notes = notes_other if notes_type == 'Other' else notes_type
+
+    total_points = assignment.total_points if assignment.total_points else 100.0
+    try:
+        points_earned = float(score_val) if (score_val is not None and str(score_val).strip()) else 0.0
+    except (ValueError, TypeError):
+        points_earned = 0.0
+
+    teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
+    if submission_type:
+        sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+        if submission_type in ['in_person', 'online']:
+            if sub:
+                sub.submission_type = submission_type
+                sub.submission_notes = submission_notes
+                sub.marked_by = teacher.id if teacher else None
+                sub.marked_at = datetime.utcnow()
+            else:
+                sub = Submission(
+                    student_id=student_id, assignment_id=assignment_id,
+                    submission_type=submission_type, submission_notes=submission_notes,
+                    marked_by=teacher.id if teacher else None,
+                    marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
+                )
+                db.session.add(sub)
+        elif submission_type == 'not_submitted' and sub:
+            db.session.delete(sub)
+
+    existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
+    if existing_grade and existing_grade.is_voided:
+        return True, 'Voided'
+
+    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+    grade_data = json.dumps({
+        'score': points_earned, 'points_earned': points_earned,
+        'total_points': total_points, 'max_score': total_points,
+        'percentage': round(percentage, 2), 'comment': comment, 'feedback': comment,
+        'graded_at': datetime.utcnow().isoformat()
+    })
+
+    if existing_grade:
+        existing_grade.grade_data = grade_data
+        existing_grade.graded_at = datetime.utcnow()
+    else:
+        grade = Grade(student_id=student_id, assignment_id=assignment_id, grade_data=grade_data, graded_at=datetime.utcnow())
+        db.session.add(grade)
+        sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+        if not sub and points_earned > 0:
+            sub = Submission(
+                student_id=student_id, assignment_id=assignment_id,
+                submission_type='in_person', submission_notes='Auto-marked: grade entered',
+                marked_by=teacher.id if teacher else None,
+                marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
+            )
+            db.session.add(sub)
+
+    db.session.commit()
+    return True, 'Saved'
+
+
+def save_student_grade(assignment_id, student_id):
+    """AJAX endpoint for Speed Grader - save a single student's grade."""
+    try:
+        ok, msg = _save_single_student_grade(assignment_id, student_id)
+        if ok:
+            return jsonify({'success': True, 'message': msg})
+        return jsonify({'success': False, 'error': msg}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def send_reminder(assignment_id):
+    """Send deadline reminder to selected students (from grading page bulk action)."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    if current_user.role not in ['Director', 'School Administrator']:
+        flash("You are not authorized to send reminders.", "danger")
+        return redirect(url_for('management.assignments_and_grades'))
+
+    reminder_type = request.form.get('reminder_type')
+    student_ids = request.form.getlist('student_ids')
+    custom_message = request.form.get('custom_message', '').strip()
+    redirect_to = request.form.get('next') or request.form.get('redirect_url')
+
+    try:
+        if reminder_type == 'all':
+            enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+            student_ids = [str(e.student_id) for e in enrollments if e.student_id]
+
+        if not student_ids:
+            flash("No students selected to send reminder to.", "warning")
+            return redirect(redirect_to or url_for('management.grade_assignment', assignment_id=assignment_id))
+
+        default_msg = f"Don't forget! Assignment '{assignment.title}' is due on {assignment.due_date.strftime('%b %d, %Y at %I:%M %p')}."
+        msg = custom_message or default_msg
+
+        for student_id in student_ids:
+            user = User.query.filter_by(student_id=int(student_id)).first()
+            if user:
+                n = Notification(user_id=user.id, type='deadline_reminder', title=f"Reminder: {assignment.title}", message=msg)
+                db.session.add(n)
+
+        db.session.commit()
+        flash(f"Reminder sent to {len(student_ids)} student(s) successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error sending reminder: {str(e)}", "danger")
+
+    return redirect(redirect_to or url_for('management.grade_assignment', assignment_id=assignment_id))
+
 
 @bp.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required
@@ -5093,7 +5219,7 @@ def admin_grant_extensions(assignment_id):
 def admin_reopen_assignment(assignment_id):
     """Reopen an assignment for selected students - Management view."""
     try:
-        from models import Assignment, AssignmentReopening, Enrollment, TeacherStaff, Submission
+        from models import Assignment, AssignmentReopening, Enrollment, TeacherStaff, Submission, Grade
         from flask_login import current_user
         
         assignment = Assignment.query.get_or_404(assignment_id)
@@ -5133,6 +5259,7 @@ def admin_reopen_assignment(assignment_id):
             return jsonify({'success': False, 'message': 'Cannot reopen assignment: No teacher record found.'})
         
         reopened_count = 0
+        skipped_voided_grade = 0
         
         for student_id in student_ids:
             try:
@@ -5147,6 +5274,14 @@ def admin_reopen_assignment(assignment_id):
                 
                 if not enrollment:
                     continue  # Skip if not enrolled
+
+                st_grade = Grade.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                ).first()
+                if st_grade and st_grade.is_voided:
+                    skipped_voided_grade += 1
+                    continue
                 
                 # Deactivate any existing active reopenings for this student and assignment
                 existing_reopenings = AssignmentReopening.query.filter_by(
@@ -5177,14 +5312,31 @@ def admin_reopen_assignment(assignment_id):
         
         db.session.commit()
         
+        if reopened_count == 0 and skipped_voided_grade > 0:
+            return jsonify({
+                'success': False,
+                'message': (
+                    f'No students were reopened. {skipped_voided_grade} selected student(s) have a voided grade. '
+                    'Un-void the grade (Restore assignment) first; then reopen or grant attempts will apply.'
+                ),
+                'reopened_count': 0,
+                'skipped_voided_grade': skipped_voided_grade,
+            })
+        
         message = f'Successfully reopened assignment for {reopened_count} student(s).'
         if assignment.assignment_type == 'quiz' and additional_attempts > 0:
             message += f' Each student has been granted {additional_attempts} additional attempt(s).'
+        if skipped_voided_grade:
+            message += (
+                f' Skipped {skipped_voided_grade} student(s) with voided grades '
+                '(un-void those grades first).'
+            )
         
         return jsonify({
             'success': True,
             'message': message,
-            'reopened_count': reopened_count
+            'reopened_count': reopened_count,
+            'skipped_voided_grade': skipped_voided_grade,
         })
         
     except Exception as e:
@@ -5200,7 +5352,7 @@ def admin_reopen_assignment(assignment_id):
 def admin_get_reopen_status(assignment_id):
     """Get reopening status for all students in the assignment's class - Management view."""
     try:
-        from models import Assignment, AssignmentReopening, Student, Submission
+        from models import Assignment, AssignmentReopening, Student, Submission, Grade
         
         assignment = Assignment.query.get_or_404(assignment_id)
         class_obj = Class.query.get_or_404(assignment.class_id)
@@ -5218,6 +5370,12 @@ def admin_get_reopen_status(assignment_id):
                 continue
             
             student = enrollment.student
+            
+            st_grade = Grade.query.filter_by(
+                assignment_id=assignment_id,
+                student_id=student.id,
+            ).first()
+            grade_is_voided = bool(st_grade and st_grade.is_voided)
             
             # Get active reopening if any
             reopening = AssignmentReopening.query.filter_by(
@@ -5255,6 +5413,12 @@ def admin_get_reopen_status(assignment_id):
                 elif needs_reopening and not reason_needs_reopening:
                     reason_needs_reopening.append('Cannot submit (closed or outside access window)')
             
+            if grade_is_voided:
+                reason_needs_reopening.insert(
+                    0,
+                    'Grade voided for this student (un-void first or reopen will not apply on the student side)',
+                )
+            
             student_data.append({
                 'student_id': student.id,
                 'name': f'{student.first_name} {student.last_name}',
@@ -5264,7 +5428,8 @@ def admin_get_reopen_status(assignment_id):
                 'needs_reopening': needs_reopening,
                 'reason_needs_reopening': ', '.join(reason_needs_reopening) if reason_needs_reopening else None,
                 'submissions_count': submissions_count,
-                'max_attempts': assignment.max_attempts if assignment.assignment_type == 'quiz' else None
+                'max_attempts': assignment.max_attempts if assignment.assignment_type == 'quiz' else None,
+                'grade_is_voided': grade_is_voided,
             })
         
         return jsonify({

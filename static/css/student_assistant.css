@@ -328,3 +328,206 @@
         align-self: flex-start;
     }
 }
+
+/* ----- Assistant console (multi-class landing) ----- */
+.sa-console-hero {
+    background: linear-gradient(125deg, #0c4a6e 0%, #0369a1 45%, #0284c7 100%);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 12px 40px rgba(12, 74, 110, 0.35);
+    color: white;
+}
+
+.sa-console-hero-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+}
+
+.sa-console-hero-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+}
+
+.sa-console-hero-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.65rem;
+    flex-shrink: 0;
+}
+
+.sa-console-hero-title {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem 0;
+}
+
+.sa-console-hero-subtitle {
+    margin: 0;
+    opacity: 0.95;
+    font-size: 0.98rem;
+    line-height: 1.45;
+    max-width: 36rem;
+}
+
+.sa-console-back-btn {
+    background: rgba(255, 255, 255, 0.95);
+    color: #0c4a6e;
+    border: none;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    padding: 0.55rem 1.15rem;
+}
+
+.sa-console-back-btn:hover {
+    background: white;
+    color: #0369a1;
+}
+
+.sa-console-grid {
+    align-items: stretch;
+}
+
+.sa-console-class-card {
+    position: relative;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sa-console-class-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+.sa-console-class-card-accent {
+    height: 5px;
+    width: 100%;
+}
+
+.sa-console-class-card-1 .sa-console-class-card-accent {
+    background: linear-gradient(90deg, #0d9488, #14b8a6);
+}
+
+.sa-console-class-card-2 .sa-console-class-card-accent {
+    background: linear-gradient(90deg, #2563eb, #6366f1);
+}
+
+.sa-console-class-card-body {
+    padding: 1.5rem 1.75rem 1.75rem;
+}
+
+.sa-console-class-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #0f172a;
+}
+
+.sa-console-badge-subject {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+}
+
+.sa-console-btn-primary {
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 0.65rem;
+    padding: 0.5rem 1.1rem;
+}
+
+.sa-console-btn-primary:hover {
+    color: white;
+    filter: brightness(1.06);
+}
+
+/* ----- Class switcher (hub / grading / attendance) ----- */
+.sa-class-switcher {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.85rem;
+    padding: 0.9rem 1.15rem;
+    margin-bottom: 1.5rem;
+}
+
+.sa-class-switcher-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.sa-class-switcher-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.sa-class-switcher-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.sa-class-pill {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.5rem 0.9rem;
+    border-radius: 0.65rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    color: #334155;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.sa-class-pill:hover {
+    border-color: #0d9488;
+    color: #0f766e;
+    background: #f0fdfa;
+}
+
+.sa-class-pill.active {
+    border-color: #0d9488;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    color: #065f46;
+}
+
+.sa-class-pill-subject {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #64748b;
+    margin-top: 0.15rem;
+}
+
+@media (max-width: 576px) {
+    .sa-console-hero {
+        padding: 1.35rem 1.15rem;
+    }
+    .sa-console-hero-title {
+        font-size: 1.35rem;
+    }
+}

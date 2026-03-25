@@ -20,13 +20,20 @@
                     <p class="student-assistant-hero-subtitle">{{ class_obj.name }} · {{ class_obj.subject }}</p>
                 </div>
             </div>
-            <div class="student-assistant-hero-actions">
+            <div class="student-assistant-hero-actions d-flex flex-wrap gap-2">
+                {% if assistant_classes is defined and assistant_classes|length > 1 %}
+                <a href="{{ url_for('student_assistant.assistant_console') }}" class="btn btn-light">
+                    <i class="bi bi-grid-1x2 me-1"></i>All classes
+                </a>
+                {% endif %}
                 <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-light">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    <i class="bi bi-arrow-left me-1"></i>Student dashboard
                 </a>
             </div>
         </div>
     </div>
+
+    {% include 'management/_student_assistant_class_switcher.html' %}
 
     <div class="row g-4">
         <!-- Take Attendance card -->

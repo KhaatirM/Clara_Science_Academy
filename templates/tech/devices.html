@@ -1,0 +1,149 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-4">
+    <div class="tech-dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="tech-dashboard-title mb-1">
+                    <i class="bi bi-laptop me-2"></i>Devices
+                </h2>
+                <p class="tech-dashboard-subtitle mb-0">
+                    Laptops (3rd grade and up) and tablets (2nd grade and below) assigned to students
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('tech.devices_csv_template') }}" class="btn btn-outline-light">
+                    <i class="bi bi-download me-1"></i>CSV template
+                </a>
+                <a href="{{ url_for('tech.device_new') }}" class="btn btn-light">
+                    <i class="bi bi-plus-lg me-1"></i>Assign device
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="tech-quick-actions mb-4">
+        <div class="tech-quick-actions-header">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>Bulk upload (CSV)</h5>
+        </div>
+        <div class="tech-quick-actions-body">
+            <p class="text-muted small mb-3">
+                Headers: <code>device_type</code>, <code>asset_name</code>,
+                optional <code>device_name</code>, <code>cord_number</code>, <code>operating_system</code>.
+                Identify the student with either <code>student_db_id</code> (internal row ID) or
+                <code>school_student_id</code> / <code>student_id</code> (value stored on the student profile).
+                Existing <code>asset_name</code> rows are updated; new rows are created.
+                Same grade rules as single assign: 3rd+ laptop, 2nd and below tablet.
+            </p>
+            <form method="POST" action="{{ url_for('tech.devices_bulk_upload') }}" enctype="multipart/form-data" class="row g-3 align-items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="col-12 col-md-8">
+                    <label class="form-label" for="csv_file">CSV file</label>
+                    <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv,text/csv" required>
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i>Import
+                    </button>
+                    <a href="{{ url_for('tech.devices_csv_template') }}" class="btn btn-outline-secondary">Template</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="tech-quick-actions mb-4">
+        <div class="tech-quick-actions-header">
+            <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filter</h5>
+        </div>
+        <div class="tech-quick-actions-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="type">Type</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">All</option>
+                        <option value="laptop" {% if filters.type == 'laptop' %}selected{% endif %}>Laptop</option>
+                        <option value="tablet" {% if filters.type == 'tablet' %}selected{% endif %}>Tablet</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-5">
+                    <label class="form-label" for="q">Search</label>
+                    <input type="text" name="q" id="q" class="form-control" value="{{ filters.q or '' }}"
+                           placeholder="Student name, asset name, cord #, OS…">
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Apply</button>
+                    <a href="{{ url_for('tech.devices') }}" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="tech-quick-actions">
+        <div class="tech-quick-actions-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0"><i class="bi bi-table me-2"></i>Assigned devices</h5>
+            <span class="badge bg-secondary">{{ records|length }} total</span>
+        </div>
+        <div class="tech-quick-actions-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Asset name</th>
+                            <th>Device name</th>
+                            <th>Cord #</th>
+                            <th>OS</th>
+                            <th>Student</th>
+                            <th>Grade</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in records %}
+                        <tr>
+                            <td>
+                                {% if d.device_type == 'laptop' %}
+                                <span class="badge bg-primary">Laptop</span>
+                                {% else %}
+                                <span class="badge bg-info text-dark">Tablet</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-semibold">{{ d.asset_name }}</td>
+                            <td>{{ d.device_name or '—' }}</td>
+                            <td>{{ d.cord_number or '—' }}</td>
+                            <td>{{ d.operating_system or '—' }}</td>
+                            <td>
+                                {% if d.student %}
+                                {{ d.student.first_name }} {{ d.student.last_name }}
+                                {% if d.student.student_id %}<small class="text-muted d-block">{{ d.student.student_id }}</small>{% endif %}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td>{% if d.student and d.student.grade_level is not none %}{{ d.student.grade_level|display_grade }}{% else %}—{% endif %}</td>
+                            <td class="text-end text-nowrap">
+                                <a href="{{ url_for('tech.device_edit', device_id=d.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form method="POST" action="{{ url_for('tech.device_delete', device_id=d.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Remove this device assignment?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">No devices yet. Assign one to get started.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

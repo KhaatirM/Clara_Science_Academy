@@ -9,49 +9,57 @@
  * - Member badges and team displays
  */
 
-/* Button Components */
+/* Button Components — use design tokens from css/shared_base.css */
 .btn-primary {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    background: linear-gradient(135deg, var(--csa-primary-500, #007bff) 0%, var(--csa-primary-600, #0056b3) 100%);
     border: none;
     color: white;
-    font-weight: 500;
+    font-weight: var(--csa-btn-font-weight, 500);
+    border-radius: var(--csa-radius-md, 10px);
+    transition: filter var(--csa-transition-default, 0.2s ease), box-shadow var(--csa-transition-default, 0.2s ease);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    background: linear-gradient(135deg, var(--csa-primary-600, #0056b3) 0%, var(--csa-primary-700, #004085) 100%);
     color: white;
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    background: linear-gradient(135deg, var(--csa-success-500, #28a745) 0%, var(--csa-success-600, #1e7e34) 100%);
     border: none;
     color: white;
+    font-weight: var(--csa-btn-font-weight, 500);
+    border-radius: var(--csa-radius-md, 10px);
 }
 
 .btn-success:hover {
-    background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+    background: linear-gradient(135deg, var(--csa-success-600, #1e7e34) 0%, var(--csa-success-700, #155724) 100%);
     color: white;
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    background: linear-gradient(135deg, var(--csa-danger-500, #dc3545) 0%, var(--csa-danger-600, #c82333) 100%);
     border: none;
     color: white;
+    font-weight: var(--csa-btn-font-weight, 500);
+    border-radius: var(--csa-radius-md, 10px);
 }
 
 .btn-danger:hover {
-    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    background: linear-gradient(135deg, var(--csa-danger-600, #c82333) 0%, var(--csa-danger-700, #bd2130) 100%);
     color: white;
 }
 
 .btn-outline-primary {
-    border: 2px solid #007bff;
-    color: #007bff;
+    border: 2px solid var(--csa-primary-500, #007bff);
+    color: var(--csa-primary-500, #007bff);
     background: transparent;
+    border-radius: var(--csa-radius-md, 10px);
+    transition: background var(--csa-transition-default, 0.2s ease), color var(--csa-transition-default, 0.2s ease);
 }
 
 .btn-outline-primary:hover {
-    background: #007bff;
+    background: var(--csa-primary-500, #007bff);
     color: white;
 }
 
@@ -64,24 +72,26 @@
 
 .class-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    box-shadow: var(--csa-shadow-card-hover, 0 10px 30px rgba(0,0,0,0.15));
 }
 
 .class-card .card-header {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    background: linear-gradient(135deg, var(--csa-success-500, #28a745) 0%, var(--csa-teal-500, #20c997) 100%);
     color: white;
     border: none;
+    border-radius: var(--csa-radius-md, 10px) var(--csa-radius-md, 10px) 0 0;
 }
 
 .assignment-card {
-    transition: all 0.3s ease;
-    border-left: 4px solid #007bff;
+    transition: transform var(--csa-transition-slow, 0.3s ease), box-shadow var(--csa-transition-slow, 0.3s ease), border-color var(--csa-transition-slow, 0.3s ease);
+    border-left: 4px solid var(--csa-primary-500, #007bff);
+    border-radius: var(--csa-radius-sm, 6px);
 }
 
 .assignment-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-    border-left-color: #28a745;
+    box-shadow: var(--csa-shadow-card-hover, 0 8px 25px rgba(0,0,0,0.12));
+    border-left-color: var(--csa-success-500, #28a745);
 }
 
 /* Status Badges */

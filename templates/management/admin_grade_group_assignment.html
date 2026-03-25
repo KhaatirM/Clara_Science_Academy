@@ -3,6 +3,9 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_grade_assignment.css') }}">
+{% if is_student_assistant %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block dashboard_content %}
@@ -33,11 +36,20 @@
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
                 <i class="bi bi-question-circle me-1"></i>Grading Help
             </button>
+            {% if is_student_assistant and assistant_classes is defined and assistant_classes|length > 1 %}
+            <a href="{{ url_for('student_assistant.assistant_console') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-grid-1x2 me-1"></i>All classes
+            </a>
+            {% endif %}
             <button onclick="goBack()" class="btn-grading-back">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </button>
         </div>
     </div>
+
+    {% if is_student_assistant %}
+    {% include 'management/_student_assistant_class_switcher.html' %}
+    {% endif %}
 
     <!-- Assignment Stats Bar -->
     <div class="grading-stats-bar mb-4">

@@ -1955,7 +1955,113 @@
     }
 }
 
-/* ===== STUDENT NOTIFICATIONS PANEL (Failing Classes & Missing Assignments) ===== */
+/* ===== UP NEXT - Compact widget ===== */
+.up-next-widget {
+    animation: studentNotificationFadeIn 0.4s ease-out;
+}
+
+.up-next-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    overflow: hidden;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.up-next-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.up-next-icon {
+    font-size: 1rem;
+}
+
+.up-next-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: white;
+}
+
+.up-next-body {
+    padding: 0.5rem 1rem 0.75rem;
+}
+
+.up-next-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+}
+
+.up-next-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #212529;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.up-next-link:hover {
+    background: #e8eeff;
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.up-next-title-text {
+    font-weight: 500;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.up-next-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    flex-shrink: 0;
+}
+
+.up-next-badge-overdue {
+    background: #dc3545;
+    color: white;
+}
+
+.up-next-badge-today {
+    background: #fd7e14;
+    color: white;
+}
+
+.up-next-badge-soon {
+    background: #0d6efd;
+    color: white;
+}
+
+.up-next-view-all {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.95);
+    text-decoration: none;
+}
+
+.up-next-view-all:hover {
+    color: white;
+}
+
+.up-next-empty-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* ===== STUDENT NOTIFICATIONS PANEL (legacy - now merged into Up Next) ===== */
 .student-notifications-panel {
     animation: studentNotificationFadeIn 0.4s ease-out;
 }
@@ -2055,4 +2161,22 @@
 
 .student-notification-missing .student-notification-link:hover {
     color: #664d03;
+}
+
+/* Student assistant dashboard promo (multi-class) */
+.student-assistant-dashboard-promo {
+    position: relative;
+    border: 1px solid rgba(13, 148, 136, 0.2);
+}
+
+.student-assistant-dashboard-promo-accent {
+    height: 4px;
+    background: linear-gradient(90deg, #0d9488, #0284c7, #6366f1);
+    margin: -1px -1px 0 -1px;
+}
+
+.student-assistant-dashboard-icon {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.15), rgba(2, 132, 199, 0.12));
+    color: #0f766e;
+    padding: 0.85rem 1rem;
 }

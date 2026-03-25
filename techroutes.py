@@ -1,15 +1,20 @@
 # Standard library imports
+import csv
+import io
 import os
 import shutil
 import json
 from datetime import datetime, timedelta
 
 # Core Flask imports
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, Response
 from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, SystemConfig
+from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
+
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, SystemConfig, StudentDevice
 from scripts.gpa_scheduler import calculate_student_gpa
 from copy import copy
 
@@ -1197,6 +1202,453 @@ def stop_impersonating():
     except Exception as e:
         flash(f'Error stopping impersonation: {str(e)}', 'danger')
         return redirect(url_for('auth.login'))
+
+
+# --- Student devices (laptops / tablets) ---------------------------------
+
+DEVICE_TYPES = ('laptop', 'tablet')
+
+
+def _normalize_device_type(raw):
+    if not raw:
+        return None
+    s = str(raw).strip().lower()
+    return s if s in DEVICE_TYPES else None
+
+
+def _device_type_fits_grade(device_type, grade_level):
+    """Grade 3+ → laptop; grade 2 and below → tablet. None grade: no enforced rule."""
+    if grade_level is None:
+        return True
+    try:
+        g = int(grade_level)
+    except (TypeError, ValueError):
+        return True
+    if device_type == 'laptop':
+        return g >= 3
+    if device_type == 'tablet':
+        return g <= 2
+    return False
+
+
+def _expected_device_label(grade_level):
+    if grade_level is None:
+        return None
+    try:
+        g = int(grade_level)
+    except (TypeError, ValueError):
+        return None
+    return 'laptop' if g >= 3 else 'tablet'
+
+
+def _students_selectable_for_device(exclude_device_id=None):
+    """Students with no device assigned, or (when editing) keep current holder."""
+    q_busy = db.session.query(StudentDevice.student_id)
+    if exclude_device_id is not None:
+        q_busy = q_busy.filter(StudentDevice.id != exclude_device_id)
+    busy_ids = {row[0] for row in q_busy.all()}
+    if not busy_ids:
+        return Student.query.order_by(Student.last_name, Student.first_name).all()
+    return (
+        Student.query.filter(~Student.id.in_(busy_ids))
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
+
+
+def _parse_device_form():
+    device_type = _normalize_device_type(request.form.get('device_type'))
+    asset_name = (request.form.get('asset_name') or '').strip()
+    device_name = (request.form.get('device_name') or '').strip() or None
+    cord_number = (request.form.get('cord_number') or '').strip() or None
+    operating_system = (request.form.get('operating_system') or '').strip() or None
+    student_id_raw = request.form.get('student_id')
+    student_id = int(student_id_raw) if student_id_raw and str(student_id_raw).isdigit() else None
+    return device_type, asset_name, device_name, cord_number, operating_system, student_id
+
+
+def _norm_csv_header(h):
+    if h is None:
+        return ''
+    return str(h).strip().lower().replace(' ', '_')
+
+
+def _csv_cell(row, *keys):
+    for k in keys:
+        v = row.get(k)
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s:
+            return s
+    return ''
+
+
+def _student_from_csv_row(row):
+    """Resolve Student from normalized row dict. student_db_id = internal PK; school_student_id / student_id = Student.student_id."""
+    db_raw = _csv_cell(row, 'student_db_id', 'student_pk', 'db_student_id', 'internal_student_id')
+    school_raw = _csv_cell(
+        row, 'school_student_id', 'school_id', 'state_student_id', 'student_id_number', 'student_id'
+    )
+    if db_raw and db_raw.isdigit():
+        stu = Student.query.get(int(db_raw))
+        if stu:
+            return stu
+    if school_raw:
+        stu = Student.query.filter_by(student_id=school_raw).first()
+        if stu:
+            return stu
+    return None
+
+
+def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_number, operating_system, stu, row_num):
+    """
+    Create or update by asset_name. Reassigns student on that asset if needed.
+    Returns (success: bool, message: str).
+    """
+    if not device_type or not asset_name or not stu:
+        return False, f'Row {row_num}: missing device type, asset name, or student'
+
+    if not _device_type_fits_grade(device_type, stu.grade_level):
+        exp = _expected_device_label(stu.grade_level)
+        return (
+            False,
+            f'Row {row_num}: type "{device_type}" does not match grade '
+            f'{stu.grade_level if stu.grade_level is not None else "N/A"} (expected {exp or "matching type"})',
+        )
+
+    by_asset = StudentDevice.query.filter_by(asset_name=asset_name).first()
+    by_student = stu.assigned_school_device
+
+    if by_asset and by_student and by_asset.id != by_student.id:
+        return (
+            False,
+            f'Row {row_num}: asset "{asset_name}" is assigned elsewhere and student '
+            f'{stu.first_name} {stu.last_name} already has "{by_student.asset_name}"',
+        )
+
+    if by_asset:
+        conflict = StudentDevice.query.filter(
+            StudentDevice.student_id == stu.id,
+            StudentDevice.id != by_asset.id,
+        ).first()
+        if conflict:
+            return (
+                False,
+                f'Row {row_num}: student already has device "{conflict.asset_name}"',
+            )
+        by_asset.device_type = device_type
+        by_asset.device_name = device_name
+        by_asset.cord_number = cord_number
+        by_asset.operating_system = operating_system
+        by_asset.student_id = stu.id
+        return True, 'updated'
+
+    if by_student:
+        if by_student.asset_name != asset_name:
+            return (
+                False,
+                f'Row {row_num}: student already has device "{by_student.asset_name}" (not "{asset_name}")',
+            )
+        by_student.device_type = device_type
+        by_student.device_name = device_name
+        by_student.cord_number = cord_number
+        by_student.operating_system = operating_system
+        return True, 'updated'
+
+    db.session.add(
+        StudentDevice(
+            device_type=device_type,
+            asset_name=asset_name,
+            device_name=device_name,
+            cord_number=cord_number,
+            operating_system=operating_system,
+            student_id=stu.id,
+        )
+    )
+    return True, 'created'
+
+
+@tech_blueprint.route('/devices/csv-template')
+@login_required
+@tech_required
+def devices_csv_template():
+    """Download a blank CSV with headers and example rows."""
+    lines = [
+        'device_type,asset_name,device_name,cord_number,operating_system,student_db_id,school_student_id',
+        'laptop,CSA-Laptop-1,Dell Latitude,1,Windows 11,42,',
+        'tablet,CSA-Tablet-2,,2,iPadOS 17,,ABC12345',
+    ]
+    body = '\r\n'.join(lines) + '\r\n'
+    return Response(
+        body,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=student_devices_template.csv'},
+    )
+
+
+@tech_blueprint.route('/devices/bulk-upload', methods=['POST'])
+@login_required
+@tech_required
+def devices_bulk_upload():
+    """Import devices from CSV (one row per device). Upserts by asset_name."""
+    upload = request.files.get('csv_file')
+    if not upload or not upload.filename:
+        flash('Choose a CSV file to upload.', 'danger')
+        return redirect(url_for('tech.devices'))
+    if not upload.filename.lower().endswith('.csv'):
+        flash('Please upload a .csv file.', 'danger')
+        return redirect(url_for('tech.devices'))
+
+    raw = upload.read()
+    try:
+        text = raw.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        try:
+            text = raw.decode('utf-8')
+        except UnicodeDecodeError:
+            flash('Could not read file as UTF-8. Save the spreadsheet as CSV UTF-8.', 'danger')
+            return redirect(url_for('tech.devices'))
+
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        flash('CSV has no header.', 'danger')
+        return redirect(url_for('tech.devices'))
+
+    headers = [_norm_csv_header(h) for h in reader.fieldnames]
+    if 'device_type' not in headers or 'asset_name' not in headers:
+        flash('CSV must include columns: device_type, asset_name (see Download template).', 'danger')
+        return redirect(url_for('tech.devices'))
+
+    created = updated = 0
+    errors = []
+    row_num = 1
+
+    for raw_row in reader:
+        row_num += 1
+        if not raw_row or not any((v and str(v).strip()) for v in raw_row.values()):
+            continue
+        row = {}
+        for k, v in raw_row.items():
+            if k is None:
+                continue
+            nk = _norm_csv_header(k)
+            if v is None or v == '':
+                row[nk] = ''
+            else:
+                row[nk] = str(v).strip()
+
+        device_type = _normalize_device_type(_csv_cell(row, 'device_type', 'type'))
+        asset_name = _csv_cell(row, 'asset_name', 'laptop_name', 'tablet_name', 'inventory_name')
+        device_name = _csv_cell(row, 'device_name') or None
+        cord_number = _csv_cell(row, 'cord_number', 'cord', 'cord_#') or None
+        operating_system = _csv_cell(row, 'operating_system', 'os') or None
+
+        if not device_type:
+            errors.append(f'Row {row_num}: invalid or missing device_type')
+            continue
+        if not asset_name:
+            errors.append(f'Row {row_num}: missing asset_name')
+            continue
+
+        stu = _student_from_csv_row(row)
+        if not stu:
+            errors.append(f'Row {row_num}: student not found (set student_db_id or school_student_id / student_id)')
+            continue
+
+        try:
+            ok, action = _upsert_device_from_csv_row(
+                device_type, asset_name, device_name, cord_number, operating_system, stu, row_num
+            )
+            if not ok:
+                errors.append(action)
+                db.session.rollback()
+                continue
+            db.session.commit()
+            if action == 'created':
+                created += 1
+            else:
+                updated += 1
+        except IntegrityError:
+            db.session.rollback()
+            errors.append(f'Row {row_num}: database conflict (duplicate asset or student)')
+        except Exception as e:
+            db.session.rollback()
+            errors.append(f'Row {row_num}: {e}')
+
+    if created or updated:
+        flash(
+            f'Bulk import finished: {created} created, {updated} updated.'
+            + (f' {len(errors)} row(s) skipped.' if errors else ''),
+            'success' if not errors else 'warning',
+        )
+    else:
+        flash('No rows were imported.', 'warning')
+    for msg in errors[:25]:
+        flash(msg, 'danger')
+    if len(errors) > 25:
+        flash(f'…and {len(errors) - 25} more errors (shown first 25).', 'danger')
+
+    return redirect(url_for('tech.devices'))
+
+
+@tech_blueprint.route('/devices')
+@login_required
+@tech_required
+def devices():
+    """List assigned laptops and tablets."""
+    device_type = request.args.get('type', '').strip().lower()
+    search = (request.args.get('q') or '').strip()
+
+    q = StudentDevice.query.join(Student, StudentDevice.student_id == Student.id)
+    if device_type in DEVICE_TYPES:
+        q = q.filter(StudentDevice.device_type == device_type)
+    if search:
+        like = f'%{search}%'
+        q = q.filter(
+            or_(
+                Student.first_name.ilike(like),
+                Student.last_name.ilike(like),
+                Student.student_id.ilike(like),
+                StudentDevice.asset_name.ilike(like),
+                StudentDevice.device_name.ilike(like),
+                StudentDevice.cord_number.ilike(like),
+            )
+        )
+    records = q.order_by(StudentDevice.device_type, StudentDevice.asset_name).all()
+    return render_template(
+        'tech/devices.html',
+        records=records,
+        filters={'type': device_type, 'q': search},
+    )
+
+
+@tech_blueprint.route('/devices/new', methods=['GET', 'POST'])
+@login_required
+@tech_required
+def device_new():
+    if request.method == 'POST':
+        device_type, asset_name, device_name, cord_number, operating_system, student_id = _parse_device_form()
+        if not device_type:
+            flash('Select a valid device type (laptop or tablet).', 'danger')
+            return redirect(url_for('tech.device_new'))
+        if not asset_name:
+            flash('Asset name is required (e.g. CSA-Laptop-12 or CSA-Tablet-5).', 'danger')
+            return redirect(url_for('tech.device_new'))
+        if not student_id:
+            flash('Select a student to attach this device to.', 'danger')
+            return redirect(url_for('tech.device_new'))
+        stu = Student.query.get(student_id)
+        if not stu:
+            flash('Student not found.', 'danger')
+            return redirect(url_for('tech.device_new'))
+        if stu.assigned_school_device:
+            flash('That student already has a device assigned. Edit or remove it first.', 'danger')
+            return redirect(url_for('tech.device_new'))
+        if not _device_type_fits_grade(device_type, stu.grade_level):
+            exp = _expected_device_label(stu.grade_level)
+            flash(
+                f'Device type does not match grade level policy: grade {stu.grade_level if stu.grade_level is not None else "N/A"} '
+                f'should use a {exp or "appropriate"} — 3rd+ laptops, 2nd and below tablets.',
+                'danger',
+            )
+            return redirect(url_for('tech.device_new'))
+        if stu.grade_level is None:
+            flash('This student has no grade on file; confirm the device type is correct before saving.', 'warning')
+        row = StudentDevice(
+            device_type=device_type,
+            asset_name=asset_name,
+            device_name=device_name,
+            cord_number=cord_number,
+            operating_system=operating_system,
+            student_id=student_id,
+        )
+        db.session.add(row)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('Could not save: duplicate asset name or student already assigned a device.', 'danger')
+            return redirect(url_for('tech.device_new'))
+        flash('Device assigned successfully.', 'success')
+        return redirect(url_for('tech.devices'))
+
+    students = _students_selectable_for_device()
+    return render_template('tech/device_form.html', device=None, students=students)
+
+
+@tech_blueprint.route('/devices/<int:device_id>/edit', methods=['GET', 'POST'])
+@login_required
+@tech_required
+def device_edit(device_id):
+    device = StudentDevice.query.get_or_404(device_id)
+    if request.method == 'POST':
+        device_type, asset_name, device_name, cord_number, operating_system, student_id = _parse_device_form()
+        if not device_type:
+            flash('Select a valid device type (laptop or tablet).', 'danger')
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        if not asset_name:
+            flash('Asset name is required.', 'danger')
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        if not student_id:
+            flash('Select a student.', 'danger')
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        stu = Student.query.get(student_id)
+        if not stu:
+            flash('Student not found.', 'danger')
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        other = StudentDevice.query.filter(
+            StudentDevice.student_id == student_id,
+            StudentDevice.id != device.id,
+        ).first()
+        if other:
+            flash('That student already has a different device assigned.', 'danger')
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        if not _device_type_fits_grade(device_type, stu.grade_level):
+            exp = _expected_device_label(stu.grade_level)
+            flash(
+                f'Device type does not match grade level policy (expected {exp or "appropriate type"} for this grade).',
+                'danger',
+            )
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        device.device_type = device_type
+        device.asset_name = asset_name
+        device.device_name = device_name
+        device.cord_number = cord_number
+        device.operating_system = operating_system
+        device.student_id = student_id
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('Could not save: duplicate asset name or conflicting assignment.', 'danger')
+            return redirect(url_for('tech.device_edit', device_id=device_id))
+        flash('Device updated.', 'success')
+        return redirect(url_for('tech.devices'))
+
+    students = _students_selectable_for_device(exclude_device_id=device.id)
+    if device.student and device.student not in students:
+        students = sorted(
+            students + [device.student],
+            key=lambda s: ((s.last_name or '').lower(), (s.first_name or '').lower()),
+        )
+    return render_template('tech/device_form.html', device=device, students=students)
+
+
+@tech_blueprint.route('/devices/<int:device_id>/delete', methods=['POST'])
+@login_required
+@tech_required
+def device_delete(device_id):
+    device = StudentDevice.query.get_or_404(device_id)
+    db.session.delete(device)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Could not remove device: {e}', 'danger')
+        return redirect(url_for('tech.devices'))
+    flash('Device assignment removed.', 'success')
+    return redirect(url_for('tech.devices'))
 
 
 # Bug Report Management Routes - Temporarily disabled due to circular import issues

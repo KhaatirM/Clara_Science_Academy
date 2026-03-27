@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 25, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 27, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,61 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 25, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 27, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This wave highlights <strong>academic alerts</strong> (submission status aligned with grading), <strong>voided grades and quiz reopen</strong> behavior, clearer <strong>assignment submissions</strong> for staff, and a redesigned <strong>student assistant</strong> experience when you assist multiple classes. Earlier items—Tech devices, assistant eligibility, group assignments, and more—remain below.</p>
+                        <p class="updates-intro-text mb-0"><strong>March 27</strong> streamlines the <strong>teacher home</strong> (one place for assignments and grading), adds a <strong>Calculating</strong> state for quarter/semester GPA while grades are finalized, and introduces <strong>automatic reminders</strong> two weeks before each period ends. <strong>March 26</strong> covers student assistant proposals and approvals; <strong>March 25</strong> academic alerts, void/reopen, submissions, and the multi-class assistant console—then Tech devices, eligibility rules, group assignments, and earlier updates.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+
+                    <!-- March 27, 2026 - Teacher home, GPA window, period reminders -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-compass me-2"></i>Teacher Home, GPA Timing &amp; Period Reminders – March 27, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignments &amp; Grades in one place:</strong> The teacher dashboard no longer includes a separate <strong>Grades</strong> quick action that opened a redundant list. <strong>Assignments &amp; Grades</strong> is the hub for viewing classes and grading; the old <code>/teacher/grades</code> link now <strong>redirects</strong> there automatically.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quarter &amp; semester GPA — “Calculating” window:</strong> After each period’s <strong>end date at 4:00 PM Eastern</strong>, the student <strong>Grades</strong> view shows <strong>Calculating</strong> for up to <strong>seven days</strong> while teachers finalize marks—instead of jumping straight to <strong>N/A</strong>. After that window, the usual percentage and GPA display for the period.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Automatic period reminders:</strong> On the day that is <strong>two weeks before</strong> each active quarter or semester <strong>end date</strong> (using the school’s configured calendar), the system sends <strong>in-app notifications and emails</strong>: students are reminded to turn in outstanding work; teachers, school administrators, and directors are reminded to finalize grades. Each period and audience is notified <strong>once</strong>. Production sites should run the daily reminder job (or the secured HTTP cron endpoint) and may set <strong>PUBLIC_BASE_URL</strong> so email links open the full site.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers see a simpler home screen; families understand when official period GPA is still being finalized; and the whole school gets a timely nudge before grading periods close.</p>
+                        </div>
+                    </div>
+
+                    <!-- March 26, 2026 - Assistant proposals, approvals, UI -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-patch-check me-2"></i>Student Assistant Proposals &amp; Approvals – March 26, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher approval before students see work:</strong> When a student assistant creates an <strong>individual</strong> or <strong>group</strong> assignment, it stays <strong>hidden from the class</strong> until a <strong>teacher or school administrator approves</strong> it. Rejected proposals do not appear to students. The assistant hub explains that approval is required.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Where to find pending proposals:</strong> <strong>Assignments &amp; Grades</strong> includes an <strong>Assistant proposals</strong> control and alert-style banners when something is waiting; selected class and class cards show counts and shortcuts. <strong>View class</strong> and the <strong>class roster</strong> also surface alerts and links so teachers do not miss proposals while teaching or reviewing a roster.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Review, approve, or reject:</strong> A dedicated <strong>pending assistant assignments</strong> page lists each proposal with context; teachers can <strong>approve</strong> or <strong>reject</strong> (with confirmation where appropriate). After approval, the assignment follows your normal visibility rules for the class.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Clearer, consistent UI:</strong> Buttons, badges, and alert strips for this flow use the same <strong>indigo/violet accent</strong> language as the rest of the dashboard—gradient primary actions, readable badges for pending counts, and a styled hub card for “create assignment” actions so the experience does not feel generic.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Assistants can propose work safely; teachers stay in control of what the class sees; pending work is visible from the places staff already use; and the approval experience looks intentional.</p>
+                        </div>
+                    </div>
 
                     <!-- March 25, 2026 - Academic alerts, void/reopen, submissions, assistant console -->
                     <div class="update-section mb-4">
@@ -1321,11 +1369,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar25_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar27_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar25_2026', 'true');
+            sessionStorage.setItem('updateModalShownMar27_2026', 'true');
         }, 500);
     }
 });

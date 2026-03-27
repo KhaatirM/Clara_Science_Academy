@@ -5,11 +5,14 @@ existing grades or records past attendance.
 """
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify
+from werkzeug.utils import secure_filename
+import os
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from models import (
-    db, Class, Student, Enrollment, Assignment, Attendance, Grade,
-    StudentAssistant, StudentAssistantActionLog, Notification, User, TeacherStaff
+    db, Class, Student, Enrollment, Assignment, AssignmentAttachment, Attendance, Grade,
+    StudentAssistant, StudentAssistantActionLog, Notification, User, TeacherStaff,
+    GroupAssignment, StudentGroup, StudentGroupMember, SchoolYear,
 )
 import json
 
@@ -234,6 +237,10 @@ def grade_assignment(class_id, assignment_id):
     if err:
         return err
     assignment = Assignment.query.filter_by(id=assignment_id, class_id=class_id).first_or_404()
+    from management_routes.student_assistant_utils import assignment_visible_to_students
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available for grading yet (it may still be awaiting teacher approval).', 'warning')
+        return redirect(url_for('student_assistant.class_hub', class_id=class_id))
 
     from models import Submission
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -401,6 +408,10 @@ def grade_group_assignment(class_id, assignment_id):
     group_assignment = GroupAssignment.query.filter_by(
         id=assignment_id, class_id=class_id
     ).first_or_404()
+    from management_routes.student_assistant_utils import assignment_visible_to_students
+    if not assignment_visible_to_students(group_assignment):
+        flash('This group assignment is not available for grading yet (it may still be awaiting teacher approval).', 'warning')
+        return redirect(url_for('student_assistant.class_hub', class_id=class_id))
 
     # Get groups for this assignment (same logic as admin)
     if group_assignment.selected_group_ids:
@@ -678,16 +689,410 @@ def class_hub(class_id):
     class_obj, err = _require_assistant(class_id)
     if err:
         return err
-    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
-    from models import GroupAssignment
-    group_assignments = GroupAssignment.query.filter_by(
-        class_id=class_id
-    ).filter(GroupAssignment.status != 'Voided').order_by(GroupAssignment.due_date.desc()).all()
+    from management_routes.student_assistant_utils import (
+        assignment_student_visibility_filter,
+        group_assignment_student_visibility_filter,
+        ASSISTANT_APPROVAL_PENDING,
+        ASSISTANT_APPROVAL_REJECTED,
+    )
+
+    assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        Assignment.status != 'Voided',
+        assignment_student_visibility_filter(),
+    ).order_by(Assignment.due_date.desc()).all()
+
+    group_assignments = GroupAssignment.query.filter(
+        GroupAssignment.class_id == class_id,
+        GroupAssignment.status != 'Voided',
+        group_assignment_student_visibility_filter(),
+    ).order_by(GroupAssignment.due_date.desc()).all()
+
+    sid = current_user.student_id
+    my_pending_assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        Assignment.proposed_by_student_id == sid,
+        Assignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+    ).order_by(Assignment.created_at.desc()).all()
+    my_pending_group = GroupAssignment.query.filter(
+        GroupAssignment.class_id == class_id,
+        GroupAssignment.proposed_by_student_id == sid,
+        GroupAssignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+    ).order_by(GroupAssignment.created_at.desc()).all()
+    my_rejected_assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        Assignment.proposed_by_student_id == sid,
+        Assignment.assistant_approval_status == ASSISTANT_APPROVAL_REJECTED,
+    ).order_by(Assignment.assistant_approval_reviewed_at.desc()).limit(15).all()
+    my_rejected_group = GroupAssignment.query.filter(
+        GroupAssignment.class_id == class_id,
+        GroupAssignment.proposed_by_student_id == sid,
+        GroupAssignment.assistant_approval_status == ASSISTANT_APPROVAL_REJECTED,
+    ).order_by(GroupAssignment.assistant_approval_reviewed_at.desc()).limit(15).all()
+
     return render_template(
         'management/student_assistant_hub.html',
         class_obj=class_obj,
         assignments=assignments,
         group_assignments=group_assignments,
+        my_pending_assignments=my_pending_assignments,
+        my_pending_group=my_pending_group,
+        my_rejected_assignments=my_rejected_assignments,
+        my_rejected_group=my_rejected_group,
         assistant_classes=_assistant_classes_for_user(),
         current_class_id=class_id,
     )
+
+
+def _assistant_allowed_file(filename):
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    return ext in {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'xls', 'xlsx', 'ppt', 'pptx'}
+
+
+@bp.route('/class/<int:class_id>/assignments/new', methods=['GET', 'POST'])
+@login_required
+def assistant_add_assignment(class_id):
+    """Create a PDF/paper assignment proposal (requires teacher or school admin approval)."""
+    class_obj, err = _require_assistant(class_id)
+    if err:
+        return err
+
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
+    from teacher_routes.utils import get_current_quarter
+    try:
+        from zoneinfo import ZoneInfo
+    except ImportError:
+        ZoneInfo = None
+    from datetime import time as time_cls
+
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            due_date_str = request.form.get('due_date')
+            quarter = request.form.get('quarter')
+            assignment_context = request.form.get('assignment_context', 'homework')
+            total_points = request.form.get('total_points', type=float)
+
+            if not all([title, due_date_str, quarter]):
+                flash('Title, Due Date, and Quarter are required.', 'danger')
+                return redirect(url_for('student_assistant.assistant_add_assignment', class_id=class_id))
+
+            if total_points is None or total_points <= 0:
+                total_points = 100.0
+
+            try:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
+
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+            open_date = None
+            close_date = None
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            if not close_date:
+                close_date = due_date
+
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash('Cannot create assignment: No active school year.', 'danger')
+                return redirect(url_for('student_assistant.assistant_add_assignment', class_id=class_id))
+
+            new_assignment = Assignment(
+                title=title,
+                description=description,
+                due_date=due_date,
+                open_date=open_date,
+                close_date=close_date,
+                quarter=quarter,
+                class_id=class_id,
+                school_year_id=current_school_year.id,
+                assignment_type='pdf_paper',
+                status='Inactive',
+                assignment_context=assignment_context,
+                total_points=total_points,
+                created_by=current_user.id,
+                assistant_approval_status=ASSISTANT_APPROVAL_PENDING,
+                proposed_by_student_id=current_user.student_id,
+            )
+            db.session.add(new_assignment)
+            db.session.flush()
+
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments')
+            os.makedirs(upload_dir, exist_ok=True)
+            files_to_save = request.files.getlist('assignment_files') or []
+            if not files_to_save or not (files_to_save[0] and files_to_save[0].filename):
+                single = request.files.get('assignment_file')
+                if single and single.filename:
+                    files_to_save = [single]
+            for idx, file in enumerate(files_to_save):
+                if not file or not file.filename or not _assistant_allowed_file(file.filename):
+                    continue
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                unique_filename = timestamp + f"{idx}_{filename}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                file.save(filepath)
+                attachment_file_path_stored = os.path.join('assignments', unique_filename)
+                att = AssignmentAttachment(
+                    assignment_id=new_assignment.id,
+                    attachment_filename=unique_filename,
+                    attachment_original_filename=filename,
+                    attachment_file_path=attachment_file_path_stored,
+                    attachment_file_size=os.path.getsize(filepath),
+                    attachment_mime_type=file.content_type or None,
+                    sort_order=idx,
+                )
+                db.session.add(att)
+                if idx == 0:
+                    new_assignment.attachment_filename = unique_filename
+                    new_assignment.attachment_original_filename = filename
+                    new_assignment.attachment_file_path = attachment_file_path_stored
+                    new_assignment.attachment_file_size = os.path.getsize(filepath)
+                    new_assignment.attachment_mime_type = file.content_type
+
+            db.session.commit()
+            _notify_teacher_and_admins(
+                class_id,
+                'Assignment pending your approval (student assistant)',
+                f'{current_user.username} proposed "{title}". Review and approve it before students will see it.',
+                link=url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id),
+            )
+            flash(
+                'Your assignment was submitted for approval. It will not appear to students until a teacher or '
+                'administrator approves it.',
+                'success',
+            )
+            return redirect(url_for('student_assistant.class_hub', class_id=class_id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception(f'Assistant add assignment: {e}')
+            flash(f'Error creating assignment: {str(e)}', 'danger')
+            return redirect(url_for('student_assistant.assistant_add_assignment', class_id=class_id))
+
+    current_quarter = get_current_quarter()
+    context = request.args.get('context', 'homework')
+    default_due_date = None
+    in_class_due_date_str = None
+    if context == 'in-class' and ZoneInfo:
+        try:
+            est = ZoneInfo('America/New_York')
+            now_est = datetime.now(est)
+            today_est = now_est.date()
+            in_class_dt = datetime.combine(today_est, time_cls(16, 0))
+            in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+            default_due_date = in_class_dt
+        except Exception:
+            in_class_dt = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+            in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+            default_due_date = in_class_dt
+    elif context == 'in-class':
+        in_class_dt = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+        in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+        default_due_date = in_class_dt
+    else:
+        try:
+            est = ZoneInfo('America/New_York')
+            now_est = datetime.now(est)
+            today_est = now_est.date()
+            in_class_dt = datetime.combine(today_est, time_cls(16, 0))
+            in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
+        except Exception:
+            in_class_due_date_str = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0).strftime(
+                '%Y-%m-%dT%H:%M'
+            )
+
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    form_action = url_for('student_assistant.assistant_add_assignment', class_id=class_id)
+    return render_template(
+        'shared/add_assignment.html',
+        class_obj=class_obj,
+        classes=[class_obj],
+        school_years=school_years,
+        current_quarter=current_quarter,
+        context=context,
+        default_due_date=default_due_date,
+        in_class_due_date_str=in_class_due_date_str,
+        teacher=None,
+        student_assistant_mode=True,
+        form_action=form_action,
+    )
+
+
+@bp.route('/class/<int:class_id>/group-assignment/create', methods=['GET'])
+@login_required
+def assistant_create_group_assignment(class_id):
+    """Form to propose a group assignment (same as teacher flow; submission goes to assistant save)."""
+    class_obj, err = _require_assistant(class_id)
+    if err:
+        return err
+
+    groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+    for group in groups:
+        members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+        group.members_list = [m.student for m in members if m.student]
+        group.member_count = len(group.members_list)
+
+    if not groups:
+        flash('No groups found for this class. Ask your teacher to create groups first.', 'warning')
+        return redirect(url_for('student_assistant.class_hub', class_id=class_id))
+
+    form_action = url_for('student_assistant.assistant_save_group_assignment', class_id=class_id)
+    return render_template(
+        'teachers/teacher_create_group_assignment.html',
+        class_item=class_obj,
+        groups=groups,
+        student_assistant_mode=True,
+        form_action=form_action,
+        back_url=url_for('student_assistant.class_hub', class_id=class_id),
+    )
+
+
+@bp.route('/class/<int:class_id>/group-assignment/save', methods=['POST'])
+@login_required
+def assistant_save_group_assignment(class_id):
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
+
+    class_obj, err = _require_assistant(class_id)
+    if err:
+        return err
+
+    try:
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date', '').strip()
+        open_date_str = request.form.get('open_date', '').strip()
+        close_date_str = request.form.get('close_date', '').strip()
+        quarter = request.form.get('quarter', '').strip()
+        assignment_category = request.form.get('assignment_category', '').strip()
+        total_points_str = request.form.get('total_points', '100').strip()
+        try:
+            total_points = float(total_points_str) if total_points_str else 100.0
+        except (ValueError, TypeError):
+            total_points = 100.0
+        category_weight_str = request.form.get('category_weight', '0').strip()
+        try:
+            category_weight = float(category_weight_str) if category_weight_str else 0.0
+        except (ValueError, TypeError):
+            category_weight = 0.0
+
+        allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+        max_extra_credit_points_str = request.form.get('max_extra_credit_points', '0').strip()
+        try:
+            max_extra_credit_points = float(max_extra_credit_points_str) if max_extra_credit_points_str else 0.0
+        except (ValueError, TypeError):
+            max_extra_credit_points = 0.0
+
+        late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+        late_penalty_per_day_str = request.form.get('late_penalty_per_day', '0').strip()
+        try:
+            late_penalty_per_day = float(late_penalty_per_day_str) if late_penalty_per_day_str else 0.0
+        except (ValueError, TypeError):
+            late_penalty_per_day = 0.0
+        late_penalty_max_days_str = request.form.get('late_penalty_max_days', '0').strip()
+        try:
+            late_penalty_max_days = int(late_penalty_max_days_str) if late_penalty_max_days_str else 0
+        except (ValueError, TypeError):
+            late_penalty_max_days = 0
+
+        grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
+        grade_scale = None
+        if grade_scale_preset == 'standard':
+            grade_scale = json.dumps({'A': 90, 'B': 80, 'C': 70, 'D': 60, 'F': 0, 'use_plus_minus': False})
+        elif grade_scale_preset == 'strict':
+            grade_scale = json.dumps({'A': 93, 'B': 85, 'C': 77, 'D': 70, 'F': 0, 'use_plus_minus': False})
+        elif grade_scale_preset == 'lenient':
+            grade_scale = json.dumps({'A': 88, 'B': 78, 'C': 68, 'D': 58, 'F': 0, 'use_plus_minus': False})
+
+        selected_groups = request.form.getlist('groups')
+
+        if not title or not due_date_str or not selected_groups or not quarter:
+            flash('Title, due date, quarter, and at least one group are required.', 'danger')
+            return redirect(url_for('student_assistant.assistant_create_group_assignment', class_id=class_id))
+
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
+        close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M') if close_date_str else None
+
+        current_year = SchoolYear.query.filter_by(is_active=True).first()
+        if not current_year:
+            flash('No active school year found.', 'danger')
+            return redirect(url_for('student_assistant.assistant_create_group_assignment', class_id=class_id))
+
+        assignment_context = request.form.get('assignment_context', 'homework')
+
+        new_assignment = GroupAssignment(
+            title=title,
+            description=description,
+            class_id=class_id,
+            due_date=due_date,
+            open_date=open_date,
+            close_date=close_date,
+            quarter=quarter,
+            school_year_id=current_year.id,
+            assignment_type='pdf',
+            assignment_context=assignment_context,
+            total_points=total_points,
+            assignment_category=assignment_category or None,
+            category_weight=category_weight,
+            allow_extra_credit=allow_extra_credit,
+            max_extra_credit_points=max_extra_credit_points,
+            late_penalty_enabled=late_penalty_enabled,
+            late_penalty_per_day=late_penalty_per_day,
+            late_penalty_max_days=late_penalty_max_days,
+            grade_scale=grade_scale,
+            selected_group_ids=json.dumps(selected_groups),
+            created_by=current_user.id,
+            status='Inactive',
+            assistant_approval_status=ASSISTANT_APPROVAL_PENDING,
+            proposed_by_student_id=current_user.student_id,
+        )
+        db.session.add(new_assignment)
+        db.session.flush()
+
+        if 'assignment_file' in request.files:
+            file = request.files['assignment_file']
+            if file and file.filename and _assistant_allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                unique_filename = timestamp + filename
+                upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'group_assignments')
+                os.makedirs(upload_dir, exist_ok=True)
+                filepath = os.path.join(upload_dir, unique_filename)
+                file.save(filepath)
+                new_assignment.attachment_filename = unique_filename
+                new_assignment.attachment_original_filename = filename
+                new_assignment.attachment_file_path = filepath
+                new_assignment.attachment_file_size = os.path.getsize(filepath)
+                new_assignment.attachment_mime_type = file.content_type
+
+        db.session.commit()
+        _notify_teacher_and_admins(
+            class_id,
+            'Group assignment pending your approval (student assistant)',
+            f'{current_user.username} proposed group assignment "{title}".',
+            link=url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id),
+        )
+        flash(
+            'Your group assignment was submitted for approval. Students will not see it until a teacher or '
+            'administrator approves it.',
+            'success',
+        )
+        return redirect(url_for('student_assistant.class_hub', class_id=class_id))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f'Assistant group assignment: {e}')
+        flash(f'Error creating group assignment: {str(e)}', 'danger')
+        return redirect(url_for('student_assistant.assistant_create_group_assignment', class_id=class_id))

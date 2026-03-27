@@ -1,0 +1,108 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Approve assistant proposals — {{ class_obj.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assistant_approval.css') }}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 py-4">
+    <div class="assistant-proposals-page-hero d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-2 fw-bold assistant-proposals-title"><i class="bi bi-stars text-warning me-2"></i>Student assistant proposals</h1>
+            <p class="text-muted mb-0">{{ class_obj.name }} — Approve or reject assignments proposed by a student assistant. Students do not see them until you approve.</p>
+        </div>
+        <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-assistant-back">
+            <i class="bi bi-arrow-left me-1"></i>Back to class
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <div class="card assistant-proposals-review-card border-0 h-100">
+                <div class="card-header border-bottom py-3">
+                    <h2 class="h5 mb-0"><i class="bi bi-file-earmark-text me-2"></i>Individual assignments</h2>
+                </div>
+                <div class="card-body">
+                    {% if pending_individual %}
+                    <ul class="list-group list-group-flush">
+                        {% for a in pending_individual %}
+                        <li class="list-group-item px-0">
+                            <div class="fw-semibold">{{ a.title }}</div>
+                            <div class="small text-muted">Due {{ a.due_date.strftime('%b %d, %Y %I:%M %p') if a.due_date else '—' }} · {{ a.total_points|int }} pts</div>
+                            {% if a.proposing_student %}
+                            <div class="small mt-1">Proposed by: {{ a.proposing_student.first_name }} {{ a.proposing_student.last_name }}</div>
+                            {% endif %}
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <form method="post" action="{{ url_for('teacher.assignments.approve_assistant_assignment', class_id=class_obj.id, assignment_id=a.id) }}" class="d-inline">
+                                    <label class="small text-muted me-1">When approved, set status</label>
+                                    <select name="publish_status" class="form-select form-select-sm d-inline w-auto">
+                                        <option value="Active" selected>Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="Upcoming">Upcoming</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-assistant-approve btn-sm ms-1"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                                </form>
+                                <button type="button" class="btn btn-assistant-reject-outline btn-sm" data-bs-toggle="collapse" data-bs-target="#rej-ind-{{ a.id }}">Reject</button>
+                            </div>
+                            <div class="collapse mt-2" id="rej-ind-{{ a.id }}">
+                                <form method="post" action="{{ url_for('teacher.assignments.reject_assistant_assignment', class_id=class_obj.id, assignment_id=a.id) }}" class="border rounded p-2 bg-light">
+                                    <label class="form-label small">Notes to assistant (optional)</label>
+                                    <textarea name="review_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Reason for rejection…"></textarea>
+                                    <button type="submit" class="btn btn-assistant-reject-solid btn-sm">Confirm reject</button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No pending individual assignments.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card assistant-proposals-review-card border-0 h-100">
+                <div class="card-header border-bottom py-3">
+                    <h2 class="h5 mb-0"><i class="bi bi-people me-2"></i>Group assignments</h2>
+                </div>
+                <div class="card-body">
+                    {% if pending_group %}
+                    <ul class="list-group list-group-flush">
+                        {% for g in pending_group %}
+                        <li class="list-group-item px-0">
+                            <div class="fw-semibold">{{ g.title }}</div>
+                            <div class="small text-muted">Due {{ g.due_date.strftime('%b %d, %Y %I:%M %p') if g.due_date else '—' }}</div>
+                            {% if g.proposing_student %}
+                            <div class="small mt-1">Proposed by: {{ g.proposing_student.first_name }} {{ g.proposing_student.last_name }}</div>
+                            {% endif %}
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <form method="post" action="{{ url_for('teacher.assignments.approve_assistant_group_assignment', class_id=class_obj.id, group_assignment_id=g.id) }}" class="d-inline">
+                                    <select name="publish_status" class="form-select form-select-sm d-inline w-auto">
+                                        <option value="Active" selected>Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="Upcoming">Upcoming</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-assistant-approve btn-sm ms-1"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                                </form>
+                                <button type="button" class="btn btn-assistant-reject-outline btn-sm" data-bs-toggle="collapse" data-bs-target="#rej-gr-{{ g.id }}">Reject</button>
+                            </div>
+                            <div class="collapse mt-2" id="rej-gr-{{ g.id }}">
+                                <form method="post" action="{{ url_for('teacher.assignments.reject_assistant_group_assignment', class_id=class_obj.id, group_assignment_id=g.id) }}" class="border rounded p-2 bg-light">
+                                    <textarea name="review_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Notes…"></textarea>
+                                    <button type="submit" class="btn btn-assistant-reject-solid btn-sm">Confirm reject</button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No pending group assignments.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

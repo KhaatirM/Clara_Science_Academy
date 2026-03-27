@@ -551,31 +551,8 @@ def grade_statistics(assignment_id):
 @login_required
 @teacher_required
 def my_grades():
-    """Display all grades for the current teacher's assignments."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Directors and School Administrators see all grades, teachers only see grades for their classes
-    if is_admin():
-        grades = Grade.query.order_by(Grade.graded_at.desc()).all()
-    else:
-        # Check if teacher object exists
-        if teacher is None:
-            # If user is a Teacher but has no teacher_staff_id, show empty grades list
-            grades = []
-        else:
-            # Get classes for this teacher
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-            class_ids = [c.id for c in classes]
-            
-            # Get assignments for these classes
-            assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-            assignment_ids = [a.id for a in assignments]
-            
-            # Get grades for these assignments
-            grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).order_by(Grade.graded_at.desc()).all()
-    
-    return render_template('teachers/teacher_grades.html', grades=grades, teacher=teacher)
+    """Legacy URL: grade management lives under Assignments & Grades."""
+    return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 
 @bp.route('/grades/history/<int:grade_id>')
 @login_required
@@ -632,5 +609,5 @@ def grade_history(grade_id):
 def student_grades():
     """Display student grades view for the current teacher's classes."""
     flash("Student grades page is being updated. Please check back later.", "info")
-    return redirect(url_for('teacher.grading.grades'))
+    return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 

@@ -1,0 +1,310 @@
+/* Student assistant assignment approval — distinctive CTAs (matches Assignments & Grades energy) */
+
+/* Primary toolbar: “Assistant proposals” */
+.btn-assistant-proposals {
+    background: linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #8b5cf6 100%);
+    color: #fff !important;
+    border: none;
+    padding: 0.75rem 1.35rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    transition: transform 0.2s ease, box-shadow 0.25s ease, filter 0.2s ease;
+    box-shadow:
+        0 4px 14px rgba(99, 102, 241, 0.45),
+        0 2px 6px rgba(124, 58, 237, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    text-decoration: none !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-assistant-proposals::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.btn-assistant-proposals:hover {
+    color: #fff !important;
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+    box-shadow:
+        0 8px 28px rgba(99, 102, 241, 0.55),
+        0 4px 12px rgba(124, 58, 237, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-assistant-proposals:active {
+    transform: translateY(0);
+}
+
+.btn-assistant-proposals i {
+    font-size: 1.15rem;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+}
+
+.btn-assistant-proposals .badge-assistant-count {
+    background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%) !important;
+    color: #1c1917 !important;
+    font-weight: 800;
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Class grid footer CTA */
+.btn-assistant-proposals-card {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff !important;
+    border: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 3px 12px rgba(79, 70, 229, 0.35);
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.btn-assistant-proposals-card:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+}
+
+/* Persistent “approvals” link on class pages */
+.btn-assistant-proposals-subtle {
+    background: rgba(255, 255, 255, 0.95);
+    color: #5b21b6 !important;
+    border: 2px solid #c4b5fd;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 999px;
+    padding: 0.45rem 1.1rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.12);
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-assistant-proposals-subtle:hover {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border-color: #8b5cf6;
+    color: #4c1d95 !important;
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.25);
+    transform: translateY(-1px);
+}
+
+.btn-assistant-proposals-subtle i {
+    color: #7c3aed;
+}
+
+/* Alert strip on assignments page */
+.assistant-proposals-alert-banner {
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+    border-left: 5px solid #f59e0b;
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+    color: #78350f;
+}
+
+.assistant-proposals-alert-banner strong {
+    color: #92400e;
+}
+
+/* Inline alert “Review now” */
+.btn-assistant-review-now {
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    color: #fff !important;
+    border: none;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 0.45rem 1rem;
+    box-shadow: 0 3px 12px rgba(234, 88, 12, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none !important;
+}
+
+.btn-assistant-review-now:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+}
+
+/* Pending review page */
+.assistant-proposals-page-hero {
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 40%, #fff7ed 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.08);
+}
+
+.assistant-proposals-page-hero .assistant-proposals-title {
+    color: #4c1d95;
+}
+
+/* Student assistant hub — propose assignment CTAs */
+.btn-sa-propose-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+    color: #fff !important;
+    border: none;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 0.5rem 1.1rem;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn-sa-propose-primary:hover {
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.45);
+}
+
+.btn-sa-propose-secondary {
+    background: rgba(255, 255, 255, 0.9);
+    color: #5b21b6 !important;
+    border: 2px solid #c4b5fd;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 0.45rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn-sa-propose-secondary:hover {
+    background: #faf5ff;
+    border-color: #8b5cf6;
+    color: #4c1d95 !important;
+}
+
+.sa-propose-assignments-card {
+    border-radius: 16px !important;
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 45%, #f5f3ff 100%) !important;
+    box-shadow: 0 10px 40px rgba(99, 102, 241, 0.08) !important;
+}
+
+.sa-propose-assignments-card .sa-propose-card-title {
+    color: #4c1d95;
+}
+
+.btn-assistant-back {
+    background: #fff;
+    color: #4c1d95 !important;
+    border: 2px solid #e9d5ff;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 0.55rem 1.15rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.btn-assistant-back:hover {
+    background: #faf5ff;
+    border-color: #c4b5fd;
+    color: #5b21b6 !important;
+}
+
+.assistant-proposals-review-card {
+    border-radius: 16px !important;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.12) !important;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06) !important;
+}
+
+.assistant-proposals-review-card .card-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25) !important;
+    font-weight: 700;
+}
+
+.assistant-proposals-review-card .card-header i {
+    color: #6366f1;
+}
+
+.btn-assistant-approve {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff !important;
+    border: none;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 0.4rem 1rem;
+    box-shadow: 0 3px 12px rgba(16, 185, 129, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-assistant-approve:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 18px rgba(16, 185, 129, 0.45);
+}
+
+.btn-assistant-reject-outline {
+    background: #fff;
+    color: #be123c !important;
+    border: 2px solid #fda4af;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.35rem 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-assistant-reject-outline:hover {
+    background: #fff1f2;
+    border-color: #fb7185;
+    color: #9f1239 !important;
+}
+
+.btn-assistant-reject-solid {
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    color: #fff !important;
+    border: none;
+    font-weight: 700;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(225, 29, 72, 0.35);
+}
+
+.btn-assistant-reject-solid:hover {
+    color: #fff !important;
+    filter: brightness(1.05);
+}
+
+/* Small badge on class cards (pending count) */
+.badge-assistant-pending {
+    background: linear-gradient(135deg, #f43f5e 0%, #db2777 100%) !important;
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 0.7rem;
+    padding: 0.35em 0.55em;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(219, 39, 119, 0.35);
+}

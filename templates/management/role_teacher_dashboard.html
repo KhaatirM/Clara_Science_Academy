@@ -138,13 +138,7 @@
                             <div class="home-qa-icon">
                                 <i class="bi bi-journal-check"></i>
                             </div>
-                            <span>Assignments</span>
-                        </a>
-                        <a href="{{ url_for('teacher.grading.my_grades') }}" class="home-quick-action home-qa-grades">
-                            <div class="home-qa-icon">
-                                <i class="bi bi-mortarboard-fill"></i>
-                            </div>
-                            <span>Grades</span>
+                            <span>Assignments &amp; Grades</span>
                         </a>
                         <a href="{{ url_for('teacher.attendance.attendance_hub') }}" class="home-quick-action home-qa-attendance">
                             <div class="home-qa-icon">
@@ -693,8 +687,8 @@
                 Student Grades Overview
             </h2>
             <div class="d-flex gap-2">
-                <a href="{{ url_for('teacher.grading.my_grades') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Grade Management
+                <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments &amp; Grades
                 </a>
             </div>
         </div>

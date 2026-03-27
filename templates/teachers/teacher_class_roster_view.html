@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assistant_approval.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
   <!-- Modern Header -->
@@ -15,6 +19,24 @@
         <i class="bi bi-arrow-left me-2"></i>Back to My Classes
       </a>
     </div>
+  </div>
+
+  {% if pending_assistant_count is defined and pending_assistant_count > 0 %}
+  <div class="alert assistant-proposals-alert-banner d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 py-3 px-4" role="alert">
+    <div class="mb-0">
+      <i class="bi bi-stars text-warning me-2"></i>
+      <strong>{{ pending_assistant_count }}</strong> proposal(s) from a student assistant need your approval before students can see them.
+    </div>
+    <a href="{{ url_for('teacher.assignments.pending_assistant_assignments', class_id=class_item.id) }}" class="btn btn-assistant-review-now btn-sm">
+      Review proposals
+    </a>
+  </div>
+  {% endif %}
+  <div class="mb-4 d-flex flex-wrap align-items-center gap-2">
+    <a href="{{ url_for('teacher.assignments.pending_assistant_assignments', class_id=class_item.id) }}" class="btn btn-assistant-proposals-subtle">
+      <i class="bi bi-patch-check-fill"></i>Assistant approvals
+    </a>
+    <span class="text-muted small">Approve or reject assignments proposed by student assistants.</span>
   </div>
 
   <!-- Statistics Cards -->

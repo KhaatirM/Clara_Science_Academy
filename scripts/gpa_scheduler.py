@@ -124,6 +124,20 @@ def update_all_gpas():
         db.session.commit()
         print(f"[{datetime.now()}] GPA update completed. Updated {updated_count} students.")
 
+
+def run_academic_period_reminders_job():
+    """Daily: 2 weeks before quarter/semester end — notify students and staff."""
+    from app import create_app
+    app = create_app()
+    with app.app_context():
+        from utils.academic_period_reminders import run_academic_period_reminders
+        try:
+            out = run_academic_period_reminders()
+            print(f"[{datetime.now()}] Academic period reminders: {out}")
+        except Exception as e:
+            print(f"[{datetime.now()}] Academic period reminders error: {e}")
+
+
 def start_gpa_scheduler():
     """Start the GPA scheduler"""
     if not SCHEDULE_AVAILABLE:
@@ -135,8 +149,9 @@ def start_gpa_scheduler():
     schedule.every().day.at("06:00").do(update_all_gpas)
     schedule.every().day.at("14:00").do(update_all_gpas)
     schedule.every().day.at("22:00").do(update_all_gpas)
+    schedule.every().day.at("08:00").do(run_academic_period_reminders_job)
     
-    print("GPA scheduler started. Updates scheduled for 6:00 AM, 2:00 PM, and 10:00 PM daily.")
+    print("GPA scheduler started. GPA updates: 6:00 AM, 2:00 PM, 10:00 PM; academic period reminders: 8:00 AM daily.")
     
     # Run the scheduler in a separate thread
     def run_scheduler():

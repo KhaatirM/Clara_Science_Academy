@@ -333,6 +333,31 @@ class AcademicPeriod(db.Model):
         return f"AcademicPeriod('{self.name}' - {self.period_type})"
 
 
+class AcademicPeriodReminderSent(db.Model):
+    """
+    Tracks one-time automated reminders per academic period and audience so we do not resend daily.
+    Audiences: student_assignments, staff_finalize_grades
+    """
+    __tablename__ = 'academic_period_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    academic_period_id = db.Column(db.Integer, db.ForeignKey('academic_period.id'), nullable=False)
+    audience = db.Column(db.String(40), nullable=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    academic_period = db.relationship('AcademicPeriod', backref=db.backref('reminder_sent_records', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'academic_period_id', 'audience',
+            name='uq_academic_period_reminder_audience',
+        ),
+    )
+
+    def __repr__(self):
+        return f"AcademicPeriodReminderSent(period={self.academic_period_id}, {self.audience!r})"
+
+
 class CalendarEvent(db.Model):
     """
     Model for storing calendar events extracted from uploaded PDFs.
@@ -590,6 +615,12 @@ class Assignment(db.Model):
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    assistant_approval_status = db.Column(db.String(20), nullable=True)  # pending, approved, rejected
+    proposed_by_student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
+    assistant_approval_reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    assistant_approval_reviewed_at = db.Column(db.DateTime, nullable=True)
+    assistant_approval_review_notes = db.Column(db.Text, nullable=True)
     
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
@@ -645,7 +676,22 @@ class Assignment(db.Model):
     class_info = db.relationship('Class', backref='assignments', lazy=True)
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)
     academic_period = db.relationship('AcademicPeriod', backref='assignments', lazy=True)
-    creator = db.relationship('User', backref='created_assignments', lazy=True)
+    creator = db.relationship(
+        'User',
+        foreign_keys=[created_by],
+        backref='created_assignments',
+        lazy=True,
+    )
+    proposing_student = db.relationship(
+        'Student',
+        foreign_keys=[proposed_by_student_id],
+        backref=db.backref('proposed_assignments', lazy='dynamic'),
+    )
+    assistant_approval_reviewer = db.relationship(
+        'User',
+        foreign_keys=[assistant_approval_reviewed_by_user_id],
+        overlaps='creator,created_assignments',
+    )
     # Multiple file attachments (in addition to legacy single attachment fields above)
     attachment_list = db.relationship('AssignmentAttachment', backref='assignment', lazy=True, order_by='AssignmentAttachment.sort_order')
 
@@ -1592,6 +1638,12 @@ class GroupAssignment(db.Model):
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    assistant_approval_status = db.Column(db.String(20), nullable=True)
+    proposed_by_student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
+    assistant_approval_reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    assistant_approval_reviewed_at = db.Column(db.DateTime, nullable=True)
+    assistant_approval_review_notes = db.Column(db.Text, nullable=True)
     
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
@@ -1649,7 +1701,22 @@ class GroupAssignment(db.Model):
     school_year = db.relationship('SchoolYear', backref='group_assignments')
     academic_period = db.relationship('AcademicPeriod', backref='group_assignments')
     quiz_questions = db.relationship('GroupQuizQuestion', backref='group_assignment', lazy=True, cascade='all, delete-orphan')
-    creator = db.relationship('User', backref='created_group_assignments', lazy=True)
+    creator = db.relationship(
+        'User',
+        foreign_keys=[created_by],
+        backref='created_group_assignments',
+        lazy=True,
+    )
+    proposing_student = db.relationship(
+        'Student',
+        foreign_keys=[proposed_by_student_id],
+        backref=db.backref('proposed_group_assignments', lazy='dynamic'),
+    )
+    assistant_approval_reviewer = db.relationship(
+        'User',
+        foreign_keys=[assistant_approval_reviewed_by_user_id],
+        overlaps='creator,created_group_assignments',
+    )
     
     def __repr__(self):
         return f"GroupAssignment('{self.title}', Class: {self.class_id})"

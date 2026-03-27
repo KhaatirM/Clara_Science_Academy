@@ -13,6 +13,7 @@ from management_routes.student_assistant_utils import (
     is_eligible_student_assistant_candidate,
     students_in_school_year_for_assistant_pool,
     count_assistant_classes_for_student_excluding,
+    count_pending_assistant_proposals_for_class,
 )
 from datetime import datetime
 import json
@@ -1803,6 +1804,8 @@ def view_class(class_id):
             StudentAssistantActionLog.created_at.desc()
         ).limit(100).all()
 
+    pending_assistant_count = count_pending_assistant_proposals_for_class(class_id)
+
     return render_template('management/view_class.html',
                          class_info=class_info,
                          teacher=teacher,
@@ -1815,7 +1818,8 @@ def view_class(class_id):
                          is_current_user_teacher=is_current_user_teacher,
                          role_prefix=None,
                          student_assistants=student_assistants,
-                         assistant_action_logs=assistant_action_logs)
+                         assistant_action_logs=assistant_action_logs,
+                         pending_assistant_count=pending_assistant_count)
 
 
 

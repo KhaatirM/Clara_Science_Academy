@@ -18,7 +18,7 @@ from models import (
     # Assignment system
     Assignment, AssignmentAttachment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest, RedoRequest,
     # Group assignment system
-    GroupAssignment, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
+    GroupAssignment, GroupAssignmentExtension, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
     QuizQuestion, QuizOption, QuizAnswer, QuizProgress,
     # Communication system
@@ -31,6 +31,13 @@ from models import (
 
 # Authentication and decorators
 from decorators import student_required
+from teacher_routes.assignment_utils import is_assignment_open_for_student
+from management_routes.student_assistant_utils import (
+    assignment_student_visibility_filter,
+    group_assignment_student_visibility_filter,
+    assignment_visible_to_students,
+)
+from utils.gpa_period_visibility import period_gpa_visibility_state
 
 # Werkzeug utilities
 from werkzeug.utils import secure_filename
@@ -448,7 +455,10 @@ def student_submissions():
             group = membership.group
             if group and group.class_id:
                 # Get group assignments for this group's class
-                assignments = GroupAssignment.query.filter_by(class_id=group.class_id).all()
+                assignments = GroupAssignment.query.filter(
+                    GroupAssignment.class_id == group.class_id,
+                    group_assignment_student_visibility_filter(),
+                ).all()
                 for assignment in assignments:
                     student_group_assignments.append({
                         'id': assignment.id,
@@ -610,7 +620,8 @@ def student_dashboard():
     assignments = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
-        Assignment.status.in_(['Active', 'Upcoming'])  # Show Active and Upcoming assignments to students
+        Assignment.status.in_(['Active', 'Upcoming']),  # Show Active and Upcoming assignments to students
+        assignment_student_visibility_filter(),
     ).all()
     
     past_due_assignments = []
@@ -763,7 +774,8 @@ def student_assignments():
     ).filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
-        Assignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided'])  # Show Active, Inactive, Upcoming, and Voided assignments
+        Assignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided']),  # Show Active, Inactive, Upcoming, and Voided assignments
+        assignment_student_visibility_filter(),
     )
     
     # Apply class filter
@@ -889,15 +901,19 @@ def student_assignments():
             if open_date_dt > now_aware:
                 is_upcoming = True
         
-        # Categorize by assignment status and open_date
+        # Categorize by whether the student can act now (reopen / extension / redo) vs raw status
+        can_submit_now = is_assignment_open_for_student(assignment, student.id)
         if is_upcoming or assignment.status == 'Upcoming':
-            # Upcoming assignments - not yet open (check open_date or status)
-            upcoming_assignments.append(assignment_data)
+            if can_submit_now:
+                active_assignments.append(assignment_data)
+            else:
+                upcoming_assignments.append(assignment_data)
         elif assignment.status == 'Inactive':
-            # Inactive assignments - students can view but can't turn them in
-            inactive_assignments.append(assignment_data)
+            if can_submit_now:
+                active_assignments.append(assignment_data)
+            else:
+                inactive_assignments.append(assignment_data)
         elif assignment.status == 'Active':
-            # Active assignments - students can submit
             active_assignments.append(assignment_data)
     
     # Fetch group assignments for the same classes and apply same filters (eager-load creator)
@@ -906,7 +922,8 @@ def student_assignments():
     ).filter(
         GroupAssignment.class_id.in_(class_ids),
         GroupAssignment.school_year_id == current_school_year.id,
-        GroupAssignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided'])
+        GroupAssignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided']),
+        group_assignment_student_visibility_filter(),
     )
     if filter_class_id:
         group_assignments_query = group_assignments_query.filter(GroupAssignment.class_id == filter_class_id)
@@ -987,10 +1004,31 @@ def student_assignments():
             now_aware = now if (hasattr(now, 'tzinfo') and now.tzinfo) else datetime.now(timezone.utc)
             if open_dt > now_aware:
                 is_upcoming = True
+        can_submit_group = False
+        if group_assignment.status == 'Inactive':
+            _ext = GroupAssignmentExtension.query.filter_by(
+                group_assignment_id=group_assignment.id,
+                student_id=student.id,
+                is_active=True,
+            ).first()
+            if _ext and _ext.extended_due_date:
+                _ed = _ext.extended_due_date
+                if isinstance(_ed, datetime) and _ed.tzinfo is None:
+                    _ed = _ed.replace(tzinfo=timezone.utc)
+                elif not isinstance(_ed, datetime):
+                    _ed = datetime.combine(_ed, datetime.min.time()).replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) <= _ed:
+                    can_submit_group = True
         if is_upcoming or group_assignment.status == 'Upcoming':
-            upcoming_assignments.append(assignment_data)
+            if can_submit_group:
+                active_assignments.append(assignment_data)
+            else:
+                upcoming_assignments.append(assignment_data)
         elif group_assignment.status == 'Inactive':
-            inactive_assignments.append(assignment_data)
+            if can_submit_group:
+                active_assignments.append(assignment_data)
+            else:
+                inactive_assignments.append(assignment_data)
         elif group_assignment.status == 'Active':
             active_assignments.append(assignment_data)
     
@@ -1044,7 +1082,10 @@ def class_assignments(class_id):
         return redirect(url_for('student.student_assignments'))
     
     # Get assignments for this class
-    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        assignment_student_visibility_filter(),
+    ).order_by(Assignment.due_date.desc()).all()
     
     # Get all submissions for this student
     submissions = Submission.query.filter_by(student_id=student.id).all()
@@ -1333,10 +1374,15 @@ def student_grades():
         Class.school_year_id == school_year.id
     ).all()
     
+    gpa_quarter_visibility = {q.name: period_gpa_visibility_state(q.end_date) for q in quarters}
+    gpa_semester_visibility = {s.name: period_gpa_visibility_state(s.end_date) for s in semesters}
+
     if not enrollments:
         flash('No classes found for current school year.', 'info')
         return render_template('students/role_student_dashboard.html', 
-                             **create_template_context(student, 'grades', 'grades'))
+                             **create_template_context(student, 'grades', 'grades',
+                                 gpa_quarter_visibility=gpa_quarter_visibility,
+                                 gpa_semester_visibility=gpa_semester_visibility))
     
     # Calculate grades for each class organized by quarters and semesters
     grades_by_class = {}
@@ -1348,12 +1394,14 @@ def student_grades():
         # Get all assignments for this class (both regular and group assignments)
         assignments = Assignment.query.filter(
             Assignment.class_id == class_info.id,
-            Assignment.school_year_id == school_year.id
+            Assignment.school_year_id == school_year.id,
+            assignment_student_visibility_filter(),
         ).all()
         
         group_assignments = GroupAssignment.query.filter(
             GroupAssignment.class_id == class_info.id,
-            GroupAssignment.school_year_id == school_year.id
+            GroupAssignment.school_year_id == school_year.id,
+            group_assignment_student_visibility_filter(),
         ).all()
         
         if not assignments and not group_assignments:
@@ -1514,10 +1562,8 @@ def student_grades():
                 return a and b and a == b
 
             for quarter in quarters:
-                # Check if the quarter has ended before calculating grades
-                today = date.today()
-                if today < quarter.end_date:
-                    # Quarter hasn't ended yet, show "In Progress" or similar
+                q_vis = period_gpa_visibility_state(quarter.end_date)
+                if q_vis == 'in_progress':
                     quarter_grades[quarter.name] = {
                         'average': None,
                         'letter': 'In Progress',
@@ -1527,7 +1573,17 @@ def student_grades():
                         'end_date': quarter.end_date
                     }
                     continue
-                
+                if q_vis == 'calculating':
+                    quarter_grades[quarter.name] = {
+                        'average': None,
+                        'letter': None,
+                        'gpa': None,
+                        'assignments': 0,
+                        'status': 'calculating',
+                        'end_date': quarter.end_date
+                    }
+                    continue
+
                 quarter_assignments = [a for a in assignments if _quarter_matches(a.quarter, quarter.name)]
                 quarter_group_assignments = [a for a in group_assignments if _quarter_matches(a.quarter, quarter.name)]
                 quarter_grades_list = []
@@ -1594,10 +1650,8 @@ def student_grades():
             
             # Calculate grades for each semester (including group assignments)
             for semester in semesters:
-                # Check if the semester has ended before calculating grades
-                today = date.today()
-                if today < semester.end_date:
-                    # Semester hasn't ended yet, show "In Progress" or similar
+                s_vis = period_gpa_visibility_state(semester.end_date)
+                if s_vis == 'in_progress':
                     semester_grades[semester.name] = {
                         'average': None,
                         'letter': 'In Progress',
@@ -1607,7 +1661,17 @@ def student_grades():
                         'end_date': semester.end_date
                     }
                     continue
-                
+                if s_vis == 'calculating':
+                    semester_grades[semester.name] = {
+                        'average': None,
+                        'letter': None,
+                        'gpa': None,
+                        'assignments': 0,
+                        'status': 'calculating',
+                        'end_date': semester.end_date
+                    }
+                    continue
+
                 semester_assignments = []
                 semester_group_assignments = []
                 
@@ -1715,7 +1779,9 @@ def student_grades():
                              grades_by_class=grades_by_class,
                              gpa=gpa,
                              quarters=quarters,
-                             semesters=semesters))
+                             semesters=semesters,
+                             gpa_quarter_visibility=gpa_quarter_visibility,
+                             gpa_semester_visibility=gpa_semester_visibility))
                          
 @student_blueprint.route('/schedule')
 @login_required
@@ -2059,7 +2125,10 @@ def view_class(class_id):
     enrolled_students = [enrollment.student for enrollment in enrollments]
     
     # Get assignments for this class
-    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        assignment_student_visibility_filter(),
+    ).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades for this student (excluding voided grades and voided assignments)
     all_grades = Grade.query.filter_by(student_id=student.id).all()
@@ -2162,10 +2231,11 @@ def get_class_assignments_api(class_id):
     if not enrollment:
         return jsonify({'error': 'Not enrolled in this class'}), 403
     
-    # Get assignments for this class (show Active, Inactive, and Voided assignments)
+    # Get assignments for this class (include Upcoming; visibility buckets use is_assignment_open_for_student)
     assignments = Assignment.query.filter(
         Assignment.class_id == class_id,
-        Assignment.status.in_(['Active', 'Inactive', 'Voided'])
+        Assignment.status.in_(['Active', 'Inactive', 'Voided', 'Upcoming']),
+        assignment_student_visibility_filter(),
     ).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades
@@ -2188,8 +2258,8 @@ def get_class_assignments_api(class_id):
         submission = student_submissions.get(assignment.id)
         grade = student_grades.get(assignment.id)
         
-        # Determine status
-        is_active = assignment.status == 'Active'
+        # Open for this student (reopening, extension, redo) even if assignment row is Inactive/Upcoming
+        can_access = is_assignment_open_for_student(assignment, student.id)
         has_submission = submission is not None
         has_grade = grade is not None
         is_past_due = assignment.due_date and assignment.due_date.date() < today.date() if assignment.due_date else False
@@ -2206,7 +2276,7 @@ def get_class_assignments_api(class_id):
         elif is_past_due:
             status = 'Past Due'
             status_class = 'danger'
-        elif not is_active:
+        elif not can_access:
             status = 'Inactive'
             status_class = 'secondary'
         else:
@@ -2223,7 +2293,7 @@ def get_class_assignments_api(class_id):
             'assignment_type': assignment.assignment_type,
             'is_group': False,
             'status': assignment.status,
-            'is_active': is_active,
+            'is_active': can_access,
             'has_attachment': bool(assignment.attachment_filename),
             'attachment_filename': assignment.attachment_original_filename or assignment.attachment_filename or '',
             'submission_status': status,
@@ -2251,6 +2321,9 @@ def take_quiz(assignment_id):
     """Take a quiz assignment"""
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Check if assignment is a quiz
     if assignment.assignment_type != 'quiz':
@@ -2413,6 +2486,8 @@ def save_quiz_progress(assignment_id):
     try:
         student = Student.query.get_or_404(current_user.student_id)
         assignment = Assignment.query.get_or_404(assignment_id)
+        if not assignment_visible_to_students(assignment):
+            return jsonify({'success': False, 'message': 'This assignment is not available.'}), 403
         
         # Check if assignment allows save and continue
         if not assignment.allow_save_and_continue:
@@ -2468,6 +2543,8 @@ def load_quiz_progress(assignment_id):
     try:
         student = Student.query.get_or_404(current_user.student_id)
         assignment = Assignment.query.get_or_404(assignment_id)
+        if not assignment_visible_to_students(assignment):
+            return jsonify({'success': False, 'message': 'This assignment is not available.'}), 403
         
         # Check if assignment allows save and continue
         if not assignment.allow_save_and_continue:
@@ -2515,6 +2592,9 @@ def submit_quiz(assignment_id):
     """Submit quiz answers"""
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Check if assignment is a quiz
     if assignment.assignment_type != 'quiz':
@@ -2646,6 +2726,9 @@ def get_quiz_details(assignment_id):
     from flask import jsonify
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Verify student is enrolled
     enrollment = Enrollment.query.filter_by(
@@ -2743,6 +2826,8 @@ def request_extension():
             return jsonify({'success': False, 'message': 'Missing required fields.'}), 400
 
         assignment = Assignment.query.get_or_404(assignment_id)
+        if not assignment_visible_to_students(assignment):
+            return jsonify({'success': False, 'message': 'This assignment is not available.'}), 403
 
         try:
             requested_due_date = datetime.strptime(requested_due_date_str, '%Y-%m-%d')
@@ -2815,6 +2900,8 @@ def request_redo():
             return jsonify({'success': False, 'message': 'Missing assignment.'}), 400
 
         assignment = Assignment.query.get_or_404(assignment_id)
+        if not assignment_visible_to_students(assignment):
+            return jsonify({'success': False, 'message': 'This assignment is not available.'}), 403
 
         # Must be inactive (students can't submit; they request redo to get a second chance)
         if assignment.status != 'Inactive':
@@ -2881,6 +2968,9 @@ def view_discussion(assignment_id):
     """View a discussion assignment"""
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Check if assignment is a discussion
     if assignment.assignment_type != 'discussion':
@@ -2952,6 +3042,9 @@ def create_discussion_thread(assignment_id):
     """Create a new discussion thread"""
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Check if assignment is a discussion
     if assignment.assignment_type != 'discussion':
@@ -3276,6 +3369,9 @@ def edit_discussion_post(post_id):
 def submit_assignment(assignment_id):
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
 
     # Check if assignment is open for this student (considering extensions)
     from teacher_routes.assignment_utils import is_assignment_open_for_student
@@ -3383,6 +3479,9 @@ def submit_group_assignment(assignment_id):
     """Submit a group assignment"""
     student = Student.query.get_or_404(current_user.student_id)
     group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(group_assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Check if student is enrolled in the class
     enrollment = Enrollment.query.filter_by(
@@ -3592,6 +3691,9 @@ def download_discussion_attachment(attachment_id):
 def download_assignment_file(assignment_id):
     """Download assignment attachment file. Use ?index=N for Nth document when multiple are attached."""
     assignment = Assignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
 
     student_id = getattr(current_user, 'student_id', None)
     if not student_id:
@@ -3661,6 +3763,9 @@ def download_assignment_file(assignment_id):
 def download_group_assignment_file(assignment_id):
     """Download group assignment attachment file."""
     group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    if not assignment_visible_to_students(group_assignment):
+        flash('This assignment is not available.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     student = Student.query.get_or_404(current_user.student_id)
     enrollment = Enrollment.query.filter_by(
         student_id=student.id,

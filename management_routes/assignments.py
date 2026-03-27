@@ -812,6 +812,13 @@ def assignments_and_grades():
             # Get pending extension request count and redo request count
             pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
             pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
+
+            from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
+            pending_assistant_by_class = {}
+            for class_obj in accessible_classes:
+                if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
+                    pending_assistant_by_class[class_obj.id] = count_pending_assistant_proposals_for_class(class_obj.id)
+            total_pending_assistant_proposals = sum(pending_assistant_by_class.values())
             
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
@@ -828,7 +835,9 @@ def assignments_and_grades():
                                  user_role=user_role,
                                  show_class_selection=True,
                                  extension_request_count=pending_extension_count,
-                                 redo_request_count=pending_redo_count)
+                                 redo_request_count=pending_redo_count,
+                                 pending_assistant_by_class=pending_assistant_by_class,
+                                 total_pending_assistant_proposals=total_pending_assistant_proposals)
         
         # Get assignment counts and grade data for each class
         class_data = {}
@@ -1345,6 +1354,16 @@ def assignments_and_grades():
                 table_student_grades = {}
                 table_student_averages = {}
         
+        from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
+        pending_assistant_count = (
+            count_pending_assistant_proposals_for_class(selected_class.id) if selected_class else 0
+        )
+        pending_assistant_by_class = {}
+        for class_obj in accessible_classes:
+            if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
+                pending_assistant_by_class[class_obj.id] = count_pending_assistant_proposals_for_class(class_obj.id)
+        total_pending_assistant_proposals = sum(pending_assistant_by_class.values())
+
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              class_data=class_data,
@@ -1363,6 +1382,9 @@ def assignments_and_grades():
                              today=date.today(),
                              extension_request_count=pending_extension_count,
                              redo_request_count=pending_redo_count,
+                             pending_assistant_count=pending_assistant_count,
+                             pending_assistant_by_class=pending_assistant_by_class,
+                             total_pending_assistant_proposals=total_pending_assistant_proposals,
                              enrolled_students=enrolled_students,
                              all_assignments=all_assignments,
                              student_grades=table_student_grades,

@@ -184,6 +184,11 @@ def is_assignment_open_for_student(assignment, student_id):
     if assignment.status == 'Voided':
         return False
 
+    # Student assistant proposals: not open until approved
+    ap = getattr(assignment, 'assistant_approval_status', None)
+    if ap is not None and ap != 'approved':
+        return False
+
     from models import Grade
     st_grade = Grade.query.filter_by(
         assignment_id=assignment.id,

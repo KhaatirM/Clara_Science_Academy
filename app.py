@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, render_template, g, current_app, redirect, url_for, flash, request, session, jsonify
+from flask import Flask, render_template, g, current_app, redirect, url_for, flash, request, session, jsonify, abort
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.security import check_password_hash
@@ -158,6 +158,42 @@ def create_app(config_class=None):
                                 print(f"Added {table_name}.{col_name} column.")
             except Exception as e:
                 print(f"Note: {table_name} status_override columns check failed (may already exist): {e}")
+
+        # Student assistant assignment approval columns (assignment + group_assignment)
+        _assistant_cols = [
+            ('assistant_approval_status', 'VARCHAR(20)', 'TEXT'),
+            ('proposed_by_student_id', 'INTEGER', 'INTEGER'),
+            ('assistant_approval_reviewed_by_user_id', 'INTEGER', 'INTEGER'),
+            ('assistant_approval_reviewed_at', 'TIMESTAMP', 'TIMESTAMP'),
+            ('assistant_approval_review_notes', 'TEXT', 'TEXT'),
+        ]
+        for table_name in ('assignment', 'group_assignment'):
+            try:
+                with db.engine.connect() as conn:
+                    dialect = db.engine.dialect.name
+                    for col_name, pg_type, sqlite_type in _assistant_cols:
+                        if dialect == 'sqlite':
+                            r = conn.execute(text(f"PRAGMA table_info({table_name})"))
+                            columns = [row[1] for row in r]
+                            if col_name not in columns:
+                                conn.execute(text(
+                                    f"ALTER TABLE {table_name} ADD COLUMN {col_name} {sqlite_type}"
+                                ))
+                                conn.commit()
+                                print(f"Added {table_name}.{col_name} column.")
+                        elif dialect == 'postgresql':
+                            r = conn.execute(text(
+                                "SELECT 1 FROM information_schema.columns "
+                                "WHERE table_name = :tbl AND column_name = :col"
+                            ), {"tbl": table_name, "col": col_name})
+                            if r.fetchone() is None:
+                                conn.execute(text(
+                                    f'ALTER TABLE "{table_name}" ADD COLUMN {col_name} {pg_type}'
+                                ))
+                                conn.commit()
+                                print(f"Added {table_name}.{col_name} column.")
+            except Exception as e:
+                print(f"Note: {table_name} assistant approval columns check failed (may already exist): {e}")
 
         # Create redo_request table if missing (for student redo requests on inactive assignments)
         try:
@@ -837,6 +873,23 @@ def create_app(config_class=None):
                 
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/cron/academic-period-reminders', methods=['POST'])
+    @csrf.exempt
+    def cron_academic_period_reminders():
+        """
+        Daily job: send 2-week-before-end reminders for quarters/semesters.
+        Protect with CRON_SECRET: header X-Cron-Secret or query ?token=
+        """
+        secret = app.config.get('CRON_SECRET') or os.environ.get('CRON_SECRET')
+        if not secret:
+            return jsonify({'ok': False, 'error': 'CRON_SECRET is not configured'}), 503
+        received = request.headers.get('X-Cron-Secret') or request.args.get('token')
+        if received != secret:
+            abort(403)
+        from utils.academic_period_reminders import run_academic_period_reminders
+        result = run_academic_period_reminders()
+        return jsonify(result)
 
     return app
 

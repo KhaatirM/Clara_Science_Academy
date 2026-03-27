@@ -64,6 +64,12 @@ class Config:
     # Form datetimes (open_date, close_date) are interpreted in this timezone, then stored as UTC.
     SCHOOL_TIMEZONE = os.environ.get('SCHOOL_TIMEZONE') or 'America/New_York'
 
+    # Optional absolute base URL for links in cron-generated emails (no request context). No trailing slash.
+    PUBLIC_BASE_URL = (os.environ.get('PUBLIC_BASE_URL') or '').rstrip('/')
+
+    # Shared secret for POST /cron/academic-period-reminders (optional; set CRON_SECRET in production).
+    CRON_SECRET = os.environ.get('CRON_SECRET')
+
     # Email (Google Workspace SMTP) - for notifications like "Assignment Graded", "Announcement", etc.
     # Set MAIL_PASSWORD in .env to your Google App Password (never commit it).
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'

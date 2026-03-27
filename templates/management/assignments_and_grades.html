@@ -3,6 +3,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_assignments_and_grades.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assistant_approval.css') }}">
 {% endblock %}
 
 {% block title %}Assignments & Grades Management{% endblock %}
@@ -54,6 +55,14 @@
                     <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 50%; min-width: 1.5rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">{{ extension_request_count }}</span>
                     {% endif %}
                 </a>
+                {% if selected_class %}
+                <a href="{{ url_for('teacher.assignments.pending_assistant_assignments', class_id=selected_class.id) }}" class="btn btn-assistant-proposals" title="Assignments proposed by a student assistant must be approved here before students see them">
+                    <i class="bi bi-person-badge"></i>Assistant proposals
+                    {% if pending_assistant_count and pending_assistant_count > 0 %}
+                    <span class="badge badge-assistant-count ms-1">{{ pending_assistant_count }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
                 {% if selected_class and current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
                 <button type="button" class="btn btn-bulk-void" data-bs-toggle="modal" data-bs-target="#bulkVoidModal" title="Void multiple assignments at once">
                     <i class="bi bi-slash-circle me-2"></i>Bulk Void
@@ -115,6 +124,12 @@
             </div>
         </div>
 
+        {% if total_pending_assistant_proposals is defined and total_pending_assistant_proposals > 0 %}
+        <div class="alert assistant-proposals-alert-banner d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 py-3 px-4" role="alert">
+            <span class="mb-0"><i class="bi bi-stars text-warning me-2"></i><strong>{{ total_pending_assistant_proposals }}</strong> student-assistant proposal(s) are waiting for approval. Pick a class below, then open <strong>Assistant proposals</strong> in the toolbar.</span>
+        </div>
+        {% endif %}
+
         <!-- Classes Grid -->
         <div class="row g-4">
             {% for class_obj in accessible_classes %}
@@ -129,6 +144,9 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <p class="assignment-class-subject mb-0">{{ class_obj.subject or 'General' }}</p>
                                 <span class="badge bg-white text-dark ms-2">{{ class_assignments.get(class_obj.id, 0) }} assignments</span>
+                                {% if pending_assistant_by_class is defined and pending_assistant_by_class.get(class_obj.id, 0) > 0 %}
+                                <span class="badge badge-assistant-pending ms-1" title="Awaiting your approval">{{ pending_assistant_by_class.get(class_obj.id, 0) }} pending</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -155,10 +173,15 @@
                     </div>
 
                     <!-- Action Footer -->
-                    <div class="assignment-class-footer">
+                    <div class="assignment-class-footer d-grid gap-2">
                         <button class="btn btn-assignment-class-action w-100" onclick="event.stopPropagation(); viewClassAssignmentsAndGrades({{ class_obj.id }})">
                             <i class="bi bi-eye me-2"></i>View Assignments & Grades
                         </button>
+                        {% if pending_assistant_by_class is defined and pending_assistant_by_class.get(class_obj.id, 0) > 0 %}
+                        <a class="btn btn-assistant-proposals-card btn-sm w-100" href="{{ url_for('teacher.assignments.pending_assistant_assignments', class_id=class_obj.id) }}" onclick="event.stopPropagation();">
+                            <i class="bi bi-patch-check-fill"></i>Review {{ pending_assistant_by_class.get(class_obj.id, 0) }} proposal{% if pending_assistant_by_class.get(class_obj.id, 0) != 1 %}s{% endif %}
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -176,6 +199,12 @@
     {% else %}
         <!-- Selected Class View: Assignments & Grades -->
         {% if selected_class %}
+            {% if pending_assistant_count is defined and pending_assistant_count > 0 %}
+            <div class="alert assistant-proposals-alert-banner d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 py-3 px-4" role="alert">
+                <span class="mb-0"><i class="bi bi-stars text-warning me-2"></i><strong>{{ pending_assistant_count }}</strong> proposal(s) from a student assistant need your approval before students can see them.</span>
+                <a href="{{ url_for('teacher.assignments.pending_assistant_assignments', class_id=selected_class.id) }}" class="btn btn-assistant-review-now btn-sm">Review now</a>
+            </div>
+            {% endif %}
             <!-- Quick Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-3 mb-3">

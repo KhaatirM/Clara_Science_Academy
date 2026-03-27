@@ -2347,26 +2347,28 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <div class="col-6">
                                     <div class="text-center p-3 border rounded">
                                         <h6 class="text-muted mb-2">{{ quarter.name }}</h6>
+                                        {% set qvis = (gpa_quarter_visibility|default({})).get(quarter.name) %}
+                                        {% if qvis == 'in_progress' %}
+                                            <div class="h4 fw-bold text-info">
+                                                <i class="bi bi-clock"></i> In Progress
+                                            </div>
+                                            <div class="small text-muted">Quarter ends {{ quarter.end_date.strftime('%m/%d/%Y') }} (4:00 PM ET)</div>
+                                        {% elif qvis == 'calculating' %}
+                                            <div class="h4 fw-bold text-warning">
+                                                <i class="bi bi-hourglass-split"></i> Calculating
+                                            </div>
+                                            <div class="small text-muted">Official GPA is finalized within 7 days after quarter end (4:00 PM ET).</div>
+                                        {% else %}
                                         {% set quarter_grades = [] %}
-                                        {% set quarter_status = 'completed' %}
                                         {% for class_name, data in grades_by_class.items() %}
                                             {% if data.quarter_grades and data.quarter_grades.get(quarter.name) %}
                                                 {% set quarter_data = data.quarter_grades[quarter.name] %}
-                                                {% if quarter_data.status == 'in_progress' %}
-                                                    {% set quarter_status = 'in_progress' %}
-                                                {% endif %}
                                                 {% if quarter_data.average %}
                                                     {% set _ = quarter_grades.append(quarter_data.average) %}
                                                 {% endif %}
                                             {% endif %}
                                         {% endfor %}
-                                        
-                                        {% if quarter_status == 'in_progress' %}
-                                            <div class="h4 fw-bold text-info">
-                                                <i class="bi bi-clock"></i> In Progress
-                                            </div>
-                                            <div class="small text-muted">Quarter ends {{ quarter.end_date.strftime('%m/%d/%Y') }}</div>
-                                        {% elif quarter_grades %}
+                                        {% if quarter_grades %}
                                             {% set quarter_avg = (quarter_grades | sum) / (quarter_grades | length) %}
                                             {% set quarter_gpa = calculate_gpa(quarter_grades) %}
                                             <div class="h4 fw-bold 
@@ -2381,6 +2383,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         {% else %}
                                             <div class="h4 text-muted">N/A</div>
                                             <div class="small text-muted">No grades</div>
+                                        {% endif %}
                                         {% endif %}
                                     </div>
                                 </div>
@@ -2407,26 +2410,28 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <div class="col-6">
                                     <div class="text-center p-3 border rounded">
                                         <h6 class="text-muted mb-2">{{ semester.name }}</h6>
+                                        {% set svis = (gpa_semester_visibility|default({})).get(semester.name) %}
+                                        {% if svis == 'in_progress' %}
+                                            <div class="h4 fw-bold text-info">
+                                                <i class="bi bi-clock"></i> In Progress
+                                            </div>
+                                            <div class="small text-muted">Semester ends {{ semester.end_date.strftime('%m/%d/%Y') }} (4:00 PM ET)</div>
+                                        {% elif svis == 'calculating' %}
+                                            <div class="h4 fw-bold text-warning">
+                                                <i class="bi bi-hourglass-split"></i> Calculating
+                                            </div>
+                                            <div class="small text-muted">Official GPA is finalized within 7 days after semester end (4:00 PM ET).</div>
+                                        {% else %}
                                         {% set semester_grades = [] %}
-                                        {% set semester_status = 'completed' %}
                                         {% for class_name, data in grades_by_class.items() %}
                                             {% if data.semester_grades and data.semester_grades.get(semester.name) %}
                                                 {% set semester_data = data.semester_grades[semester.name] %}
-                                                {% if semester_data.status == 'in_progress' %}
-                                                    {% set semester_status = 'in_progress' %}
-                                                {% endif %}
                                                 {% if semester_data.average %}
                                                     {% set _ = semester_grades.append(semester_data.average) %}
                                                 {% endif %}
                                             {% endif %}
                                         {% endfor %}
-                                        
-                                        {% if semester_status == 'in_progress' %}
-                                            <div class="h4 fw-bold text-info">
-                                                <i class="bi bi-clock"></i> In Progress
-                                            </div>
-                                            <div class="small text-muted">Semester ends {{ semester.end_date.strftime('%m/%d/%Y') }}</div>
-                                        {% elif semester_grades %}
+                                        {% if semester_grades %}
                                             {% set semester_avg = (semester_grades | sum) / (semester_grades | length) %}
                                             {% set semester_gpa = calculate_gpa(semester_grades) %}
                                             <div class="h4 fw-bold 
@@ -2441,6 +2446,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         {% else %}
                                             <div class="h4 text-muted">N/A</div>
                                             <div class="small text-muted">No grades</div>
+                                        {% endif %}
                                         {% endif %}
                                     </div>
                                 </div>
@@ -2504,7 +2510,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                 <div class="fw-bold text-info">
                                                     <i class="bi bi-clock"></i> In Progress
                                                 </div>
-                                                <div class="small text-muted">Ends {{ quarter_data.end_date.strftime('%m/%d/%Y') }}</div>
+                                                <div class="small text-muted">Ends {{ quarter_data.end_date.strftime('%m/%d/%Y') }} (4:00 PM ET)</div>
+                                            {% elif quarter_data.status == 'calculating' %}
+                                                <div class="fw-bold text-warning">
+                                                    <i class="bi bi-hourglass-split"></i> Calculating
+                                                </div>
+                                                <div class="small text-muted">GPA available after finalization window</div>
                                             {% elif quarter_data.average %}
                                                 <div class="fw-bold 
                                                     {% if quarter_data.average >= 90 %}text-success
@@ -2541,7 +2552,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                 <div class="fw-bold text-info">
                                                     <i class="bi bi-clock"></i> In Progress
                                                 </div>
-                                                <div class="small text-muted">Ends {{ semester_data.end_date.strftime('%m/%d/%Y') }}</div>
+                                                <div class="small text-muted">Ends {{ semester_data.end_date.strftime('%m/%d/%Y') }} (4:00 PM ET)</div>
+                                            {% elif semester_data.status == 'calculating' %}
+                                                <div class="fw-bold text-warning">
+                                                    <i class="bi bi-hourglass-split"></i> Calculating
+                                                </div>
+                                                <div class="small text-muted">GPA available after finalization window</div>
                                             {% elif semester_data.average %}
                                                 <div class="fw-bold 
                                                     {% if semester_data.average >= 90 %}text-success

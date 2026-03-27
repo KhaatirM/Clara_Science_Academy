@@ -19,7 +19,9 @@
                     <div class="header-text">
                         <nav aria-label="breadcrumb" class="mb-2">
                             <ol class="breadcrumb breadcrumb-light mb-0">
-                                {% if request.args.get('admin_view') == 'true' %}
+                                {% if student_assistant_mode %}
+                                <li class="breadcrumb-item"><a href="{{ url_for('student_assistant.class_hub', class_id=class_item.id) }}">Assistant hub</a></li>
+                                {% elif request.args.get('admin_view') == 'true' %}
                                 <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
                                 <li class="breadcrumb-item"><a href="{{ url_for('management.assignments_and_grades', class_id=class_item.id) }}">Group Assignments</a></li>
                                 {% else %}
@@ -29,8 +31,9 @@
                                 <li class="breadcrumb-item active">Create</li>
                             </ol>
                         </nav>
-                        <h1 class="header-title">Create Group Assignment</h1>
+                        <h1 class="header-title">{% if student_assistant_mode %}Propose group assignment{% else %}Create Group Assignment{% endif %}</h1>
                         <p class="header-subtitle">
+                            {% if student_assistant_mode %}Your teacher or an administrator must approve this before students will see it.<br>{% endif %}
                             <i class="bi bi-book me-1"></i>{{ class_item.name }} - {{ class_item.subject }}
                             {% if class_item.get_grade_levels_display() %}<span class="badge bg-white bg-opacity-25 ms-2">{{ class_item.get_grade_levels_display() }}</span>{% endif %}
                         </p>
@@ -39,7 +42,11 @@
                         <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#groupAssignmentInfoModal" title="Scenarios and how group assignments behave">
                             <i class="bi bi-info-circle me-1"></i>What you should know
                         </button>
-                        {% if request.args.get('admin_view') == 'true' %}
+                        {% if student_assistant_mode %}
+                        <a href="{{ back_url or url_for('student_assistant.class_hub', class_id=class_item.id) }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% elif request.args.get('admin_view') == 'true' %}
                         <a href="{{ url_for('management.assignments_and_grades', class_id=class_item.id) }}" class="btn btn-light btn-sm">
                             <i class="bi bi-arrow-left me-1"></i>Back
                         </a>
@@ -87,7 +94,7 @@
     <div class="row">
         <!-- Main Form Column -->
         <div class="col-lg-8">
-            <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}" enctype="multipart/form-data" id="assignmentForm">
+            <form method="POST" action="{% if student_assistant_mode and form_action is defined %}{{ form_action }}{% else %}{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}{% endif %}" enctype="multipart/form-data" id="assignmentForm">
                 
                 <!-- Section 1: Assignment Details -->
                 <div class="form-section" data-section="1">

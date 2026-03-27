@@ -2160,3 +2160,147 @@ def view_group_assignment(assignment_id):
             return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         except:
             return redirect(url_for('teacher.dashboard.teacher_dashboard'))
+
+
+# --- Student assistant proposals: teacher / school admin must approve before students see assignments ---
+
+@bp.route('/class/<int:class_id>/assistant-assignments/pending')
+@login_required
+@teacher_required
+def pending_assistant_assignments(class_id):
+    """Review assignments created by a student assistant (awaiting approval)."""
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not is_authorized_for_class(class_obj):
+        flash('You are not authorized to access this class.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_classes'))
+
+    pending_individual = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        Assignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+    ).order_by(Assignment.created_at.desc()).all()
+
+    pending_group = GroupAssignment.query.filter(
+        GroupAssignment.class_id == class_id,
+        GroupAssignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+    ).order_by(GroupAssignment.created_at.desc()).all()
+
+    return render_template(
+        'teachers/teacher_pending_assistant_assignments.html',
+        class_obj=class_obj,
+        pending_individual=pending_individual,
+        pending_group=pending_group,
+    )
+
+
+@bp.route('/class/<int:class_id>/assistant-assignments/<int:assignment_id>/approve', methods=['POST'])
+@login_required
+@teacher_required
+def approve_assistant_assignment(class_id, assignment_id):
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_APPROVED, ASSISTANT_APPROVAL_PENDING
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not is_authorized_for_class(class_obj):
+        flash('You are not authorized.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_classes'))
+
+    a = Assignment.query.filter_by(id=assignment_id, class_id=class_id).first_or_404()
+    if a.assistant_approval_status != ASSISTANT_APPROVAL_PENDING:
+        flash('This assignment is not pending approval.', 'warning')
+        return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+    publish_status = request.form.get('publish_status', 'Active')
+    if publish_status not in ('Active', 'Inactive', 'Upcoming'):
+        publish_status = 'Active'
+
+    a.assistant_approval_status = ASSISTANT_APPROVAL_APPROVED
+    a.assistant_approval_reviewed_by_user_id = current_user.id
+    a.assistant_approval_reviewed_at = datetime.utcnow()
+    a.assistant_approval_review_notes = None
+    a.status = publish_status
+    db.session.commit()
+    flash('Assignment approved. Students in the class can now see it (per the status you chose).', 'success')
+    return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+
+@bp.route('/class/<int:class_id>/assistant-assignments/<int:assignment_id>/reject', methods=['POST'])
+@login_required
+@teacher_required
+def reject_assistant_assignment(class_id, assignment_id):
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_REJECTED, ASSISTANT_APPROVAL_PENDING
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not is_authorized_for_class(class_obj):
+        flash('You are not authorized.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_classes'))
+
+    a = Assignment.query.filter_by(id=assignment_id, class_id=class_id).first_or_404()
+    if a.assistant_approval_status != ASSISTANT_APPROVAL_PENDING:
+        flash('This assignment is not pending approval.', 'warning')
+        return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+    notes = request.form.get('review_notes', '').strip()
+    a.assistant_approval_status = ASSISTANT_APPROVAL_REJECTED
+    a.assistant_approval_reviewed_by_user_id = current_user.id
+    a.assistant_approval_reviewed_at = datetime.utcnow()
+    a.assistant_approval_review_notes = notes or None
+    db.session.commit()
+    flash('Proposal rejected. The student assistant was notified via the review notes (shown on their hub).', 'info')
+    return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+
+@bp.route('/class/<int:class_id>/assistant-group-assignments/<int:group_assignment_id>/approve', methods=['POST'])
+@login_required
+@teacher_required
+def approve_assistant_group_assignment(class_id, group_assignment_id):
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_APPROVED, ASSISTANT_APPROVAL_PENDING
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not is_authorized_for_class(class_obj):
+        flash('You are not authorized.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_classes'))
+
+    ga = GroupAssignment.query.filter_by(id=group_assignment_id, class_id=class_id).first_or_404()
+    if ga.assistant_approval_status != ASSISTANT_APPROVAL_PENDING:
+        flash('This assignment is not pending approval.', 'warning')
+        return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+    publish_status = request.form.get('publish_status', 'Active')
+    if publish_status not in ('Active', 'Inactive', 'Upcoming'):
+        publish_status = 'Active'
+
+    ga.assistant_approval_status = ASSISTANT_APPROVAL_APPROVED
+    ga.assistant_approval_reviewed_by_user_id = current_user.id
+    ga.assistant_approval_reviewed_at = datetime.utcnow()
+    ga.assistant_approval_review_notes = None
+    ga.status = publish_status
+    db.session.commit()
+    flash('Group assignment approved.', 'success')
+    return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+
+@bp.route('/class/<int:class_id>/assistant-group-assignments/<int:group_assignment_id>/reject', methods=['POST'])
+@login_required
+@teacher_required
+def reject_assistant_group_assignment(class_id, group_assignment_id):
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_REJECTED, ASSISTANT_APPROVAL_PENDING
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not is_authorized_for_class(class_obj):
+        flash('You are not authorized.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_classes'))
+
+    ga = GroupAssignment.query.filter_by(id=group_assignment_id, class_id=class_id).first_or_404()
+    if ga.assistant_approval_status != ASSISTANT_APPROVAL_PENDING:
+        flash('This assignment is not pending approval.', 'warning')
+        return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))
+
+    notes = request.form.get('review_notes', '').strip()
+    ga.assistant_approval_status = ASSISTANT_APPROVAL_REJECTED
+    ga.assistant_approval_reviewed_by_user_id = current_user.id
+    ga.assistant_approval_reviewed_at = datetime.utcnow()
+    ga.assistant_approval_review_notes = notes or None
+    db.session.commit()
+    flash('Group assignment proposal rejected.', 'info')
+    return redirect(url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id))

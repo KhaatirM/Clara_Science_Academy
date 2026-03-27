@@ -87,3 +87,55 @@ def count_assistant_classes_for_student_excluding(student_id, exclude_class_id=N
     if exclude_class_id is not None:
         q = q.filter(StudentAssistant.class_id != exclude_class_id)
     return q.count()
+
+
+# --- Assistant-proposed assignments (teacher/admin approval before students see them) ---
+
+ASSISTANT_APPROVAL_PENDING = 'pending'
+ASSISTANT_APPROVAL_APPROVED = 'approved'
+ASSISTANT_APPROVAL_REJECTED = 'rejected'
+
+
+def assignment_visible_to_students(assignment_or_group_assignment):
+    """False while pending or rejected; True for normal assignments and approved proposals."""
+    s = getattr(assignment_or_group_assignment, 'assistant_approval_status', None)
+    return s is None or s == ASSISTANT_APPROVAL_APPROVED
+
+
+def assignment_student_visibility_filter():
+    """SQLAlchemy filter: students only see approved or non-assistant assignments."""
+    from sqlalchemy import or_
+    from models import Assignment
+
+    return or_(
+        Assignment.assistant_approval_status.is_(None),
+        Assignment.assistant_approval_status == ASSISTANT_APPROVAL_APPROVED,
+    )
+
+
+def group_assignment_student_visibility_filter():
+    from sqlalchemy import or_
+    from models import GroupAssignment
+
+    return or_(
+        GroupAssignment.assistant_approval_status.is_(None),
+        GroupAssignment.assistant_approval_status == ASSISTANT_APPROVAL_APPROVED,
+    )
+
+
+def count_pending_assistant_proposals_for_class(class_id):
+    """Individual + group assignments awaiting teacher/admin approval for this class."""
+    from models import Assignment, GroupAssignment
+
+    if class_id is None:
+        return 0
+    return (
+        Assignment.query.filter(
+            Assignment.class_id == class_id,
+            Assignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+        ).count()
+        + GroupAssignment.query.filter(
+            GroupAssignment.class_id == class_id,
+            GroupAssignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+        ).count()
+    )

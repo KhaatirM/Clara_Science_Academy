@@ -2,6 +2,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assistant_approval.css') }}">
 {% endblock %}
 
 {% block title %}Assistant - {{ class_obj.name }}{% endblock %}
@@ -36,6 +37,48 @@
     {% include 'management/_student_assistant_class_switcher.html' %}
 
     <div class="row g-4">
+        <!-- Propose assignments -->
+        <div class="col-12">
+            <div class="card sa-propose-assignments-card mb-2">
+                <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <h3 class="h6 mb-1 fw-semibold sa-propose-card-title"><i class="bi bi-stars text-warning me-1"></i>Create assignments <span class="text-muted fw-normal">(teacher approval required)</span></h3>
+                        <p class="small text-muted mb-0">Proposals stay hidden from students until a teacher or administrator approves them.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('student_assistant.assistant_add_assignment', class_id=class_obj.id) }}" class="btn btn-sa-propose-primary btn-sm">
+                            <i class="bi bi-file-earmark-plus me-1"></i>Individual (PDF/paper)
+                        </a>
+                        <a href="{{ url_for('student_assistant.assistant_create_group_assignment', class_id=class_obj.id) }}" class="btn btn-sa-propose-secondary btn-sm">
+                            <i class="bi bi-people me-1"></i>Group assignment
+                        </a>
+                        <span class="small text-muted align-self-center"><i class="bi bi-info-circle me-1"></i>Teachers review proposals from <strong>Class → Review assistant proposals</strong> (they get a notification).</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if my_pending_assignments or my_pending_group %}
+        <div class="col-12">
+            <div class="alert alert-info py-2 mb-0">
+                <strong>Waiting for approval:</strong>
+                {% for a in my_pending_assignments %}<span class="me-2">{{ a.title }} (individual)</span>{% endfor %}
+                {% for g in my_pending_group %}<span class="me-2">{{ g.title }} (group)</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% if my_rejected_assignments or my_rejected_group %}
+        <div class="col-12">
+            <div class="alert alert-secondary py-2 mb-0">
+                <strong>Rejected proposals:</strong>
+                {% for a in my_rejected_assignments %}
+                <div class="small">{{ a.title }}: {{ a.assistant_approval_review_notes or 'No notes' }}</div>
+                {% endfor %}
+                {% for g in my_rejected_group %}
+                <div class="small">{{ g.title }}: {{ g.assistant_approval_review_notes or 'No notes' }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         <!-- Take Attendance card -->
         <div class="col-md-6 col-lg-4">
             <div class="card student-assistant-action-card">

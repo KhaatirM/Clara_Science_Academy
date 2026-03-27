@@ -305,6 +305,18 @@ def view_class(class_id):
         StudentAssistantActionLog.created_at.desc()
     ).limit(50).all()
 
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
+    pending_assistant_count = (
+        Assignment.query.filter(
+            Assignment.class_id == class_id,
+            Assignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+        ).count()
+        + GroupAssignment.query.filter(
+            GroupAssignment.class_id == class_id,
+            GroupAssignment.assistant_approval_status == ASSISTANT_APPROVAL_PENDING,
+        ).count()
+    )
+
     return render_template(
         'teachers/teacher_class_roster_view.html',
         class_item=class_obj,
@@ -313,7 +325,8 @@ def view_class(class_id):
         recent_attendance=recent_attendance,
         announcements=announcements,
         student_assistants=student_assistants,
-        assistant_action_logs=assistant_action_logs
+        assistant_action_logs=assistant_action_logs,
+        pending_assistant_count=pending_assistant_count,
     )
 
 @bp.route('/classes')
@@ -727,6 +740,13 @@ def assignments_and_grades():
                         RedoRequest.status == 'Pending'
                     ).count() if assignment_ids else 0
             
+            from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
+            pending_assistant_by_class = {}
+            for c in accessible_classes:
+                if c and hasattr(c, 'id') and c.id is not None:
+                    pending_assistant_by_class[c.id] = count_pending_assistant_proposals_for_class(c.id)
+            total_pending_assistant_proposals = sum(pending_assistant_by_class.values())
+
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
                                  class_assignments=class_assignments,
@@ -740,7 +760,9 @@ def assignments_and_grades():
                                  user_role=current_user.role if hasattr(current_user, 'role') else 'Teacher',
                                  show_class_selection=True,
                                  extension_request_count=pending_extension_count,
-                                 redo_request_count=pending_redo_count)
+                                 redo_request_count=pending_redo_count,
+                                 pending_assistant_by_class=pending_assistant_by_class,
+                                 total_pending_assistant_proposals=total_pending_assistant_proposals)
         
         # Handle class filter
         selected_class = None
@@ -1169,7 +1191,17 @@ def assignments_and_grades():
                     RedoRequest.assignment_id.in_(assignment_ids),
                     RedoRequest.status == 'Pending'
                 ).count() if assignment_ids else 0
-        
+
+        from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
+        pending_assistant_count = (
+            count_pending_assistant_proposals_for_class(selected_class.id) if selected_class else 0
+        )
+        pending_assistant_by_class = {}
+        for c in accessible_classes:
+            if c and hasattr(c, 'id') and c.id is not None:
+                pending_assistant_by_class[c.id] = count_pending_assistant_proposals_for_class(c.id)
+        total_pending_assistant_proposals = sum(pending_assistant_by_class.values())
+
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              classes=accessible_classes,  # For dropdown filter
@@ -1189,6 +1221,9 @@ def assignments_and_grades():
                              today=today,
                              extension_request_count=pending_extension_count,
                              redo_request_count=pending_redo_count,
+                             pending_assistant_count=pending_assistant_count,
+                             pending_assistant_by_class=pending_assistant_by_class,
+                             total_pending_assistant_proposals=total_pending_assistant_proposals,
                              # Table view data
                              enrolled_students=enrolled_students,
                              student_grades=table_student_grades if view_mode == 'table' else {},

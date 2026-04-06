@@ -5,6 +5,21 @@ import re
 from datetime import datetime, timezone
 
 
+def _as_utc_aware(dt):
+    """
+    Normalize a datetime for comparison with datetime.now(timezone.utc).
+    Naive datetimes are treated as UTC (matches legacy DB rows).
+    """
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    # date only
+    return datetime.combine(dt, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+
 def parse_discussion_description(desc):
     """Parse discussion prompt, instructions, rubric from stored description."""
     prompt, instructions, rubric = '', '', ''
@@ -204,7 +219,7 @@ def is_assignment_open_for_student(assignment, student_id):
         from models import AssignmentReopening, AssignmentRedo
         # First check: student may have extension—is their effective close_date still valid?
         student_close_date = get_student_close_date(assignment, student_id)
-        if student_close_date and now <= student_close_date:
+        if student_close_date and now <= _as_utc_aware(student_close_date):
             return True  # Still within extension window
         # Otherwise check reopening or redo
         reopening = AssignmentReopening.query.filter_by(
@@ -219,7 +234,7 @@ def is_assignment_open_for_student(assignment, student_id):
             student_id=student_id,
             is_used=False
         ).first()
-        if redo and redo.redo_deadline and now <= redo.redo_deadline:
+        if redo and redo.redo_deadline and now <= _as_utc_aware(redo.redo_deadline):
             return True  # Student has valid redo within deadline
         return False  # Inactive and no extension/reopening/redo - cannot submit
 
@@ -238,7 +253,7 @@ def is_assignment_open_for_student(assignment, student_id):
             student_id=student_id,
             is_used=False
         ).first()
-        if redo and redo.redo_deadline and now <= redo.redo_deadline:
+        if redo and redo.redo_deadline and now <= _as_utc_aware(redo.redo_deadline):
             return True  # Valid redo grants access
         # Fall through to open_date check below (will return False)
     
@@ -257,7 +272,7 @@ def is_assignment_open_for_student(assignment, student_id):
     # Check close_date (with extension support)
     student_close_date = get_student_close_date(assignment, student_id)
     if student_close_date:
-        if now > student_close_date:
+        if now > _as_utc_aware(student_close_date):
             return False  # Assignment is closed (even with extension)
     
     return True  # Assignment is open

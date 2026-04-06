@@ -1,7 +1,7 @@
 # Standard library imports
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Core Flask imports
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
@@ -31,7 +31,7 @@ from models import (
 
 # Authentication and decorators
 from decorators import student_required
-from teacher_routes.assignment_utils import is_assignment_open_for_student
+from teacher_routes.assignment_utils import is_assignment_open_for_student, _as_utc_aware
 from management_routes.student_assistant_utils import (
     assignment_student_visibility_filter,
     group_assignment_student_visibility_filter,
@@ -2188,6 +2188,9 @@ def view_class(class_id):
     # Get current date for assignment status
     from datetime import datetime
     today = datetime.now().date()
+
+    # Template lookup: Jinja {% set %} inside nested loops does not update outer scope — use a dict
+    class_assignment_status_by_id = {a.id: st for a, _s, st in assignments_with_status}
     
     assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
     is_assistant_for_this_class = any(c.id == class_id for c in assistant_for_classes)
@@ -2207,7 +2210,8 @@ def view_class(class_id):
                          today=today,
                          show_class_details=True,
                          assistant_for_classes=assistant_for_classes,
-                         is_assistant_for_this_class=is_assistant_for_this_class)
+                         is_assistant_for_this_class=is_assistant_for_this_class,
+                         class_assignment_status_by_id=class_assignment_status_by_id)
 
 
 @student_blueprint.route('/class/<int:class_id>/assignments')
@@ -3433,8 +3437,8 @@ def submit_assignment(assignment_id):
                 redo_record.redo_submission_id = submission.id
                 redo_record.redo_submitted_at = datetime.utcnow()
                 
-                # Check if redo was submitted late
-                if datetime.utcnow() > redo_record.redo_deadline:
+                # Check if redo was submitted late (normalize tz for DB values that may be naive or aware)
+                if datetime.now(timezone.utc) > _as_utc_aware(redo_record.redo_deadline):
                     redo_record.was_redo_late = True
                 
                 db.session.commit()

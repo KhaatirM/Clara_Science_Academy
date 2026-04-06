@@ -2113,6 +2113,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <div class="row g-3">
                                         {% for assignment in assignments[:6] %}
                                         <div class="col-md-6">
+                                            {% set assignment_status = (class_assignment_status_by_id|default({})).get(assignment.id, 'Un-Submitted') %}
                                             <div class="card border h-100" style="border-radius: 0.5rem; border-color: #e9ecef; transition: all 0.3s ease;">
                                                 <div class="card-body" style="padding: 1.25rem;">
                                                     <div class="d-flex align-items-start mb-2">
@@ -2144,12 +2145,6 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                                     <strong>Due:</strong> {{ assignment.due_date.strftime('%B %d, %Y') }}
                                                             {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                             {% set days_remaining = (due_date - today).days %}
-                                                            {% set assignment_status = 'Un-Submitted' %}
-                                                            {% for assignment_item, sub_ignored, st in assignments_with_status %}
-                                                                {% if assignment_item.id == assignment.id %}
-                                                                    {% set assignment_status = st %}
-                                                                {% endif %}
-                                                            {% endfor %}
                                                             {% if assignment_status == 'completed' %}
                                                                         <span class="badge bg-success ms-2" style="font-size: 0.7rem;">Completed</span>
                                                             {% elif assignment_status == 'submitted_in_person' %}

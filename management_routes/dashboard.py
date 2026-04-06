@@ -226,7 +226,8 @@ def management_dashboard():
 @login_required
 def redo_dashboard():
     """Dashboard showing all active redo opportunities, reopenings, and pending redo requests from students"""
-    from datetime import datetime
+    from datetime import datetime, timezone
+    from teacher_routes.assignment_utils import _as_utc_aware
     from models import AssignmentRedo, AssignmentReopening, Assignment, Class, TeacherStaff, RedoRequest
     from sqlalchemy.orm import joinedload
     
@@ -277,8 +278,8 @@ def redo_dashboard():
     # Calculate statistics
     active_redos = len([r for r in redos if not r.is_used and not r.final_grade])
     completed_redos = len([r for r in redos if r.final_grade])
-    now = datetime.utcnow()
-    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline and r.redo_deadline < now])
+    now = datetime.now(timezone.utc)
+    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline and _as_utc_aware(r.redo_deadline) < now])
     active_reopenings = len(reopenings)
     
     # Calculate average improvement

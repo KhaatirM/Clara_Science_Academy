@@ -437,11 +437,11 @@ def save_group_assignment(class_id):
         grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
         grade_scale = None
         if grade_scale_preset == 'standard':
-            grade_scale = json.dumps({"A": 90, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": False})
+            grade_scale = json.dumps({"A": 93, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": True})
         elif grade_scale_preset == 'strict':
-            grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": False})
+            grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": True})
         elif grade_scale_preset == 'lenient':
-            grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": False})
+            grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": True})
         
         selected_groups = request.form.getlist('groups')  # List of group IDs
         

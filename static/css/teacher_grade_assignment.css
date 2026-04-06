@@ -65,10 +65,49 @@
     border-color: #667eea;
 }
 
-/* Grade Distribution Chart */
+/* Grade distribution (summary + bar) */
 .grade-distribution {
-    margin-top: 1rem;
+    margin-top: 0.25rem;
 }
+
+.grade-distribution-card .grade-dist-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.grade-dist-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+}
+
+.grade-dist-pill strong {
+    font-weight: 700;
+    color: #111827;
+}
+
+.grade-dist-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.grade-dist-pill.dist-a .grade-dist-dot { background: #059669; }
+.grade-dist-pill.dist-b .grade-dist-dot { background: #2563eb; }
+.grade-dist-pill.dist-c .grade-dist-dot { background: #d97706; }
+.grade-dist-pill.dist-d .grade-dist-dot { background: #dc2626; }
+.grade-dist-pill.dist-f .grade-dist-dot { background: #7f1d1d; }
+.grade-dist-pill.dist-ungraded .grade-dist-dot { background: #9ca3af; }
 
 .distribution-bar {
     display: flex;
@@ -78,11 +117,20 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
+.distribution-bar-v2 {
+    height: 14px;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    background: #f1f5f9;
+}
+
 .dist-segment {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: width 0.35s ease;
+    min-width: 0;
     color: white;
     font-weight: 600;
     font-size: 0.85rem;
@@ -98,7 +146,65 @@
 .dist-c { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
 .dist-d { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
 .dist-f { background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%); }
-.dist-ungraded { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); }
+.dist-ungraded { background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%); }
+
+.grade-dist-footnote {
+    font-size: 0.8125rem;
+}
+
+/* Grade spread filter buttons */
+.grade-filter-group {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.grade-filter-group .grade-filter-btn {
+    border: none;
+    border-right: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #6b7280;
+    font-weight: 600;
+    min-width: 88px;
+    padding: 0.38rem 0.8rem;
+    line-height: 1.25;
+    transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.grade-filter-group .grade-filter-btn:last-child {
+    border-right: none;
+}
+
+.grade-filter-group .grade-filter-btn:hover {
+    background: #f8fafc;
+}
+
+.grade-filter-group .grade-filter-btn.is-active {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.grade-filter-group .grade-filter-btn[data-filter="passing"].is-active {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.grade-filter-group .grade-filter-btn[data-filter="failing"].is-active {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.grade-filter-group .grade-filter-btn[data-filter="ungraded"].is-active {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.grade-filter-group .grade-filter-btn:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: -2px;
+    z-index: 1;
+}
 
 /* Auto-save Indicator */
 .auto-save-indicator {
@@ -326,6 +432,31 @@
     transform: translateY(-3px) !important;
     box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
     border-color: white !important;
+}
+
+.grading-header .btn-grading-help {
+    background: #fff7ed !important;
+    color: #9a3412 !important;
+    border: 2px solid #fed7aa !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+    transition: all 0.2s ease !important;
+}
+
+.grading-header .btn-grading-help:hover {
+    background: #ffedd5 !important;
+    color: #7c2d12 !important;
+    border-color: #fdba74 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important;
+}
+
+.grading-header .btn-grading-help:focus-visible {
+    outline: 3px solid rgba(251, 146, 60, 0.55) !important;
+    outline-offset: 2px !important;
 }
 
 /* High Visibility Buttons for Green Gradient Header (Bulk Actions) */

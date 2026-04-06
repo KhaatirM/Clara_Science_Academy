@@ -136,7 +136,7 @@
                                 style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: 2px solid #28a745; color: white; font-weight: 600; padding: 0.5rem 1.25rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3); transition: all 0.3s ease;">
                             <i class="bi bi-check-circle-fill me-2"></i>All Present
                         </button>
-                        <button type="button" class="btn btn-status-action btn-all-absent" onclick="markAllSchoolDay('Absent')"
+                        <button type="button" class="btn btn-status-action btn-all-absent" onclick="markAllSchoolDay('Unexcused Absence')"
                                 style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border: 2px solid #dc3545; color: white; font-weight: 600; padding: 0.5rem 1.25rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); transition: all 0.3s ease;">
                             <i class="bi bi-x-circle-fill me-2"></i>All Absent
                         </button>
@@ -175,10 +175,9 @@
                                             <input type="hidden" name="status-{{ student.id }}" class="school-day-status-input" value="{{ current_status }}" data-student-id="{{ student.id }}">
                                             <div class="status-btn-group" role="group">
                                                 <span class="btn btn-status-present status-pill" data-status="Present" data-student-id="{{ student.id }}" title="Present"><i class="bi bi-check-circle-fill me-1"></i>Present</span>
-                                                <span class="btn btn-status-absent status-pill" data-status="Absent" data-student-id="{{ student.id }}" title="Absent"><i class="bi bi-x-circle-fill me-1"></i>Absent</span>
+                                                <span class="btn btn-status-absent status-pill" data-status="Unexcused Absence" data-student-id="{{ student.id }}" title="Absent"><i class="bi bi-x-circle-fill me-1"></i>Absent</span>
                                                 <span class="btn btn-status-late status-pill" data-status="Late" data-student-id="{{ student.id }}" title="Late"><i class="bi bi-clock-fill me-1"></i>Late</span>
                                                 <span class="btn btn-status-excused status-pill" data-status="Excused Absence" data-student-id="{{ student.id }}" title="Excused"><i class="bi bi-info-circle-fill me-1"></i>Excused</span>
-                                                <span class="btn btn-status-unexcused status-pill" data-status="Unexcused Absence" data-student-id="{{ student.id }}" title="Unexcused"><i class="bi bi-exclamation-circle-fill me-1"></i>Unexcused</span>
                                             </div>
                                         </td>
                                         <td>

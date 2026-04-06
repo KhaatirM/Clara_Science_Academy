@@ -1,5 +1,23 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/view_assignment.css') }}">
+<style>
+  .btn-void-top {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: none;
+    color: #fff;
+  }
+  .btn-void-top:hover { filter: brightness(1.05); color: #fff; }
+  .btn-unvoid-top {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: #fff;
+  }
+  .btn-unvoid-top:hover { filter: brightness(1.05); color: #fff; }
+</style>
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
   <!-- Enhanced Header with Status Badge -->
@@ -36,72 +54,34 @@
       {% endif %}
     </div>
     <div class="d-flex gap-2 flex-wrap">
+      {% set has_voided_grades = group_grades|selectattr('is_voided', 'equalto', True)|list|length > 0 if group_grades else False %}
       <a href="{{ url_for('management.assignments_and_grades', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back
       </a>
       <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
         <i class="bi bi-check-circle me-1"></i>Grade
       </a>
+      <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#groupSubmissionsModal">
+        <i class="bi bi-inbox me-1"></i>Submissions
+      </button>
       <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-warning btn-sm">
         <i class="bi bi-pencil me-1"></i>Edit
       </a>
       <a href="{{ url_for('management.admin_grant_group_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-clock me-1"></i>Extensions
       </a>
+      {% if has_voided_grades %}
+      <button type="button" class="btn btn-sm btn-unvoid-top" data-bs-toggle="modal" data-bs-target="#unvoidGroupModal">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Unvoid
+      </button>
+      {% endif %}
+      <button type="button" class="btn btn-sm btn-void-top" data-bs-toggle="modal" data-bs-target="#voidGroupModal">
+        <i class="bi bi-slash-circle me-1"></i>Void
+      </button>
       <button type="button" class="btn btn-danger btn-sm" 
               onclick="confirmDeleteAssignment({{ group_assignment.id }}, '{{ group_assignment.title }}')">
         <i class="bi bi-trash me-1"></i>Delete
       </button>
-    </div>
-  </div>
-
-  <!-- Enhanced Statistics Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="card-body text-white text-center py-3">
-          <i class="bi bi-inbox display-6 mb-2 opacity-75"></i>
-          <h3 class="mb-0 fw-bold">{{ submission_count }}</h3>
-          <p class="mb-0 small text-white-50">Submissions</p>
-          {% if groups %}
-            <small class="text-white-75">of {{ groups|length }} groups</small>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-        <div class="card-body text-white text-center py-3">
-          <i class="bi bi-check-circle-fill display-6 mb-2 opacity-75"></i>
-          <h3 class="mb-0 fw-bold">{{ graded_count }}</h3>
-          <p class="mb-0 small text-white-50">Graded</p>
-          {% if total_students %}
-            <small class="text-white-75">of {{ total_students }} students</small>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-        <div class="card-body text-white text-center py-3">
-          <i class="bi bi-people display-6 mb-2 opacity-75"></i>
-          <h3 class="mb-0 fw-bold">{{ total_students }}</h3>
-          <p class="mb-0 small text-white-50">Students</p>
-          <small class="text-white-75">in {{ groups|length }} groups</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-        <div class="card-body text-white text-center py-3">
-          <i class="bi bi-graph-up-arrow display-6 mb-2 opacity-75"></i>
-          <h3 class="mb-0 fw-bold">{{ "%.0f"|format(submission_rate) }}%</h3>
-          <p class="mb-0 small text-white-50">Submission Rate</p>
-          <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.3);">
-            <div class="progress-bar bg-white" role="progressbar" style="width: {{ submission_rate }}%"></div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -112,7 +92,7 @@
         <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
           <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Details</h5>
         </div>
-        <div class="card-body">
+        <div class="card-body p-3">
           {% if group_assignment.description %}
             <div class="mb-4">
               <h6 class="text-primary"><i class="bi bi-file-text me-2"></i>Description</h6>
@@ -121,175 +101,116 @@
             <hr>
           {% endif %}
 
-          <div class="row g-3">
+          <div class="row g-2">
             <div class="col-md-6">
-              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
-                <i class="bi bi-calendar-event text-primary me-3 fs-5"></i>
+              <div class="d-flex align-items-start p-2 rounded border bg-light">
+                <i class="bi bi-calendar-event text-primary me-2"></i>
                 <div>
                   <small class="text-muted d-block mb-1">Due Date</small>
-                  <strong class="d-block">{{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if group_assignment.due_date else 'Not set' }}</strong>
+                  <strong class="d-block small">{{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if group_assignment.due_date else 'Not set' }}</strong>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
-                <i class="bi bi-people text-success me-3 fs-5"></i>
+              <div class="d-flex align-items-start p-2 rounded border bg-light">
+                <i class="bi bi-people text-success me-2"></i>
                 <div>
                   <small class="text-muted d-block mb-1">Group Size</small>
-                  <strong class="d-block">{{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max or '∞' }} students</strong>
+                  <strong class="d-block small">{{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max or '∞' }} students</strong>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
-                <i class="bi bi-book text-info me-3 fs-5"></i>
+              <div class="d-flex align-items-start p-2 rounded border bg-light">
+                <i class="bi bi-book text-info me-2"></i>
                 <div>
                   <small class="text-muted d-block mb-1">Class</small>
-                  <strong class="d-block">{{ group_assignment.class_info.name }}</strong>
+                  <strong class="d-block small">{{ group_assignment.class_info.name }}</strong>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
-                <i class="bi bi-tag text-warning me-3 fs-5"></i>
+              <div class="d-flex align-items-start p-2 rounded border bg-light">
+                <i class="bi bi-tag text-warning me-2"></i>
                 <div>
                   <small class="text-muted d-block mb-1">Type</small>
-                  <strong class="d-block">{{ group_assignment.assignment_type.title() }}</strong>
+                  <strong class="d-block small">{{ group_assignment.assignment_type.title() }}</strong>
                 </div>
               </div>
             </div>
             {% if group_assignment.quarter %}
             <div class="col-md-6">
-              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
-                <i class="bi bi-bookmark text-secondary me-3 fs-5"></i>
+              <div class="d-flex align-items-start p-2 rounded border bg-light">
+                <i class="bi bi-bookmark text-secondary me-2"></i>
                 <div>
                   <small class="text-muted d-block mb-1">Quarter</small>
-                  <strong class="d-block">Q{{ group_assignment.quarter }}</strong>
+                  <strong class="d-block small">Q{{ group_assignment.quarter }}</strong>
                 </div>
               </div>
             </div>
             {% endif %}
             {% if group_assignment.total_points %}
             <div class="col-md-6">
-              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
-                <i class="bi bi-star text-warning me-3 fs-5"></i>
+              <div class="d-flex align-items-start p-2 rounded border bg-light">
+                <i class="bi bi-star text-warning me-2"></i>
                 <div>
                   <small class="text-muted d-block mb-1">Total Points</small>
-                  <strong class="d-block">{{ group_assignment.total_points }}</strong>
+                  <strong class="d-block small">{{ group_assignment.total_points }}</strong>
                 </div>
               </div>
             </div>
             {% endif %}
           </div>
 
-          {% if group_assignment.attachment_filename %}
+          {% if group_assignment.attachment_filename or group_assignment.attachment_file_path %}
             <hr>
             <div class="mt-3">
-              <h6 class="text-primary mb-3"><i class="bi bi-paperclip me-2"></i>Attachments</h6>
-              <div class="card border">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                      <i class="bi bi-file-earmark-pdf text-danger me-3 fs-3"></i>
-                      <div>
-                        <strong class="d-block">{{ group_assignment.attachment_original_filename or group_assignment.attachment_filename }}</strong>
-                        {% if group_assignment.attachment_file_size %}
-                          <small class="text-muted">{{ "%.2f"|format(group_assignment.attachment_file_size / 1024 / 1024) }} MB</small>
-                        {% endif %}
-                      </div>
-                    </div>
-                    <a href="{{ url_for('static', filename='uploads/' ~ group_assignment.attachment_filename) }}" 
-                       class="btn btn-primary btn-sm" target="_blank">
-                      <i class="bi bi-download me-1"></i>Download
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          {% endif %}
-        </div>
-      </div>
+              {% set attachment_name = group_assignment.attachment_original_filename or group_assignment.attachment_filename or 'Attached file' %}
+              {% set attachment_download_url = url_for('download_group_assignment_file', assignment_id=group_assignment.id) %}
+              {% set attachment_view_url = url_for('download_group_assignment_file', assignment_id=group_assignment.id, view='true') %}
+              {% set attachment_lower = (attachment_name or '')|lower %}
+              {% set is_pdf = (group_assignment.attachment_mime_type and 'pdf' in group_assignment.attachment_mime_type|lower) or attachment_lower.endswith('.pdf') %}
 
-      <!-- Enhanced Submissions -->
-      <div class="card shadow-sm border-0 mt-4">
-        <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none;">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-inbox me-2"></i>Group Submissions ({{ submission_count }})</h5>
-            {% if submission_count > 0 %}
-              <div class="d-flex gap-2">
-                <span class="badge bg-white text-success">{{ on_time_submissions }} On Time</span>
-                <span class="badge bg-white text-danger">{{ late_submissions }} Late</span>
-              </div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="card-body p-0">
-          {% if submissions %}
-            <div class="list-group list-group-flush">
-              {% for submission in submissions %}
-                {% set group_name = '' %}
-                {% for group in groups %}
-                  {% if group.id == submission.group_id %}
-                    {% set group_name = group.name %}
-                  {% endif %}
-                {% endfor %}
-                <div class="list-group-item border-0 border-bottom">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                      <div class="d-flex align-items-center gap-2 mb-2">
-                        <h6 class="mb-0">{{ group_name or 'Unknown Group' }}</h6>
-                        <span class="badge bg-{% if submission.is_late %}danger{% else %}success{% endif %}">
-                          <i class="bi bi-{% if submission.is_late %}exclamation-triangle{% else %}check-circle{% endif %} me-1"></i>
-                          {{ 'Late' if submission.is_late else 'On Time' }}
-                        </span>
-                      </div>
-                      <div class="mb-2">
-                        <small class="text-muted">
-                          <i class="bi bi-clock me-1"></i>
-                          Submitted: {{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') if submission.submitted_at else 'Not submitted' }}
-                        </small>
-                        {% if submission.submitter %}
-                          <br>
-                          <small class="text-muted">
-                            <i class="bi bi-person me-1"></i>
-                            By: {{ submission.submitter.first_name }} {{ submission.submitter.last_name }}
-                          </small>
-                        {% endif %}
-                      </div>
-                      {% if submission.submission_text %}
-                        <p class="mb-2 text-muted small">{{ submission.submission_text[:150] }}{% if submission.submission_text|length > 150 %}...{% endif %}</p>
-                      {% endif %}
-                      {% if submission.comments %}
-                        <div class="alert alert-info py-2 px-3 mb-0 small">
-                          <i class="bi bi-chat-left-text me-1"></i>{{ submission.comments }}
-                        </div>
-                      {% endif %}
+              <div class="card border-0 shadow-sm mb-4" style="background: #ffffff;">
+                <div class="card-header bg-white border-bottom">
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                      <h6 class="mb-0"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Assignment Document</h6>
+                      <small class="text-muted">{{ attachment_name }}</small>
                     </div>
-                    <div class="d-flex flex-column gap-2 ms-3">
-                      {% if submission.attachment_filename %}
-                        <a href="{{ url_for('static', filename='uploads/' ~ submission.attachment_filename) }}" 
-                           class="btn btn-outline-primary btn-sm" target="_blank" title="Download submission">
-                          <i class="bi bi-download"></i>
-                        </a>
-                      {% endif %}
-                      <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" 
-                         class="btn btn-success btn-sm" title="Grade this submission">
-                        <i class="bi bi-check-circle"></i>
+                    <div class="btn-group" role="group">
+                      <a href="{{ attachment_view_url if is_pdf else attachment_download_url }}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Open document">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                      </a>
+                      <a href="{{ attachment_download_url }}" class="btn btn-sm btn-outline-secondary" download title="Download document">
+                        <i class="bi bi-download"></i>
                       </a>
                     </div>
                   </div>
                 </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="p-5 text-center">
-              <i class="bi bi-inbox text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
-              <h5 class="text-muted mt-3">No Submissions Yet</h5>
-              <p class="text-muted mb-0">Groups haven't submitted their work for this assignment.</p>
+                <div class="card-body p-0">
+                  {% if is_pdf %}
+                    <div style="height: 70vh; min-height: 560px;">
+                      <iframe src="{{ attachment_view_url }}#toolbar=0&navpanes=0&scrollbar=1&zoom=page-width"
+                              title="Group assignment PDF"
+                              style="width: 100%; height: 100%; border: none;"></iframe>
+                    </div>
+                  {% else %}
+                    <div class="p-4 text-center bg-light">
+                      <i class="bi bi-file-earmark-text display-6 text-muted mb-2"></i>
+                      <p class="text-muted mb-3">Preview is available for PDF files. Download to view this file.</p>
+                      <a href="{{ attachment_download_url }}" class="btn btn-primary btn-sm" download>
+                        <i class="bi bi-download me-1"></i>Download File
+                      </a>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
             </div>
           {% endif %}
         </div>
       </div>
+
     </div>
 
     <!-- Enhanced Sidebar -->
@@ -345,51 +266,56 @@
         </div>
       </div>
 
-      <!-- Enhanced Assignment Stats -->
-      <div class="card shadow-sm border-0 mt-4">
-        <div class="card-header text-white" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); border: none;">
-          <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistics</h5>
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="text-muted small">Submission Progress</span>
-              <span class="fw-bold">{{ submission_count }}/{{ groups|length }}</span>
-            </div>
-            <div class="progress" style="height: 8px;">
-              <div class="progress-bar bg-success" role="progressbar" style="width: {{ submission_rate }}%"></div>
+      <!-- Statistics Cards (moved below Class Groups) -->
+      <div class="row g-3 mt-1">
+        <div class="col-6">
+          <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-white text-center py-3">
+              <i class="bi bi-inbox display-6 mb-2 opacity-75"></i>
+              <h3 class="mb-0 fw-bold">{{ group_submission_count }}</h3>
+              <p class="mb-0 small text-white-50">Groups Submitted</p>
+              {% if groups %}
+                <small class="text-white-75">of {{ groups|length }} groups</small>
+              {% endif %}
             </div>
           </div>
-          
-          <div class="row g-3 text-center">
-            <div class="col-6">
-              <div class="p-2 rounded" style="background: #e7f5e7;">
-                <h5 class="mb-0 text-success">{{ on_time_submissions }}</h5>
-                <small class="text-muted d-block">On Time</small>
-              </div>
+        </div>
+        <div class="col-6">
+          <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="card-body text-white text-center py-3">
+              <i class="bi bi-check-circle-fill display-6 mb-2 opacity-75"></i>
+              <h3 class="mb-0 fw-bold">{{ graded_count }}</h3>
+              <p class="mb-0 small text-white-50">Graded</p>
+              {% if total_students %}
+                <small class="text-white-75">of {{ total_students }} students</small>
+              {% endif %}
             </div>
-            <div class="col-6">
-              <div class="p-2 rounded" style="background: #ffe7e7;">
-                <h5 class="mb-0 text-danger">{{ late_submissions }}</h5>
-                <small class="text-muted d-block">Late</small>
-              </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="card-body text-white text-center py-3">
+              <i class="bi bi-people display-6 mb-2 opacity-75"></i>
+              <h3 class="mb-0 fw-bold">{{ total_students }}</h3>
+              <p class="mb-0 small text-white-50">Students</p>
+              <small class="text-white-75">in {{ groups|length }} groups</small>
             </div>
-            <div class="col-6">
-              <div class="p-2 rounded" style="background: #e7f0ff;">
-                <h5 class="mb-0 text-primary">{{ graded_count }}</h5>
-                <small class="text-muted d-block">Graded</small>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="p-2 rounded" style="background: #fff4e7;">
-                <h5 class="mb-0 text-warning">{{ total_students - graded_count }}</h5>
-                <small class="text-muted d-block">Pending</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <div class="card-body text-white text-center py-3">
+              <i class="bi bi-graph-up-arrow display-6 mb-2 opacity-75"></i>
+              <h3 class="mb-0 fw-bold">{{ "%.0f"|format(submission_rate) }}%</h3>
+              <p class="mb-0 small text-white-50">Submission Rate</p>
+              <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.3);">
+                <div class="progress-bar bg-white" role="progressbar" style="width: {{ submission_rate }}%"></div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       <!-- Extensions Card -->
       {% if extensions %}
       <div class="card shadow-sm border-0 mt-4">
@@ -425,12 +351,262 @@
   </div>
 </div>
 
+<!-- Group Submissions Modal -->
+<div class="modal fade" id="groupSubmissionsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-inbox me-2"></i>Online Group Submissions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Group</th>
+                <th>Submitted By</th>
+                <th>Submitted At</th>
+                <th>Status</th>
+                <th>File/Text</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set ns = namespace(has_rows=false) %}
+              {% for submission in submissions %}
+                {% if submission.attachment_filename or submission.attachment_file_path or submission.submission_text %}
+                  {% set ns.has_rows = true %}
+                  <tr>
+                    <td>{{ submission.group.name if submission.group else 'Unknown Group' }}</td>
+                    <td>{{ submission.submitter.first_name ~ ' ' ~ submission.submitter.last_name if submission.submitter else 'N/A' }}</td>
+                    <td>{{ submission.submitted_at.strftime('%b %d, %Y %I:%M %p') if submission.submitted_at else 'N/A' }}</td>
+                    <td>
+                      <span class="badge bg-{{ 'warning text-dark' if submission.is_late else 'success' }}">{{ 'Late' if submission.is_late else 'On Time' }}</span>
+                    </td>
+                    <td>
+                      {% if submission.attachment_filename or submission.attachment_file_path %}
+                        <a href="{{ url_for('static', filename=(submission.attachment_file_path or submission.attachment_filename)|replace('\\', '/')) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                          <i class="bi bi-eye me-1"></i>Open
+                        </a>
+                      {% elif submission.submission_text %}
+                        <span class="text-muted small">Text submission</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+              {% if not ns.has_rows %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted py-4">No online submissions yet.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+          <i class="bi bi-check-circle me-1"></i>Go to Grade
+        </a>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Void Group Assignment Modal -->
+<div class="modal fade" id="voidGroupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content modal-modern">
+      <div class="modal-header-void">
+        <div class="modal-icon-void">
+          <i class="bi bi-slash-circle"></i>
+        </div>
+        <div class="flex-grow-1">
+          <h5 class="modal-title-void">Void Group Assignment</h5>
+          <p class="modal-subtitle-void">Exclude from grade calculations</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.void_group_assignment', assignment_id=group_assignment.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="modal-body modal-body-enhanced">
+          <div class="alert-modern alert-void">
+            <div class="alert-icon">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+              <div class="alert-title">Important Notice</div>
+              <p class="alert-text">Voiding excludes this assignment from grade calculations. Students see <strong>0/0 points</strong> (does not affect GPA).</p>
+            </div>
+          </div>
+
+          <div class="void-options-section">
+            <label class="section-label">
+              <i class="bi bi-gear me-2"></i>Void Options
+            </label>
+
+            <div class="option-card option-card-active" onclick="selectAdminGroupVoidOption('all_groups', this)">
+              <input class="form-check-input" type="radio" name="void_scope" id="voidAllGroups" value="all_groups" checked onchange="toggleAdminGroupVoidSelection()">
+              <label class="option-card-label" for="voidAllGroups">
+                <div class="option-icon bg-danger"><i class="bi bi-people-fill"></i></div>
+                <div class="option-content">
+                  <div class="option-title">Void for All Groups</div>
+                  <div class="option-description">All groups and all students will be voided</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="option-card" onclick="selectAdminGroupVoidOption('specific_groups', this)">
+              <input class="form-check-input" type="radio" name="void_scope" id="voidSpecificGroups" value="specific_groups" onchange="toggleAdminGroupVoidSelection()">
+              <label class="option-card-label" for="voidSpecificGroups">
+                <div class="option-icon bg-warning"><i class="bi bi-people"></i></div>
+                <div class="option-content">
+                  <div class="option-title">Void for Specific Groups</div>
+                  <div class="option-description">Choose only certain groups</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="option-card" onclick="selectAdminGroupVoidOption('specific_students', this)">
+              <input class="form-check-input" type="radio" name="void_scope" id="voidSpecificStudents" value="specific_students" onchange="toggleAdminGroupVoidSelection()">
+              <label class="option-card-label" for="voidSpecificStudents">
+                <div class="option-icon bg-info"><i class="bi bi-person-check-fill"></i></div>
+                <div class="option-content">
+                  <div class="option-title">Void for Specific Students</div>
+                  <div class="option-description">Choose individual students across groups</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div id="adminGroupSelectionDiv" class="student-selection-section" style="display:none;">
+            <div class="selection-header"><i class="bi bi-people me-2"></i>Select Groups</div>
+            <div class="students-grid">
+              {% for group in groups %}
+              <div class="student-select-card">
+                <input class="form-check-input admin-void-group-checkbox" type="checkbox" name="group_ids" value="{{ group.id }}" id="admin_void_group_{{ group.id }}">
+                <label class="student-select-label" for="admin_void_group_{{ group.id }}">
+                  <div class="student-avatar-mini bg-primary"><i class="bi bi-people"></i></div>
+                  <span>{{ group.name }}</span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div id="adminStudentSelectionDiv" class="student-selection-section" style="display:none;">
+            <div class="selection-header"><i class="bi bi-people me-2"></i>Select Students</div>
+            <div class="students-grid" style="max-height:300px; overflow-y:auto;">
+              {% set ns = namespace(ids=[]) %}
+              {% for group in groups %}
+                {% for member in group.members %}
+                  {% if member.student_id not in ns.ids %}
+                    {% set ns.ids = ns.ids + [member.student_id] %}
+                    <div class="student-select-card">
+                      <input class="form-check-input admin-void-student-checkbox" type="checkbox" name="student_ids" value="{{ member.student_id }}" id="admin_void_student_{{ member.student_id }}">
+                      <label class="student-select-label" for="admin_void_student_{{ member.student_id }}">
+                        <div class="student-avatar-mini">
+                          {{ member.student.first_name[0] if member.student else '?' }}{{ member.student.last_name[0] if member.student else '?' }}
+                        </div>
+                        <span>{{ member.student.first_name if member.student else 'Unknown' }} {{ member.student.last_name if member.student else '' }} ({{ group.name }})</span>
+                      </label>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="reason-section">
+            <label for="admin_void_reason" class="section-label"><i class="bi bi-chat-text me-2"></i>Reason for Voiding <span class="text-muted">(Optional)</span></label>
+            <textarea class="form-control form-control-modern" id="admin_void_reason" name="reason" rows="3" placeholder="Snow day, technical issues, curriculum change..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-enhanced">
+          <button type="button" class="btn btn-cancel" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+          <button type="submit" class="btn btn-void"><i class="bi bi-slash-circle me-2"></i>Void Assignment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if has_voided_grades %}
+<!-- Unvoid Group Assignment Modal -->
+<div class="modal fade" id="unvoidGroupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content modal-modern">
+      <div class="modal-header-unvoid">
+        <div class="modal-icon-unvoid">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </div>
+        <div class="flex-grow-1">
+          <h5 class="modal-title-unvoid">Restore Group Assignment</h5>
+          <p class="modal-subtitle-unvoid">Include back in grade calculations</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.unvoid_group_assignment', assignment_id=group_assignment.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="modal-body modal-body-enhanced">
+          <div class="alert-modern alert-unvoid">
+            <div class="alert-icon">
+              <i class="bi bi-info-circle"></i>
+            </div>
+            <div>
+              <div class="alert-title">Restore Assignment</div>
+              <p class="alert-text">Restoring will include this assignment back in grade calculations. Original grades are restored.</p>
+            </div>
+          </div>
+          <div class="void-options-section">
+            <label class="section-label"><i class="bi bi-gear me-2"></i>Restore Options</label>
+            <div class="option-card option-card-active">
+              <input class="form-check-input" type="radio" name="unvoid_scope" id="adminUnvoidAll" value="all" checked>
+              <label class="option-card-label" for="adminUnvoidAll">
+                <div class="option-icon bg-success"><i class="bi bi-people-fill"></i></div>
+                <div class="option-content">
+                  <div class="option-title">Restore for All</div>
+                  <div class="option-description">Restore all voided grades for this assignment</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-enhanced">
+          <button type="button" class="btn btn-cancel" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+          <button type="submit" class="btn btn-unvoid"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore Assignment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Hidden delete form -->
 <form id="deleteAssignmentForm" method="POST" style="display: none;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 </form>
 
 <script>
+function toggleAdminGroupVoidSelection() {
+    const checked = document.querySelector('input[name="void_scope"]:checked');
+    const scope = checked ? checked.value : 'all_groups';
+    const groupDiv = document.getElementById('adminGroupSelectionDiv');
+    const studentDiv = document.getElementById('adminStudentSelectionDiv');
+    if (!groupDiv || !studentDiv) return;
+    groupDiv.style.display = scope === 'specific_groups' ? 'block' : 'none';
+    studentDiv.style.display = scope === 'specific_students' ? 'block' : 'none';
+}
+
+function selectAdminGroupVoidOption(option, el) {
+    document.querySelectorAll('#voidGroupModal .option-card').forEach(card => card.classList.remove('option-card-active'));
+    if (el) el.classList.add('option-card-active');
+    const radio = document.querySelector(`#voidGroupModal input[name="void_scope"][value="${option}"]`);
+    if (radio) radio.checked = true;
+    toggleAdminGroupVoidSelection();
+}
+
 function confirmDeleteAssignment(assignmentId, assignmentTitle) {
     if (confirm(`Are you sure you want to delete the assignment "${assignmentTitle}"?\n\nThis action cannot be undone and will delete all grades and submissions for this assignment.`)) {
         const form = document.getElementById('deleteAssignmentForm');
@@ -438,5 +614,9 @@ function confirmDeleteAssignment(assignmentId, assignmentTitle) {
         form.submit();
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    toggleAdminGroupVoidSelection();
+});
 </script>
 {% endblock %}

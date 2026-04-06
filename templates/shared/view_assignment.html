@@ -6,6 +6,7 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
+    {% set has_assignment_document = assignment.attachment_list or assignment.attachment_filename %}
     <!-- Compact Header Section -->
     <div class="view-assignment-header mb-4">
         <div class="d-flex justify-content-between align-items-start">
@@ -243,253 +244,104 @@
                 </div>
             </div>
 
-            <!-- Quick Action Buttons (Moved to main column) -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h6>
-                </div>
-                <div class="card-body p-3">
-                    <!-- Google Forms Integration Section (for quiz assignments) -->
-                    {% if assignment.assignment_type == 'quiz' %}
-                    <div class="mb-3 p-3 bg-info bg-opacity-10 border border-info rounded">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <strong><i class="bi bi-google me-2"></i>Google Forms Integration</strong>
-                        </div>
-                        
-                        {% if assignment.google_form_linked and assignment.google_form_url %}
-                            <!-- Already Linked -->
-                            <div class="mb-2">
-                                <p class="mb-1 small text-muted">This quiz is linked to a Google Form</p>
-                                <div class="d-flex gap-2">
-                                    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.sync_google_forms_submissions', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.sync_google_forms_submissions', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-sm btn-info">
-                                            <i class="bi bi-arrow-repeat me-1"></i>Sync Submissions
-                                        </button>
-                                    </form>
-                                    <a href="{{ assignment.google_form_url }}" target="_blank" class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i>View Form
-                                    </a>
-                                </div>
-                            </div>
-                        {% else %}
-                            <!-- Not Linked - Offer Export -->
-                            <div class="mb-2">
-                                <p class="mb-1 small text-muted">Export this quiz to Google Forms</p>
-                                <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        <i class="bi bi-upload me-1"></i>Export to Google Forms
-                                    </button>
-                                </form>
-                            </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    <div class="compact-action-grid">
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
-                            {% if assignment.assignment_type == 'quiz' %}
-                            <a href="{{ url_for('management.create_quiz_assignment') }}?edit={{ assignment.id }}" 
-                               class="btn btn-compact btn-compact-edit">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Edit</span>
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-compact btn-compact-edit">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Edit</span>
-                            </a>
-                            {% endif %}
-                            <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" 
-                               class="btn btn-compact btn-compact-submissions">
-                                <i class="bi bi-file-earmark-arrow-up"></i>
-                                <span>Submissions</span>
-                            </a>
-                            {% if assignment.assignment_type == 'quiz' and not has_open_ended_questions %}
-                                <button class="btn btn-compact btn-compact-grade" 
-                                        title="This quiz contains only auto-graded questions. All grades are automatically calculated when students submit their quizzes." 
-                                        disabled style="opacity: 0.6; cursor: not-allowed;">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                    <span>Auto-Graded</span>
-                                </button>
-                            {% else %}
-                                <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" 
-                                   class="btn btn-compact btn-compact-grade">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                    <span>Grade</span>
-                                </a>
-                            {% endif %}
-                        {% else %}
-                            {% if assignment.assignment_type == 'quiz' %}
-                            <a href="{{ url_for('teacher.create_quiz_assignment') }}?edit={{ assignment.id }}" 
-                               class="btn btn-compact btn-compact-edit">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Edit</span>
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-compact btn-compact-edit">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Edit</span>
-                            </a>
-                            {% endif %}
-                            <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" 
-                               class="btn btn-compact btn-compact-submissions">
-                                <i class="bi bi-file-earmark-arrow-up"></i>
-                                <span>Submissions</span>
-                            </a>
-                            {% if assignment.assignment_type == 'quiz' and not has_open_ended_questions %}
-                                <button class="btn btn-compact btn-compact-grade" 
-                                        title="This quiz contains only auto-graded questions. All grades are automatically calculated when students submit their quizzes." 
-                                        disabled style="opacity: 0.6; cursor: not-allowed;">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                    <span>Auto-Graded</span>
-                                </button>
-                            {% else %}
-                                <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" 
-                                   class="btn btn-compact btn-compact-grade">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                    <span>Grade</span>
-                                </a>
-                            {% endif %}
-                        {% endif %}
-                        <button class="btn btn-compact btn-compact-extension" 
-                                onclick="openExtensionModal()">
-                            <i class="bi bi-clock-history"></i>
-                            <span>Extensions</span>
-                        </button>
-                        <button class="btn btn-compact btn-compact-reopen" 
-                                onclick="openReopenModal()">
-                            <i class="bi bi-arrow-repeat"></i>
-                            <span>Reopen</span>
-                        </button>
-                        {% set has_voided_grades = assignment.grades|selectattr('is_voided', 'equalto', True)|list|length > 0 %}
-                        {% if has_voided_grades %}
-                        <button class="btn btn-compact btn-compact-unvoid" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#unvoidModal">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                            <span>Unvoid</span>
-                        </button>
-                        {% endif %}
-                        <button class="btn btn-compact btn-compact-void" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#voidModal">
-                            <i class="bi bi-slash-circle"></i>
-                            <span>Void</span>
-                        </button>
-                        <button class="btn btn-compact btn-compact-remove" 
-                                onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
-                            <i class="bi bi-trash"></i>
-                            <span>Remove</span>
-                        </button>
-                        <button onclick="goBack()" class="btn btn-compact btn-compact-back">
-                            <i class="bi bi-arrow-left-circle"></i>
-                            <span>Back</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {% if not has_assignment_document %}
+                {% include 'shared/_assignment_actions_card.html' %}
+            {% endif %}
         </div>
 
-        <!-- Right Column - Compact Stats & Class Info -->
+        <!-- Right Column - Overview & Class Details -->
         <div class="col-lg-4">
-            <!-- Statistics Card -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistics</h6>
+            <div class="card border-0 shadow-sm mb-4 assignment-overview-card">
+                <div class="card-header overview-header">
+                    <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Assignment Overview</h6>
                 </div>
-                <div class="card-body p-3">
-                    <div class="row g-3">
-                        <!-- Submissions -->
-                        <div class="col-6">
-                            <div class="stat-item">
-                                <div class="stat-icon-wrapper bg-primary bg-opacity-10">
-                                    <i class="bi bi-file-text-fill text-primary"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ submissions_count|default(0) }}</div>
-                                    <div class="stat-label">Submissions</div>
-                                    {% if total_students %}
-                                        <div class="stat-sublabel text-muted">{{ submission_rate }}% of class</div>
-                                    {% endif %}
-                                </div>
-                            </div>
+                <div class="card-body p-3 p-xl-4">
+                    <div class="overview-metric-grid">
+                        <div class="overview-metric metric-submitted">
+                            <div class="overview-metric-label">Submitted</div>
+                            <div class="overview-metric-value">{{ submissions_count|default(0) }}</div>
+                            <div class="overview-metric-note">Student submissions</div>
                         </div>
-                        
-                        <!-- Points -->
-                        <div class="col-6">
-                            <div class="stat-item">
-                                <div class="stat-icon-wrapper bg-warning bg-opacity-10">
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ assignment_points|default(0)|int if assignment_points else 'N/A' }}</div>
-                                    <div class="stat-label">Total Points</div>
-                                    {% if average_score is not none %}
-                                        <div class="stat-sublabel text-success">Avg: {{ average_score }}%</div>
-                                    {% endif %}
-                                </div>
-                            </div>
+                        <div class="overview-metric metric-graded">
+                            <div class="overview-metric-label">Graded</div>
+                            <div class="overview-metric-value">{{ graded_count|default(0) }}</div>
+                            <div class="overview-metric-note">With active grades</div>
                         </div>
-                        
-                        <!-- Graded -->
-                        <div class="col-6">
-                            <div class="stat-item">
-                                <div class="stat-icon-wrapper bg-success bg-opacity-10">
-                                    <i class="bi bi-check-circle-fill text-success"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ graded_count|default(0) }}</div>
-                                    <div class="stat-label">Graded</div>
-                                    {% if total_students %}
-                                        <div class="stat-sublabel text-muted">{{ grading_rate }}% complete</div>
-                                    {% endif %}
-                                </div>
-                            </div>
+                        <div class="overview-metric metric-pending">
+                            <div class="overview-metric-label">Awaiting Grade</div>
+                            <div class="overview-metric-value">{{ pending_count|default(0) }}</div>
+                            <div class="overview-metric-note">Not graded yet</div>
                         </div>
-                        
-                        <!-- Students -->
-                        <div class="col-6">
-                            <div class="stat-item">
-                                <div class="stat-icon-wrapper bg-info bg-opacity-10">
-                                    <i class="bi bi-people-fill text-info"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ total_students|default(0) }}</div>
-                                    <div class="stat-label">Students</div>
-                                    <div class="stat-sublabel text-muted">Enrolled</div>
-                                </div>
-                            </div>
+                        <div class="overview-metric metric-students">
+                            <div class="overview-metric-label">Enrolled</div>
+                            <div class="overview-metric-value">{{ total_students|default(0) }}</div>
+                            <div class="overview-metric-note">Students in class</div>
+                        </div>
+                    </div>
+
+                    <div class="overview-progress-wrap mt-3">
+                        <div class="overview-progress-label">
+                            <span>Submission Progress</span>
+                            <strong>{{ submission_rate|default(0) }}%</strong>
+                        </div>
+                        <div class="progress overview-progress">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ submission_rate|default(0) }}%" aria-valuenow="{{ submission_rate|default(0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <div class="overview-progress-wrap mt-2">
+                        <div class="overview-progress-label">
+                            <span>Grading Progress</span>
+                            <strong>{{ grading_rate|default(0) }}%</strong>
+                        </div>
+                        <div class="progress overview-progress">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ grading_rate|default(0) }}%" aria-valuenow="{{ grading_rate|default(0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <div class="overview-footer mt-3">
+                        <div class="overview-points">
+                            <i class="bi bi-star-fill me-1 text-warning"></i>
+                            Total Points:
+                            <strong>{% if assignment_points %}{{ assignment_points|int }}{% else %}N/A{% endif %}</strong>
+                        </div>
+                        <div class="overview-average">
+                            <i class="bi bi-speedometer2 me-1 text-success"></i>
+                            Class Avg:
+                            <strong>{% if average_score is not none %}{{ average_score }}%{% else %}N/A{% endif %}</strong>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Class Info Card -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>Class Info</h6>
+            <div class="card border-0 shadow-sm class-details-card">
+                <div class="card-header class-details-header">
+                    <h6 class="mb-0"><i class="bi bi-mortarboard-fill me-2"></i>Class Details</h6>
                 </div>
-                <div class="card-body p-3">
+                <div class="card-body p-3 p-xl-4">
                     {% if class_info %}
-                        <div class="compact-info-list">
-                            <div class="compact-info-row">
-                                <span class="compact-info-label">Class:</span>
-                                <span class="compact-info-value">{{ class_info.name }}</span>
+                        <div class="class-detail-list">
+                            <div class="class-detail-row">
+                                <span class="class-detail-key"><i class="bi bi-book me-2"></i>Class</span>
+                                <span class="class-detail-value">{{ class_info.name }}</span>
                             </div>
-                            <div class="compact-info-row">
-                                <span class="compact-info-label">Subject:</span>
-                                <span class="compact-info-value">{{ class_info.subject }}</span>
+                            <div class="class-detail-row">
+                                <span class="class-detail-key"><i class="bi bi-journal-text me-2"></i>Subject</span>
+                                <span class="class-detail-value">{{ class_info.subject or 'N/A' }}</span>
                             </div>
-                            <div class="compact-info-row">
-                                <span class="compact-info-label">Grade:</span>
-                                <span class="compact-info-value">{{ class_info.grade_level if class_info.grade_level else 'N/A' }}</span>
+                            <div class="class-detail-row">
+                                <span class="class-detail-key"><i class="bi bi-grid-3x3-gap me-2"></i>Grade Level</span>
+                                <span class="class-detail-value">{{ class_info.grade_level if class_info.grade_level else 'N/A' }}</span>
                             </div>
-                            <div class="compact-info-row">
-                                <span class="compact-info-label">Teacher:</span>
-                                <span class="compact-info-value">{{ class_info.teacher.first_name if class_info.teacher else 'N/A' }}</span>
+                            <div class="class-detail-row">
+                                <span class="class-detail-key"><i class="bi bi-person-badge me-2"></i>Teacher</span>
+                                <span class="class-detail-value">
+                                    {% if class_info.teacher %}
+                                        {{ class_info.teacher.first_name }} {{ class_info.teacher.last_name or '' }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                     {% else %}
@@ -497,6 +349,12 @@
                     {% endif %}
                 </div>
             </div>
+
+            {% if has_assignment_document %}
+                <div class="mt-4">
+                    {% include 'shared/_assignment_actions_card.html' %}
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -1413,9 +1271,9 @@ function showNotification(message, type) {
 // Back navigation: always go to intended page (no history.back)
 function goBack() {
     {% if current_user.role in ['Director', 'School Administrator'] %}
-        window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+        window.location.href = "{{ url_for('management.assignments_and_grades', class_id=assignment.class_id, view='assignments') }}";
     {% else %}
-        window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+        window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades', class_id=assignment.class_id, view='assignments') }}";
     {% endif %}
 }
 

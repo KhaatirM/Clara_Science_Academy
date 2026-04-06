@@ -84,6 +84,11 @@ class Student(db.Model):
     dob = db.Column(db.String(20)) # Storing as string as per our previous finding
     grade_level = db.Column(db.Integer)  # Changed to Integer to match app.py expectations
     student_id = db.Column(db.String(50), nullable=True, unique=True)
+    gender = db.Column(db.String(30), nullable=True)
+    # Stored as school-year string (e.g., "2025-2026")
+    entrance_date = db.Column(db.String(9), nullable=True)
+    # Stored as month/year string for report cards (e.g., "06/2030")
+    expected_grad_date = db.Column(db.String(7), nullable=True)
     address = db.Column(db.Text, nullable=True)
     photo_filename = db.Column(db.String(255), nullable=True)
     transcript_filename = db.Column(db.String(255), nullable=True)

@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 27, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 5, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,90 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 27, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 5, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>March 27</strong> streamlines the <strong>teacher home</strong> (one place for assignments and grading), adds a <strong>Calculating</strong> state for quarter/semester GPA while grades are finalized, and introduces <strong>automatic reminders</strong> two weeks before each period ends. <strong>March 26</strong> covers student assistant proposals and approvals; <strong>March 25</strong> academic alerts, void/reopen, submissions, and the multi-class assistant console—then Tech devices, eligibility rules, group assignments, and earlier updates.</p>
+                        <p class="updates-intro-text mb-0"><strong>April 5</strong> focuses on report-card safeguards, profile-sync confirmation fields, and admin alerting for generation checks. <strong>Early April</strong> adds the updated grading policy and GPA mappings, upgraded assignment/group-assignment workflows, student assistant expansion (quiz/discussion proposals), attendance cleanup, and stronger void-status consistency across teacher, admin, and student views.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- April 5, 2026 - Report cards, grading policy, alerts -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Report Cards, Grading Policy &amp; Safeguards – April 5, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Updated grading policy (Q4 onward):</strong> Letter-grade cutoffs, +/- handling, GPA point mapping, and grade distribution were updated system-wide. Failing letter output now uses <strong>E</strong> instead of legacy failing labels in all key grading/report-card paths.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report-card confirmation now profile-synced:</strong> Student confirmation data in report-card generation is now sourced from student records to improve accuracy. Required profile fields for this flow include <strong>Gender</strong> and <strong>Entrance School Year</strong> (with school-year choices going back to 2020).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Generation alerts for leadership:</strong> Whenever a report card is generated, Directors and School Administrators now receive in-app and email alerts. The system also checks quarter-grade continuity and flags inconsistent patterns for review.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Templates and outputs aligned:</strong> Report-card templates and sanitization logic were refreshed so generated PDFs and viewed report-card data remain consistent with the current grading model.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Grading and report cards are now aligned under one policy, generation is more auditable, and school leadership gets immediate visibility when report cards are created or need review.</p>
+                        </div>
+                    </div>
+
+                    <!-- April 4, 2026 - Assignments and group assignment experience -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-file-earmark-richtext me-2"></i>Assignments &amp; Group Assignment Experience – April 4, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher grading workflow cleanup:</strong> Grade-distribution visuals and filters were redesigned, ungraded logic was corrected (including valid <strong>0</strong> scores), and grading actions now better respect voided records.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment view/back navigation refinements:</strong> Assignment view and grading pages were reorganized for clarity, with back-navigation behavior tuned to return users to the right class-scoped assignments view.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignment view upgrades:</strong> Document/PDF display, compact details, submissions modal, and void/unvoid controls were improved for both teachers and administrators, with refreshed modal/button styling for consistency.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignment creation/edit improvements:</strong> File-upload UI for PDF/Paper flows was redesigned, and group-assignment editing now supports replacing uploaded documents.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Assignment workflows are cleaner and faster to use, document handling is more reliable, and group-assignment management is clearer across creation, viewing, and grading.</p>
+                        </div>
+                    </div>
+
+                    <!-- April 3, 2026 - Assistant, attendance, and student status consistency -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-people-fill me-2"></i>Student Assistant, Attendance &amp; Status Consistency – April 3, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Assistant expansion:</strong> Assistants can now propose <strong>quiz</strong> and <strong>discussion</strong> assignments (in addition to PDF/Paper) through the established approval workflow.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Attendance simplification:</strong> School-day attendance controls were streamlined by consolidating overlapping absence actions while preserving the same underlying behavior.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Voided status shown correctly to students:</strong> Student class/recent-assignment views now correctly surface <strong>Voided</strong> instead of misleading late/not-submitted states where applicable.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Selector clarity for group assignment types:</strong> Group Discussion remains visible but marked <strong>Under Development</strong> and non-selectable, keeping the available path clear.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Assistant capabilities are broader, attendance actions are easier to use, and students get more accurate status visibility across assignments.</p>
+                        </div>
+                    </div>
 
                     <!-- March 27, 2026 - Teacher home, GPA window, period reminders -->
                     <div class="update-section mb-4">

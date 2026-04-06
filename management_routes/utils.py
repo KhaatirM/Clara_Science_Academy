@@ -409,26 +409,28 @@ def calculate_student_gpa(student_id):
         percentage = (earned_points / total_points) * 100
         
         # Convert percentage to GPA (4.0 scale)
-        if percentage >= 97:
+        if percentage >= 93:
             return 4.0
-        elif percentage >= 93:
-            return 3.7
         elif percentage >= 90:
-            return 3.3
+            return 3.67
         elif percentage >= 87:
-            return 3.0
+            return 3.33
         elif percentage >= 83:
-            return 2.7
+            return 3.0
         elif percentage >= 80:
-            return 2.3
+            return 2.67
         elif percentage >= 77:
-            return 2.0
+            return 2.33
         elif percentage >= 73:
-            return 1.7
+            return 2.0
         elif percentage >= 70:
-            return 1.3
+            return 1.67
         elif percentage >= 67:
+            return 1.33
+        elif percentage >= 63:
             return 1.0
+        elif percentage >= 60:
+            return 0.67
         else:
             return 0.0
             

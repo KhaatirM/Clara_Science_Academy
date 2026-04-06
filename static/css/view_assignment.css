@@ -95,6 +95,126 @@
     letter-spacing: 0.5px;
 }
 
+/* ===== ASSIGNMENT OVERVIEW SIDEBAR ===== */
+.assignment-overview-card .overview-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff;
+    border: none;
+}
+
+.overview-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.overview-metric {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.75rem 0.85rem;
+    background: #fff;
+}
+
+.overview-metric-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+    color: #64748b;
+}
+
+.overview-metric-value {
+    font-size: 1.4rem;
+    line-height: 1.15;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 0.2rem;
+}
+
+.overview-metric-note {
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin-top: 0.15rem;
+}
+
+.overview-metric.metric-submitted { border-top: 3px solid #2563eb; }
+.overview-metric.metric-graded { border-top: 3px solid #059669; }
+.overview-metric.metric-pending { border-top: 3px solid #f59e0b; }
+.overview-metric.metric-students { border-top: 3px solid #7c3aed; }
+
+.overview-progress-wrap {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.55rem 0.65rem;
+}
+
+.overview-progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #334155;
+    margin-bottom: 0.35rem;
+}
+
+.overview-progress-label strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.overview-progress {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.overview-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    font-size: 0.86rem;
+    color: #334155;
+}
+
+.class-details-header {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #fff;
+    border: none;
+}
+
+.class-detail-list {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.class-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px dashed #e5e7eb;
+    padding-bottom: 0.45rem;
+}
+
+.class-detail-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.class-detail-key {
+    color: #475569;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.class-detail-value {
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: right;
+}
+
 /* ===== DOCUMENT VIEWER STYLES ===== */
 .document-viewer-wrapper {
     display: flex;
@@ -202,6 +322,10 @@
 }
 
 @media (max-width: 768px) {
+    .overview-metric-grid {
+        grid-template-columns: 1fr;
+    }
+
     .document-viewer-container {
         min-height: 600px;
         height: 70vh;

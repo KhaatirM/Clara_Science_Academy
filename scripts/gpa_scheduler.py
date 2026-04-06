@@ -29,15 +29,29 @@ def calculate_student_gpa(grades):
             grade_data = json.loads(grade.grade_data)
             score = grade_data.get('score', 0)
             
-            # Convert percentage to GPA (assuming 90+ = 4.0, 80-89 = 3.0, etc.)
-            if score >= 90:
+            # Convert percentage to GPA with +/- grading points.
+            if score >= 93:
                 gpa_points = 4.0
-            elif score >= 80:
+            elif score >= 90:
+                gpa_points = 3.67
+            elif score >= 87:
+                gpa_points = 3.33
+            elif score >= 83:
                 gpa_points = 3.0
-            elif score >= 70:
+            elif score >= 80:
+                gpa_points = 2.67
+            elif score >= 77:
+                gpa_points = 2.33
+            elif score >= 73:
                 gpa_points = 2.0
-            elif score >= 60:
+            elif score >= 70:
+                gpa_points = 1.67
+            elif score >= 67:
+                gpa_points = 1.33
+            elif score >= 63:
                 gpa_points = 1.0
+            elif score >= 60:
+                gpa_points = 0.67
             else:
                 gpa_points = 0.0
             
@@ -86,15 +100,29 @@ def update_all_gpas():
                         grade_data = json.loads(grade.grade_data)
                         score = grade_data.get('score', 0)
                         
-                        # Convert percentage to GPA (assuming 90+ = 4.0, 80-89 = 3.0, etc.)
-                        if score >= 90:
+                        # Convert percentage to GPA with +/- grading points.
+                        if score >= 93:
                             gpa_points = 4.0
-                        elif score >= 80:
+                        elif score >= 90:
+                            gpa_points = 3.67
+                        elif score >= 87:
+                            gpa_points = 3.33
+                        elif score >= 83:
                             gpa_points = 3.0
-                        elif score >= 70:
+                        elif score >= 80:
+                            gpa_points = 2.67
+                        elif score >= 77:
+                            gpa_points = 2.33
+                        elif score >= 73:
                             gpa_points = 2.0
-                        elif score >= 60:
+                        elif score >= 70:
+                            gpa_points = 1.67
+                        elif score >= 67:
+                            gpa_points = 1.33
+                        elif score >= 63:
                             gpa_points = 1.0
+                        elif score >= 60:
+                            gpa_points = 0.67
                         else:
                             gpa_points = 0.0
                         

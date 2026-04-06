@@ -569,7 +569,7 @@ def grade_group_assignment(class_id, assignment_id):
                 else:
                     display_total = total_points
                 percentage = (points_earned / display_total * 100) if display_total > 0 else 0
-                letter_grade = 'A' if percentage >= 90 else ('B' if percentage >= 80 else ('C' if percentage >= 70 else ('D' if percentage >= 60 else 'D')))
+                letter_grade = 'A' if percentage >= 90 else ('B' if percentage >= 80 else ('C' if percentage >= 70 else ('D' if percentage >= 60 else 'E')))
                 grade_data = {
                     'score': points_earned,
                     'points_earned': points_earned,
@@ -930,6 +930,368 @@ def assistant_add_assignment(class_id):
     )
 
 
+@bp.route('/class/<int:class_id>/assignments/new/quiz', methods=['GET', 'POST'])
+@login_required
+def assistant_add_quiz_assignment(class_id):
+    """Create a quiz assignment proposal (requires teacher/admin approval)."""
+    class_obj, err = _require_assistant(class_id)
+    if err:
+        return err
+
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
+    from teacher_routes.utils import get_current_quarter
+    from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+    from models import QuizQuestion, QuizOption, QuizSection
+
+    if request.method == 'POST':
+        try:
+            title = (request.form.get('title') or '').strip()
+            description = request.form.get('description', '')
+            due_date_str = (request.form.get('due_date') or '').strip()
+            quarter = (request.form.get('quarter') or '').strip()
+            posted_class_id = request.form.get('class_id', type=int)
+
+            if not all([title, due_date_str, quarter]):
+                flash("Please fill in all required fields.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id))
+
+            # Keep proposal scoped to this assistant class even if class_id is tampered.
+            if posted_class_id and posted_class_id != class_id:
+                flash("Invalid class selection.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id))
+
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                flash("Invalid due date format.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id))
+
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
+            if not close_date:
+                close_date = due_date
+
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash("Cannot create assignment: No active school year.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id))
+
+            allow_save_and_continue = request.form.get('allow_save_and_continue') == 'on'
+            max_save_attempts = int(request.form.get('max_save_attempts', 10))
+            save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
+            time_limit_str = request.form.get('time_limit', '').strip()
+            time_limit_minutes = int(time_limit_str) if time_limit_str else None
+            max_attempts = int(request.form.get('attempts', 1))
+            shuffle_questions = request.form.get('shuffle_questions') == 'on'
+            show_correct_answers = request.form.get('show_correct_answers') == 'on'
+            link_google_form = request.form.get('link_google_form') == 'on'
+            google_form_url = request.form.get('google_form_url', '').strip()
+            google_form_id = None
+            assignment_context = request.form.get('assignment_context', 'homework')
+
+            if link_google_form and google_form_url:
+                import re
+                match = re.search(r'/forms/d/e/([A-Za-z0-9_-]+)/', google_form_url)
+                if match:
+                    google_form_id = match.group(1)
+                else:
+                    flash('Invalid Google Forms URL format. Please check the URL.', 'warning')
+
+            new_assignment = Assignment(
+                title=title,
+                description=description,
+                due_date=due_date,
+                open_date=open_date,
+                close_date=close_date,
+                quarter=str(quarter),
+                class_id=class_id,
+                school_year_id=current_school_year.id,
+                status='Inactive',
+                assignment_type='quiz',
+                assignment_context=assignment_context,
+                allow_save_and_continue=allow_save_and_continue,
+                max_save_attempts=max_save_attempts,
+                save_timeout_minutes=save_timeout_minutes,
+                time_limit_minutes=time_limit_minutes,
+                max_attempts=max_attempts,
+                shuffle_questions=shuffle_questions,
+                show_correct_answers=show_correct_answers,
+                google_form_id=google_form_id,
+                google_form_url=google_form_url if link_google_form else None,
+                google_form_linked=link_google_form,
+                created_by=current_user.id,
+                assistant_approval_status=ASSISTANT_APPROVAL_PENDING,
+                proposed_by_student_id=current_user.student_id,
+            )
+            db.session.add(new_assignment)
+            db.session.flush()
+
+            block_order_str = request.form.get('block_order', '').strip()
+            question_count = 0
+            total_points = 0.0
+            current_section_id = None
+            section_order = 0
+
+            if block_order_str:
+                blocks = [b.strip() for b in block_order_str.split(',') if b.strip()]
+                for block in blocks:
+                    if block.startswith('section_'):
+                        try:
+                            section_idx = block.replace('section_', '')
+                            section_title = request.form.get(f'section_title_{section_idx}', '').strip() or f'Part {section_order + 1}'
+                            sec = QuizSection(assignment_id=new_assignment.id, title=section_title, order=section_order)
+                            db.session.add(sec)
+                            db.session.flush()
+                            current_section_id = sec.id
+                            section_order += 1
+                        except Exception:
+                            pass
+                        continue
+
+                    if not block.startswith('question_'):
+                        continue
+                    question_id = block.replace('question_', '')
+                    question_text = request.form.get(f'question_text_{question_id}', '').strip()
+                    if not question_text:
+                        continue
+                    question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
+                    points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                    total_points += points
+                    question = QuizQuestion(
+                        assignment_id=new_assignment.id,
+                        section_id=current_section_id,
+                        question_text=question_text,
+                        question_type=question_type,
+                        points=points,
+                        order=question_count
+                    )
+                    db.session.add(question)
+                    db.session.flush()
+
+                    if question_type == 'multiple_choice':
+                        option_count = 0
+                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                        option_values = request.form.getlist(f'option_text_{question_id}[]')
+                        for option_text in option_values:
+                            option_text = option_text.strip()
+                            if not option_text:
+                                continue
+                            is_correct = str(option_count) == correct_answer
+                            db.session.add(QuizOption(
+                                question_id=question.id,
+                                option_text=option_text,
+                                is_correct=is_correct,
+                                order=option_count
+                            ))
+                            option_count += 1
+                    elif question_type == 'true_false':
+                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                        db.session.add(QuizOption(question_id=question.id, option_text='True', is_correct=(correct_answer == 'true'), order=0))
+                        db.session.add(QuizOption(question_id=question.id, option_text='False', is_correct=(correct_answer == 'false'), order=1))
+
+                    question_count += 1
+            else:
+                # Fallback for forms that submit questions without block order.
+                question_ids = set()
+                for key in request.form.keys():
+                    if key.startswith('question_text_') and not key.endswith('[]'):
+                        question_ids.add(key.split('_')[-1])
+                for question_id in sorted(question_ids, key=lambda x: int(x) if x.isdigit() else 999):
+                    question_text = request.form.get(f'question_text_{question_id}', '').strip()
+                    if not question_text:
+                        continue
+                    question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
+                    points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                    total_points += points
+                    question = QuizQuestion(
+                        assignment_id=new_assignment.id,
+                        section_id=None,
+                        question_text=question_text,
+                        question_type=question_type,
+                        points=points,
+                        order=question_count
+                    )
+                    db.session.add(question)
+                    db.session.flush()
+                    if question_type == 'multiple_choice':
+                        option_count = 0
+                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                        option_values = request.form.getlist(f'option_text_{question_id}[]')
+                        for option_text in option_values:
+                            option_text = option_text.strip()
+                            if not option_text:
+                                continue
+                            is_correct = str(option_count) == correct_answer
+                            db.session.add(QuizOption(
+                                question_id=question.id,
+                                option_text=option_text,
+                                is_correct=is_correct,
+                                order=option_count
+                            ))
+                            option_count += 1
+                    elif question_type == 'true_false':
+                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                        db.session.add(QuizOption(question_id=question.id, option_text='True', is_correct=(correct_answer == 'true'), order=0))
+                        db.session.add(QuizOption(question_id=question.id, option_text='False', is_correct=(correct_answer == 'false'), order=1))
+                    question_count += 1
+
+            new_assignment.total_points = total_points if total_points > 0 else 100.0
+            db.session.commit()
+
+            _notify_teacher_and_admins(
+                class_id,
+                'Quiz assignment pending your approval (student assistant)',
+                f'{current_user.username} proposed quiz assignment "{title}".',
+                link=url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id),
+            )
+            flash(
+                'Your quiz assignment was submitted for approval. It will not appear to students until a teacher or administrator approves it.',
+                'success',
+            )
+            return redirect(url_for('student_assistant.class_hub', class_id=class_id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception(f'Assistant add quiz assignment: {e}')
+            flash(f'Error creating quiz assignment: {str(e)}', 'danger')
+            return redirect(url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id))
+
+    current_quarter = get_current_quarter()
+    return render_template(
+        'shared/create_quiz_assignment.html',
+        classes=[class_obj],
+        class_obj=class_obj,
+        current_quarter=current_quarter,
+        assignment=None,
+        quiz_data=None,
+        question_banks_url='',
+        save_to_bank_url='',
+        student_assistant_mode=True,
+        form_action=url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id),
+        back_url=url_for('student_assistant.class_hub', class_id=class_id),
+    )
+
+
+@bp.route('/class/<int:class_id>/assignments/new/discussion', methods=['GET', 'POST'])
+@login_required
+def assistant_add_discussion_assignment(class_id):
+    """Create a discussion assignment proposal (requires teacher/admin approval)."""
+    class_obj, err = _require_assistant(class_id)
+    if err:
+        return err
+
+    from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
+    from teacher_routes.utils import get_current_quarter
+    from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title', '').strip()
+            posted_class_id = request.form.get('class_id', type=int)
+            discussion_prompt = request.form.get('discussion_prompt', '').strip()
+            description = request.form.get('description', '').strip()
+            due_date_str = request.form.get('due_date', '').strip()
+            quarter = request.form.get('quarter', '').strip()
+            total_points = request.form.get('total_points', type=float) or 100.0
+            assignment_context = request.form.get('assignment_context', 'homework')
+            min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
+            min_replies = request.form.get('min_replies', type=int) or 2
+            allow_student_edit_posts = request.form.get('allow_student_edit_posts') == 'on'
+            use_rubric = request.form.get('use_rubric') == 'on'
+            rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+
+            if not all([title, discussion_prompt, due_date_str, quarter]):
+                flash("Please fill in all required fields.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id))
+
+            if posted_class_id and posted_class_id != class_id:
+                flash("Invalid class selection.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id))
+
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                flash("Invalid due date.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id))
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
+            if not close_date:
+                close_date = due_date
+
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash("Cannot create assignment: No active school year.", "danger")
+                return redirect(url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id))
+
+            full_description = f"**Discussion Prompt:**\n{discussion_prompt}\n\n"
+            if description:
+                full_description += f"**Instructions:**\n{description}\n\n"
+            if rubric_criteria:
+                full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
+            full_description += (
+                f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n"
+                f"- Minimum {min_replies} reply/replies to classmates"
+            )
+
+            new_assignment = Assignment(
+                title=title,
+                description=full_description,
+                due_date=due_date,
+                open_date=open_date,
+                close_date=close_date,
+                quarter=str(quarter),
+                class_id=class_id,
+                school_year_id=current_school_year.id,
+                assignment_type='discussion',
+                status='Inactive',
+                assignment_context=assignment_context,
+                total_points=total_points,
+                created_by=current_user.id,
+                allow_student_edit_posts=allow_student_edit_posts,
+                assistant_approval_status=ASSISTANT_APPROVAL_PENDING,
+                proposed_by_student_id=current_user.student_id,
+            )
+            db.session.add(new_assignment)
+            db.session.commit()
+
+            _notify_teacher_and_admins(
+                class_id,
+                'Discussion assignment pending your approval (student assistant)',
+                f'{current_user.username} proposed discussion assignment "{title}".',
+                link=url_for('teacher.assignments.pending_assistant_assignments', class_id=class_id),
+            )
+            flash(
+                'Your discussion assignment was submitted for approval. It will not appear to students until a teacher or administrator approves it.',
+                'success',
+            )
+            return redirect(url_for('student_assistant.class_hub', class_id=class_id))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception(f'Assistant add discussion assignment: {e}')
+            flash(f'Error saving discussion assignment: {str(e)}', 'danger')
+            return redirect(url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id))
+
+    current_quarter = get_current_quarter()
+    return render_template(
+        'shared/create_discussion_assignment.html',
+        classes=[class_obj],
+        class_obj=class_obj,
+        current_quarter=current_quarter,
+        assignment=None,
+        discussion_prompt='',
+        instructions='',
+        rubric_criteria='',
+        min_initial_posts=1,
+        min_replies=2,
+        student_assistant_mode=True,
+        form_action=url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id),
+        back_url=url_for('student_assistant.class_hub', class_id=class_id),
+    )
+
+
 @bp.route('/class/<int:class_id>/group-assignment/create', methods=['GET'])
 @login_required
 def assistant_create_group_assignment(class_id):
@@ -1009,11 +1371,11 @@ def assistant_save_group_assignment(class_id):
         grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
         grade_scale = None
         if grade_scale_preset == 'standard':
-            grade_scale = json.dumps({'A': 90, 'B': 80, 'C': 70, 'D': 60, 'F': 0, 'use_plus_minus': False})
+            grade_scale = json.dumps({'A': 93, 'B': 80, 'C': 70, 'D': 60, 'F': 0, 'use_plus_minus': True})
         elif grade_scale_preset == 'strict':
-            grade_scale = json.dumps({'A': 93, 'B': 85, 'C': 77, 'D': 70, 'F': 0, 'use_plus_minus': False})
+            grade_scale = json.dumps({'A': 93, 'B': 85, 'C': 77, 'D': 70, 'F': 0, 'use_plus_minus': True})
         elif grade_scale_preset == 'lenient':
-            grade_scale = json.dumps({'A': 88, 'B': 78, 'C': 68, 'D': 58, 'F': 0, 'use_plus_minus': False})
+            grade_scale = json.dumps({'A': 88, 'B': 78, 'C': 68, 'D': 58, 'F': 0, 'use_plus_minus': True})
 
         selected_groups = request.form.getlist('groups')
 

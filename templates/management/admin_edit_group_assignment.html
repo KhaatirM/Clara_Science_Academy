@@ -62,7 +62,7 @@
 
     <div class="row">
         <div class="col-12 col-lg-8">
-            <form method="POST" id="editGroupAssignmentForm" data-initial-groups="{{ selected_ids|tojson }}">
+            <form method="POST" id="editGroupAssignmentForm" enctype="multipart/form-data" data-initial-groups="{{ selected_ids|tojson }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                 <!-- Section 1: Assignment Details -->
@@ -92,6 +92,24 @@
                                 <i class="bi bi-card-text me-1 form-label-icon"></i>Description
                             </label>
                             <textarea class="form-control" id="description" name="description" rows="4">{{ group_assignment.description or '' }}</textarea>
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="assignment_file" class="form-label fw-semibold">
+                                <i class="bi bi-paperclip me-1 text-primary"></i>Assignment Document
+                            </label>
+                            {% if group_assignment.attachment_filename %}
+                            <div class="small text-muted mb-2">
+                                Current:
+                                {% set current_attachment_path = group_assignment.attachment_file_path or group_assignment.attachment_filename %}
+                                <a href="{{ url_for('static', filename='uploads/' ~ current_attachment_path|replace('\\', '/')) }}" target="_blank" class="text-decoration-none">
+                                    {{ group_assignment.attachment_original_filename or group_assignment.attachment_filename }}
+                                </a>
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" id="assignment_file" name="assignment_file"
+                                   accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.avi,.mkv">
+                            <small class="text-muted">Upload a new file to replace the current document. Leave blank to keep existing file.</small>
                         </div>
                     </div>
                 </div>

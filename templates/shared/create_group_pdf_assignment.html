@@ -216,11 +216,15 @@
 .file-upload-zone {
     border: 2px dashed #28a745;
     border-radius: 12px;
-    padding: 2rem;
+    padding: 2rem 1.5rem;
     text-align: center;
     cursor: pointer;
     transition: var(--transition-smooth);
     background: #fafbfc;
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .file-upload-zone:hover {
@@ -251,6 +255,34 @@
     margin: 0 auto 1rem;
     font-size: 1.5rem;
     color: white;
+}
+
+.file-input-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.file-upload-zone h6 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.file-upload-zone .text-muted.small {
+    font-size: 0.92rem !important;
+}
+
+.file-upload-zone .btn {
+    min-width: 170px;
 }
 
 .file-preview-content {
@@ -436,6 +468,40 @@
     gap: 1rem;
 }
 
+.submit-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.submit-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.submit-actions .btn {
+    min-height: 52px;
+    min-width: 160px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.submit-actions .btn-outline-secondary {
+    border-width: 1.5px;
+    color: #5f6b7a;
+}
+
+.submit-actions .btn-outline-secondary:hover {
+    color: #2f3a46;
+    background: #f8f9fb;
+}
+
 .btn-success {
     background: var(--primary-gradient);
     border: none;
@@ -469,10 +535,12 @@
     .header-content { flex-wrap: wrap; }
     .header-icon { display: none; }
     .submit-content { flex-direction: column; align-items: stretch; }
+    .submit-actions .btn { width: 100%; }
 }
 
 @media (max-width: 768px) {
     .groups-grid { grid-template-columns: 1fr; }
+    .file-upload-zone { min-height: 220px; padding: 1.5rem 1rem; }
 }
 </style>
 {% endblock %}
@@ -961,11 +1029,11 @@
                 <!-- Submit Section -->
                 <div class="submit-section">
                     <div class="submit-content">
-                        <div>
-                            <i class="bi bi-info-circle text-muted me-2"></i>
-                            <span class="text-muted">Review your assignment details before creating</span>
+                        <div class="submit-note">
+                            <i class="bi bi-info-circle"></i>
+                            <span>Review your assignment details before creating</span>
                         </div>
-                        <div class="d-flex gap-2">
+                        <div class="submit-actions">
                             {% if admin_view %}
                             <a href="{{ url_for('management.admin_group_assignment_type_selector', class_id=class_obj.id) }}" 
                                class="btn btn-outline-secondary btn-lg">

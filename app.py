@@ -130,6 +130,39 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: low_grade_threshold column check failed (may already exist): {e}")
 
+        # Add student profile confirmation columns if missing (report cards + enrollment policy)
+        _student_cols = [
+            ('gender', 'VARCHAR(30)', 'TEXT'),
+            ('entrance_date', 'VARCHAR(9)', 'TEXT'),
+            ('expected_grad_date', 'VARCHAR(7)', 'TEXT'),
+        ]
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                for col_name, pg_type, sqlite_type in _student_cols:
+                    if dialect == 'sqlite':
+                        r = conn.execute(text("PRAGMA table_info(student)"))
+                        columns = [row[1] for row in r]
+                        if col_name not in columns:
+                            conn.execute(text(
+                                f"ALTER TABLE student ADD COLUMN {col_name} {sqlite_type}"
+                            ))
+                            conn.commit()
+                            print(f"Added student.{col_name} column.")
+                    elif dialect == 'postgresql':
+                        r = conn.execute(text(
+                            "SELECT 1 FROM information_schema.columns "
+                            "WHERE table_name = 'student' AND column_name = :col"
+                        ), {"col": col_name})
+                        if r.fetchone() is None:
+                            conn.execute(text(
+                                f'ALTER TABLE "student" ADD COLUMN {col_name} {pg_type}'
+                            ))
+                            conn.commit()
+                            print(f"Added student.{col_name} column.")
+        except Exception as e:
+            print(f"Note: student profile columns check failed (may already exist): {e}")
+
         # Add assignment.status_override and status_override_until if missing (for temporary status overrides)
         for table_name in ('assignment', 'group_assignment'):
             try:
@@ -682,6 +715,77 @@ def create_app(config_class=None):
         except Exception as e:
             current_app.logger.error(f"Error serving assignment file: {e}")
             abort(404)
+
+    @app.route('/group-assignment/file/<int:assignment_id>')
+    @login_required
+    def download_group_assignment_file(assignment_id):
+        """Download or view a group assignment file."""
+        from flask import send_file, abort, request
+        from models import GroupAssignment, Enrollment
+        import os
+
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        class_obj = group_assignment.class_info
+
+        # Authorization
+        if current_user.role in ['Director', 'School Administrator']:
+            pass
+        elif class_obj:
+            if current_user.role == 'Student':
+                student_id = getattr(current_user, 'student_id', None)
+                if not student_id:
+                    abort(403, description="Your account is not properly linked. Please contact your administrator.")
+                enrollment = Enrollment.query.filter_by(
+                    class_id=class_obj.id,
+                    student_id=student_id,
+                    is_active=True
+                ).first()
+                if not enrollment:
+                    abort(403, description="You are not enrolled in this class")
+            else:
+                from models import TeacherStaff, class_additional_teachers, class_substitute_teachers
+                teacher = None
+                if getattr(current_user, 'teacher_staff_id', None):
+                    teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+                if not teacher:
+                    abort(403, description="You are not authorized to access this file")
+
+                is_authorized = (
+                    class_obj.teacher_id == teacher.id or
+                    db.session.query(class_additional_teachers).filter(
+                        class_additional_teachers.c.class_id == class_obj.id,
+                        class_additional_teachers.c.teacher_id == teacher.id
+                    ).count() > 0 or
+                    db.session.query(class_substitute_teachers).filter(
+                        class_substitute_teachers.c.class_id == class_obj.id,
+                        class_substitute_teachers.c.teacher_id == teacher.id
+                    ).count() > 0
+                )
+                if not is_authorized:
+                    abort(403, description="You are not authorized to access this file")
+        else:
+            abort(403, description="You are not authorized to access this file")
+
+        file_path = _resolve_assignment_file_path(
+            current_app.config['UPLOAD_FOLDER'],
+            group_assignment.attachment_filename,
+            group_assignment.attachment_file_path
+        )
+        if not file_path or not os.path.exists(file_path):
+            abort(404, description="File not found")
+
+        view_mode = request.args.get('view', 'false').lower() == 'true'
+        mime = group_assignment.attachment_mime_type or ''
+        is_pdf = ('pdf' in mime.lower()) or file_path.lower().endswith('.pdf')
+
+        if view_mode and is_pdf:
+            return send_file(file_path, as_attachment=False, mimetype=mime or 'application/pdf')
+
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=group_assignment.attachment_original_filename or group_assignment.attachment_filename or 'group_assignment_file'
+        )
 
     # Start GPA scheduler in development mode
     if app.config.get('ENV') == 'development':

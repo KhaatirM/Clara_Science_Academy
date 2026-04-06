@@ -39,14 +39,15 @@
                 <div class="invalid-feedback">Please select a grade level.</div>
             </div>
             <div class="col-12 col-md-4">
-                <label for="gender" class="form-label">Gender</label>
-                <select class="form-select" id="gender" name="gender">
+                <label for="gender" class="form-label">Gender <span class="text-danger">*</span></label>
+                <select class="form-select" id="gender" name="gender" required>
                     <option value="">Choose...</option>
                     {% set genders = ["Male", "Female", "Non-binary", "Prefer not to say", "Other"] %}
                     {% for g in genders %}
                     <option value="{{ g }}" {% if student_data and student_data.gender == g %}selected{% endif %}>{{ g }}</option>
                     {% endfor %}
                 </select>
+                <div class="invalid-feedback">Please select a gender.</div>
             </div>
             <div class="col-12 col-md-4">
                 <label for="ethnicity" class="form-label">Ethnicity</label>
@@ -72,6 +73,17 @@
                 <input type="date" class="form-control" id="dob" name="dob" 
                        value="{{ student_data.dob if student_data else '' }}" required>
                 <div class="invalid-feedback">Date of birth is required.</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="entrance_date" class="form-label">Entrance School Year <span class="text-danger">*</span></label>
+                <select class="form-select" id="entrance_date" name="entrance_date" required>
+                    <option value="">Choose school year...</option>
+                    {% for school_year in (entrance_school_year_options or []) %}
+                    <option value="{{ school_year }}" {% if student_data and student_data.entrance_date == school_year %}selected{% endif %}>{{ school_year }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select the student's entrance school year.</div>
+                <div class="form-text">Available years go back to 2020.</div>
             </div>
             
             <div class="col-12 col-md-6">

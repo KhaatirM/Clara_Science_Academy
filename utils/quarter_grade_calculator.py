@@ -213,7 +213,7 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     average = (points_earned_sum / total_points_sum) * 100.0
     
     # Convert to letter grade
-    if average >= 95:
+    if average >= 93:
         letter = 'A'
     elif average >= 90:
         letter = 'A-'
@@ -229,10 +229,14 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
         letter = 'C'
     elif average >= 70:
         letter = 'C-'
-    elif average >= 65:
+    elif average >= 67:
+        letter = 'D+'
+    elif average >= 63:
         letter = 'D'
+    elif average >= 60:
+        letter = 'D-'
     else:
-        letter = 'D'  # Minimum letter grade
+        letter = 'E'
     
     return {
         'letter_grade': letter,

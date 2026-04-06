@@ -377,6 +377,7 @@ def save_student_grade(assignment_id, student_id):
 
     try:
         score_val = request.form.get('score', request.json.get('score') if request.is_json else None)
+        score_raw = str(score_val).strip() if score_val is not None else ''
         comment = request.form.get('comment', request.json.get('comment', '')) or ''
         submission_type = request.form.get('submission_type', request.json.get('submission_type', '')) or ''
         notes_type = request.form.get('submission_notes_type', request.json.get('submission_notes_type', 'On-Time')) or 'On-Time'
@@ -384,10 +385,6 @@ def save_student_grade(assignment_id, student_id):
         submission_notes = notes_other if notes_type == 'Other' else notes_type
 
         total_points = assignment.total_points if assignment.total_points else 100.0
-        try:
-            points_earned = float(score_val) if (score_val is not None and str(score_val).strip()) else 0.0
-        except (ValueError, TypeError):
-            points_earned = 0.0
 
         # Handle submission status
         teacher_staff = get_teacher_or_admin()
@@ -411,10 +408,21 @@ def save_student_grade(assignment_id, student_id):
             elif submission_type == 'not_submitted' and sub:
                 db.session.delete(sub)
 
-        # Save grade (even 0)
         existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
         if existing_grade and existing_grade.is_voided:
             return jsonify({'success': True, 'message': 'Grade voided, not updated'})
+
+        # Empty score = not entered: remove grade row so 0 can stay distinct from blank
+        if score_raw == '':
+            if existing_grade:
+                db.session.delete(existing_grade)
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Cleared'})
+
+        try:
+            points_earned = float(score_raw)
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'Invalid score'}), 400
 
         percentage = (points_earned / total_points * 100) if total_points > 0 else 0
         grade_data = {
@@ -479,7 +487,7 @@ def grade_statistics(assignment_id):
     }
     
     scores = []
-    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0}
     grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
     
     total_points = assignment.total_points if assignment.total_points else 100.0
@@ -523,7 +531,7 @@ def grade_statistics(assignment_id):
                     letter_grades['D'] += 1
                     grade_distribution['60-69'] += 1
                 else:
-                    letter_grades['D'] += 1
+                    letter_grades['E'] += 1
                     grade_distribution['0-59'] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
             continue

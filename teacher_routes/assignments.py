@@ -719,56 +719,58 @@ def view_assignment(assignment_id):
     today = date.today()
     
     # Calculate statistics
-    # Get total enrolled students
     total_students = Enrollment.query.filter_by(
         class_id=class_obj.id,
         is_active=True
     ).count()
-    
-    # Get submission count
-    submissions_count = Submission.query.filter_by(
+
+    # Count unique student submissions for this assignment
+    submissions_count = db.session.query(Submission.student_id).filter_by(
         assignment_id=assignment_id
-    ).count()
-    
-    # Get graded count (grades that are not voided)
-    graded_count = Grade.query.filter_by(
+    ).distinct().count()
+
+    non_voided_grades = Grade.query.filter_by(
         assignment_id=assignment_id,
         is_voided=False
-    ).count()
-    
-    # Get assignment points (use total_points if available, otherwise points)
+    ).all()
+    graded_count = len(non_voided_grades)
+
     assignment_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else (assignment.points if assignment.points else 0)
-    
-    # Calculate average score if there are grades
+    assignment_points = float(assignment_points or 0)
+
+    # Calculate average percentage from grade data (0 is valid and included)
     average_score = None
     if graded_count > 0:
-        grades = Grade.query.filter_by(
-            assignment_id=assignment_id,
-            is_voided=False
-        ).all()
-        total_percentage = 0
+        total_percentage = 0.0
         count = 0
-        for grade in grades:
+        for grade in non_voided_grades:
             try:
-                if grade.grade_data:
-                    import json
-                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                    if isinstance(grade_data, dict) and 'score' in grade_data:
-                        score = grade_data['score']
-                        if isinstance(score, (int, float)):
-                            total_percentage += score
-                            count += 1
-            except (json.JSONDecodeError, TypeError, KeyError):
+                if not grade.grade_data:
+                    continue
+                import json
+                grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                if not isinstance(grade_data, dict):
+                    continue
+
+                score_raw = grade_data.get('points_earned', grade_data.get('score'))
+                if score_raw is None:
+                    continue
+                points_earned = float(score_raw)
+                if assignment_points > 0:
+                    percentage = (points_earned / assignment_points) * 100
+                else:
+                    percentage = float(grade_data.get('percentage', 0))
+                total_percentage += percentage
+                count += 1
+            except (ValueError, TypeError, json.JSONDecodeError):
                 continue
-        
+
         if count > 0:
             average_score = round(total_percentage / count, 1)
-    
-    # Calculate submission rate
+
     submission_rate = round((submissions_count / total_students * 100) if total_students > 0 else 0, 1)
-    
-    # Calculate grading completion rate
     grading_rate = round((graded_count / total_students * 100) if total_students > 0 else 0, 1)
+    pending_count = max(total_students - graded_count, 0)
     
     # Get voided grades for the unvoid modal
     voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
@@ -786,6 +788,7 @@ def view_assignment(assignment_id):
                          average_score=average_score,
                          submission_rate=submission_rate,
                          grading_rate=grading_rate,
+                         pending_count=pending_count,
                          voided_student_ids=voided_student_ids)
 
 
@@ -2072,7 +2075,11 @@ def view_group_assignment(assignment_id):
             members = StudentGroupMember.query.filter_by(group_id=group.id).all()
             total_students += len(members)
         
-        # Calculate submission statistics: GroupSubmission + GroupGrade with in_person/online
+        # Calculate submission statistics
+        submitted_group_ids = {s.group_id for s in submissions if getattr(s, 'group_id', None)}
+        group_submission_count = len(submitted_group_ids)
+
+        # Student-level submissions from GroupSubmission + GroupGrade(in_person/online)
         import json
         submission_student_ids = set()
         for gs in submissions:
@@ -2091,10 +2098,10 @@ def view_group_assignment(assignment_id):
                     pass
         submission_count = len(submission_student_ids)
         late_submissions = len([s for s in submissions if getattr(s, 'is_late', False)])
-        on_time_submissions = max(0, submission_count - late_submissions)
+        on_time_submissions = max(0, group_submission_count - late_submissions)
         
-        # Calculate submission rate
-        submission_rate = (submission_count / total_students * 100) if total_students else 0
+        # Group-level submission rate (submitted groups / total groups)
+        submission_rate = (group_submission_count / len(groups) * 100) if groups else 0
         
         # Calculate time remaining/overdue
         now = datetime.utcnow()
@@ -2145,6 +2152,7 @@ def view_group_assignment(assignment_id):
                              group_grades=all_group_grades,  # Pass all grades (including voided) for void check
                              graded_count=graded_count,
                              total_students=total_students,
+                             group_submission_count=group_submission_count,
                              submission_count=submission_count,
                              late_submissions=late_submissions,
                              on_time_submissions=on_time_submissions,

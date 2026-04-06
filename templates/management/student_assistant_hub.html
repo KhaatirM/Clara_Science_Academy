@@ -49,6 +49,12 @@
                         <a href="{{ url_for('student_assistant.assistant_add_assignment', class_id=class_obj.id) }}" class="btn btn-sa-propose-primary btn-sm">
                             <i class="bi bi-file-earmark-plus me-1"></i>Individual (PDF/paper)
                         </a>
+                        <a href="{{ url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_obj.id) }}" class="btn btn-sa-propose-secondary btn-sm">
+                            <i class="bi bi-question-circle me-1"></i>Individual quiz
+                        </a>
+                        <a href="{{ url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_obj.id) }}" class="btn btn-sa-propose-discussion btn-sm">
+                            <i class="bi bi-chat-dots me-1"></i>Individual discussion
+                        </a>
                         <a href="{{ url_for('student_assistant.assistant_create_group_assignment', class_id=class_obj.id) }}" class="btn btn-sa-propose-secondary btn-sm">
                             <i class="bi bi-people me-1"></i>Group assignment
                         </a>

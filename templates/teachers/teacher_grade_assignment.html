@@ -37,7 +37,7 @@
             <button type="button" class="btn btn-sm btn-outline-info" onclick="printGradebook()">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
+            <button type="button" class="btn btn-sm btn-grading-help" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
                 <i class="bi bi-question-circle me-1"></i>Grading Help
             </button>
             <button onclick="goBack()" class="btn-grading-back">
@@ -73,7 +73,7 @@
             <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
             <div class="stat-content">
                 <div class="stat-value" id="pendingStatCount">{{ students|length - grades|length }}</div>
-                <div class="stat-label">Pending</div>
+                <div class="stat-label">Awaiting score</div>
             </div>
         </div>
         <div class="grading-stat-card stat-average">
@@ -145,40 +145,39 @@
     </div>
     {% endif %}
     
-    <!-- Grade Distribution Chart -->
-    <div class="card mb-4 border-0 shadow-sm">
+    <!-- Grade distribution: summary pills + compact bar (0 = graded F; empty field = not entered) -->
+    <div class="card mb-4 border-0 shadow-sm grade-distribution-card">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Grade Distribution</h6>
-                <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-primary" onclick="filterByGrade('all')">All</button>
-                    <button type="button" class="btn btn-outline-success" onclick="filterByGrade('passing')">Passing</button>
-                    <button type="button" class="btn btn-outline-danger" onclick="filterByGrade('failing')">Failing</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterByGrade('ungraded')">Ungraded</button>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <h6 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Grade spread</h6>
+                <div class="btn-group btn-group-sm grade-filter-group" role="group" aria-label="Filter student grading cards">
+                    <button type="button" class="btn grade-filter-btn is-active" data-filter="all" aria-pressed="true" onclick="filterByGrade('all')">All</button>
+                    <button type="button" class="btn grade-filter-btn" data-filter="passing" aria-pressed="false" onclick="filterByGrade('passing')">Passing</button>
+                    <button type="button" class="btn grade-filter-btn" data-filter="failing" aria-pressed="false" onclick="filterByGrade('failing')">Failing</button>
+                    <button type="button" class="btn grade-filter-btn" data-filter="ungraded" aria-pressed="false" onclick="filterByGrade('ungraded')" title="No score entered yet">Not entered</button>
                 </div>
             </div>
-            <div class="grade-distribution">
-                <div class="distribution-bar">
-                    <div class="dist-segment dist-a" id="distA" style="width: 0%" title="A grades">
-                        <span class="dist-label">A: <span id="countA">0</span></span>
-                    </div>
-                    <div class="dist-segment dist-b" id="distB" style="width: 0%" title="B grades">
-                        <span class="dist-label">B: <span id="countB">0</span></span>
-                    </div>
-                    <div class="dist-segment dist-c" id="distC" style="width: 0%" title="C grades">
-                        <span class="dist-label">C: <span id="countC">0</span></span>
-                    </div>
-                    <div class="dist-segment dist-d" id="distD" style="width: 0%" title="D (60-69%)">
-                        <span class="dist-label">D (60-69): <span id="countD">0</span></span>
-                    </div>
-                    <div class="dist-segment dist-f" id="distF" style="width: 0%" title="D (0-59%)">
-                        <span class="dist-label">D (0-59): <span id="countF">0</span></span>
-                    </div>
-                    <div class="dist-segment dist-ungraded" id="distUngraded" style="width: 100%" title="Ungraded">
-                        <span class="dist-label">Ungraded: <span id="countUngraded">{{ students|length }}</span></span>
-                    </div>
+            <div class="grade-dist-pills mb-3" aria-live="polite">
+                <span class="grade-dist-pill dist-a"><span class="grade-dist-dot"></span>A <strong id="countA">0</strong></span>
+                <span class="grade-dist-pill dist-b"><span class="grade-dist-dot"></span>B <strong id="countB">0</strong></span>
+                <span class="grade-dist-pill dist-c"><span class="grade-dist-dot"></span>C <strong id="countC">0</strong></span>
+                <span class="grade-dist-pill dist-d"><span class="grade-dist-dot"></span>D <strong id="countD">0</strong></span>
+                <span class="grade-dist-pill dist-f"><span class="grade-dist-dot"></span>F <strong id="countF">0</strong></span>
+                <span class="grade-dist-pill dist-ungraded"><span class="grade-dist-dot"></span>Not entered <strong id="countUngraded">{{ students|length }}</strong></span>
+            </div>
+            <div class="grade-distribution grade-distribution-v2">
+                <div class="distribution-bar distribution-bar-v2" role="img" aria-label="Grade distribution">
+                    <div class="dist-segment dist-a" id="distA" style="width: 0%" title="A (90–100%)"></div>
+                    <div class="dist-segment dist-b" id="distB" style="width: 0%" title="B (80–89%)"></div>
+                    <div class="dist-segment dist-c" id="distC" style="width: 0%" title="C (70–79%)"></div>
+                    <div class="dist-segment dist-d" id="distD" style="width: 0%" title="D (60–69%)"></div>
+                    <div class="dist-segment dist-f" id="distF" style="width: 0%" title="F (below 60%)"></div>
+                    <div class="dist-segment dist-ungraded" id="distUngraded" style="width: 100%" title="No score entered"></div>
                 </div>
             </div>
+            <p class="text-muted small mb-0 mt-2 grade-dist-footnote">
+                <i class="bi bi-info-circle me-1"></i>Entering <strong>0</strong> is a real grade (F). Leaving points blank means not entered yet.
+            </p>
         </div>
     </div>
 
@@ -239,57 +238,6 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <div class="grading-container">
-            <div class="grading-container-header">
-                <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-3">
-                    <div>
-                        <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Student Grading</h5>
-                        <div class="grading-progress">
-                            <span id="gradedCount">{{ grades|length }}</span> / {{ students|length }} Graded
-                        </div>
-                    </div>
-                    <!-- Bulk Actions for Manual Submissions -->
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkMarkSubmitted('in_person')">
-                            <i class="bi bi-check-all me-1"></i>Mark All as Submitted (Paper)
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkMarkNotSubmitted()">
-                            <i class="bi bi-x-lg me-1"></i>Mark All as Not Submitted
-                        </button>
-                        {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper'] %}
-                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="bulkGrantRedo()">
-                            <i class="bi bi-arrow-repeat me-1"></i>Bulk Grant Redos
-                        </button>
-                        {% endif %}
-                        <button type="button" class="btn btn-sm btn-bulk-reminder" onclick="bulkSendReminder()">
-                            <span class="btn-bulk-reminder-icon"><i class="bi bi-send-fill"></i></span>
-                            Send Reminder
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
-                            <i class="bi bi-ui-checks me-1"></i>Select/Deselect All
-                        </button>
-                        <button type="button" class="btn btn-sm btn-primary" id="speedGraderToggle" onclick="toggleSpeedGrader()">
-                            <i class="bi bi-lightning-charge-fill me-1"></i>Speed Grader
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Speed Grader Navigation Bar (sticky) -->
-            <div id="speedGraderBar" class="speed-grader-bar" style="display: none;">
-                <button type="button" class="btn btn-outline-secondary speed-grader-btn" id="speedGraderPrev" onclick="speedGraderNav(-1)">
-                    <i class="bi bi-chevron-left"></i> Previous
-                </button>
-                <span class="speed-grader-position" id="speedGraderPosition">1 of {{ students|length }}</span>
-                <button type="button" class="btn btn-outline-secondary speed-grader-btn" id="speedGraderNext" onclick="speedGraderNav(1)">
-                    Next <i class="bi bi-chevron-right"></i>
-                </button>
-                <button type="button" class="btn btn-primary speed-grader-save-next" id="speedGraderSaveNext" onclick="speedGraderSaveAndNext()">
-                    <i class="bi bi-check-circle me-1"></i>Save & Next
-                </button>
-                <button type="button" class="btn btn-link text-muted speed-grader-exit" onclick="toggleSpeedGrader()">
-                    Exit Speed Grader
-                </button>
-            </div>
             
             <div class="student-grading-cards">
                 {% for student in students %}
@@ -323,16 +271,16 @@
                         {% endif %}
                         {% set comment_data = grade_data.comment|default('') or grade_data.feedback|default('') %}
                     {% endif %}
-                    {% set performance_class = 'voided' if is_voided else ('excellent' if percentage_value >= 90 else ('good' if percentage_value >= 80 else ('warning' if percentage_value >= 70 else ('failing' if percentage_value > 0 else 'ungraded')))) %}
+                    {% if is_voided %}
+                        {% set performance_class = 'voided' %}
+                    {% elif grade_data %}
+                        {% set performance_class = 'excellent' if percentage_value >= 90 else ('good' if percentage_value >= 80 else ('warning' if percentage_value >= 70 else 'failing')) %}
+                    {% else %}
+                        {% set performance_class = 'ungraded' %}
+                    {% endif %}
                     
                     <div class="student-grade-card {{ performance_class }}{% if is_voided %} voided-disabled{% endif %}" id="student-card-{{ student.id }}" data-student-id="{{ student.id }}">
                         <div class="student-grade-header">
-                            <!-- Bulk Select Checkbox -->
-                            <div class="bulk-select-checkbox">
-                                <input type="checkbox" class="form-check-input student-select-checkbox" 
-                                       id="select_{{ student.id }}" value="{{ student.id }}">
-                            </div>
-                            
                             <div class="student-grade-avatar">
                                 {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
                             </div>
@@ -433,13 +381,14 @@
                                                        class="score-input form-control" 
                                                        name="score_{{ student.id }}" 
                                                        id="score_{{ student.id }}"
-                                                       value="{{ points_earned if points_earned else '' }}"
+                                                       value="{{ points_earned if grade_data else '' }}"
                                                        min="0" 
                                                        max="{{ total_points }}" 
                                                        step="0.1"
                                                        placeholder="0-{{ total_points|int }}"
                                                        data-student-id="{{ student.id }}"
                                                        data-total-points="{{ total_points }}"
+                                                       {% if grade_id %}data-grade-history-url="{% if role_prefix == 'management' or (request.endpoint and 'management' in request.endpoint) %}{{ url_for('management.admin_grade_history', grade_id=grade_id) }}{% else %}{{ url_for('teacher.grading.grade_history', grade_id=grade_id) }}{% endif %}"{% endif %}
                                                        {% if is_voided %}disabled{% endif %}
                                                        oninput="updateScoreVisual(this); autoSaveGrade({{ student.id }})">
                                                 <span class="input-group-text">/ {{ total_points|int }} pts</span>
@@ -448,7 +397,7 @@
                                                 <div class="score-visual-fill" style="width: {{ percentage_value }}%"></div>
                                             </div>
                                             <small class="text-muted d-block mt-1">
-                                                <span id="percentageDisplay_{{ student.id }}">{{ percentage_value|round(2) if percentage_value else 0 }}%</span>
+                                                <span id="percentageDisplay_{{ student.id }}">{% if grade_data %}{{ percentage_value|round(2) }}%{% else %}—{% endif %}</span>
                                             </small>
                                         </div>
                                     </div>
@@ -478,7 +427,10 @@
                                             <i class="bi bi-trophy"></i> Current Grade
                                         </label>
                                         <div class="current-grade-display" id="gradeDisplay_{{ student.id }}">
-                                            {% if points_earned > 0 %}
+                                            {% if is_voided %}
+                                                <div class="grade-value grade-voided-text">Voided</div>
+                                                <div class="grade-letter-placeholder text-muted small">No grade recorded</div>
+                                            {% elif grade_data %}
                                                 <div class="grade-value grade-{{ performance_class }}">
                                                     {{ points_earned|round(1) }} / {{ total_points|int }}
                                                 </div>
@@ -596,92 +548,112 @@
 {% block scripts %}
 {{ super() }}
 <script>
+// True when the teacher entered a numeric score (including 0). Empty field = not entered.
+function isScoreInputGraded(input) {
+    const raw = (input && input.value != null) ? String(input.value).trim() : '';
+    if (raw === '') return false;
+    const n = parseFloat(raw);
+    return !Number.isNaN(n);
+}
+
 // Update score visual feedback and grade display
-function updateScoreVisual(input) {
-    const pointsEarned = parseFloat(input.value) || 0;
+function updateScoreVisual(input, opts) {
+    opts = opts || {};
+    const raw = (input.value ?? '').trim();
     const totalPoints = parseFloat(input.getAttribute('data-total-points')) || 100;
     const studentId = input.getAttribute('data-student-id');
     const card = input.closest('.student-grade-card');
     const visualFill = input.parentElement.querySelector('.score-visual-fill');
     const gradeDisplay = document.getElementById('gradeDisplay_' + studentId);
     const percentageDisplay = document.getElementById('percentageDisplay_' + studentId);
-    
-    // Calculate percentage
-    const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
-    
-    // Update visual bar (based on percentage)
-    visualFill.style.width = Math.min(percentage, 100) + '%';
-    
-    // Update visual bar color based on percentage
-    if (percentage >= 90) {
-        visualFill.style.background = 'linear-gradient(90deg, #28a745 0%, #20c997 100%)';
-    } else if (percentage >= 80) {
-        visualFill.style.background = 'linear-gradient(90deg, #20c997 0%, #17a2b8 100%)';
-    } else if (percentage >= 70) {
-        visualFill.style.background = 'linear-gradient(90deg, #ffc107 0%, #fd7e14 100%)';
+
+    const isUngraded = raw === '';
+    const pointsEarned = isUngraded ? NaN : parseFloat(raw);
+    const numericPoints = Number.isNaN(pointsEarned) ? 0 : pointsEarned;
+    const percentage = totalPoints > 0 ? (numericPoints / totalPoints * 100) : 0;
+
+    if (isUngraded) {
+        visualFill.style.width = '0%';
+        visualFill.style.background = '#e9ecef';
     } else {
-        visualFill.style.background = 'linear-gradient(90deg, #dc3545 0%, #c82333 100%)';
+        visualFill.style.width = Math.min(percentage, 100) + '%';
+        if (percentage >= 90) {
+            visualFill.style.background = 'linear-gradient(90deg, #28a745 0%, #20c997 100%)';
+        } else if (percentage >= 80) {
+            visualFill.style.background = 'linear-gradient(90deg, #20c997 0%, #17a2b8 100%)';
+        } else if (percentage >= 70) {
+            visualFill.style.background = 'linear-gradient(90deg, #ffc107 0%, #fd7e14 100%)';
+        } else {
+            visualFill.style.background = 'linear-gradient(90deg, #dc3545 0%, #c82333 100%)';
+        }
     }
-    
-    // Update percentage display
+
     if (percentageDisplay) {
-        percentageDisplay.textContent = percentage.toFixed(2) + '%';
+        percentageDisplay.textContent = isUngraded ? '—' : (percentage.toFixed(2) + '%');
     }
-    
-    // Update card class based on percentage
+
     card.classList.remove('excellent', 'good', 'warning', 'failing', 'ungraded');
-    if (percentage >= 90) {
+    if (isUngraded) {
+        card.classList.add('ungraded');
+    } else if (percentage >= 90) {
         card.classList.add('excellent');
     } else if (percentage >= 80) {
         card.classList.add('good');
     } else if (percentage >= 70) {
         card.classList.add('warning');
-    } else if (percentage > 0) {
-        card.classList.add('failing');
     } else {
-        card.classList.add('ungraded');
+        card.classList.add('failing');
     }
-    
-    // Update grade display
+
     let letter = '';
-    let performanceClass = '';
-    if (percentage >= 90) {
-        letter = 'A';
-        performanceClass = 'excellent';
-    } else if (percentage >= 80) {
-        letter = 'B';
-        performanceClass = 'good';
-    } else if (percentage >= 70) {
-        letter = 'C';
-        performanceClass = 'warning';
-    } else if (percentage >= 60) {
-        letter = 'D';
-        performanceClass = 'failing';
-    } else if (percentage > 0) {
-        letter = 'D';
-        performanceClass = 'failing';
+    let performanceClass = 'ungraded';
+    if (!isUngraded) {
+        if (percentage >= 90) {
+            letter = 'A';
+            performanceClass = 'excellent';
+        } else if (percentage >= 80) {
+            letter = 'B';
+            performanceClass = 'good';
+        } else if (percentage >= 70) {
+            letter = 'C';
+            performanceClass = 'warning';
+        } else if (percentage >= 60) {
+            letter = 'D';
+            performanceClass = 'failing';
+        } else {
+            letter = 'F';
+            performanceClass = 'failing';
+        }
     }
-    
-    if (pointsEarned > 0) {
+
+    const historyUrl = input.getAttribute('data-grade-history-url');
+    const historyHtml = historyUrl
+        ? `<div class="mt-2"><a href="${historyUrl}" class="btn btn-sm btn-outline-secondary" title="View grade history"><i class="bi bi-clock-history me-1"></i>History</a></div>`
+        : '';
+
+    if (isUngraded) {
+        gradeDisplay.innerHTML = `
+            <div class="grade-value grade-ungraded">--</div>
+            <div class="grade-letter-placeholder">Not Graded</div>
+        `;
+    } else {
         gradeDisplay.innerHTML = `
             <div class="grade-value grade-${performanceClass}">
-                ${pointsEarned.toFixed(1)} / ${Math.round(totalPoints)}
+                ${numericPoints.toFixed(1)} / ${Math.round(totalPoints)}
             </div>
             <div class="grade-percentage text-muted small mb-1">
                 (${percentage.toFixed(1)}%)
             </div>
             <div class="grade-letter">${letter}</div>
-        `;
-    } else {
-        gradeDisplay.innerHTML = `
-            <div class="grade-value grade-ungraded">--</div>
-            <div class="grade-letter-placeholder">Not Graded</div>
+            ${historyHtml}
         `;
     }
-    
-    // Update graded count
-    updateGradedCount();
-    
+
+    if (!opts.skipCharts) {
+        updateGradedCount();
+        updateDistributionChart();
+    }
+
     // Visual feedback
     input.classList.add('input-changed');
     setTimeout(() => {
@@ -727,11 +699,9 @@ function toggleSubmissionNotesOther(selectEl) {
 function updateGradedCount() {
     const scoreInputs = document.querySelectorAll('.score-input');
     let gradedCount = 0;
-    
+
     scoreInputs.forEach(input => {
-        if (input.value && parseFloat(input.value) > 0) {
-            gradedCount++;
-        }
+        if (isScoreInputGraded(input)) gradedCount++;
     });
     
     const gradedCountElement = document.getElementById('gradedCount');
@@ -749,9 +719,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCharCount(textarea);
     });
     
-    // Initialize distribution chart
+    document.querySelectorAll('.score-input:not([disabled])').forEach(inp => updateScoreVisual(inp, { skipCharts: true }));
     updateDistributionChart();
-    
+
     // Add keyboard navigation
     document.querySelectorAll('.score-input').forEach((input, index, inputs) => {
         input.addEventListener('keydown', function(e) {
@@ -817,15 +787,16 @@ function exportGradesCSV() {
         
         const name = nameElement?.textContent?.trim() || '';
         const email = emailElement?.textContent?.trim() || '';
-        const score = scoreInput?.value || '0';
-        const scoreNum = parseFloat(score);
-        const letter = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : scoreNum > 0 ? 'F' : 'N/A';
+        const rawScore = (scoreInput?.value ?? '').trim();
+        const scoreNum = rawScore === '' ? NaN : parseFloat(rawScore);
+        const letter = !Number.isFinite(scoreNum) ? 'N/A' : (scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : 'F');
         const comment = (commentInput?.value || '').replace(/"/g, '""');
         const submissionStatus = submissionSelect?.options[submissionSelect.selectedIndex]?.text || 'Not Submitted';
         const notesTypeSelect = card.querySelector('select[name^="submission_notes_type_"]');
         const notes = (notesTypeSelect?.value === 'Other' ? (notesInput?.value || '') : (notesTypeSelect?.value || 'On-Time')).replace(/"/g, '""');
-        
-        csv += `"${name}","","${email}","${submissionStatus}","${score}","${letter}","${comment}","${notes}"\n`;
+
+        const scoreOut = rawScore === '' ? '' : String(scoreNum);
+        csv += `"${name}","","${email}","${submissionStatus}","${scoreOut}","${letter}","${comment}","${notes}"\n`;
     });
     
     // Create download
@@ -898,18 +869,21 @@ function generatePrintableGradebook() {
         const submissionSelect = card.querySelector('.submission-type-select');
         
         const name = nameElement?.textContent?.trim() || '';
-        const score = scoreInput?.value || '0';
-        const scoreNum = parseFloat(score);
-        const letter = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : scoreNum > 0 ? 'F' : 'N/A';
-        const gradeClass = scoreNum >= 90 ? 'grade-a' : scoreNum >= 80 ? 'grade-b' : scoreNum >= 70 ? 'grade-c' : scoreNum >= 60 ? 'grade-d' : 'grade-d';
+        const rawScore = (scoreInput?.value ?? '').trim();
+        const scoreNum = rawScore === '' ? NaN : parseFloat(rawScore);
+        const totalPts = parseFloat(scoreInput?.getAttribute('data-total-points')) || 100;
+        const pct = Number.isFinite(scoreNum) && totalPts > 0 ? (scoreNum / totalPts * 100) : NaN;
+        const letter = !Number.isFinite(pct) ? '—' : (pct >= 90 ? 'A' : pct >= 80 ? 'B' : pct >= 70 ? 'C' : pct >= 60 ? 'D' : 'F');
+        const gradeClass = !Number.isFinite(pct) ? 'grade-ungraded' : (pct >= 90 ? 'grade-a' : pct >= 80 ? 'grade-b' : pct >= 70 ? 'grade-c' : pct >= 60 ? 'grade-d' : 'grade-f');
         const comment = (commentInput?.value || '').substring(0, 100);
         const submissionStatus = submissionSelect?.options[submissionSelect.selectedIndex]?.text || 'Not Submitted';
         
+        const scoreCell = Number.isFinite(scoreNum) ? `${scoreNum} / ${Math.round(totalPts)} (${pct.toFixed(1)}%)` : '—';
         html += `
                     <tr>
                         <td>${name}</td>
                         <td>${submissionStatus}</td>
-                        <td>${score}%</td>
+                        <td>${scoreCell}</td>
                         <td class="${gradeClass}">${letter}</td>
                         <td>${comment}</td>
                     </tr>
@@ -929,9 +903,9 @@ function generatePrintableGradebook() {
 // Back navigation: always go to intended page (no history.back)
 function goBack() {
     {% if current_user.role in ['Director', 'School Administrator'] %}
-        window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+        window.location.href = "{{ url_for('management.view_assignment', assignment_id=assignment.id) }}";
     {% else %}
-        window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+        window.location.href = "{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}";
     {% endif %}
 }
 
@@ -1032,334 +1006,95 @@ function saveGradeAjax(studentId) {
     updateDistributionChart();
 }
 
-function saveGradeAjaxSync(studentId) {
-    return new Promise((resolve, reject) => {
-        const scoreInput = document.getElementById(`score_${studentId}`);
-        const commentInput = document.querySelector(`textarea[name="comment_${studentId}"]`);
-        const submissionType = document.querySelector(`select[name="submission_type_${studentId}"]`);
-        const notesTypeSelect = document.querySelector(`select[name="submission_notes_type_${studentId}"]`);
-        const notesOtherInput = document.querySelector(`input[name="submission_notes_${studentId}"]`);
-        const submissionNotes = (notesTypeSelect?.value === 'Other' && notesOtherInput) ? notesOtherInput.value : (notesTypeSelect?.value || '');
-
-        const formData = new FormData();
-        formData.append('csrf_token', '{{ csrf_token() }}');
-        formData.append('score', scoreInput?.value || '');
-        formData.append('comment', commentInput?.value || '');
-        formData.append('submission_type', submissionType?.value || '');
-        formData.append('submission_notes_type', notesTypeSelect?.value || 'On-Time');
-        formData.append('submission_notes', submissionNotes);
-
-        fetch(SAVE_GRADE_URL + '/' + studentId, { method: 'POST', body: formData, credentials: 'same-origin' })
-            .then(r => r.json())
-            .then(data => { resolve(data); })
-            .catch(reject);
-    });
-}
-
-const SPEED_GRADER_STUDENT_IDS = [{% for s in students %}{{ s.id }}{% if not loop.last %}, {% endif %}{% endfor %}];
-let speedGraderIndex = 0;
-let speedGraderActive = false;
-
-function toggleSpeedGrader() {
-    speedGraderActive = !speedGraderActive;
-    const bar = document.getElementById('speedGraderBar');
-    if (speedGraderActive && SPEED_GRADER_STUDENT_IDS.length > 0) {
-        bar.style.display = 'flex';
-        speedGraderIndex = 0;
-        speedGraderUpdateFocus();
-    } else {
-        bar.style.display = 'none';
-        document.querySelectorAll('.student-grade-card').forEach(c => c.style.display = '');
-    }
-}
-
-function speedGraderUpdateFocus() {
-    document.querySelectorAll('.student-grade-card').forEach((card, i) => {
-        const sid = parseInt(card.getAttribute('data-student-id'));
-        const idx = SPEED_GRADER_STUDENT_IDS.indexOf(sid);
-        card.style.display = (idx === speedGraderIndex) ? '' : 'none';
-    });
-    document.getElementById('speedGraderPosition').textContent = (speedGraderIndex + 1) + ' of ' + SPEED_GRADER_STUDENT_IDS.length;
-    document.getElementById('speedGraderPrev').disabled = speedGraderIndex <= 0;
-    document.getElementById('speedGraderNext').disabled = speedGraderIndex >= SPEED_GRADER_STUDENT_IDS.length - 1;
-}
-
-function speedGraderNav(delta) {
-    speedGraderIndex = Math.max(0, Math.min(SPEED_GRADER_STUDENT_IDS.length - 1, speedGraderIndex + delta));
-    speedGraderUpdateFocus();
-}
-
-async function speedGraderSaveAndNext() {
-    const sid = SPEED_GRADER_STUDENT_IDS[speedGraderIndex];
-    const btn = document.getElementById('speedGraderSaveNext');
-    btn.disabled = true;
-    try {
-        await saveGradeAjaxSync(sid);
-        if (speedGraderIndex < SPEED_GRADER_STUDENT_IDS.length - 1) {
-            speedGraderIndex++;
-            speedGraderUpdateFocus();
-        }
-    } finally {
-        btn.disabled = false;
-    }
-}
-
 // Grade Distribution Chart
 function updateDistributionChart() {
     const scoreInputs = document.querySelectorAll('.score-input');
-    let counts = { a: 0, b: 0, c: 0, d: 0, f: 0, ungraded: 0 };
-    let total = scoreInputs.length;
+    const counts = { a: 0, b: 0, c: 0, d: 0, f: 0, ungraded: 0 };
+    const total = scoreInputs.length;
     const totalPoints = {{ total_points if total_points else 100.0 }};
-    
+
     scoreInputs.forEach(input => {
-        const pointsEarned = parseFloat(input.value);
-        if (isNaN(pointsEarned) || pointsEarned === 0) {
+        if (!isScoreInputGraded(input)) {
             counts.ungraded++;
-        } else {
-            // Calculate percentage using assignment's total_points
-            const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
-            // Determine letter grade based on percentage
-            if (percentage >= 90) {
-                counts.a++;
-            } else if (percentage >= 80) {
-                counts.b++;
-            } else if (percentage >= 70) {
-                counts.c++;
-            } else if (percentage >= 60) {
-                counts.d++;
-            } else {
-                counts.f++;
-            }
+            return;
         }
+        const pointsEarned = parseFloat(input.value);
+        const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
+        if (percentage >= 90) counts.a++;
+        else if (percentage >= 80) counts.b++;
+        else if (percentage >= 70) counts.c++;
+        else if (percentage >= 60) counts.d++;
+        else counts.f++;
     });
-    
-    // Update counts
+
     document.getElementById('countA').textContent = counts.a;
     document.getElementById('countB').textContent = counts.b;
     document.getElementById('countC').textContent = counts.c;
     document.getElementById('countD').textContent = counts.d;
     document.getElementById('countF').textContent = counts.f;
     document.getElementById('countUngraded').textContent = counts.ungraded;
-    
-    // Update widths (percentage of total)
+
     const graded = total - counts.ungraded;
-    if (graded > 0) {
-        document.getElementById('distA').style.width = ((counts.a / total) * 100) + '%';
-        document.getElementById('distB').style.width = ((counts.b / total) * 100) + '%';
-        document.getElementById('distC').style.width = ((counts.c / total) * 100) + '%';
-        document.getElementById('distD').style.width = ((counts.d / total) * 100) + '%';
-        document.getElementById('distF').style.width = ((counts.f / total) * 100) + '%';
-        document.getElementById('distUngraded').style.width = ((counts.ungraded / total) * 100) + '%';
-    }
-    
-    // Update average (calculate percentage average)
+    const pct = (n) => (total > 0 ? (n / total) * 100 : 0);
+    document.getElementById('distA').style.width = pct(counts.a) + '%';
+    document.getElementById('distB').style.width = pct(counts.b) + '%';
+    document.getElementById('distC').style.width = pct(counts.c) + '%';
+    document.getElementById('distD').style.width = pct(counts.d) + '%';
+    document.getElementById('distF').style.width = pct(counts.f) + '%';
+    document.getElementById('distUngraded').style.width = pct(counts.ungraded) + '%';
+
     let totalPercentage = 0;
     let countScored = 0;
     scoreInputs.forEach(input => {
+        if (!isScoreInputGraded(input)) return;
         const pointsEarned = parseFloat(input.value);
-        if (!isNaN(pointsEarned) && pointsEarned > 0) {
-            // Calculate percentage using assignment's total_points
-            const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
-            totalPercentage += percentage;
-            countScored++;
-        }
+        const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
+        totalPercentage += percentage;
+        countScored++;
     });
-    
+
+    const avgEl = document.getElementById('averageStatValue');
     if (countScored > 0) {
-        const average = (totalPercentage / countScored).toFixed(1);
-        document.getElementById('averageStatValue').textContent = average + '%';
+        avgEl.textContent = (totalPercentage / countScored).toFixed(1) + '%';
+    } else {
+        avgEl.textContent = '--';
     }
-    
-    // Update graded count
+
     document.getElementById('gradedStatCount').textContent = graded;
     document.getElementById('pendingStatCount').textContent = counts.ungraded;
+    const gradedProgress = document.getElementById('gradedCount');
+    if (gradedProgress) gradedProgress.textContent = graded;
 }
 
-// Filter by grade function
+// Filter by grade function (uses percentage of points, not raw score vs 70)
 function filterByGrade(filter) {
     const cards = document.querySelectorAll('.student-grade-card');
-    
+    const filterButtons = document.querySelectorAll('.grade-filter-btn');
+
+    filterButtons.forEach(btn => {
+        const isActive = btn.getAttribute('data-filter') === filter;
+        btn.classList.toggle('is-active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
     cards.forEach(card => {
         const scoreInput = card.querySelector('.score-input');
-        const score = parseFloat(scoreInput?.value);
+        const totalPts = parseFloat(scoreInput?.getAttribute('data-total-points')) || 100;
+        const graded = isScoreInputGraded(scoreInput);
+        const points = graded ? parseFloat(scoreInput.value) : NaN;
+        const pct = graded && totalPts > 0 ? (points / totalPts) * 100 : NaN;
+
         let show = true;
-        
-        if (filter === 'passing' && (isNaN(score) || score < 70)) {
-            show = false;
-        } else if (filter === 'failing' && (isNaN(score) || score >= 70 || score === 0)) {
-            show = false;
-        } else if (filter === 'ungraded' && (!isNaN(score) && score > 0)) {
-            show = false;
+        if (filter === 'passing') {
+            show = graded && pct >= 70;
+        } else if (filter === 'failing') {
+            show = graded && pct < 70;
+        } else if (filter === 'ungraded') {
+            show = !graded;
         }
-        
+
         card.style.display = show ? 'block' : 'none';
     });
-}
-
-// Bulk Selection Functions
-function toggleSelectAll() {
-    const checkboxes = document.querySelectorAll('.student-select-checkbox');
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = !allChecked;
-    });
-}
-
-function bulkSendReminder() {
-    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        alert('Please select at least one student first using the checkboxes.');
-        return;
-    }
-    if (!confirm(`Send deadline reminder to ${selectedCheckboxes.length} selected student(s)?`)) return;
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = "{% if role_prefix == 'management' or (request.endpoint and 'management' in request.endpoint) %}{{ url_for('management.send_reminder', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.dashboard.send_reminder', assignment_id=assignment.id) }}{% endif %}";
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = 'csrf_token';
-    csrf.value = '{{ csrf_token() }}';
-    form.appendChild(csrf);
-    const nextInput = document.createElement('input');
-    nextInput.type = 'hidden';
-    nextInput.name = 'next';
-    nextInput.value = window.location.href;
-    form.appendChild(nextInput);
-    const typeInput = document.createElement('input');
-    typeInput.type = 'hidden';
-    typeInput.name = 'reminder_type';
-    typeInput.value = 'selected';
-    form.appendChild(typeInput);
-    selectedCheckboxes.forEach(cb => {
-        const inp = document.createElement('input');
-        inp.type = 'hidden';
-        inp.name = 'student_ids';
-        inp.value = cb.value;
-        form.appendChild(inp);
-    });
-    document.body.appendChild(form);
-    form.submit();
-}
-
-function bulkMarkSubmitted(submissionType) {
-    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
-    
-    if (selectedCheckboxes.length === 0) {
-        alert('Please select at least one student first using the checkboxes.');
-        return;
-    }
-    
-    const confirmMsg = `Mark ${selectedCheckboxes.length} selected student(s) as submitted (${submissionType === 'in_person' ? 'Paper/In-Person' : 'Online'})?`;
-    
-    if (confirm(confirmMsg)) {
-        selectedCheckboxes.forEach(checkbox => {
-            const studentId = checkbox.value;
-            const select = document.querySelector(`select[name="submission_type_${studentId}"]`);
-            if (select) {
-                select.value = submissionType;
-                updateSubmissionStatus(select);
-            }
-        });
-    }
-}
-
-// Bulk Redo Granting
-function bulkGrantRedo() {
-    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
-    
-    if (selectedCheckboxes.length === 0) {
-        alert('Please select at least one student first using the checkboxes.');
-        return;
-    }
-    
-    // Open bulk redo modal
-    const studentNames = [];
-    selectedCheckboxes.forEach(checkbox => {
-        const card = checkbox.closest('.student-grade-card');
-        const nameElement = card.querySelector('.student-grade-name');
-        if (nameElement) {
-            studentNames.push(nameElement.textContent.trim());
-        }
-    });
-    
-    document.getElementById('bulkRedoStudentList').innerHTML = studentNames.map(name => 
-        `<li class="list-group-item">${name}</li>`
-    ).join('');
-    document.getElementById('bulkRedoCount').textContent = selectedCheckboxes.length;
-    
-    const modal = new bootstrap.Modal(document.getElementById('bulkRedoModal'));
-    modal.show();
-}
-
-function grantBulkRedo() {
-    const deadline = document.getElementById('bulkRedoDeadline').value;
-    const reason = document.getElementById('bulkRedoReason').value;
-    
-    if (!deadline) {
-        alert('Please select a redo deadline.');
-        return;
-    }
-    
-    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
-    const studentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
-    
-    // Show loading state
-    const btn = document.getElementById('grantBulkRedoBtn');
-    const originalHTML = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Granting...';
-    
-    // Prepare form data
-    const formData = new FormData();
-    studentIds.forEach(id => formData.append('student_ids[]', id));
-    formData.append('redo_deadline', deadline);
-    formData.append('reason', reason);
-    formData.append('csrf_token', '{{ csrf_token() }}');
-    
-    // Send request
-    fetch('/management/grant-redo/{{ assignment.id }}', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('bulkRedoModal')).hide();
-            location.reload();
-        } else {
-            alert('Error: ' + data.message);
-            btn.disabled = false;
-            btn.innerHTML = originalHTML;
-        }
-    })
-    .catch(error => {
-        alert('Error granting bulk redo: ' + error);
-        btn.disabled = false;
-        btn.innerHTML = originalHTML;
-    });
-}
-
-function bulkMarkNotSubmitted() {
-    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
-    
-    if (selectedCheckboxes.length === 0) {
-        alert('Please select at least one student first using the checkboxes.');
-        return;
-    }
-    
-    if (confirm(`Mark ${selectedCheckboxes.length} selected student(s) as NOT submitted?`)) {
-        selectedCheckboxes.forEach(checkbox => {
-            const studentId = checkbox.value;
-            const select = document.querySelector(`select[name="submission_type_${studentId}"]`);
-            if (select) {
-                select.value = 'not_submitted';
-                updateSubmissionStatus(select);
-            }
-        });
-    }
 }
 
 function updateSubmissionStatus(selectElement) {
@@ -1491,54 +1226,6 @@ function grantRedo() {
                 </button>
                 <button type="button" class="btn btn-warning" id="grantRedoBtn" onclick="grantRedo()">
                     <i class="bi bi-arrow-repeat me-1"></i>Grant Redo
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Redo Modal -->
-<div class="modal fade" id="bulkRedoModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">
-                    <i class="bi bi-arrow-repeat me-2"></i>Bulk Grant Redo Opportunities
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Grading Policy:</strong> The final grade will be the higher of the original and redo grades. If any redo is submitted late, a 10% penalty will be applied.
-                </div>
-                
-                <h6 class="fw-bold mb-2">Granting redo to <span id="bulkRedoCount">0</span> student(s):</h6>
-                <div class="mb-3" style="max-height: 200px; overflow-y: auto;">
-                    <ul class="list-group" id="bulkRedoStudentList">
-                        <!-- Student names will be populated here -->
-                    </ul>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="bulkRedoDeadline" class="form-label fw-bold">Redo Deadline<span class="text-danger">*</span></label>
-                    <input type="date" class="form-control" id="bulkRedoDeadline" required>
-                    <small class="text-muted">Set a new deadline for all redo submissions</small>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="bulkRedoReason" class="form-label fw-bold">Reason (Optional)</label>
-                    <textarea class="form-control" id="bulkRedoReason" rows="3" 
-                              placeholder="e.g., Multiple students need improvement, Excused absences, etc."></textarea>
-                    <small class="text-muted">This will be visible to all selected students</small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i>Cancel
-                </button>
-                <button type="button" class="btn btn-warning" id="grantBulkRedoBtn" onclick="grantBulkRedo()">
-                    <i class="bi bi-arrow-repeat me-1"></i>Grant Bulk Redos
                 </button>
             </div>
         </div>

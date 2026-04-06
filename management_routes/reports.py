@@ -13,9 +13,45 @@ from models import db, ReportCard, SchoolYear, Class, Student, Enrollment
 bp = Blueprint('reports', __name__)
 
 
+def _build_entrance_school_year_options(start_year=2020):
+    """Return school-year labels from current year back to start_year."""
+    today = datetime.utcnow()
+    current_start_year = today.year if today.month >= 7 else today.year - 1
+    return [f"{year}-{year + 1}" for year in range(current_start_year, start_year - 1, -1)]
+
+
+def _is_valid_school_year_label(value):
+    """Validate 'YYYY-YYYY' format where second year = first + 1."""
+    if not value or not isinstance(value, str):
+        return False
+    raw = value.strip()
+    if len(raw) != 9 or raw[4] != '-':
+        return False
+    left, right = raw.split('-', 1)
+    if not (left.isdigit() and right.isdigit()):
+        return False
+    return int(right) == int(left) + 1
+
+
+def _calculate_expected_grad_from_student(student):
+    """Estimate expected graduation month/year from grade and entrance year."""
+    entrance = getattr(student, 'entrance_date', None)
+    grade_level = getattr(student, 'grade_level', None)
+    if grade_level is None or not _is_valid_school_year_label(entrance):
+        return getattr(student, 'expected_grad_date', None) or None
+    try:
+        start_year = int(str(entrance).split('-', 1)[0])
+        years_to_graduation = 12 - int(grade_level)
+        if years_to_graduation < 0:
+            years_to_graduation = 0
+        return f"06/{start_year + years_to_graduation}"
+    except (TypeError, ValueError):
+        return getattr(student, 'expected_grad_date', None) or None
+
+
 def _sanitize_letter_grades_for_report(obj):
     """
-    Recursively replace 'F' with 'D' in grade data (minimum letter grade is D).
+    Recursively normalize legacy failing letter grades to 'E' in report data.
     Handles grades dict, grades_by_quarter, and nested structures.
     """
     if obj is None:
@@ -23,14 +59,124 @@ def _sanitize_letter_grades_for_report(obj):
     if isinstance(obj, dict):
         result = {}
         for k, v in obj.items():
-            if k in ('letter', 'letter_grade', 'overall_letter', 'grade') and v == 'F':
-                result[k] = 'D'
+            if k in ('letter', 'letter_grade', 'overall_letter', 'grade') and v in ('F', 'FL'):
+                result[k] = 'E'
             else:
                 result[k] = _sanitize_letter_grades_for_report(v)
         return result
     if isinstance(obj, list):
         return [_sanitize_letter_grades_for_report(item) for item in obj]
     return obj
+
+
+def _quarter_has_any_grade(quarter_payload):
+    """
+    Return True when a quarter payload contains at least one usable grade value.
+    Supports multiple payload shapes used in this codebase.
+    """
+    if not quarter_payload:
+        return False
+
+    # If payload is one class dict or a map of classes -> class dict.
+    if isinstance(quarter_payload, dict):
+        # Direct grade markers
+        for key in ('overall_grade', 'overall_letter', 'letter_grade', 'letter', 'grade'):
+            value = quarter_payload.get(key)
+            if value not in (None, '', 'N/A'):
+                return True
+        for key in ('overall_percentage', 'percentage', 'avg_percentage', 'score'):
+            value = quarter_payload.get(key)
+            if value not in (None, '', 'N/A'):
+                return True
+
+        # Nested dict/list content (class maps and structures)
+        for nested in quarter_payload.values():
+            if _quarter_has_any_grade(nested):
+                return True
+        return False
+
+    if isinstance(quarter_payload, list):
+        return any(_quarter_has_any_grade(item) for item in quarter_payload)
+
+    # Primitive fallback
+    return quarter_payload not in (None, '', 'N/A')
+
+
+def _detect_quarter_grade_inconsistency(all_quarter_grades):
+    """
+    Detect non-contiguous quarter-grade patterns.
+    Allowed examples:
+      - Q1,Q2 graded and Q3,Q4 not graded
+      - Q1,Q2 not graded and Q3,Q4 graded
+    Flag example:
+      - Q1 graded, Q2 not graded, Q3/Q4 graded
+    Rule: graded quarters must form one contiguous block (or no grades).
+    """
+    quarter_keys = ['Q1', 'Q2', 'Q3', 'Q4']
+    graded_flags = []
+
+    for q in quarter_keys:
+        payload = all_quarter_grades.get(q)
+        if payload is None:
+            payload = all_quarter_grades.get(q.replace('Q', ''))
+        graded_flags.append(1 if _quarter_has_any_grade(payload) else 0)
+
+    first = next((i for i, flag in enumerate(graded_flags) if flag == 1), None)
+    if first is None:
+        return False, graded_flags  # No quarter has grades yet
+
+    last = len(graded_flags) - 1 - next(
+        (i for i, flag in enumerate(reversed(graded_flags)) if flag == 1), 0
+    )
+    is_contiguous = all(flag == 1 for flag in graded_flags[first:last + 1])
+    return (not is_contiguous), graded_flags
+
+
+def _notify_admins_report_card_generated(student, school_year, quarter_str, report_type, generated_at_utc,
+                                         report_card_id=None, inconsistency_flag=False, quarter_flags=None):
+    """
+    Send in-app + email alerts to Director / School Administrator when a report card is generated.
+    Uses existing notification service; email is sent automatically from create_notification().
+    """
+    try:
+        from models import User
+        from services.notifications import create_notifications_for_users
+
+        admin_users = User.query.filter(User.role.in_(['Director', 'School Administrator'])).all()
+        admin_user_ids = [u.id for u in admin_users if u and getattr(u, 'id', None)]
+        if not admin_user_ids:
+            return
+
+        generated_label = generated_at_utc.strftime('%Y-%m-%d %H:%M UTC')
+        student_name = f"{student.first_name} {student.last_name}".strip()
+        report_kind = (report_type or 'official').title()
+        title = f"Report card generated: {student_name}"
+
+        message = (
+            f"{report_kind} report card generated for {student_name} "
+            f"(Grade {student.grade_level}) - {school_year.name}, {quarter_str}. "
+            f"Generated at {generated_label} by {getattr(current_user, 'username', 'system')}."
+        )
+        if inconsistency_flag:
+            pattern = ','.join(str(x) for x in (quarter_flags or []))
+            message += (
+                " Flag: quarter grading pattern appears inconsistent "
+                f"(Q1-Q4 graded flags: {pattern}). Please review quarter records."
+            )
+
+        link = None
+        if report_card_id:
+            link = url_for('management.view_report_card', report_card_id=report_card_id)
+
+        create_notifications_for_users(
+            admin_user_ids,
+            'report_card_generation',
+            title,
+            message,
+            link
+        )
+    except Exception as notify_exc:
+        current_app.logger.warning('Report card admin alert failed: %s', notify_exc)
 
 
 # ============================================================
@@ -124,6 +270,14 @@ def generate_report_card_form():
         from models import Grade, Assignment
         student = Student.query.get(student_id_int)
         
+        # Student confirmation fields are now synced from the student record.
+        if not getattr(student, 'gender', None):
+            flash('Student profile is missing Gender. Please update the student record before generating a report card.', 'danger')
+            return redirect(request.url)
+        if not _is_valid_school_year_label(getattr(student, 'entrance_date', None)):
+            flash('Student profile is missing a valid Entrance School Year (YYYY-YYYY). Please update the student record before generating a report card.', 'danger')
+            return redirect(request.url)
+
         # Update quarter grades in database (calculates/refreshes if needed)
         from utils.quarter_grade_calculator import update_all_quarter_grades_for_student, get_quarter_grades_for_report
         
@@ -158,6 +312,14 @@ def generate_report_card_form():
             else:
                 # Include empty dict for quarters without data (will show "—" in template)
                 calculated_grades_by_quarter[q] = {}
+
+        inconsistency_flag, quarter_flags = _detect_quarter_grade_inconsistency(all_quarter_grades)
+        if inconsistency_flag:
+            flash(
+                "Heads up: quarter grades look inconsistent (example: Q1 has grades, Q2 missing, Q3/Q4 have grades). "
+                "An administrator alert was generated for review.",
+                'warning'
+            )
         
         # Set the primary calculated_grades to the first selected quarter (or the determined quarter_str)
         if len(quarters_to_include) == 1:
@@ -222,7 +384,7 @@ def generate_report_card_form():
             
             report_card_data['attendance'] = attendance_data
 
-        # Save confirmation form data (gender, entrance date, etc.) so View → Download shows same values
+        # Save synced student confirmation data so View → Download stays consistent.
         def _format_date_for_save(value):
             if value is None or (isinstance(value, str) and not value.strip()):
                 return None
@@ -236,21 +398,16 @@ def generate_report_card_form():
                     except Exception:
                         continue
             return None
-        confirm_gender = request.form.get('confirm_gender', '').strip()
-        confirm_address = request.form.get('confirm_address', '').strip()
-        confirm_dob = request.form.get('confirm_dob', '').strip()
-        confirm_entrance_date = request.form.get('confirm_entrance_date', '').strip()
-        confirm_first_name = request.form.get('confirm_first_name', '').strip()
-        confirm_last_name = request.form.get('confirm_last_name', '').strip()
-        confirm_expected_grad_date = request.form.get('confirm_expected_grad_date', '').strip()
-        student_name = f"{confirm_first_name} {confirm_last_name}".strip() if (confirm_first_name or confirm_last_name) else f"{student.first_name} {student.last_name}"
+        student_name = f"{student.first_name} {student.last_name}"
+        expected_grad_date = _calculate_expected_grad_from_student(student)
+        student_address = f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', ')
         report_card_data['student_display'] = {
             'name': student_name,
-            'gender': confirm_gender or getattr(student, 'gender', None),
-            'address': confirm_address or None,
-            'dob': _format_date_for_save(confirm_dob) or _format_date_for_save(getattr(student, 'dob', None)),
-            'entrance_date': _format_date_for_save(confirm_entrance_date) or None,
-            'expected_grad_date': confirm_expected_grad_date or None,
+            'gender': getattr(student, 'gender', None),
+            'address': student_address or None,
+            'dob': _format_date_for_save(getattr(student, 'dob', None)),
+            'entrance_date': getattr(student, 'entrance_date', None),
+            'expected_grad_date': expected_grad_date,
             'phone': getattr(student, 'phone', None),
         }
         
@@ -258,6 +415,18 @@ def generate_report_card_form():
         report_card.grades_details = json.dumps(report_card_data)
         report_card.generated_at = datetime.utcnow()
         db.session.commit()
+
+        # Alert Director / School Administrator in-app + email after save.
+        _notify_admins_report_card_generated(
+            student=student,
+            school_year=report_card.school_year,
+            quarter_str=report_card.quarter,
+            report_type=report_type,
+            generated_at_utc=report_card.generated_at or datetime.utcnow(),
+            report_card_id=report_card.id,
+            inconsistency_flag=inconsistency_flag,
+            quarter_flags=quarter_flags
+        )
         
         # Generate and return PDF directly
         try:
@@ -294,22 +463,12 @@ def generate_report_card_form():
                 except Exception:
                     return 'N/A'
 
-            # Get confirmation form values (use form values if provided, otherwise use student data)
-            confirm_gender = request.form.get('confirm_gender', '').strip()
-            confirm_address = request.form.get('confirm_address', '').strip()
-            confirm_dob = request.form.get('confirm_dob', '').strip()
-            confirm_entrance_date = request.form.get('confirm_entrance_date', '').strip()
-            confirm_first_name = request.form.get('confirm_first_name', '').strip()
-            confirm_last_name = request.form.get('confirm_last_name', '').strip()
-            
-            # Use confirmation values if provided, otherwise fall back to student data
-            student_name = f"{confirm_first_name} {confirm_last_name}".strip() if confirm_first_name or confirm_last_name else f"{student.first_name} {student.last_name}"
-            student_dob = _format_date_value(confirm_dob) if confirm_dob else _format_date_value(getattr(student, 'dob', None))
-            student_gender = confirm_gender if confirm_gender else getattr(student, 'gender', 'N/A')
-            student_address = confirm_address if confirm_address else f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', ')
-            
-            # Get expected graduation date from form
-            confirm_expected_grad_date = request.form.get('confirm_expected_grad_date', '').strip()
+            # Student data in PDF is synced from student records.
+            student_name = f"{student.first_name} {student.last_name}"
+            student_dob = _format_date_value(getattr(student, 'dob', None))
+            student_gender = getattr(student, 'gender', 'N/A')
+            student_address = f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', ')
+            expected_grad_date = _calculate_expected_grad_from_student(student)
             
             student_data = {
                 'name': student_name,
@@ -320,8 +479,8 @@ def generate_report_card_form():
                 'gender': student_gender,
                 'address': student_address,
                 'phone': getattr(student, 'phone', ''),
-                'entrance_date': _format_date_value(confirm_entrance_date) if confirm_entrance_date else 'N/A',
-                'expected_grad_date': confirm_expected_grad_date if confirm_expected_grad_date else 'N/A'
+                'entrance_date': getattr(student, 'entrance_date', None) or 'N/A',
+                'expected_grad_date': expected_grad_date if expected_grad_date else 'N/A'
             }
             
             # Choose template based on grade level and report type
@@ -333,7 +492,7 @@ def generate_report_card_form():
             else:  # Grades 4-8
                 template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
             
-            # Sanitize letter grades: minimum is D, never show F
+            # Sanitize legacy failing letters to 'E' for report cards
             calculated_grades = _sanitize_letter_grades_for_report(calculated_grades)
             calculated_grades_by_quarter = _sanitize_letter_grades_for_report(calculated_grades_by_quarter)
 
@@ -431,9 +590,12 @@ def generate_report_card_form():
 </html>'''
             return error_html, 500
 
-    return render_template('management/report_card_generate_form.html', 
-                         students=students, 
-                         school_years=school_years)
+    return render_template(
+        'management/report_card_generate_form.html',
+        students=students,
+        school_years=school_years,
+        entrance_school_year_options=_build_entrance_school_year_options()
+    )
 
 
 
@@ -471,7 +633,7 @@ def view_report_card(report_card_id):
     if not attendance and include_attendance:
         attendance = {"Present": 0, "Absent": 0, "Tardy": 0}
 
-    # Sanitize letter grades: minimum is D, never show F on report cards
+    # Sanitize legacy failing letters to 'E' for report cards
     grades = _sanitize_letter_grades_for_report(grades)
     
     # Get class objects for selected classes
@@ -542,7 +704,7 @@ def generate_report_card_pdf(report_card_id):
                 class_ids=selected_classes if selected_classes else None
             )
 
-        # Sanitize letter grades: minimum is D, never show F on report cards
+        # Sanitize legacy failing letters to 'E' for report cards
         grades = _sanitize_letter_grades_for_report(grades)
         grades_by_quarter = _sanitize_letter_grades_for_report(grades_by_quarter)
         
@@ -585,8 +747,8 @@ def generate_report_card_pdf(report_card_id):
             'gender': getattr(student, 'gender', 'N/A'),
             'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
             'phone': getattr(student, 'phone', ''),
-            'entrance_date': 'N/A',
-            'expected_grad_date': 'N/A',
+            'entrance_date': getattr(student, 'entrance_date', None) or 'N/A',
+            'expected_grad_date': _calculate_expected_grad_from_student(student) or 'N/A',
         }
         # Override with saved confirmation data from when report was generated
         saved_student = report_card_data.get('student_display') if isinstance(report_card_data, dict) else None

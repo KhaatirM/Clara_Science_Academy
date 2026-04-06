@@ -15,7 +15,11 @@
                             <p class="mb-0 opacity-75">Design engaging quizzes with multiple question types and smart features</p>
                         </div>
                         <div class="d-flex gap-2 mt-3 mt-md-0">
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if student_assistant_mode and back_url %}
+                                <a href="{{ back_url }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to assistant workspace
+                                </a>
+                            {% elif current_user.role in ['Director', 'School Administrator'] %}
                                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-light btn-sm">
                                     <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
                                 </a>
@@ -31,7 +35,7 @@
         </div>
     </div>
 
-    <form id="quizAssignmentForm" method="POST" enctype="multipart/form-data">
+    <form id="quizAssignmentForm" method="POST" enctype="multipart/form-data" action="{{ form_action if form_action is defined else '' }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="assignment_type" value="quiz">
         {% if assignment %}

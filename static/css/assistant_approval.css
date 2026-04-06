@@ -206,6 +206,29 @@
     color: #4c1d95 !important;
 }
 
+.btn-sa-propose-discussion {
+    background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
+    color: #fff !important;
+    border: none;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 0.5rem 1.05rem;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn-sa-propose-discussion:hover {
+    color: #fff !important;
+    transform: translateY(-2px);
+    filter: brightness(1.03);
+    box-shadow: 0 8px 22px rgba(14, 165, 233, 0.42);
+}
+
 .sa-propose-assignments-card {
     border-radius: 16px !important;
     border: 1px solid rgba(99, 102, 241, 0.25) !important;

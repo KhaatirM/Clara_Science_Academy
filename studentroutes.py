@@ -76,16 +76,16 @@ def calculate_gpa(grades):
             return 0.0
         
         if percentage >= 93: return 4.0
-        elif percentage >= 90: return 3.7
-        elif percentage >= 87: return 3.3
+        elif percentage >= 90: return 3.67
+        elif percentage >= 87: return 3.33
         elif percentage >= 83: return 3.0
-        elif percentage >= 80: return 2.7
-        elif percentage >= 77: return 2.3
+        elif percentage >= 80: return 2.67
+        elif percentage >= 77: return 2.33
         elif percentage >= 73: return 2.0
-        elif percentage >= 70: return 1.7
-        elif percentage >= 67: return 1.3
+        elif percentage >= 70: return 1.67
+        elif percentage >= 67: return 1.33
         elif percentage >= 63: return 1.0
-        elif percentage >= 60: return 0.7
+        elif percentage >= 60: return 0.67
         else: return 0.0
     
     gpa_points = [percentage_to_gpa(grade) for grade in grades]
@@ -242,11 +242,11 @@ def get_grade_trends(student_id, class_id, limit=10):
     return trends
 
 def get_letter_grade(percentage):
-    """Convert percentage to letter grade. Minimum letter grade is D."""
+    """Convert percentage to letter grade using the current grading policy."""
     try:
         percentage = float(percentage)
     except (ValueError, TypeError):
-        return 'D'
+        return 'E'
     
     if percentage >= 93:
         return 'A'
@@ -271,7 +271,7 @@ def get_letter_grade(percentage):
     elif percentage >= 60:
         return 'D-'
     else:
-        return 'D'
+        return 'E'
 
 def create_template_context(student, section, active_tab, **kwargs):
     """Helper function to create common template context."""
@@ -2130,16 +2130,28 @@ def view_class(class_id):
         assignment_student_visibility_filter(),
     ).order_by(Assignment.due_date.desc()).all()
     
-    # Get submissions and grades for this student (excluding voided grades and voided assignments)
-    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    # Get submissions and grades for this student.
+    # Keep all grade rows for status detection (including voided), but only expose
+    # non-voided grades in grade display dictionaries.
+    all_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.id.desc()).all()
     student_grades = {}
     grades_dict = {}  # Store Grade objects for status checking
     for g in all_grades:
-        # Skip voided grades and voided assignments
-        # Check if assignment exists and is not voided
-        if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
-            student_grades[g.assignment_id] = json.loads(g.grade_data)
+        if not g.assignment:
+            continue
+        # First row wins because query is ordered newest-first.
+        if g.assignment_id not in grades_dict:
             grades_dict[g.assignment_id] = g
+        if (
+            not g.is_voided
+            and g.assignment.status != 'Voided'
+            and g.assignment_id not in student_grades
+            and g.grade_data
+        ):
+            try:
+                student_grades[g.assignment_id] = json.loads(g.grade_data)
+            except (json.JSONDecodeError, TypeError):
+                pass
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
@@ -2242,14 +2254,25 @@ def get_class_assignments_api(class_id):
         assignment_student_visibility_filter(),
     ).order_by(Assignment.due_date.desc()).all()
     
-    # Get submissions and grades
-    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    # Get submissions and grades. Keep all grade rows for status detection.
+    all_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.id.desc()).all()
     student_grades = {}
+    grades_dict = {}
     for g in all_grades:
-        # Check if assignment exists and is not voided
-        if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
-            grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-            student_grades[g.assignment_id] = grade_data
+        if not g.assignment:
+            continue
+        if g.assignment_id not in grades_dict:
+            grades_dict[g.assignment_id] = g
+        if (
+            not g.is_voided
+            and g.assignment.status != 'Voided'
+            and g.assignment_id not in student_grades
+            and g.grade_data
+        ):
+            try:
+                student_grades[g.assignment_id] = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+            except (json.JSONDecodeError, TypeError):
+                pass
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
@@ -2261,6 +2284,8 @@ def get_class_assignments_api(class_id):
     for assignment in assignments:
         submission = student_submissions.get(assignment.id)
         grade = student_grades.get(assignment.id)
+        grade_obj = grades_dict.get(assignment.id)
+        student_status = get_student_assignment_status(assignment, submission, grade_obj, student.id)
         
         # Open for this student (reopening, extension, redo) even if assignment row is Inactive/Upcoming
         can_access = is_assignment_open_for_student(assignment, student.id)
@@ -2268,7 +2293,10 @@ def get_class_assignments_api(class_id):
         has_grade = grade is not None
         is_past_due = assignment.due_date and assignment.due_date.date() < today.date() if assignment.due_date else False
         
-        if has_grade:
+        if student_status == 'Voided':
+            status = 'Voided'
+            status_class = 'secondary'
+        elif has_grade:
             status = 'Graded'
             status_class = 'success'
         elif has_submission and is_past_due:
@@ -2277,9 +2305,15 @@ def get_class_assignments_api(class_id):
         elif has_submission:
             status = 'Awaiting Grade'
             status_class = 'info'
-        elif is_past_due:
+        elif student_status == 'Past Due' or is_past_due:
             status = 'Past Due'
             status_class = 'danger'
+        elif student_status == 'Extended':
+            status = 'Extended'
+            status_class = 'warning'
+        elif student_status == 'Submitted or Awaiting Grade':
+            status = 'Awaiting Grade'
+            status_class = 'info'
         elif not can_access:
             status = 'Inactive'
             status_class = 'secondary'

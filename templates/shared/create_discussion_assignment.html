@@ -40,7 +40,11 @@
                         <p class="mb-0">Foster critical thinking and peer engagement through structured academic discussions</p>
                     </div>
                     <div class="d-flex gap-2 mt-3 mt-md-0">
-                        {% if class_obj %}
+                        {% if student_assistant_mode and back_url %}
+                            <a href="{{ back_url }}" class="btn btn-assignments-back btn-sm">
+                                <i class="bi bi-arrow-left me-1"></i>Back to assistant workspace
+                            </a>
+                        {% elif class_obj %}
                             {% if current_user.role in ['Director', 'School Administrator'] %}
                                 <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-assignments-back btn-sm">
                                     <i class="bi bi-arrow-left me-1"></i>Back to Class
@@ -69,7 +73,7 @@
 
     <div class="row g-4">
         <div class="col-12 col-lg-8">
-            <form method="POST" id="discussionAssignmentForm">
+            <form method="POST" id="discussionAssignmentForm" action="{{ form_action if form_action is defined else '' }}">
                 <div class="assignment-form-wrapper">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     {% if assignment %}<input type="hidden" name="edit_id" value="{{ assignment.id }}"/>{% endif %}

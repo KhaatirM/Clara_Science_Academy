@@ -14,7 +14,7 @@ from models import Assignment, Grade, Submission
 def get_default_grade_scale():
     """Get the default grade scale."""
     return {
-        "A": 90,
+        "A": 93,
         "B": 80,
         "C": 70,
         "D": 60,
@@ -55,48 +55,47 @@ def calculate_letter_grade(percentage, grade_scale=None):
         grade_scale = get_default_grade_scale()
     
     use_plus_minus = grade_scale.get("use_plus_minus", True)
-    a_threshold = grade_scale.get("A", 90)
+    a_threshold = grade_scale.get("A", 93)
     b_threshold = grade_scale.get("B", 80)
     c_threshold = grade_scale.get("C", 70)
     d_threshold = grade_scale.get("D", 60)
-    
+
+    if use_plus_minus:
+        # Fixed policy cutoffs for +/- grading.
+        if percentage >= 93:
+            return "A"
+        if percentage >= 90:
+            return "A-"
+        if percentage >= 87:
+            return "B+"
+        if percentage >= 83:
+            return "B"
+        if percentage >= 80:
+            return "B-"
+        if percentage >= 77:
+            return "C+"
+        if percentage >= 73:
+            return "C"
+        if percentage >= 70:
+            return "C-"
+        if percentage >= 67:
+            return "D+"
+        if percentage >= 63:
+            return "D"
+        if percentage >= 60:
+            return "D-"
+        return "E"
+
+    # Non +/- grading uses configured major thresholds.
     if percentage >= a_threshold:
-        if use_plus_minus:
-            if percentage >= a_threshold + 3:
-                return "A"
-            elif percentage >= a_threshold:
-                return "A-"
         return "A"
-    elif percentage >= b_threshold:
-        if use_plus_minus:
-            if percentage >= b_threshold + 3:
-                return "B+"
-            elif percentage >= b_threshold:
-                return "B"
-            else:
-                return "B-"
+    if percentage >= b_threshold:
         return "B"
-    elif percentage >= c_threshold:
-        if use_plus_minus:
-            if percentage >= c_threshold + 3:
-                return "C+"
-            elif percentage >= c_threshold:
-                return "C"
-            else:
-                return "C-"
+    if percentage >= c_threshold:
         return "C"
-    elif percentage >= d_threshold:
-        if use_plus_minus:
-            if percentage >= d_threshold + 3:
-                return "D+"
-            elif percentage >= d_threshold:
-                return "D"
-            else:
-                return "D-"
+    if percentage >= d_threshold:
         return "D"
-    else:
-        # Minimum letter grade is D (no F)
-        return "D" if not use_plus_minus else "D-"
+    return "E"
 
 
 def calculate_late_penalty(assignment, submission_date, due_date):
@@ -263,8 +262,8 @@ def calculate_assignment_statistics(assignment_id):
         grade_ranges[range_key] = grade_ranges.get(range_key, 0) + 1
     mode_range = max(grade_ranges.items(), key=lambda x: x[1])[0] if grade_ranges else "0-9"
     
-    # Grade distribution (A, B, C, D - minimum is D)
-    distribution = {"A": 0, "B": 0, "C": 0, "D": 0}
+    # Grade distribution (A, B, C, D, E)
+    distribution = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0}
     for p in percentages:
         if p >= 90:
             distribution["A"] += 1
@@ -272,8 +271,10 @@ def calculate_assignment_statistics(assignment_id):
             distribution["B"] += 1
         elif p >= 70:
             distribution["C"] += 1
-        else:
+        elif p >= 60:
             distribution["D"] += 1
+        else:
+            distribution["E"] += 1
     
     return {
         "total_students": len(grades),

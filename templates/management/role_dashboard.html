@@ -3621,8 +3621,28 @@
                       <input type='text' class='form-control' name='grade_level' value='${data.grade_level || ''}'>
                     </div>
                     <div class='col-md-6 mb-3'>
+                      <label>Gender <span class='text-danger'>*</span></label>
+                      <select class='form-control' name='gender' required>
+                        <option value=''>Choose...</option>
+                        <option value='Male' ${(data.gender || '') === 'Male' ? 'selected' : ''}>Male</option>
+                        <option value='Female' ${(data.gender || '') === 'Female' ? 'selected' : ''}>Female</option>
+                        <option value='Non-binary' ${(data.gender || '') === 'Non-binary' ? 'selected' : ''}>Non-binary</option>
+                        <option value='Prefer not to say' ${(data.gender || '') === 'Prefer not to say' ? 'selected' : ''}>Prefer not to say</option>
+                        <option value='Other' ${(data.gender || '') === 'Other' ? 'selected' : ''}>Other</option>
+                      </select>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Entrance School Year <span class='text-danger'>*</span></label>
+                      <select class='form-control' name='entrance_date' required id='editStudentEntranceDate'></select>
+                      <small class='text-muted'>School year the student joined (options back to 2020).</small>
+                    </div>
+                    <div class='col-md-6 mb-3'>
                       <label>Student ID</label>
                       <input type='text' class='form-control' name='student_id' value='${data.student_id || ''}' disabled>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Expected Graduation Date</label>
+                      <input type='text' class='form-control' name='expected_grad_date' value='${data.expected_grad_date || ''}' readonly>
                     </div>
                   </div>
                   
@@ -3751,6 +3771,18 @@
                     </div>
                   </div>
                 `;
+                const entranceSelect = document.getElementById('editStudentEntranceDate');
+                if (entranceSelect) {
+                  const now = new Date();
+                  const currentStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+                  let optionsHtml = "<option value=''>Choose school year...</option>";
+                  for (let y = currentStartYear; y >= 2020; y -= 1) {
+                    const schoolYear = `${y}-${y + 1}`;
+                    const isSelected = (data.entrance_date || '') === schoolYear ? 'selected' : '';
+                    optionsHtml += `<option value='${schoolYear}' ${isSelected}>${schoolYear}</option>`;
+                  }
+                  entranceSelect.innerHTML = optionsHtml;
+                }
                 form.onsubmit = function(e) {
                   e.preventDefault();
                   let formData = new FormData(form);

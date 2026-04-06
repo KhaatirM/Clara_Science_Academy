@@ -27,6 +27,40 @@ from .utils import allowed_file
 bp = Blueprint('students', __name__)
 
 
+def _build_entrance_school_year_options(start_year=2020):
+    """Return school-year labels from current year back to start_year."""
+    today = date.today()
+    current_start_year = today.year if today.month >= 7 else today.year - 1
+    return [f"{year}-{year + 1}" for year in range(current_start_year, start_year - 1, -1)]
+
+
+def _is_valid_school_year_label(value):
+    """Validate 'YYYY-YYYY' format where second year = first + 1."""
+    if not value or not isinstance(value, str):
+        return False
+    raw = value.strip()
+    if len(raw) != 9 or raw[4] != '-':
+        return False
+    left, right = raw.split('-', 1)
+    if not (left.isdigit() and right.isdigit()):
+        return False
+    return int(right) == int(left) + 1
+
+
+def _calculate_expected_grad_date(grade_level, entrance_school_year):
+    """Estimate expected graduation month/year from grade and entrance year."""
+    if grade_level is None or not _is_valid_school_year_label(entrance_school_year):
+        return None
+    try:
+        start_year = int(str(entrance_school_year).split('-', 1)[0])
+        years_to_graduation = 12 - int(grade_level)
+        if years_to_graduation < 0:
+            years_to_graduation = 0
+        return f"06/{start_year + years_to_graduation}"
+    except (TypeError, ValueError):
+        return None
+
+
 # ============================================================
 # Route: /add-student', methods=['GET', 'POST']
 # Function: add_student
@@ -43,6 +77,8 @@ def add_student():
         last_name = request.form.get('student_last_name', '').strip()
         dob = request.form.get('dob', '').strip()
         grade_level_str = request.form.get('grade_level', '').strip()
+        gender = request.form.get('gender', '').strip()
+        entrance_school_year = request.form.get('entrance_date', '').strip()
         
         # Address fields
         street = request.form.get('street_address', '').strip()
@@ -146,6 +182,18 @@ def add_student():
         if not first_name or not last_name or not dob or grade_level is None:
             flash('First name, last name, date of birth, and grade level are required.', 'danger')
             return redirect(request.url)
+
+        if not gender:
+            flash('Gender is required for student records and report card confirmation.', 'danger')
+            return redirect(request.url)
+
+        if gender not in ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other']:
+            flash('Please select a valid gender option.', 'danger')
+            return redirect(request.url)
+
+        if not _is_valid_school_year_label(entrance_school_year):
+            flash('Entrance school year is required and must use format YYYY-YYYY.', 'danger')
+            return redirect(request.url)
         
         # Generate username (first initial + last name + random number)
         import random
@@ -169,6 +217,9 @@ def add_student():
             student.last_name = last_name
             student.dob = dob
             student.grade_level = grade_level
+            student.gender = gender
+            student.entrance_date = entrance_school_year
+            student.expected_grad_date = _calculate_expected_grad_date(grade_level, entrance_school_year)
             student.photo_filename = photo_filename
             student.transcript_filename = transcript_filename
             
@@ -267,7 +318,10 @@ def add_student():
             flash(f'Error adding student: {str(e)}', 'danger')
             return redirect(request.url)
     
-    return render_template('students/add_student.html')
+    return render_template(
+        'students/add_student.html',
+        entrance_school_year_options=_build_entrance_school_year_options()
+    )
 
 
 
@@ -349,7 +403,6 @@ def get_student_classes(student_id):
 def get_student_details(student_id):
     """Get detailed student information for report card confirmation"""
     try:
-        from datetime import datetime
         student = Student.query.get_or_404(student_id)
         
         # Format address
@@ -366,15 +419,10 @@ def get_student_details(student_id):
             address_parts.append(student.zip_code)
         address = ', '.join(address_parts) if address_parts else ''
         
-        # Calculate expected graduation date
-        # Assuming graduation is in June of the year they reach 12th grade
-        expected_grad_date = None
-        if student.grade_level:
-            years_to_graduation = 12 - student.grade_level
-            if years_to_graduation >= 0:
-                current_year = datetime.now().year
-                grad_year = current_year + years_to_graduation
-                expected_grad_date = f"06/{grad_year}"
+        # Expected graduation date: prioritize stored value, then derive from entrance school year.
+        expected_grad_date = getattr(student, 'expected_grad_date', None) or _calculate_expected_grad_date(
+            student.grade_level, getattr(student, 'entrance_date', None)
+        )
         
         # Format student ID
         student_id_formatted = student.student_id if student.student_id else 'N/A'
@@ -384,13 +432,11 @@ def get_student_details(student_id):
         # Get SSN/State ID (might not exist in model)
         ssn = getattr(student, 'ssn', None) or getattr(student, 'state_student_id', None) or 'N/A'
         
-        # Get gender (might not exist in model)
-        gender = getattr(student, 'gender', None) or 'N/A'
+        gender = getattr(student, 'gender', None) or ''
         
         # Format DOB
         dob = student.dob if student.dob else 'N/A'
         
-        # Get entrance date (might not exist in model)
         entrance_date = getattr(student, 'entrance_date', None) or ''
         
         student_data = {
@@ -403,7 +449,7 @@ def get_student_details(student_id):
             'dob': dob,
             'state_id': ssn,
             'entrance_date': entrance_date,
-            'expected_grad_date': expected_grad_date
+            'expected_grad_date': expected_grad_date or ''
         }
         
         return jsonify({
@@ -1001,7 +1047,8 @@ def generate_report_card_for_student(student_id):
                          school_years=school_years,
                          classes=classes,
                          category=category,
-                         pre_selected_student=student_id)
+                         pre_selected_student=student_id,
+                         entrance_school_year_options=_build_entrance_school_year_options())
 
 
 
@@ -1619,6 +1666,9 @@ def view_student(student_id):
         'age': age,
         'grade_level': student.grade_level,
         'student_id': student.student_id,
+        'gender': getattr(student, 'gender', None),
+        'entrance_date': getattr(student, 'entrance_date', None),
+        'expected_grad_date': getattr(student, 'expected_grad_date', None),
         'email': student.email,
         'google_workspace_email': student.user.google_workspace_email if student.user else None,
         'gpa': gpa,
@@ -1689,6 +1739,17 @@ def edit_student(student_id):
         student.last_name = request.form.get('last_name', student.last_name).strip()
         student.dob = request.form.get('dob', student.dob)
         student.grade_level = request.form.get('grade_level', student.grade_level)
+        gender = request.form.get('gender', getattr(student, 'gender', '')).strip()
+        entrance_school_year = request.form.get('entrance_date', getattr(student, 'entrance_date', '')).strip()
+        if not gender:
+            return jsonify({'success': False, 'message': 'Gender is required.'}), 400
+        if gender not in ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other']:
+            return jsonify({'success': False, 'message': 'Please select a valid gender option.'}), 400
+        if not _is_valid_school_year_label(entrance_school_year):
+            return jsonify({'success': False, 'message': 'Entrance school year is required and must use format YYYY-YYYY.'}), 400
+        student.gender = gender
+        student.entrance_date = entrance_school_year
+        student.expected_grad_date = _calculate_expected_grad_date(student.grade_level, entrance_school_year)
         # State ID is disabled, so we don't update it
         
         # Parent 1 information

@@ -1827,6 +1827,7 @@ def _save_single_student_grade(assignment_id, student_id):
         return None, 'Student not in class'
 
     score_val = request.form.get('score', request.json.get('score') if request.is_json else None)
+    score_raw = str(score_val).strip() if score_val is not None else ''
     comment = request.form.get('comment', request.json.get('comment', '')) or ''
     submission_type = request.form.get('submission_type', request.json.get('submission_type', '')) or ''
     notes_type = request.form.get('submission_notes_type', request.json.get('submission_notes_type', 'On-Time')) or 'On-Time'
@@ -1834,10 +1835,6 @@ def _save_single_student_grade(assignment_id, student_id):
     submission_notes = notes_other if notes_type == 'Other' else notes_type
 
     total_points = assignment.total_points if assignment.total_points else 100.0
-    try:
-        points_earned = float(score_val) if (score_val is not None and str(score_val).strip()) else 0.0
-    except (ValueError, TypeError):
-        points_earned = 0.0
 
     teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
     if submission_type:
@@ -1862,6 +1859,17 @@ def _save_single_student_grade(assignment_id, student_id):
     existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
     if existing_grade and existing_grade.is_voided:
         return True, 'Voided'
+
+    if score_raw == '':
+        if existing_grade:
+            db.session.delete(existing_grade)
+        db.session.commit()
+        return True, 'Cleared'
+
+    try:
+        points_earned = float(score_raw)
+    except (ValueError, TypeError):
+        return False, 'Invalid score'
 
     percentage = (points_earned / total_points * 100) if total_points > 0 else 0
     grade_data = json.dumps({
@@ -2572,7 +2580,7 @@ def view_assignment(assignment_id):
         
         # For discussion assignments, use specialized view
         if assignment.assignment_type == 'discussion':
-            from models import DiscussionThread, DiscussionPost, Enrollment, Student
+            from models import DiscussionThread, DiscussionPost, Student
             from collections import defaultdict
             
             # Get class information
@@ -2632,7 +2640,6 @@ def view_assignment(assignment_id):
             participants.sort(key=lambda x: x['total_posts'], reverse=True)
             
             # Get grades for this assignment
-            from models import Grade
             grades = {}
             grade_records = Grade.query.filter_by(assignment_id=assignment_id).all()
             for g in grade_records:
@@ -2702,19 +2709,61 @@ def view_assignment(assignment_id):
             group_submissions_count = 0
         
         total_submissions_count = submissions_count + group_submissions_count
-        
-        # Get points from assignment - safely handle missing attributes
+
+        # Statistics payload for view page
+        total_students = Enrollment.query.filter_by(
+            class_id=assignment.class_id,
+            is_active=True
+        ).count() if assignment.class_id else 0
+
+        non_voided_grades = Grade.query.filter_by(
+            assignment_id=assignment_id,
+            is_voided=False
+        ).all()
+        graded_count = len(non_voided_grades)
+
         assignment_points = 0
         if hasattr(assignment, 'total_points') and assignment.total_points:
             assignment_points = assignment.total_points
         elif hasattr(assignment, 'points') and assignment.points:
             assignment_points = assignment.points
+        assignment_points = float(assignment_points or 0)
+
+        average_score = None
+        if graded_count > 0:
+            total_percentage = 0.0
+            pct_count = 0
+            for grade in non_voided_grades:
+                try:
+                    if not grade.grade_data:
+                        continue
+                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                    if not isinstance(grade_data, dict):
+                        continue
+                    score_raw = grade_data.get('points_earned', grade_data.get('score'))
+                    if score_raw is None:
+                        continue
+                    points_earned = float(score_raw)
+                    if assignment_points > 0:
+                        percentage = (points_earned / assignment_points) * 100
+                    else:
+                        percentage = float(grade_data.get('percentage', 0))
+                    total_percentage += percentage
+                    pct_count += 1
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    continue
+            if pct_count > 0:
+                average_score = round(total_percentage / pct_count, 1)
+
+        submission_rate = round((total_submissions_count / total_students * 100) if total_students > 0 else 0, 1)
+        submission_rate = min(submission_rate, 100.0)
+        grading_rate = round((graded_count / total_students * 100) if total_students > 0 else 0, 1)
+        pending_count = max(total_students - graded_count, 0)
         
         # Get current date for status calculations
         today = datetime.now().date()
         
         # Get voided grades for the unvoid modal
-        from models import Grade
         voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
         voided_student_ids = {g.student_id for g in voided_grades}
         
@@ -2731,6 +2780,12 @@ def view_assignment(assignment_id):
                              teacher=teacher,
                              submissions_count=total_submissions_count,
                              assignment_points=assignment_points,
+                             total_students=total_students,
+                             graded_count=graded_count,
+                             average_score=average_score,
+                             submission_rate=submission_rate,
+                             grading_rate=grading_rate,
+                             pending_count=pending_count,
                              today=today,
                              voided_student_ids=voided_student_ids,
                              has_open_ended_questions=has_open_ended_questions)
@@ -3169,7 +3224,7 @@ def admin_grade_statistics(assignment_id):
     }
     
     scores = []
-    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0}
     grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
     
     total_points = assignment.total_points if assignment.total_points else 100.0
@@ -3213,7 +3268,7 @@ def admin_grade_statistics(assignment_id):
                     letter_grades['D'] += 1
                     grade_distribution['60-69'] += 1
                 else:
-                    letter_grades['D'] += 1
+                    letter_grades['E'] += 1
                     grade_distribution['0-59'] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
             continue
@@ -3270,7 +3325,7 @@ def admin_group_grade_statistics(assignment_id):
     }
     
     scores = []
-    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0}
     grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
     
     total_points = group_assignment.total_points if group_assignment.total_points else 100.0
@@ -3314,7 +3369,7 @@ def admin_group_grade_statistics(assignment_id):
                     letter_grades['D'] += 1
                     grade_distribution['60-69'] += 1
                 else:
-                    letter_grades['D'] += 1
+                    letter_grades['E'] += 1
                     grade_distribution['0-59'] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
             continue
@@ -4609,7 +4664,11 @@ def admin_view_group_assignment(assignment_id):
         # Calculate total students in groups
         total_students = sum(len(group.members) for group in groups)
         
-        # Calculate submission statistics: GroupSubmission + GroupGrade with in_person/online
+        # Calculate submission statistics
+        submitted_group_ids = {s.group_id for s in submissions if getattr(s, 'group_id', None)}
+        group_submission_count = len(submitted_group_ids)
+
+        # Student-level submissions from GroupSubmission + GroupGrade(in_person/online)
         submission_student_ids = set()
         for gs in submissions:
             if (gs.attachment_file_path or gs.attachment_filename) and gs.group_id:
@@ -4625,10 +4684,10 @@ def admin_view_group_assignment(assignment_id):
                     pass
         submission_count = len(submission_student_ids)
         late_submissions = len([s for s in submissions if getattr(s, 'is_late', False)])
-        on_time_submissions = max(0, submission_count - late_submissions)
+        on_time_submissions = max(0, group_submission_count - late_submissions)
         
-        # Calculate submission rate (students who submitted / total students)
-        submission_rate = (submission_count / total_students * 100) if total_students else 0
+        # Group-level submission rate (submitted groups / total groups)
+        submission_rate = (group_submission_count / len(groups) * 100) if groups else 0
         
         # Calculate time remaining/overdue
         now = datetime.utcnow()
@@ -4682,6 +4741,7 @@ def admin_view_group_assignment(assignment_id):
                              group_grades=all_group_grades,  # Pass all grades (including voided) for void check
                              graded_count=graded_count,
                              total_students=total_students,
+                             group_submission_count=group_submission_count,
                              submission_count=submission_count,
                              late_submissions=late_submissions,
                              on_time_submissions=on_time_submissions,
@@ -4893,7 +4953,7 @@ def admin_grade_group_assignment(assignment_id):
                     else:
                         display_total = total_points
                         percentage = (points_earned / display_total * 100) if display_total > 0 else 0
-                    letter_grade = 'A' if percentage >= 90 else ('B' if percentage >= 80 else ('C' if percentage >= 70 else ('D' if percentage >= 60 else 'D')))
+                    letter_grade = 'A' if percentage >= 90 else ('B' if percentage >= 80 else ('C' if percentage >= 70 else ('D' if percentage >= 60 else 'E')))
                     grade_data = {
                         'score': points_earned,
                         'points_earned': points_earned,
@@ -5140,11 +5200,11 @@ def admin_edit_group_assignment(assignment_id):
                     group_assignment.late_penalty_max_days = 0
                 grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
                 if grade_scale_preset == 'standard':
-                    group_assignment.grade_scale = json.dumps({"A": 90, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": False})
+                    group_assignment.grade_scale = json.dumps({"A": 93, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": True})
                 elif grade_scale_preset == 'strict':
-                    group_assignment.grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": False})
+                    group_assignment.grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": True})
                 elif grade_scale_preset == 'lenient':
-                    group_assignment.grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": False})
+                    group_assignment.grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": True})
                 else:
                     group_assignment.grade_scale = None
 
@@ -5161,6 +5221,54 @@ def admin_edit_group_assignment(assignment_id):
 
                 group_assignment.assignment_type = request.form.get('assignment_type', group_assignment.assignment_type)
                 group_assignment.collaboration_type = request.form.get('collaboration_type', group_assignment.collaboration_type)
+
+                # Optional file replacement
+                upload = request.files.get('assignment_file')
+                if upload and upload.filename:
+                    if not allowed_file(upload.filename):
+                        flash(f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
+                        return render_template('management/admin_edit_group_assignment.html',
+                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
+
+                    upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'group_assignments')
+                    os.makedirs(upload_dir, exist_ok=True)
+
+                    original_name = secure_filename(upload.filename)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                    unique_filename = f"{timestamp}{original_name}"
+                    file_path = os.path.join(upload_dir, unique_filename)
+
+                    # Best-effort cleanup of previous stored file variants
+                    old_name = group_assignment.attachment_filename
+                    old_rel_path = group_assignment.attachment_file_path
+                    if old_name:
+                        for candidate in (
+                            os.path.join(current_app.config['UPLOAD_FOLDER'], old_name),
+                            os.path.join(current_app.config['UPLOAD_FOLDER'], 'group_assignments', old_name),
+                        ):
+                            try:
+                                if os.path.exists(candidate):
+                                    os.remove(candidate)
+                            except OSError:
+                                pass
+                    if old_rel_path:
+                        rel_norm = str(old_rel_path).replace('/', os.sep).replace('\\', os.sep)
+                        abs_old = os.path.join(current_app.config['UPLOAD_FOLDER'], rel_norm)
+                        try:
+                            if os.path.exists(abs_old):
+                                os.remove(abs_old)
+                        except OSError:
+                            pass
+
+                    upload.save(file_path)
+                    group_assignment.attachment_filename = unique_filename
+                    group_assignment.attachment_original_filename = original_name
+                    group_assignment.attachment_file_path = os.path.join('group_assignments', unique_filename)
+                    try:
+                        group_assignment.attachment_file_size = os.path.getsize(file_path)
+                    except OSError:
+                        group_assignment.attachment_file_size = None
+                    group_assignment.attachment_mime_type = upload.content_type or None
 
                 # Selected groups (empty = all groups = null; need at least one for valid assignment)
                 selected_groups = request.form.getlist('groups')

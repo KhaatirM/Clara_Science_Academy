@@ -73,32 +73,29 @@
 
                 <!-- Discussion Assignment -->
                 <div class="col-12 col-md-6">
-                    <div class="card group-type-card" data-assignment-type="discussion">
+                    <div class="card group-type-card group-type-card-disabled" data-assignment-type="discussion">
                         <div class="card-body">
+                            <div class="under-development-badge">
+                                <i class="bi bi-tools me-1"></i>Under Development
+                            </div>
                             <div class="group-type-icon">
                                 <i class="bi bi-chat-dots-fill"></i>
                             </div>
                             <h5 class="card-title">Discussion Assignment</h5>
                             <p class="card-text">
-                                Run structured discussions with prompts and threads. Track group participation and peer interaction—great for debates and topic exploration.
+                                Group discussion assignments are currently under development and are temporarily unavailable for selection.
                             </p>
                             <div class="group-type-features">
-                                <div class="feature-item"><i class="bi bi-check-circle-fill"></i> Structured discussion threads</div>
-                                <div class="feature-item"><i class="bi bi-check-circle-fill"></i> Group participation tracking</div>
-                                <div class="feature-item"><i class="bi bi-check-circle-fill"></i> Moderation tools</div>
-                                <div class="feature-item"><i class="bi bi-check-circle-fill"></i> Peer interaction</div>
+                                <div class="feature-item"><i class="bi bi-hourglass-split"></i> Structured discussion threads</div>
+                                <div class="feature-item"><i class="bi bi-hourglass-split"></i> Group participation tracking</div>
+                                <div class="feature-item"><i class="bi bi-hourglass-split"></i> Moderation tools</div>
+                                <div class="feature-item"><i class="bi bi-hourglass-split"></i> Peer interaction</div>
                             </div>
                         </div>
                         <div class="card-footer">
-                            {% if admin_view %}
-                                <a href="{{ url_for('management.classes.admin_create_group_discussion_assignment', class_id=class_obj.id) }}" class="btn btn-create w-100">
-                                    <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
-                                </a>
-                            {% else %}
-                                <a href="{{ url_for('teacher.groups.create_group_assignment', class_id=class_obj.id) }}" class="btn btn-create w-100">
-                                    <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
-                                </a>
-                            {% endif %}
+                            <button type="button" class="btn btn-create w-100 disabled" aria-disabled="true" title="This option is currently under development">
+                                <i class="bi bi-lock-fill me-2"></i>Coming Soon
+                            </button>
                         </div>
                     </div>
                 </div>

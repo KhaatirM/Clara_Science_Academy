@@ -102,11 +102,15 @@
                 </div>
                 <div>
                   <h5 class="fw-bold mb-1">2. Confirm Information</h5>
-                  <p class="text-muted mb-0 small">Please review and confirm the student and school information</p>
+                  <p class="text-muted mb-0 small">These values are synced from the student profile to keep report cards accurate.</p>
                 </div>
               </div>
               <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
+                  <div class="alert alert-warning border-0 shadow-sm mb-4">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    Missing fields here must be completed in the student profile before generating a report card.
+                  </div>
                   <div class="row g-4">
                     <!-- Student Information -->
                     <div class="col-md-6">
@@ -125,13 +129,7 @@
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold">Student Gender</label>
-                          <select class="form-select" id="confirm_gender" name="confirm_gender">
-                            <option value="">Select Gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                            <option value="Prefer not to say">Prefer not to say</option>
-                          </select>
+                          <input type="text" class="form-control" id="confirm_gender" name="confirm_gender" readonly>
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold">Student Grade</label>
@@ -139,11 +137,11 @@
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold">Student Address</label>
-                          <textarea class="form-control" id="confirm_address" name="confirm_address" rows="3"></textarea>
+                          <textarea class="form-control" id="confirm_address" name="confirm_address" rows="3" readonly></textarea>
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold">Student DOB</label>
-                          <input type="text" class="form-control" id="confirm_dob" name="confirm_dob" placeholder="MM/DD/YYYY">
+                          <input type="text" class="form-control" id="confirm_dob" name="confirm_dob" readonly>
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold">Student State ID</label>
@@ -158,8 +156,8 @@
                       </h6>
                       <div class="row g-3">
                         <div class="col-12">
-                          <label class="form-label fw-semibold">Entrance Date</label>
-                          <input type="text" class="form-control" id="confirm_entrance_date" name="confirm_entrance_date" placeholder="MM/DD/YYYY">
+                          <label class="form-label fw-semibold">Entrance School Year</label>
+                          <input type="text" class="form-control" id="confirm_entrance_date" name="confirm_entrance_date" readonly>
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-semibold">Expected to Graduate Date</label>
@@ -600,6 +598,16 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Please wait for classes to load, or the student may not be enrolled in any classes.');
         return false;
       }
+    }
+
+    // Enforce synced student confirmation fields required by policy.
+    const confirmGender = (document.getElementById('confirm_gender')?.value || '').trim();
+    const confirmEntrance = (document.getElementById('confirm_entrance_date')?.value || '').trim();
+    if (!confirmGender || !confirmEntrance) {
+      e.preventDefault();
+      alert('Student profile is missing required confirmation fields (Gender and/or Entrance School Year). Please update the student profile first.');
+      confirmationSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
     }
     
     // All validation passed

@@ -8,7 +8,7 @@ from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
     db, Class, Assignment, SchoolYear, QuizQuestion, QuizOption, QuizAnswer, QuizSection,
-    QuestionBank, QuestionBankQuestion, QuestionBankOption
+    QuizProgress, QuestionBank, QuestionBankQuestion, QuestionBankOption
 )
 from datetime import datetime
 
@@ -127,9 +127,16 @@ def create_quiz_assignment():
                 existing.class_id = class_id
                 existing.status = calculated_status
                 new_assignment = existing
-                # Delete old sections and questions (cascade will remove options)
-                QuizSection.query.filter_by(assignment_id=assignment_id).delete()
-                QuizQuestion.query.filter_by(assignment_id=assignment_id).delete()
+                # Delete old quiz graph in FK-safe order before rebuilding.
+                old_question_ids = [
+                    q.id for q in QuizQuestion.query.with_entities(QuizQuestion.id).filter_by(assignment_id=assignment_id).all()
+                ]
+                if old_question_ids:
+                    QuizAnswer.query.filter(QuizAnswer.question_id.in_(old_question_ids)).delete(synchronize_session=False)
+                    QuizOption.query.filter(QuizOption.question_id.in_(old_question_ids)).delete(synchronize_session=False)
+                QuizProgress.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+                QuizQuestion.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+                QuizSection.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
             else:
                 # Create the quiz assignment (total_points will be calculated from questions)
                 new_assignment = Assignment(

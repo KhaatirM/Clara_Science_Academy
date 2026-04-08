@@ -2027,6 +2027,7 @@ def view_group_assignment(assignment_id):
     from datetime import datetime, timedelta
     
     try:
+        from types import SimpleNamespace
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         
         # Check authorization - teacher must be authorized for this class
@@ -2067,13 +2068,36 @@ def view_group_assignment(assignment_id):
         all_group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()
         non_voided_grades = [g for g in all_group_grades if not g.is_voided]  # Non-voided for graded count
         graded_count = len(non_voided_grades)
+
+        # Preserve visibility for grades from deleted/inactive groups.
+        student_ids_in_groups = set()
+        for group in groups:
+            for member in getattr(group, 'members', []):
+                if getattr(member, 'student_id', None):
+                    student_ids_in_groups.add(member.student_id)
+        orphan_student_ids = [
+            g.student_id for g in all_group_grades
+            if g.student_id and g.student_id not in student_ids_in_groups
+        ]
+        if orphan_student_ids:
+            orphan_students = Student.query.filter(Student.id.in_(set(orphan_student_ids))).all()
+            if orphan_students:
+                virtual_group = SimpleNamespace(
+                    id=0,
+                    name='Students from deleted group',
+                    members=[SimpleNamespace(student=s, student_id=s.id) for s in orphan_students]
+                )
+                groups.append(virtual_group)
         
         # Calculate total students in groups
         from models import StudentGroupMember
         total_students = 0
         for group in groups:
-            members = StudentGroupMember.query.filter_by(group_id=group.id).all()
-            total_students += len(members)
+            if getattr(group, 'id', None) == 0:
+                total_students += len(getattr(group, 'members', []))
+            else:
+                members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+                total_students += len(members)
         
         # Calculate submission statistics
         submitted_group_ids = {s.group_id for s in submissions if getattr(s, 'group_id', None)}

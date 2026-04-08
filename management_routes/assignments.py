@@ -197,8 +197,17 @@ def create_quiz_assignment():
                 existing.google_form_linked = link_google_form
                 existing.assignment_context = assignment_context
                 new_assignment = existing
-                QuizSection.query.filter_by(assignment_id=assignment_id).delete()
-                QuizQuestion.query.filter_by(assignment_id=assignment_id).delete()
+                # Clean old quiz graph in FK-safe order before rebuilding questions.
+                from models import QuizProgress
+                old_question_ids = [
+                    q.id for q in QuizQuestion.query.with_entities(QuizQuestion.id).filter_by(assignment_id=assignment_id).all()
+                ]
+                if old_question_ids:
+                    QuizAnswer.query.filter(QuizAnswer.question_id.in_(old_question_ids)).delete(synchronize_session=False)
+                    QuizOption.query.filter(QuizOption.question_id.in_(old_question_ids)).delete(synchronize_session=False)
+                QuizProgress.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+                QuizQuestion.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+                QuizSection.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
             else:
                 # Create the assignment (status already calculated above)
                 new_assignment = Assignment(
@@ -3057,7 +3066,7 @@ def remove_assignment(assignment_id):
     
     try:
         from models import (
-            QuizQuestion, QuizProgress, QuizSection, DiscussionThread, DiscussionPost, QuizAnswer,
+            QuizQuestion, QuizProgress, QuizSection, DiscussionThread, DiscussionPost, QuizAnswer, QuizOption,
             DeadlineReminder, AssignmentExtension
         )
         
@@ -3074,19 +3083,20 @@ def remove_assignment(assignment_id):
         
         # Delete associated records in proper order to avoid foreign key constraint issues
         
-        # 1. Delete quiz answers first (they reference quiz questions)
+        # 1. Delete quiz answers/options first (they reference quiz questions)
         quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
         for question in quiz_questions:
             QuizAnswer.query.filter_by(question_id=question.id).delete()
+            QuizOption.query.filter_by(question_id=question.id).delete()
         
-        # 2. Delete quiz questions (they reference assignments and sections)
+        # 2. Delete quiz progress before questions (progress can reference current_question_id)
+        QuizProgress.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # 3. Delete quiz questions (they reference assignments and sections)
         QuizQuestion.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 3. Delete quiz sections (they reference assignments)
+        # 4. Delete quiz sections (they reference assignments)
         QuizSection.query.filter_by(assignment_id=assignment_id).delete()
-        
-        # 4. Delete quiz progress
-        QuizProgress.query.filter_by(assignment_id=assignment_id).delete()
         
         # 5. Delete discussion threads and posts
         discussion_threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).all()
@@ -4614,6 +4624,7 @@ def grant_group_extensions(assignment_id):
 def admin_view_group_assignment(assignment_id):
     """View details of a specific group assignment - Management view."""
     from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension, Assignment
+    from types import SimpleNamespace
     import json
     
     try:
@@ -4660,9 +4671,34 @@ def admin_view_group_assignment(assignment_id):
         all_group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()
         non_voided_grades = [g for g in all_group_grades if not g.is_voided]  # Non-voided for graded count
         graded_count = len(non_voided_grades)
+
+        # Preserve visibility for grades tied to deleted/inactive groups.
+        student_ids_in_groups = set()
+        for group in groups:
+            for member in getattr(group, 'members', []):
+                if getattr(member, 'student_id', None):
+                    student_ids_in_groups.add(member.student_id)
+        orphan_student_ids = [
+            g.student_id for g in all_group_grades
+            if g.student_id and g.student_id not in student_ids_in_groups
+        ]
+        if orphan_student_ids:
+            orphan_students = Student.query.filter(Student.id.in_(set(orphan_student_ids))).all()
+            if orphan_students:
+                virtual_group = SimpleNamespace(
+                    id=0,
+                    name='Students from deleted group',
+                    members=[SimpleNamespace(student=s, student_id=s.id) for s in orphan_students]
+                )
+                groups.append(virtual_group)
         
         # Calculate total students in groups
-        total_students = sum(len(group.members) for group in groups)
+        total_students = 0
+        for group in groups:
+            if getattr(group, 'id', None) == 0:
+                total_students += len(getattr(group, 'members', []))
+            else:
+                total_students += len(group.members)
         
         # Calculate submission statistics
         submitted_group_ids = {s.group_id for s in submissions if getattr(s, 'group_id', None)}

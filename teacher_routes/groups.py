@@ -311,13 +311,23 @@ def delete_group(group_id):
         return redirect(url_for('teacher.groups.groups_hub'))
     
     try:
+        # Preserve historical grades/submissions by detaching this group id.
+        # This mirrors admin behavior so final grades don't "disappear" after group deletion.
+        from models import GroupGrade, GroupSubmission, GroupQuizAnswer
+        GroupGrade.query.filter_by(group_id=group_id).update({GroupGrade.group_id: None}, synchronize_session=False)
+        GroupSubmission.query.filter_by(group_id=group_id).update({GroupSubmission.group_id: None}, synchronize_session=False)
+        GroupQuizAnswer.query.filter_by(group_id=group_id).update({GroupQuizAnswer.group_id: None}, synchronize_session=False)
+
         # Delete all members first
         StudentGroupMember.query.filter_by(group_id=group_id).delete()
         # Mark group as inactive
         group.is_active = False
         db.session.commit()
         
-        flash(f"Group '{group.name}' deleted successfully!", "success")
+        flash(
+            f"Group '{group.name}' deleted successfully. Historical grades and submissions were preserved per student.",
+            "success"
+        )
     except Exception as e:
         db.session.rollback()
         flash(f"Error deleting group: {str(e)}", "danger")

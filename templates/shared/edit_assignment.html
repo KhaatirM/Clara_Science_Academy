@@ -226,6 +226,58 @@
                         
                     </div>
                     </div>
+
+                    <!-- Advanced Grading Options -->
+                    <div class="card assignment-section-card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Advanced Grading Options</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <!-- Extra Credit -->
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="allow_extra_credit" name="allow_extra_credit" {% if assignment.allow_extra_credit %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="allow_extra_credit">
+                                            <i class="bi bi-star-fill me-1 text-warning"></i>Allow Extra Credit
+                                        </label>
+                                    </div>
+                                    <div class="ms-4 mt-2">
+                                        <label for="max_extra_credit_points" class="form-label">Maximum Extra Credit Points</label>
+                                        <input type="number" class="form-control" id="max_extra_credit_points" name="max_extra_credit_points"
+                                               value="{{ assignment.max_extra_credit_points or 0 }}" min="0" step="0.1">
+                                        <div class="form-text">Maximum extra points students can earn above assignment total.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Late Penalty -->
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="late_penalty_enabled" name="late_penalty_enabled" {% if assignment.late_penalty_enabled %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="late_penalty_enabled">
+                                            <i class="bi bi-clock-history me-1 text-danger"></i>Enable Late Penalty
+                                        </label>
+                                    </div>
+                                    <div class="ms-4 mt-2">
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <label for="late_penalty_per_day" class="form-label">Penalty Per Day (%)</label>
+                                                <input type="number" class="form-control" id="late_penalty_per_day" name="late_penalty_per_day"
+                                                       value="{{ assignment.late_penalty_per_day or 0 }}" min="0" max="100" step="0.1">
+                                                <div class="form-text">e.g., 10 = 10% of assignment points per day.</div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="late_penalty_max_days" class="form-label">Max Days (0 = unlimited)</label>
+                                                <input type="number" class="form-control" id="late_penalty_max_days" name="late_penalty_max_days"
+                                                       value="{{ assignment.late_penalty_max_days or 0 }}" min="0">
+                                                <div class="form-text">Stop applying penalty after X days.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- File Upload Section -->
                     <div class="card assignment-section-card">
@@ -405,6 +457,27 @@ document.addEventListener('DOMContentLoaded', function() {
             statusRevertWrapper.style.display = this.checked ? 'block' : 'none';
         });
     }
+
+    // Advanced grading options: toggle dependent inputs.
+    const allowExtraCredit = document.getElementById('allow_extra_credit');
+    const maxExtraCredit = document.getElementById('max_extra_credit_points');
+    const latePenaltyEnabled = document.getElementById('late_penalty_enabled');
+    const latePenaltyPerDay = document.getElementById('late_penalty_per_day');
+    const latePenaltyMaxDays = document.getElementById('late_penalty_max_days');
+
+    function toggleAdvancedGradingFields() {
+        if (allowExtraCredit && maxExtraCredit) {
+            maxExtraCredit.disabled = !allowExtraCredit.checked;
+        }
+        if (latePenaltyEnabled) {
+            const lateEnabled = latePenaltyEnabled.checked;
+            if (latePenaltyPerDay) latePenaltyPerDay.disabled = !lateEnabled;
+            if (latePenaltyMaxDays) latePenaltyMaxDays.disabled = !lateEnabled;
+        }
+    }
+    if (allowExtraCredit) allowExtraCredit.addEventListener('change', toggleAdvancedGradingFields);
+    if (latePenaltyEnabled) latePenaltyEnabled.addEventListener('change', toggleAdvancedGradingFields);
+    toggleAdvancedGradingFields();
     
     const fileInput = document.getElementById('assignment_files');
     const fileUploadArea = document.getElementById('fileUploadArea');

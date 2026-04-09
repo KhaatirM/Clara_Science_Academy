@@ -642,6 +642,13 @@ class Assignment(db.Model):
     
     # Grading settings - total points for the assignment (defaults to 100 for percentage-based)
     total_points = db.Column(db.Float, default=100.0, nullable=False)
+    allow_extra_credit = db.Column(db.Boolean, default=False, nullable=False)
+    max_extra_credit_points = db.Column(db.Float, default=0.0, nullable=False)
+    late_penalty_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    # Percentage deducted per day late (e.g. 10.0 = 10% of assignment points/day)
+    late_penalty_per_day = db.Column(db.Float, default=0.0, nullable=False)
+    # Maximum days to apply late penalty; 0 means unlimited
+    late_penalty_max_days = db.Column(db.Integer, default=0, nullable=False)
     
     # Quiz save and continue settings
     allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)

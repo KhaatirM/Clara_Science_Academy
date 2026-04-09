@@ -107,6 +107,11 @@ def add_assignment_for_class(class_id):
             status = request.form.get('status', 'Active')
             assignment_context = request.form.get('assignment_context', 'homework')
             total_points = request.form.get('total_points', type=float)
+            allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+            max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
+            late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+            late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
+            late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
             
             if not all([title, due_date_str, quarter]):
                 flash("Title, Due Date, and Quarter are required.", "danger")
@@ -126,6 +131,11 @@ def add_assignment_for_class(class_id):
             close_date_str = request.form.get('close_date', '').strip()
             open_date = None
             close_date = None
+            allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+            max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
+            late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+            late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
+            late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
             
             if open_date_str:
                 try:
@@ -164,6 +174,11 @@ def add_assignment_for_class(class_id):
                 status=status,
                 assignment_context=assignment_context,
                 total_points=total_points,
+                allow_extra_credit=allow_extra_credit,
+                max_extra_credit_points=max_extra_credit_points if allow_extra_credit else 0.0,
+                late_penalty_enabled=late_penalty_enabled,
+                late_penalty_per_day=late_penalty_per_day if late_penalty_enabled else 0.0,
+                late_penalty_max_days=late_penalty_max_days if late_penalty_enabled else 0,
                 created_by=teacher_id
             )
             
@@ -343,6 +358,11 @@ def edit_assignment(assignment_id):
             assignment.assignment_category = assignment_category
             assignment.category_weight = category_weight
             assignment.total_points = total_points
+            assignment.allow_extra_credit = allow_extra_credit
+            assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
+            assignment.late_penalty_enabled = late_penalty_enabled
+            assignment.late_penalty_per_day = late_penalty_per_day if late_penalty_enabled else 0.0
+            assignment.late_penalty_max_days = late_penalty_max_days if late_penalty_enabled else 0
             
             # Calculate status based on dates if status not explicitly set to Voided
             from teacher_routes.assignment_utils import calculate_assignment_status

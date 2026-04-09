@@ -28,6 +28,60 @@ from utils.grade_helpers import get_points_earned
 bp = Blueprint('assignments', __name__)
 
 
+def _apply_assignment_adjustments(assignment, entered_points, submission_record=None, notes_type='On-Time'):
+    """
+    Apply assignment-level grading rules (extra credit + late penalty) to a raw score.
+    Returns dict with final points and metadata for grade_data.
+    """
+    total_points = float(assignment.total_points or 100.0)
+    raw_points = max(0.0, float(entered_points))
+
+    # Extra credit applies only to points above assignment total.
+    extra_credit_points = 0.0
+    if getattr(assignment, 'allow_extra_credit', False):
+        overage = max(0.0, raw_points - total_points)
+        max_extra = max(0.0, float(getattr(assignment, 'max_extra_credit_points', 0.0) or 0.0))
+        extra_credit_points = min(overage, max_extra)
+        points_before_penalty = min(raw_points, total_points) + extra_credit_points
+    else:
+        points_before_penalty = min(raw_points, total_points)
+
+    # Late penalty can be inferred from submission timestamp or explicit "Late" note selection.
+    late_penalty_applied = 0.0
+    days_late = 0
+    if getattr(assignment, 'late_penalty_enabled', False):
+        per_day_pct = max(0.0, float(getattr(assignment, 'late_penalty_per_day', 0.0) or 0.0))
+        if per_day_pct > 0:
+            due_date = getattr(assignment, 'due_date', None)
+            submitted_at = getattr(submission_record, 'submitted_at', None) if submission_record else None
+            if due_date and submitted_at and submitted_at > due_date:
+                delta_days = (submitted_at - due_date).days
+                days_late = delta_days if delta_days > 0 else 1
+            elif str(notes_type or '').strip().lower() == 'late':
+                days_late = 1
+            if days_late > 0:
+                max_days = int(getattr(assignment, 'late_penalty_max_days', 0) or 0)
+                if max_days > 0:
+                    days_late = min(days_late, max_days)
+                late_penalty_applied = (days_late * per_day_pct / 100.0) * total_points
+                late_penalty_applied = min(late_penalty_applied, points_before_penalty)
+
+    final_points = max(0.0, points_before_penalty - late_penalty_applied)
+    percentage = (final_points / total_points * 100.0) if total_points > 0 else 0.0
+    max_score = total_points + (float(getattr(assignment, 'max_extra_credit_points', 0.0) or 0.0) if getattr(assignment, 'allow_extra_credit', False) else 0.0)
+
+    return {
+        'raw_points': round(raw_points, 2),
+        'points_earned': round(final_points, 2),
+        'extra_credit_points': round(extra_credit_points, 2),
+        'late_penalty_applied': round(late_penalty_applied, 2),
+        'days_late': int(days_late),
+        'percentage': round(percentage, 2),
+        'total_points': round(total_points, 2),
+        'max_score': round(max_score, 2),
+    }
+
+
 # ============================================================
 # Route: /assignment/type-selector
 # Function: assignment_type_selector
@@ -1880,22 +1934,41 @@ def _save_single_student_grade(assignment_id, student_id):
     except (ValueError, TypeError):
         return False, 'Invalid score'
 
-    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+    sub_for_adjustments = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+    adjusted = _apply_assignment_adjustments(
+        assignment=assignment,
+        entered_points=points_earned,
+        submission_record=sub_for_adjustments,
+        notes_type=notes_type
+    )
     grade_data = json.dumps({
-        'score': points_earned, 'points_earned': points_earned,
-        'total_points': total_points, 'max_score': total_points,
-        'percentage': round(percentage, 2), 'comment': comment, 'feedback': comment,
+        'score': adjusted['points_earned'], 'points_earned': adjusted['points_earned'],
+        'raw_points': adjusted['raw_points'],
+        'extra_credit_points': adjusted['extra_credit_points'],
+        'late_penalty_applied': adjusted['late_penalty_applied'],
+        'days_late': adjusted['days_late'],
+        'total_points': adjusted['total_points'], 'max_score': adjusted['max_score'],
+        'percentage': adjusted['percentage'], 'comment': comment, 'feedback': comment,
         'graded_at': datetime.utcnow().isoformat()
     })
 
     if existing_grade:
         existing_grade.grade_data = grade_data
         existing_grade.graded_at = datetime.utcnow()
+        existing_grade.extra_credit_points = adjusted['extra_credit_points']
+        existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
     else:
-        grade = Grade(student_id=student_id, assignment_id=assignment_id, grade_data=grade_data, graded_at=datetime.utcnow())
+        grade = Grade(
+            student_id=student_id,
+            assignment_id=assignment_id,
+            grade_data=grade_data,
+            graded_at=datetime.utcnow(),
+            extra_credit_points=adjusted['extra_credit_points'],
+            late_penalty_applied=adjusted['late_penalty_applied']
+        )
         db.session.add(grade)
         sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-        if not sub and points_earned > 0:
+        if not sub and adjusted['points_earned'] > 0:
             sub = Submission(
                 student_id=student_id, assignment_id=assignment_id,
                 submission_type='in_person', submission_notes='Auto-marked: grade entered',
@@ -2875,6 +2948,11 @@ def edit_assignment(assignment_id):
         if category_weight is None:
             category_weight = 0.0
         total_points = request.form.get('total_points', type=float)
+        allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+        max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
+        late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+        late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
+        late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
         status_revert_enabled = request.form.get('status_revert_enabled') == '1'
         status_override_until_str = request.form.get('status_override_until', '').strip()
         
@@ -2909,6 +2987,11 @@ def edit_assignment(assignment_id):
             assignment.assignment_category = assignment_category
             assignment.category_weight = category_weight
             assignment.total_points = total_points
+            assignment.allow_extra_credit = allow_extra_credit
+            assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
+            assignment.late_penalty_enabled = late_penalty_enabled
+            assignment.late_penalty_per_day = late_penalty_per_day if late_penalty_enabled else 0.0
+            assignment.late_penalty_max_days = late_penalty_max_days if late_penalty_enabled else 0
             
             # Status override: when "revert after" is set, lock status until that datetime
             if status_revert_enabled and status_override_until_str:

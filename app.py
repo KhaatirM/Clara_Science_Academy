@@ -163,6 +163,41 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: student profile columns check failed (may already exist): {e}")
 
+        # Add assignment advanced grading columns if missing
+        _assignment_cols = [
+            ('allow_extra_credit', 'BOOLEAN DEFAULT FALSE', 'INTEGER DEFAULT 0'),
+            ('max_extra_credit_points', 'DOUBLE PRECISION DEFAULT 0.0', 'REAL DEFAULT 0.0'),
+            ('late_penalty_enabled', 'BOOLEAN DEFAULT FALSE', 'INTEGER DEFAULT 0'),
+            ('late_penalty_per_day', 'DOUBLE PRECISION DEFAULT 0.0', 'REAL DEFAULT 0.0'),
+            ('late_penalty_max_days', 'INTEGER DEFAULT 0', 'INTEGER DEFAULT 0'),
+        ]
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                for col_name, pg_type, sqlite_type in _assignment_cols:
+                    if dialect == 'sqlite':
+                        r = conn.execute(text("PRAGMA table_info(assignment)"))
+                        columns = [row[1] for row in r]
+                        if col_name not in columns:
+                            conn.execute(text(
+                                f"ALTER TABLE assignment ADD COLUMN {col_name} {sqlite_type}"
+                            ))
+                            conn.commit()
+                            print(f"Added assignment.{col_name} column.")
+                    elif dialect == 'postgresql':
+                        r = conn.execute(text(
+                            "SELECT 1 FROM information_schema.columns "
+                            "WHERE table_name = 'assignment' AND column_name = :col"
+                        ), {"col": col_name})
+                        if r.fetchone() is None:
+                            conn.execute(text(
+                                f'ALTER TABLE "assignment" ADD COLUMN {col_name} {pg_type}'
+                            ))
+                            conn.commit()
+                            print(f"Added assignment.{col_name} column.")
+        except Exception as e:
+            print(f"Note: assignment advanced grading columns check failed (may already exist): {e}")
+
         # Add assignment.status_override and status_override_until if missing (for temporary status overrides)
         for table_name in ('assignment', 'group_assignment'):
             try:

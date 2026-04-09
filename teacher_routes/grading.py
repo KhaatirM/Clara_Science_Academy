@@ -16,6 +16,58 @@ from utils.grade_helpers import get_points_earned
 
 bp = Blueprint('grading', __name__)
 
+
+def _apply_assignment_adjustments(assignment, entered_points, submission_record=None, notes_type='On-Time'):
+    """
+    Apply assignment-level grading rules (extra credit + late penalty) to a raw score.
+    Returns dict with final points and metadata for grade_data.
+    """
+    total_points = float(assignment.total_points or 100.0)
+    raw_points = max(0.0, float(entered_points))
+
+    extra_credit_points = 0.0
+    if getattr(assignment, 'allow_extra_credit', False):
+        overage = max(0.0, raw_points - total_points)
+        max_extra = max(0.0, float(getattr(assignment, 'max_extra_credit_points', 0.0) or 0.0))
+        extra_credit_points = min(overage, max_extra)
+        points_before_penalty = min(raw_points, total_points) + extra_credit_points
+    else:
+        points_before_penalty = min(raw_points, total_points)
+
+    late_penalty_applied = 0.0
+    days_late = 0
+    if getattr(assignment, 'late_penalty_enabled', False):
+        per_day_pct = max(0.0, float(getattr(assignment, 'late_penalty_per_day', 0.0) or 0.0))
+        if per_day_pct > 0:
+            due_date = getattr(assignment, 'due_date', None)
+            submitted_at = getattr(submission_record, 'submitted_at', None) if submission_record else None
+            if due_date and submitted_at and submitted_at > due_date:
+                delta_days = (submitted_at - due_date).days
+                days_late = delta_days if delta_days > 0 else 1
+            elif str(notes_type or '').strip().lower() == 'late':
+                days_late = 1
+            if days_late > 0:
+                max_days = int(getattr(assignment, 'late_penalty_max_days', 0) or 0)
+                if max_days > 0:
+                    days_late = min(days_late, max_days)
+                late_penalty_applied = (days_late * per_day_pct / 100.0) * total_points
+                late_penalty_applied = min(late_penalty_applied, points_before_penalty)
+
+    final_points = max(0.0, points_before_penalty - late_penalty_applied)
+    percentage = (final_points / total_points * 100.0) if total_points > 0 else 0.0
+    max_score = total_points + (float(getattr(assignment, 'max_extra_credit_points', 0.0) or 0.0) if getattr(assignment, 'allow_extra_credit', False) else 0.0)
+
+    return {
+        'raw_points': round(raw_points, 2),
+        'points_earned': round(final_points, 2),
+        'extra_credit_points': round(extra_credit_points, 2),
+        'late_penalty_applied': round(late_penalty_applied, 2),
+        'days_late': int(days_late),
+        'percentage': round(percentage, 2),
+        'total_points': round(total_points, 2),
+        'max_score': round(max_score, 2),
+    }
+
 @bp.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required
 @teacher_required
@@ -84,14 +136,25 @@ def grade_assignment(assignment_id):
                     
                     # Get feedback comment
                     comments = request.form.get(f'comment_{student_id}', '').strip()
+                    sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+                    adjusted = _apply_assignment_adjustments(
+                        assignment=assignment,
+                        entered_points=earned_points,
+                        submission_record=sub,
+                        notes_type='On-Time'
+                    )
                     
                     # Create or update grade
                     grade_data = {
-                        'score': earned_points,
-                        'points_earned': earned_points,
-                        'total_points': total_points,
-                        'max_score': total_points,
-                        'percentage': round((earned_points / total_points * 100) if total_points > 0 else 0, 2),
+                        'score': adjusted['points_earned'],
+                        'points_earned': adjusted['points_earned'],
+                        'raw_points': adjusted['raw_points'],
+                        'extra_credit_points': adjusted['extra_credit_points'],
+                        'late_penalty_applied': adjusted['late_penalty_applied'],
+                        'days_late': adjusted['days_late'],
+                        'total_points': adjusted['total_points'],
+                        'max_score': adjusted['max_score'],
+                        'percentage': adjusted['percentage'],
                         'feedback': comments,
                         'graded_at': datetime.now().isoformat()
                     }
@@ -99,12 +162,16 @@ def grade_assignment(assignment_id):
                     if existing_grade:
                         existing_grade.grade_data = json.dumps(grade_data)
                         existing_grade.graded_at = datetime.now()
+                        existing_grade.extra_credit_points = adjusted['extra_credit_points']
+                        existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
                     else:
                         new_grade = Grade(
                             assignment_id=assignment_id,
                             student_id=student_id,
                             grade_data=json.dumps(grade_data),
-                            graded_at=datetime.now()
+                            graded_at=datetime.now(),
+                            extra_credit_points=adjusted['extra_credit_points'],
+                            late_penalty_applied=adjusted['late_penalty_applied']
                         )
                         db.session.add(new_grade)
                     
@@ -135,18 +202,23 @@ def grade_assignment(assignment_id):
                         # Don't update voided grades - preserve the void status
                         continue
                     
-                    # Get total points from assignment (default to 100 if not set)
-                    total_points = assignment.total_points if assignment.total_points else 100.0
-                    
-                    # Calculate percentage based on points earned vs total points
-                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
-                    
+                    sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+                    adjusted = _apply_assignment_adjustments(
+                        assignment=assignment,
+                        entered_points=points_earned,
+                        submission_record=sub,
+                        notes_type='On-Time'
+                    )
                     grade_data = {
-                        'score': points_earned,
-                        'points_earned': points_earned,
-                        'total_points': total_points,
-                        'max_score': total_points,  # Keep for backward compatibility
-                        'percentage': round(percentage, 2),
+                        'score': adjusted['points_earned'],
+                        'points_earned': adjusted['points_earned'],
+                        'raw_points': adjusted['raw_points'],
+                        'extra_credit_points': adjusted['extra_credit_points'],
+                        'late_penalty_applied': adjusted['late_penalty_applied'],
+                        'days_late': adjusted['days_late'],
+                        'total_points': adjusted['total_points'],
+                        'max_score': adjusted['max_score'],  # Keep for backward compatibility
+                        'percentage': adjusted['percentage'],
                         'feedback': comments,
                         'graded_at': datetime.now().isoformat()
                     }
@@ -155,13 +227,17 @@ def grade_assignment(assignment_id):
                         # Update existing grade
                         existing_grade.grade_data = json.dumps(grade_data)
                         existing_grade.graded_at = datetime.now()
+                        existing_grade.extra_credit_points = adjusted['extra_credit_points']
+                        existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
                     else:
                         # Create new grade
                         new_grade = Grade(
                             assignment_id=assignment_id,
                             student_id=student_id,
                             grade_data=json.dumps(grade_data),
-                            graded_at=datetime.now()
+                            graded_at=datetime.now(),
+                            extra_credit_points=adjusted['extra_credit_points'],
+                            late_penalty_applied=adjusted['late_penalty_applied']
                         )
                         db.session.add(new_grade)
                     
@@ -424,25 +500,40 @@ def save_student_grade(assignment_id, student_id):
         except (ValueError, TypeError):
             return jsonify({'success': False, 'error': 'Invalid score'}), 400
 
-        percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+        sub_for_adjustments = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+        adjusted = _apply_assignment_adjustments(
+            assignment=assignment,
+            entered_points=points_earned,
+            submission_record=sub_for_adjustments,
+            notes_type=notes_type
+        )
         grade_data = {
-            'score': points_earned, 'points_earned': points_earned,
-            'total_points': total_points, 'max_score': total_points,
-            'percentage': round(percentage, 2), 'feedback': comment, 'comment': comment,
+            'score': adjusted['points_earned'], 'points_earned': adjusted['points_earned'],
+            'raw_points': adjusted['raw_points'],
+            'extra_credit_points': adjusted['extra_credit_points'],
+            'late_penalty_applied': adjusted['late_penalty_applied'],
+            'days_late': adjusted['days_late'],
+            'total_points': adjusted['total_points'], 'max_score': adjusted['max_score'],
+            'percentage': adjusted['percentage'], 'feedback': comment, 'comment': comment,
             'graded_at': datetime.utcnow().isoformat()
         }
 
         if existing_grade:
             existing_grade.grade_data = json.dumps(grade_data)
             existing_grade.graded_at = datetime.utcnow()
+            existing_grade.extra_credit_points = adjusted['extra_credit_points']
+            existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
         else:
             new_grade = Grade(
                 assignment_id=assignment_id, student_id=student_id,
-                grade_data=json.dumps(grade_data), graded_at=datetime.utcnow()
+                grade_data=json.dumps(grade_data),
+                graded_at=datetime.utcnow(),
+                extra_credit_points=adjusted['extra_credit_points'],
+                late_penalty_applied=adjusted['late_penalty_applied']
             )
             db.session.add(new_grade)
             sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-            if not sub and points_earned > 0:
+            if not sub and adjusted['points_earned'] > 0:
                 sub = Submission(
                     student_id=student_id, assignment_id=assignment_id,
                     submission_type='in_person', submission_notes='Auto-marked: grade entered',

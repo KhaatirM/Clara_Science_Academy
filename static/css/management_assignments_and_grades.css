@@ -84,6 +84,42 @@
     color: #c45c5c;
 }
 
+/* Quick class finder */
+.class-finder-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 4px 14px rgba(31, 41, 55, 0.06);
+}
+
+.class-finder-icon {
+    background: #f8fafc;
+    border-right: 0;
+    color: #6b7280;
+}
+
+.class-finder-input {
+    border-left: 0;
+    min-height: 42px;
+}
+
+.class-finder-input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.class-finder-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+}
+
 /* Assignment Context Badges - Enhanced with higher specificity */
 .card.assignment-card .card-body .badge.bg-primary,
 .card.assignment-card .card-body .badge.bg-secondary,

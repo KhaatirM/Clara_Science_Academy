@@ -3035,11 +3035,17 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <p class="student-assignment-teacher mb-2 small text-muted">
                                 <i class="bi bi-person me-1"></i>
                                 {% if assignment.creator %}
-                                    {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
-                                        {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
-                                    {% else %}
-                                        {{ assignment.creator.username }}
+                                    {% set creator_name = '' %}
+                                    {% if assignment.creator.teacher_staff_profile %}
+                                        {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
                                     {% endif %}
+                                    {% if not creator_name and assignment.creator.student_profile %}
+                                        {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                    {% endif %}
+                                    {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
+                                        {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                    {% endif %}
+                                    {{ creator_name if creator_name else assignment.creator.username }}
                                 {% else %}
                                     Unknown
                                 {% endif %}
@@ -3235,11 +3241,17 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <p class="student-assignment-teacher mb-2 small text-muted">
                                 <i class="bi bi-person me-1"></i>
                                 {% if assignment.creator %}
-                                    {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
-                                        {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
-                                    {% else %}
-                                        {{ assignment.creator.username }}
+                                    {% set creator_name = '' %}
+                                    {% if assignment.creator.teacher_staff_profile %}
+                                        {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
                                     {% endif %}
+                                    {% if not creator_name and assignment.creator.student_profile %}
+                                        {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                    {% endif %}
+                                    {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
+                                        {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                    {% endif %}
+                                    {{ creator_name if creator_name else assignment.creator.username }}
                                 {% else %}
                                     Unknown
                                 {% endif %}
@@ -3491,11 +3503,17 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <p class="student-assignment-teacher mb-2 small text-muted">
                                 <i class="bi bi-person me-1"></i>
                                 {% if assignment.creator %}
-                                    {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
-                                        {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
-                                    {% else %}
-                                        {{ assignment.creator.username }}
+                                    {% set creator_name = '' %}
+                                    {% if assignment.creator.teacher_staff_profile %}
+                                        {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
                                     {% endif %}
+                                    {% if not creator_name and assignment.creator.student_profile %}
+                                        {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                    {% endif %}
+                                    {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
+                                        {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                    {% endif %}
+                                    {{ creator_name if creator_name else assignment.creator.username }}
                                 {% else %}
                                     Unknown
                                 {% endif %}

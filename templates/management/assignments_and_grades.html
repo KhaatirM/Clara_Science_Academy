@@ -130,11 +130,38 @@
         </div>
         {% endif %}
 
+        <div class="class-finder-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-8">
+                    <label for="classSearchInput" class="form-label fw-bold text-muted mb-2">QUICK FIND CLASS</label>
+                    <div class="input-group">
+                        <span class="input-group-text class-finder-icon"><i class="bi bi-search"></i></span>
+                        <input
+                            type="text"
+                            id="classSearchInput"
+                            class="form-control class-finder-input"
+                            placeholder="Type class name, subject, or teacher..."
+                            autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4 d-flex flex-wrap justify-content-lg-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" id="clearClassSearchBtn">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </button>
+                    <div class="class-finder-count" id="classSearchCount">
+                        Showing {{ accessible_classes|length }} of {{ accessible_classes|length }} classes
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Classes Grid -->
-        <div class="row g-4">
+        <div class="row g-4" id="classSelectionGrid">
             {% for class_obj in accessible_classes %}
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="assignment-class-card" onclick="viewClassAssignmentsAndGrades({{ class_obj.id }})">
+            <div class="col-12 col-md-6 col-lg-4 class-search-item">
+                <div class="assignment-class-card"
+                     data-search-text="{{ (class_obj.name ~ ' ' ~ (class_obj.subject or '') ~ ' ' ~ (class_obj.teacher.first_name if class_obj.teacher else '') ~ ' ' ~ (class_obj.teacher.last_name if class_obj.teacher else ''))|lower }}"
+                     onclick="viewClassAssignmentsAndGrades({{ class_obj.id }})">
                     <div class="assignment-class-header">
                         <div class="assignment-class-icon">
                             <i class="bi bi-book-fill"></i>
@@ -194,6 +221,11 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+        <div class="assignments-empty-state mt-4 d-none" id="classSearchEmptyState">
+            <i class="bi bi-search display-1 text-muted d-block mb-3"></i>
+            <h5 class="text-muted">No classes match that filter</h5>
+            <p class="text-muted mb-0">Try a different class name, subject, or teacher keyword.</p>
         </div>
 
     {% else %}
@@ -395,11 +427,20 @@
                                     <small class="text-muted">
                                         <i class="bi bi-person me-1"></i>
                                         {% if assignment.creator %}
-                                            {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
-                                                {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
-                                            {% else %}
-                                                {{ assignment.creator.username }}
-                                            {% endif %}
+                                                {% set creator_name = '' %}
+                                                {% if assignment.proposing_student %}
+                                                    {% set creator_name = (assignment.proposing_student.first_name ~ ' ' ~ assignment.proposing_student.last_name)|trim %}
+                                                {% endif %}
+                                                {% if not creator_name and assignment.creator.teacher_staff_profile %}
+                                                    {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                                {% endif %}
+                                                {% if not creator_name and assignment.creator.student_profile %}
+                                                    {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                                {% endif %}
+                                                {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
+                                                    {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                                {% endif %}
+                                                {{ creator_name if creator_name else assignment.creator.username }}
                                         {% else %}
                                             Unknown
                                         {% endif %}
@@ -512,11 +553,20 @@
                                         <small class="text-muted">
                                             <i class="bi bi-person me-1"></i>
                                             {% if group_assignment.creator %}
-                                                {% if group_assignment.creator.teacher_staff_id and group_assignment.creator.teacher_staff_profile %}
-                                                    {{ group_assignment.creator.teacher_staff_profile.first_name }} {{ group_assignment.creator.teacher_staff_profile.last_name }}
-                                                {% else %}
-                                                    {{ group_assignment.creator.username }}
+                                                {% set creator_name = '' %}
+                                                {% if group_assignment.proposing_student %}
+                                                    {% set creator_name = (group_assignment.proposing_student.first_name ~ ' ' ~ group_assignment.proposing_student.last_name)|trim %}
                                                 {% endif %}
+                                                {% if not creator_name and group_assignment.creator.teacher_staff_profile %}
+                                                    {% set creator_name = (group_assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ group_assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                                {% endif %}
+                                                {% if not creator_name and group_assignment.creator.student_profile %}
+                                                    {% set creator_name = (group_assignment.creator.student_profile.first_name ~ ' ' ~ group_assignment.creator.student_profile.last_name)|trim %}
+                                                {% endif %}
+                                                {% if not creator_name and (group_assignment.creator.first_name or group_assignment.creator.last_name) %}
+                                                    {% set creator_name = ((group_assignment.creator.first_name or '') ~ ' ' ~ (group_assignment.creator.last_name or ''))|trim %}
+                                                {% endif %}
+                                                {{ creator_name if creator_name else group_assignment.creator.username }}
                                             {% else %}
                                                 Unknown
                                             {% endif %}
@@ -1011,6 +1061,33 @@ function createAssignment() {
     {% endif %}
 }
 
+function filterClassCards() {
+    const searchInput = document.getElementById('classSearchInput');
+    const cards = document.querySelectorAll('.class-search-item');
+    const countEl = document.getElementById('classSearchCount');
+    const emptyState = document.getElementById('classSearchEmptyState');
+
+    if (!searchInput || !cards.length) return;
+
+    const query = (searchInput.value || '').trim().toLowerCase();
+    let visibleCount = 0;
+
+    cards.forEach((cardCol) => {
+        const card = cardCol.querySelector('.assignment-class-card');
+        const haystack = (card?.getAttribute('data-search-text') || '').toLowerCase();
+        const isVisible = !query || haystack.includes(query);
+        cardCol.classList.toggle('d-none', !isVisible);
+        if (isVisible) visibleCount += 1;
+    });
+
+    if (countEl) {
+        countEl.textContent = `Showing ${visibleCount} of ${cards.length} classes`;
+    }
+    if (emptyState) {
+        emptyState.classList.toggle('d-none', visibleCount > 0);
+    }
+}
+
 // Initialize view based on URL parameter (only set display, don't redirect)
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1038,6 +1115,20 @@ document.addEventListener('DOMContentLoaded', function() {
             activeBtn.classList.remove('btn-outline-primary');
         }
     }
+
+    const searchInput = document.getElementById('classSearchInput');
+    const clearBtn = document.getElementById('clearClassSearchBtn');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterClassCards);
+    }
+    if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            filterClassCards();
+            searchInput.focus();
+        });
+    }
+    filterClassCards();
 });
 
 // Void Assignment Modal Functions

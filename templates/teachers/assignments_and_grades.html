@@ -111,17 +111,31 @@
             </select>
         </div>
             </div>
+            <div class="row g-3 mt-1">
+                <div class="col-12">
+                    <label for="assignmentSearchInput" class="form-label fw-bold text-muted">QUICK FIND ASSIGNMENT</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="assignmentSearchInput" class="form-control form-control-enhanced" placeholder="Type assignment title or class...">
+                        <button type="button" class="btn btn-outline-secondary" id="clearAssignmentSearchBtn">Clear</button>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="assignmentSearchCount">
+                        Showing {{ assignments|length + group_assignments|length }} of {{ assignments|length + group_assignments|length }} assignments
+                    </small>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Assignments View -->
     <div id="assignmentsView" class="view-content" style="display: {% if view_mode == 'assignments' %}block{% else %}none{% endif %};">
         {% if assignments or group_assignments %}
-        <div class="row g-4">
+        <div class="row g-4" id="assignmentsGrid">
             <!-- Individual Assignments -->
                 {% for assignment in assignments %}
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="assignment-card">
+            <div class="col-12 col-md-6 col-xl-4 assignment-search-item">
+                <div class="assignment-card"
+                     data-search-text="{{ (assignment.title ~ ' ' ~ (assignment.class_info.name if assignment.class_info else '') ~ ' individual')|lower }}">
                     <div class="assignment-card-header">
                         <div class="assignment-icon">
                             <i class="bi bi-journal-text"></i>
@@ -196,8 +210,9 @@
             
             <!-- Group Assignments -->
                 {% for group_assignment in group_assignments %}
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="group-assignment-card">
+            <div class="col-12 col-md-6 col-xl-4 assignment-search-item">
+                <div class="group-assignment-card"
+                     data-search-text="{{ (group_assignment.title ~ ' ' ~ (group_assignment.class_info.name if group_assignment.class_info else '') ~ ' group')|lower }}">
                     <div class="assignment-card-header">
                         <div class="assignment-icon">
                             <i class="bi bi-people-fill"></i>
@@ -260,6 +275,13 @@
                     </div>
                 </div>
                 {% endfor %}
+        </div>
+        <div class="empty-state d-none mt-4" id="assignmentSearchEmptyState">
+            <div class="empty-state-icon">
+                <i class="bi bi-search"></i>
+            </div>
+            <h4>No matching assignments</h4>
+            <p class="text-muted">Try a different assignment or class keyword.</p>
         </div>
         {% else %}
         <div class="empty-state">
@@ -518,6 +540,33 @@ function createAssignment() {
     window.location.href = "{{ url_for('teacher.assignments.assignment_type_selector') }}";
 }
 
+function filterAssignmentCards() {
+    const searchInput = document.getElementById('assignmentSearchInput');
+    const cards = document.querySelectorAll('.assignment-search-item');
+    const countEl = document.getElementById('assignmentSearchCount');
+    const emptyState = document.getElementById('assignmentSearchEmptyState');
+
+    if (!searchInput || !cards.length) return;
+
+    const query = (searchInput.value || '').trim().toLowerCase();
+    let visibleCount = 0;
+
+    cards.forEach((cardCol) => {
+        const card = cardCol.querySelector('.assignment-card, .group-assignment-card');
+        const haystack = (card?.getAttribute('data-search-text') || '').toLowerCase();
+        const isVisible = !query || haystack.includes(query);
+        cardCol.classList.toggle('d-none', !isVisible);
+        if (isVisible) visibleCount += 1;
+    });
+
+    if (countEl) {
+        countEl.textContent = `Showing ${visibleCount} of ${cards.length} assignments`;
+    }
+    if (emptyState) {
+        emptyState.classList.toggle('d-none', visibleCount > 0);
+    }
+}
+
 // Initialize active button based on current view
 document.addEventListener('DOMContentLoaded', function() {
     const currentView = '{{ view_mode }}';
@@ -526,6 +575,20 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         document.getElementById('assignmentsBtn').classList.add('active');
     }
+
+    const searchInput = document.getElementById('assignmentSearchInput');
+    const clearBtn = document.getElementById('clearAssignmentSearchBtn');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterAssignmentCards);
+    }
+    if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            filterAssignmentCards();
+            searchInput.focus();
+        });
+    }
+    filterAssignmentCards();
 });
 </script>
 

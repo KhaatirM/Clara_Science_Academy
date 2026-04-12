@@ -280,7 +280,7 @@
                                         <div class="ms-4 mt-2">
                                             <label for="max_extra_credit_points" class="form-label">Maximum Extra Credit Points</label>
                                             <input type="number" class="form-control" id="max_extra_credit_points" name="max_extra_credit_points" 
-                                                   value="0" min="0" step="0.1" disabled>
+                                                   value="0" min="0" step="0.1">
                                             <div class="form-text">Maximum extra credit points students can earn</div>
                                         </div>
                                     </div>
@@ -298,13 +298,13 @@
                                                 <div class="col-md-4">
                                                     <label for="late_penalty_per_day" class="form-label">Penalty Per Day (%)</label>
                                                     <input type="number" class="form-control" id="late_penalty_per_day" name="late_penalty_per_day" 
-                                                           value="0" min="0" max="100" step="0.1" disabled>
+                                                           value="0" min="0" max="100" step="0.1">
                                                     <div class="form-text">e.g., 10 = 10% per day</div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <label for="late_penalty_max_days" class="form-label">Max Days (0 = unlimited)</label>
                                                     <input type="number" class="form-control" id="late_penalty_max_days" name="late_penalty_max_days" 
-                                                           value="0" min="0" disabled>
+                                                           value="0" min="0">
                                                     <div class="form-text">Stop applying penalty after X days</div>
                                                 </div>
                                             </div>
@@ -612,15 +612,17 @@ document.addEventListener('DOMContentLoaded', function() {
     } // end if (file upload elements exist)
     
     // Update preview on form changes
-    const formInputs = form.querySelectorAll('input, textarea, select');
-    formInputs.forEach(input => {
-        input.addEventListener('input', updateAssignmentPreview);
-        input.addEventListener('change', updateAssignmentPreview);
-    });
+    if (form && typeof updateAssignmentPreview === 'function') {
+        const formInputs = form.querySelectorAll('input, textarea, select');
+        formInputs.forEach(input => {
+            input.addEventListener('input', updateAssignmentPreview);
+            input.addEventListener('change', updateAssignmentPreview);
+        });
+    }
     
     // Form submission - validate class_ids when using checkboxes
     const classIdsCheckboxes = document.querySelectorAll('input[name="class_ids"]');
-    form.addEventListener('submit', function(e) {
+    if (form) form.addEventListener('submit', function(e) {
         if (classIdsCheckboxes.length > 0) {
             const checked = Array.from(classIdsCheckboxes).filter(cb => cb.checked);
             if (!checked || checked.length === 0) {
@@ -631,9 +633,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         const submitBtn = document.getElementById('createAssignmentBtn');
-        submitBtn.classList.add('loading');
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating Assignment...';
-        submitBtn.disabled = true;
+        if (submitBtn) {
+            submitBtn.classList.add('loading');
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating Assignment...';
+            submitBtn.disabled = true;
+        }
     });
     
     // Create Assignment button uses form="assignmentForm" and type="submit" so it natively submits the form.
@@ -688,7 +692,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize preview
-    updateAssignmentPreview();
+    if (typeof updateAssignmentPreview === 'function') {
+        updateAssignmentPreview();
+    }
     
     // Select/Deselect all classes (for checkbox mode)
     window.selectAllClasses = function() {
@@ -697,20 +703,26 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deselectAllClasses = function() {
         document.querySelectorAll('input[name="class_ids"]').forEach(cb => { cb.checked = false; });
     };
-});
-    // Enable/disable extra credit fields (guard against missing elements to avoid breaking file upload)
-    var elExtra = document.getElementById('allow_extra_credit');
-    if (elExtra) elExtra.addEventListener('change', function() {
-        var inp = document.getElementById('max_extra_credit_points');
-        if (inp) { inp.disabled = !this.checked; if (!this.checked) inp.value = '0'; }
-    });
     
-    var elLate = document.getElementById('late_penalty_enabled');
-    if (elLate) elLate.addEventListener('change', function() {
-        var p1 = document.getElementById('late_penalty_per_day'), p2 = document.getElementById('late_penalty_max_days');
-        if (p1) { p1.disabled = !this.checked; if (!this.checked) p1.value = '0'; }
-        if (p2) { p2.disabled = !this.checked; if (!this.checked) p2.value = '0'; }
-    });
+    // Enable/disable advanced grading fields.
+    const elExtra = document.getElementById('allow_extra_credit');
+    const inpExtra = document.getElementById('max_extra_credit_points');
+    const elLate = document.getElementById('late_penalty_enabled');
+    const inpLatePerDay = document.getElementById('late_penalty_per_day');
+    const inpLateMaxDays = document.getElementById('late_penalty_max_days');
+
+    function syncAdvancedGradingInputs() {
+        // Keep fields editable at all times.
+        // Backend applies values only when matching switches are enabled.
+        if (inpExtra) inpExtra.disabled = false;
+        if (inpLatePerDay) inpLatePerDay.disabled = false;
+        if (inpLateMaxDays) inpLateMaxDays.disabled = false;
+    }
+
+    if (elExtra) elExtra.addEventListener('change', syncAdvancedGradingInputs);
+    if (elLate) elLate.addEventListener('change', syncAdvancedGradingInputs);
+    syncAdvancedGradingInputs();
+});
 </script>
 
 {% endblock %} 

@@ -2115,24 +2115,34 @@ def grade_assignment(assignment_id):
                             # Remove submission if marked as not submitted
                             db.session.delete(submission)
                     
+                    submission_for_adjustments = Submission.query.filter_by(
+                        student_id=student.id,
+                        assignment_id=assignment_id
+                    ).first()
+
                     # Always process grade - blank/empty means 0 and not submitted
                     try:
                         points_earned = float(score) if (score is not None and str(score).strip()) else 0.0
                     except (ValueError, TypeError):
                         points_earned = 0.0
 
-                    # Get total points from assignment (default to 100 if not set)
-                    total_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else 100.0
-
-                    # Calculate percentage based on points earned vs total points
-                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                    adjusted = _apply_assignment_adjustments(
+                        assignment=assignment,
+                        entered_points=points_earned,
+                        submission_record=submission_for_adjustments,
+                        notes_type=notes_type
+                    )
 
                     grade_data_dict = {
-                        'score': points_earned,
-                        'points_earned': points_earned,
-                        'total_points': total_points,
-                        'max_score': total_points,  # Keep for backward compatibility
-                        'percentage': round(percentage, 2),
+                        'score': adjusted['points_earned'],
+                        'points_earned': adjusted['points_earned'],
+                        'raw_points': adjusted['raw_points'],
+                        'extra_credit_points': adjusted['extra_credit_points'],
+                        'late_penalty_applied': adjusted['late_penalty_applied'],
+                        'days_late': adjusted['days_late'],
+                        'total_points': adjusted['total_points'],
+                        'max_score': adjusted['max_score'],  # Keep for backward compatibility
+                        'percentage': adjusted['percentage'],
                         'comment': comment or '',
                         'feedback': comment or '',  # Keep for backward compatibility
                         'graded_at': datetime.utcnow().isoformat()
@@ -2145,6 +2155,8 @@ def grade_assignment(assignment_id):
                         if not grade.is_voided:
                             grade.grade_data = grade_data
                             grade.graded_at = datetime.utcnow()
+                            grade.extra_credit_points = adjusted['extra_credit_points']
+                            grade.late_penalty_applied = adjusted['late_penalty_applied']
                             # Check if grade should be voided due to late enrollment (only if not already voided)
                             from management_routes.late_enrollment_utils import check_and_void_grade
                             check_and_void_grade(grade)
@@ -2155,6 +2167,8 @@ def grade_assignment(assignment_id):
                         grade.assignment_id = assignment_id
                         grade.grade_data = grade_data
                         grade.graded_at = datetime.utcnow()
+                        grade.extra_credit_points = adjusted['extra_credit_points']
+                        grade.late_penalty_applied = adjusted['late_penalty_applied']
                         db.session.add(grade)
                         # Check if grade should be voided due to late enrollment
                         from management_routes.late_enrollment_utils import check_and_void_grade
@@ -2197,7 +2211,7 @@ def grade_assignment(assignment_id):
                         grade.grade_data = json.dumps(grade_data_dict)
 
                     # Only auto-create in_person submission when score > 0 (blank = 0 and not submitted)
-                    if points_earned > 0:
+                    if adjusted['points_earned'] > 0:
                         submission = Submission.query.filter_by(
                             student_id=student.id,
                             assignment_id=assignment_id
@@ -2216,7 +2230,7 @@ def grade_assignment(assignment_id):
                             db.session.add(submission)
 
                     # Queue for digest notification (one per student after commit)
-                    if student.user and points_earned > 0:
+                    if student.user and adjusted['points_earned'] > 0:
                         graded_user_ids.append(student.user.id)
                 
                 db.session.commit()
@@ -2251,7 +2265,13 @@ def grade_assignment(assignment_id):
                     if g.grade_data:
                         grade_data = json.loads(g.grade_data)
                         # Ensure grade_data has the expected structure
-                        points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+                        points_earned_raw = grade_data.get('points_earned')
+                        if points_earned_raw in (None, '', False):
+                            points_earned_raw = grade_data.get('score', 0)
+                        try:
+                            points_earned = float(points_earned_raw)
+                        except (TypeError, ValueError):
+                            points_earned = 0.0
                         # Always use assignment's total_points as source of truth, not stored value
                         total_points = assignment_total_points
                         # Always recalculate percentage using assignment's actual total_points

@@ -279,7 +279,14 @@ def redo_dashboard():
     active_redos = len([r for r in redos if not r.is_used and not r.final_grade])
     completed_redos = len([r for r in redos if r.final_grade])
     now = datetime.now(timezone.utc)
-    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline and _as_utc_aware(r.redo_deadline) < now])
+    for redo in redos:
+        redo.is_overdue = bool(
+            (not redo.is_used) and
+            (not redo.final_grade) and
+            redo.redo_deadline and
+            (_as_utc_aware(redo.redo_deadline) < now)
+        )
+    overdue_redos = len([r for r in redos if getattr(r, 'is_overdue', False)])
     active_reopenings = len(reopenings)
     
     # Calculate average improvement

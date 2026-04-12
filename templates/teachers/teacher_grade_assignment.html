@@ -248,12 +248,19 @@
                     {% set points_earned = 0 %}
                     {# Always use assignment.total_points as source of truth, not stored value in grade_data #}
                     {% set total_points = assignment.total_points if assignment.total_points else 100.0 %}
+                    {% set allow_extra_credit = assignment.allow_extra_credit|default(false) %}
+                    {% set max_extra_credit_points = assignment.max_extra_credit_points|default(0)|float %}
+                    {% set grading_max_points = total_points + (max_extra_credit_points if allow_extra_credit else 0) %}
                     {% set percentage_value = 0 %}
                     {% set comment_data = '' %}
                     {% set grade_id = None %}
+                    {% set extra_credit_applied = 0 %}
+                    {% set late_penalty_applied = 0 %}
                     {% if grade_data %}
                         {% set is_voided = grade_data.is_voided|default(false) %}
                         {% set points_earned = grade_data.points_earned|default(grade_data.score|default(0))|float %}
+                        {% set extra_credit_applied = grade_data.extra_credit_points|default(0)|float %}
+                        {% set late_penalty_applied = grade_data.late_penalty_applied|default(0)|float %}
                         {# Always recalculate percentage using assignment's actual total_points #}
                         {% if points_earned > 0 and total_points > 0 %}
                             {% set percentage_value = (points_earned / total_points * 100)|round(2) %}
@@ -376,23 +383,32 @@
                                         </div>
                                         
                                         <div class="score-input-wrapper">
-                                            <div class="input-group mb-2">
+                                            <div class="score-fraction-input mb-2">
                                                 <input type="number" 
-                                                       class="score-input form-control" 
+                                                       class="score-input score-fraction-numerator" 
                                                        name="score_{{ student.id }}" 
                                                        id="score_{{ student.id }}"
                                                        value="{{ points_earned if grade_data else '' }}"
                                                        min="0" 
-                                                       max="{{ total_points }}" 
+                                                       max="{{ grading_max_points|round(2) }}" 
                                                        step="0.1"
-                                                       placeholder="0-{{ total_points|int }}"
+                                                       placeholder="0"
                                                        data-student-id="{{ student.id }}"
                                                        data-total-points="{{ total_points }}"
                                                        {% if grade_id %}data-grade-history-url="{% if role_prefix == 'management' or (request.endpoint and 'management' in request.endpoint) %}{{ url_for('management.admin_grade_history', grade_id=grade_id) }}{% else %}{{ url_for('teacher.grading.grade_history', grade_id=grade_id) }}{% endif %}"{% endif %}
                                                        {% if is_voided %}disabled{% endif %}
                                                        oninput="updateScoreVisual(this); autoSaveGrade({{ student.id }})">
-                                                <span class="input-group-text">/ {{ total_points|int }} pts</span>
+                                                <div class="score-fraction-divider"></div>
+                                                <div class="score-fraction-denominator">{{ total_points|int }}</div>
                                             </div>
+                                            <small class="text-muted d-block mb-1">
+                                                Base points{% if allow_extra_credit %} (+{{ max_extra_credit_points|round(1) }} EC max){% endif %}
+                                            </small>
+                                            {% if allow_extra_credit %}
+                                            <small class="text-muted d-block mb-1">
+                                                Enter above {{ total_points|int }} to apply extra credit.
+                                            </small>
+                                            {% endif %}
                                             <div class="score-visual-bar">
                                                 <div class="score-visual-fill" style="width: {{ percentage_value }}%"></div>
                                             </div>
@@ -437,6 +453,13 @@
                                                 <div class="grade-percentage text-muted small mb-1">
                                                     ({{ percentage_value|round(1) }}%)
                                                 </div>
+                                                {% if extra_credit_applied > 0 or late_penalty_applied > 0 %}
+                                                <div class="grade-percentage text-muted small mb-1">
+                                                    {% if extra_credit_applied > 0 %}+{{ extra_credit_applied|round(1) }} EC{% endif %}
+                                                    {% if extra_credit_applied > 0 and late_penalty_applied > 0 %} • {% endif %}
+                                                    {% if late_penalty_applied > 0 %}-{{ late_penalty_applied|round(1) }} late{% endif %}
+                                                </div>
+                                                {% endif %}
                                                 <div class="grade-letter">
                                                     {% if percentage_value >= 90 %}A
                                                     {% elif percentage_value >= 80 %}B
@@ -532,7 +555,7 @@
                 </div>
                 <div class="mb-3">
                     <h6><i class="bi bi-star text-primary me-2"></i>Points Earned</h6>
-                    <p class="mb-0">Points the student earned out of the total. Use the quick buttons (A, B, C, D) or presets (100, 90, 80, 70, 0) for speed. Enter 0 for no credit or not submitted.</p>
+                    <p class="mb-0">Points the student earned out of the total. If extra credit is enabled for this assignment, you can enter points above the base total up to the configured EC maximum. Enter 0 for no credit or not submitted.</p>
                 </div>
                 <div class="mb-0">
                     <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
@@ -563,7 +586,8 @@ function updateScoreVisual(input, opts) {
     const totalPoints = parseFloat(input.getAttribute('data-total-points')) || 100;
     const studentId = input.getAttribute('data-student-id');
     const card = input.closest('.student-grade-card');
-    const visualFill = input.parentElement.querySelector('.score-visual-fill');
+    const scoreWrapper = input.closest('.score-input-wrapper');
+    const visualFill = scoreWrapper ? scoreWrapper.querySelector('.score-visual-fill') : null;
     const gradeDisplay = document.getElementById('gradeDisplay_' + studentId);
     const percentageDisplay = document.getElementById('percentageDisplay_' + studentId);
 
@@ -572,10 +596,10 @@ function updateScoreVisual(input, opts) {
     const numericPoints = Number.isNaN(pointsEarned) ? 0 : pointsEarned;
     const percentage = totalPoints > 0 ? (numericPoints / totalPoints * 100) : 0;
 
-    if (isUngraded) {
+    if (visualFill && isUngraded) {
         visualFill.style.width = '0%';
         visualFill.style.background = '#e9ecef';
-    } else {
+    } else if (visualFill) {
         visualFill.style.width = Math.min(percentage, 100) + '%';
         if (percentage >= 90) {
             visualFill.style.background = 'linear-gradient(90deg, #28a745 0%, #20c997 100%)';
@@ -637,6 +661,10 @@ function updateScoreVisual(input, opts) {
             <div class="grade-letter-placeholder">Not Graded</div>
         `;
     } else {
+        const liveExtraCredit = Math.max(0, numericPoints - totalPoints);
+        const liveExtraCreditHtml = liveExtraCredit > 0
+            ? `<div class="grade-percentage text-muted small mb-1">+${liveExtraCredit.toFixed(1)} EC</div>`
+            : '';
         gradeDisplay.innerHTML = `
             <div class="grade-value grade-${performanceClass}">
                 ${numericPoints.toFixed(1)} / ${Math.round(totalPoints)}
@@ -644,6 +672,7 @@ function updateScoreVisual(input, opts) {
             <div class="grade-percentage text-muted small mb-1">
                 (${percentage.toFixed(1)}%)
             </div>
+            ${liveExtraCreditHtml}
             <div class="grade-letter">${letter}</div>
             ${historyHtml}
         `;

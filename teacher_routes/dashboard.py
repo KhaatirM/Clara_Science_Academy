@@ -36,12 +36,6 @@ def teacher_dashboard():
     try:
         # Update assignment statuses before displaying
         update_assignment_statuses()
-        # Apply automatic 0 for students with no grade 7 days after due/close
-        try:
-            from management_routes.utils import apply_auto_zeros_for_past_due_assignments
-            apply_auto_zeros_for_past_due_assignments()
-        except Exception as _e:
-            pass
         # Get teacher object or None for administrators
         teacher = get_teacher_or_admin()
         

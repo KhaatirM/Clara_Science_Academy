@@ -15,8 +15,12 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def update_assignment_statuses():
-    """Update assignment statuses (Assignment and GroupAssignment) based on open_date, close_date, and due_date."""
+def update_assignment_statuses(run_auto_zeros=False):
+    """Update assignment statuses (Assignment and GroupAssignment) based on open/close/due dates.
+
+    Auto-zero backfill is intentionally optional because it can be expensive on large datasets
+    and should not run on every page request.
+    """
     try:
         from models import Assignment, GroupAssignment, db
         from datetime import timezone
@@ -182,8 +186,17 @@ def update_assignment_statuses():
                 continue
         
         db.session.commit()
-        # Apply automatic 0 for students with no grade 7 days after due/close
-        apply_auto_zeros_for_past_due_assignments()
+
+        # Apply automatic 0 for students with no grade 7 days after due/close only when explicitly requested.
+        should_run_auto_zeros = bool(run_auto_zeros)
+        try:
+            if not should_run_auto_zeros and current_app:
+                should_run_auto_zeros = bool(current_app.config.get('AUTO_ZERO_ON_STATUS_UPDATE', False))
+        except Exception:
+            should_run_auto_zeros = bool(run_auto_zeros)
+
+        if should_run_auto_zeros:
+            apply_auto_zeros_for_past_due_assignments()
     except Exception as e:
         print(f"Error updating assignment statuses: {e}")
         db.session.rollback()

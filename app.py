@@ -330,7 +330,19 @@ def create_app(config_class=None):
             app.logger.warning("Ignoring invalid session user id: %r", user_id)
             return None
 
-        user = User.query.get(user_id_int)
+        try:
+            user = User.query.get(user_id_int)
+        except Exception as exc:
+            # Database connection hiccups can happen under load (e.g. SSL EOF).
+            # Roll back the broken transaction so subsequent requests can recover cleanly.
+            try:
+                from models import db
+                db.session.rollback()
+            except Exception:
+                pass
+            app.logger.warning("load_user failed for id %s: %s", user_id_int, exc)
+            return None
+
         if user:
             # Check if user has expired temporary access
             if user.teacher_staff_id:

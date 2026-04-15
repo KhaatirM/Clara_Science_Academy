@@ -321,7 +321,16 @@ def create_app(config_class=None):
     # User loader function for Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
-        user = User.query.get(int(user_id))
+        # Guard against stale/corrupt session values (e.g., non-numeric _user_id).
+        # Returning None here safely treats the session as unauthenticated
+        # instead of raising a 500 during login restore.
+        try:
+            user_id_int = int(user_id)
+        except (TypeError, ValueError):
+            app.logger.warning("Ignoring invalid session user id: %r", user_id)
+            return None
+
+        user = User.query.get(user_id_int)
         if user:
             # Check if user has expired temporary access
             if user.teacher_staff_id:

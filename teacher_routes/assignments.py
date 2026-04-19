@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
-from teacher_routes.assignment_utils import is_assignment_open_for_student
+from teacher_routes.assignment_utils import is_assignment_open_for_student, parse_form_datetime_as_school_tz
 from models import (
     db, Class, Assignment, AssignmentAttachment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
     Grade, GroupAssignment, GroupGrade, GradeHistory, GroupSubmission, StudentGroup,
@@ -120,36 +120,18 @@ def add_assignment_for_class(class_id):
             if total_points is None or total_points <= 0:
                 total_points = 100.0
             
-            try:
-                due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            except ValueError:
-                due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                flash("Invalid due date format.", "danger")
+                return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
             
-            # Parse open_date and close_date if provided
-            # IMPORTANT: close_date should default to due_date if not provided
+            # Parse open_date and close_date if provided (school timezone → UTC)
             open_date_str = request.form.get('open_date', '').strip()
             close_date_str = request.form.get('close_date', '').strip()
-            open_date = None
-            close_date = None
-            allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
-            max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
-            late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
-            late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
-            late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             
-            if open_date_str:
-                try:
-                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
-                except ValueError:
-                    pass
-            
-            if close_date_str:
-                try:
-                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
-                except ValueError:
-                    pass
-            
-            # If close_date not provided, default to due_date
             if not close_date:
                 close_date = due_date
             
@@ -317,31 +299,17 @@ def edit_assignment(assignment_id):
             if total_points is None or total_points <= 0:
                 total_points = 100.0
             
-            try:
-                due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            except ValueError:
-                due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                flash("Invalid due date format.", "danger")
+                return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
             
-            # Parse open_date and close_date if provided
-            # IMPORTANT: close_date should default to due_date if not provided
             open_date_str = request.form.get('open_date', '').strip()
             close_date_str = request.form.get('close_date', '').strip()
-            open_date = None
-            close_date = None
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             
-            if open_date_str:
-                try:
-                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
-                except ValueError:
-                    pass
-            
-            if close_date_str:
-                try:
-                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
-                except ValueError:
-                    pass
-            
-            # If close_date not provided, default to due_date
             if not close_date:
                 close_date = due_date
             
@@ -1367,11 +1335,10 @@ def grant_extensions():
         if not all([assignment_id, class_id, extended_due_date_str, student_ids]):
             return jsonify({'success': False, 'message': 'Missing required fields'})
         
-        # Parse the extended due date
-        try:
-            extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%dT%H:%M')
-        except ValueError:
-            extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%d')
+        tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+        extended_due_date = parse_form_datetime_as_school_tz(extended_due_date_str, tz_name)
+        if not extended_due_date:
+            return jsonify({'success': False, 'message': 'Invalid extended due date format'})
         
         # Get the assignment
         assignment = Assignment.query.get_or_404(assignment_id)

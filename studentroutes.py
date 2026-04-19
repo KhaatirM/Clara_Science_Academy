@@ -31,7 +31,11 @@ from models import (
 
 # Authentication and decorators
 from decorators import student_required
-from teacher_routes.assignment_utils import is_assignment_open_for_student, _as_utc_aware
+from teacher_routes.assignment_utils import (
+    is_assignment_open_for_student,
+    get_effective_assignment_status,
+    _as_utc_aware,
+)
 from management_routes.student_assistant_utils import (
     assignment_student_visibility_filter,
     group_assignment_student_visibility_filter,
@@ -840,22 +844,12 @@ def student_assignments():
     ).all()
     redo_requests_by_assignment = {r.assignment_id: r for r in redo_requests}
     
-    # Separate assignments into 3 categories: Inactive, Active, and Upcoming
-    inactive_assignments = []  # Assignments with status='Inactive' - students can't turn them in
-    active_assignments = []  # Assignments with status='Active' - students can submit
-    upcoming_assignments = []  # Assignments that haven't opened yet (open_date in future)
+    # Separate assignments into 3 buckets using the same date-aware lifecycle as teacher/admin UIs
+    inactive_assignments = []  # Effective Inactive and not open for this student (no extension/redo/reopen)
+    active_assignments = []  # Effective Active, or Inactive/Upcoming but still open for this student
+    upcoming_assignments = []  # Effective Upcoming and not yet open for this student
     today = datetime.now().date()
-    now = datetime.now()
-    
-    # Helper to ensure timezone-aware datetime
-    from datetime import timezone
-    def ensure_aware(dt):
-        if dt is None:
-            return None
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt
-    
+
     for assignment in assignments:
         submission = submissions_dict.get(assignment.id)
         grade = grades_dict.get(assignment.id)
@@ -882,39 +876,24 @@ def student_assignments():
         # Skip voided assignments
         if assignment.status == 'Voided' or student_status == 'Voided':
             continue
-        
-        # Check if assignment is upcoming based on open_date (even if status isn't 'Upcoming')
-        is_upcoming = False
-        if hasattr(assignment, 'open_date') and assignment.open_date:
-            raw_open_date = assignment.open_date
-            # Convert to timezone-aware datetime
-            if isinstance(raw_open_date, datetime):
-                open_date_dt = ensure_aware(raw_open_date)
-            else:
-                # It's a date object, convert to datetime at start of day
-                from datetime import date as date_type
-                if isinstance(raw_open_date, date_type):
-                    open_date_dt = datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-                else:
-                    open_date_dt = ensure_aware(raw_open_date)
-            # Ensure now is also timezone-aware
-            now_aware = now if (hasattr(now, 'tzinfo') and now.tzinfo) else datetime.now(timezone.utc)
-            if open_date_dt > now_aware:
-                is_upcoming = True
-        
-        # Categorize by whether the student can act now (reopen / extension / redo) vs raw status
+
+        # Same lifecycle label as teacher/admin cards (date-aware), not only the stored status column
+        lifecycle = get_effective_assignment_status(assignment)
+        if lifecycle == 'Voided':
+            continue
+
         can_submit_now = is_assignment_open_for_student(assignment, student.id)
-        if is_upcoming or assignment.status == 'Upcoming':
+        if lifecycle == 'Upcoming':
             if can_submit_now:
                 active_assignments.append(assignment_data)
             else:
                 upcoming_assignments.append(assignment_data)
-        elif assignment.status == 'Inactive':
+        elif lifecycle == 'Inactive':
             if can_submit_now:
                 active_assignments.append(assignment_data)
             else:
                 inactive_assignments.append(assignment_data)
-        elif assignment.status == 'Active':
+        else:
             active_assignments.append(assignment_data)
     
     # Fetch group assignments for the same classes and apply same filters (eager-load creator)
@@ -994,19 +973,10 @@ def student_assignments():
         ).filter(GroupGrade.is_voided == False).first() is not None
         # Include student_group and has_any_grades so template can show correct badge
         assignment_data = (group_assignment, group_submission, student_status, None, True, student_group, has_any_grades_ga)
-        is_upcoming = False
-        if hasattr(group_assignment, 'open_date') and group_assignment.open_date:
-            raw_open = group_assignment.open_date
-            if isinstance(raw_open, datetime):
-                open_dt = ensure_aware(raw_open)
-            else:
-                from datetime import date as date_type
-                open_dt = datetime.combine(raw_open, datetime.min.time()).replace(tzinfo=timezone.utc) if isinstance(raw_open, date_type) else ensure_aware(raw_open)
-            now_aware = now if (hasattr(now, 'tzinfo') and now.tzinfo) else datetime.now(timezone.utc)
-            if open_dt > now_aware:
-                is_upcoming = True
+
+        ga_lifecycle = get_effective_assignment_status(group_assignment)
         can_submit_group = False
-        if group_assignment.status == 'Inactive':
+        if ga_lifecycle == 'Inactive':
             _ext = GroupAssignmentExtension.query.filter_by(
                 group_assignment_id=group_assignment.id,
                 student_id=student.id,
@@ -1020,17 +990,15 @@ def student_assignments():
                     _ed = datetime.combine(_ed, datetime.min.time()).replace(tzinfo=timezone.utc)
                 if datetime.now(timezone.utc) <= _ed:
                     can_submit_group = True
-        if is_upcoming or group_assignment.status == 'Upcoming':
-            if can_submit_group:
-                active_assignments.append(assignment_data)
-            else:
-                upcoming_assignments.append(assignment_data)
-        elif group_assignment.status == 'Inactive':
+
+        if ga_lifecycle == 'Upcoming':
+            upcoming_assignments.append(assignment_data)
+        elif ga_lifecycle == 'Inactive':
             if can_submit_group:
                 active_assignments.append(assignment_data)
             else:
                 inactive_assignments.append(assignment_data)
-        elif group_assignment.status == 'Active':
+        else:
             active_assignments.append(assignment_data)
     
     # Sort each category by due_date (most recent first)

@@ -75,7 +75,7 @@ def create_app(config_class=None):
     csrf.init_app(app)
     mail.init_app(app)
     
-    # Initialize database schema (no ALTER TABLE here; use Flask-Migrate for schema changes)
+    # Initialize database schema; create_all plus idempotent ADD COLUMN patches for older deployments
     with app.app_context():
         try:
             db.create_all()
@@ -129,6 +129,43 @@ def create_app(config_class=None):
                         print("Added user.low_grade_threshold column.")
         except Exception as e:
             print(f"Note: low_grade_threshold column check failed (may already exist): {e}")
+
+        # Add message.is_edited / parent_message_id if missing (ORM expects them; older DBs may lack them)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(message)"))
+                    msg_columns = [row[1] for row in r]
+                    if 'is_edited' not in msg_columns:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN is_edited INTEGER DEFAULT 0"))
+                        conn.commit()
+                        print("Added message.is_edited column.")
+                    if 'parent_message_id' not in msg_columns:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN parent_message_id INTEGER"))
+                        conn.commit()
+                        print("Added message.parent_message_id column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'message' AND column_name = 'is_edited'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            "ALTER TABLE message ADD COLUMN is_edited BOOLEAN NOT NULL DEFAULT false"
+                        ))
+                        conn.commit()
+                        print("Added message.is_edited column.")
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'message' AND column_name = 'parent_message_id'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN parent_message_id INTEGER"))
+                        conn.commit()
+                        print("Added message.parent_message_id column.")
+        except Exception as e:
+            print(f"Note: message table column check failed (may already exist): {e}")
 
         # Add student profile confirmation columns if missing (report cards + enrollment policy)
         _student_cols = [

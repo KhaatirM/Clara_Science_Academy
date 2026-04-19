@@ -1849,28 +1849,123 @@ def remove_student(student_id):
         
         # Delete all related records first to avoid foreign key constraints
         from models import (
-            Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, Grade, 
-            Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment, 
-            MessageGroupMember, Notification, QuizAnswer, QuizProgress, DiscussionPost,
-            ReportCard, GroupQuizAnswer, CleaningTeamMember
+            Attendance,
+            SchoolDayAttendance,
+            StudentGoal,
+            StudentGroupMember,
+            Grade,
+            Submission,
+            GroupSubmission,
+            GroupGrade,
+            AssignmentExtension,
+            Enrollment,
+            MessageGroupMember,
+            Notification,
+            QuizAnswer,
+            QuizProgress,
+            DiscussionPost,
+            DiscussionThread,
+            DiscussionAttachment,
+            ReportCard,
+            GroupQuizAnswer,
+            CleaningTeamMember,
+            GradeHistory,
+            AssignmentRedo,
+            RedoRequest,
+            ExtensionRequest,
+            AssignmentReopening,
+            QuarterGrade,
+            PeerEvaluation,
+            PeerReview,
+            ReflectionJournal,
+            DraftSubmission,
+            DraftFeedback,
+            GroupContract,
+            Feedback360,
+            Feedback360Response,
+            Feedback360Criteria,
+            ReminderNotification,
+            StudentAssistant,
+            StudentAssistantActionLog,
+            IndividualContribution,
+            GroupConflict,
+            ConflictResolution,
+            ConflictParticipant,
         )
-        
+
         # Delete enrollment records first (these reference the student)
         Enrollment.query.filter_by(student_id=student_id).delete()
-        
+
         # Delete attendance records (both class and school day attendance)
         Attendance.query.filter_by(student_id=student_id).delete()
         SchoolDayAttendance.query.filter_by(student_id=student_id).delete()
-        
+
         # Delete student goals
         StudentGoal.query.filter_by(student_id=student_id).delete()
-        
+
         # Delete group memberships
         StudentGroupMember.query.filter_by(student_id=student_id).delete()
-        
+
+        QuarterGrade.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+        StudentAssistant.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+        if student.user:
+            StudentAssistantActionLog.query.filter_by(assistant_user_id=student.user.id).delete(
+                synchronize_session=False
+            )
+
+        ReminderNotification.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+
+        Feedback360Response.query.filter_by(respondent_id=student_id).delete(synchronize_session=False)
+        for f360 in Feedback360.query.filter_by(target_student_id=student_id).all():
+            Feedback360Response.query.filter_by(feedback360_id=f360.id).delete(synchronize_session=False)
+            Feedback360Criteria.query.filter_by(feedback360_id=f360.id).delete(synchronize_session=False)
+            db.session.delete(f360)
+
+        PeerEvaluation.query.filter(
+            (PeerEvaluation.evaluator_id == student_id) | (PeerEvaluation.evaluatee_id == student_id)
+        ).delete(synchronize_session=False)
+        PeerReview.query.filter(
+            (PeerReview.reviewer_id == student_id) | (PeerReview.reviewee_id == student_id)
+        ).delete(synchronize_session=False)
+        ReflectionJournal.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+        GroupContract.query.filter_by(agreed_by=student_id).delete(synchronize_session=False)
+        IndividualContribution.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+
+        for gc in GroupConflict.query.filter_by(reported_by=student_id).all():
+            cid = gc.id
+            ConflictResolution.query.filter_by(conflict_id=cid).delete(synchronize_session=False)
+            ConflictParticipant.query.filter_by(conflict_id=cid).delete(synchronize_session=False)
+            db.session.delete(gc)
+        ConflictParticipant.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+
+        draft_ids = [d.id for d in DraftSubmission.query.filter_by(student_id=student_id).all()]
+        if draft_ids:
+            DraftFeedback.query.filter(DraftFeedback.draft_submission_id.in_(draft_ids)).delete(synchronize_session=False)
+        DraftSubmission.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+
+        # Discussion: threads this student started, then replies they authored elsewhere
+        for thread in DiscussionThread.query.filter_by(student_id=student_id).all():
+            post_ids = [p.id for p in DiscussionPost.query.filter_by(thread_id=thread.id).all()]
+            if post_ids:
+                DiscussionAttachment.query.filter(DiscussionAttachment.post_id.in_(post_ids)).delete(synchronize_session=False)
+                DiscussionPost.query.filter(DiscussionPost.id.in_(post_ids)).delete(synchronize_session=False)
+            DiscussionAttachment.query.filter_by(thread_id=thread.id).delete(synchronize_session=False)
+            db.session.delete(thread)
+        for post in DiscussionPost.query.filter_by(student_id=student_id).all():
+            DiscussionAttachment.query.filter_by(post_id=post.id).delete(synchronize_session=False)
+            db.session.delete(post)
+
+        GradeHistory.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+
+        # Redo / extension rows before grades and submissions (FKs)
+        AssignmentRedo.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+        RedoRequest.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+        ExtensionRequest.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+        AssignmentReopening.query.filter_by(student_id=student_id).delete(synchronize_session=False)
+
         # Delete grades
         Grade.query.filter_by(student_id=student_id).delete()
-        
+
         # Delete assignment submissions
         Submission.query.filter_by(student_id=student_id).delete()
         
@@ -1916,6 +2011,7 @@ def remove_student(student_id):
         
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception('remove_student failed student_id=%s', student_id)
         print(f"Error removing student: {e}")
         flash('Error removing student. Please try again.', 'error')
         return redirect(url_for('management.students'))

@@ -5,7 +5,29 @@ Classes routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance, SchoolYear, AcademicPeriod, StudentAssistant, StudentAssistantActionLog
+from models import (
+    db,
+    Class,
+    TeacherStaff,
+    Student,
+    Enrollment,
+    Assignment,
+    Attendance,
+    Grade,
+    Submission,
+    StudentGroup,
+    StudentGroupMember,
+    GroupAssignment,
+    GroupConflict,
+    GroupGrade,
+    SchoolDayAttendance,
+    SchoolYear,
+    AcademicPeriod,
+    StudentAssistant,
+    StudentAssistantActionLog,
+    class_additional_teachers,
+    class_substitute_teachers,
+)
 from management_routes.student_assistant_utils import (
     MAX_ASSISTANTS_PER_CLASS,
     MAX_CLASSES_PER_ASSISTANT,
@@ -1384,6 +1406,130 @@ def class_grades(class_id):
 
 
 
+def _cascade_delete_group_assignment(group_assignment_id):
+    """Remove one group assignment and every row that references it."""
+    from models import (
+        GroupAssignmentExtension,
+        DeadlineReminder,
+        ReminderNotification,
+        GroupQuizQuestion,
+        GroupQuizOption,
+        GroupQuizAnswer,
+        GroupSubmission,
+        GroupGrade,
+        PeerEvaluation,
+        AssignmentRubric,
+        GroupContract,
+        ReflectionJournal,
+        GroupProgress,
+        PeerReview,
+        DraftSubmission,
+        DraftFeedback,
+        GroupConflict,
+        ConflictResolution,
+        ConflictParticipant,
+        IndividualContribution,
+        TimeTracking,
+        CollaborationMetrics,
+        GroupAssignment,
+    )
+
+    gid = group_assignment_id
+
+    dr_ids = [r.id for r in DeadlineReminder.query.filter_by(group_assignment_id=gid).all()]
+    for rid in dr_ids:
+        ReminderNotification.query.filter_by(reminder_id=rid).delete(synchronize_session=False)
+    DeadlineReminder.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+
+    qids = [q.id for q in GroupQuizQuestion.query.filter_by(group_assignment_id=gid).all()]
+    if qids:
+        GroupQuizAnswer.query.filter(GroupQuizAnswer.question_id.in_(qids)).delete(synchronize_session=False)
+        GroupQuizOption.query.filter(GroupQuizOption.question_id.in_(qids)).delete(synchronize_session=False)
+        GroupQuizQuestion.query.filter(GroupQuizQuestion.id.in_(qids)).delete(synchronize_session=False)
+
+    GroupSubmission.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    GroupGrade.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    PeerEvaluation.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    AssignmentRubric.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    GroupContract.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    ReflectionJournal.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    GroupProgress.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    PeerReview.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+
+    draft_ids = [d.id for d in DraftSubmission.query.filter_by(group_assignment_id=gid).all()]
+    if draft_ids:
+        DraftFeedback.query.filter(DraftFeedback.draft_submission_id.in_(draft_ids)).delete(synchronize_session=False)
+    DraftSubmission.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+
+    conflict_ids = [c.id for c in GroupConflict.query.filter_by(group_assignment_id=gid).all()]
+    if conflict_ids:
+        ConflictResolution.query.filter(ConflictResolution.conflict_id.in_(conflict_ids)).delete(synchronize_session=False)
+        ConflictParticipant.query.filter(ConflictParticipant.conflict_id.in_(conflict_ids)).delete(synchronize_session=False)
+    GroupConflict.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+
+    IndividualContribution.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    TimeTracking.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    CollaborationMetrics.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+    GroupAssignmentExtension.query.filter_by(group_assignment_id=gid).delete(synchronize_session=False)
+
+    ga = db.session.get(GroupAssignment, gid)
+    if ga:
+        db.session.delete(ga)
+
+
+def _purge_student_groups_for_class(class_id):
+    """Delete in-class student groups and any rows still tied to those groups (class is being removed)."""
+    from models import (
+        StudentGroup,
+        StudentGroupMember,
+        GroupGrade,
+        GroupSubmission,
+        GroupQuizAnswer,
+        PeerEvaluation,
+        GroupContract,
+        ReflectionJournal,
+        GroupProgress,
+        PeerReview,
+        DraftSubmission,
+        DraftFeedback,
+        GroupConflict,
+        ConflictResolution,
+        ConflictParticipant,
+        IndividualContribution,
+        TimeTracking,
+        CollaborationMetrics,
+    )
+
+    for group in StudentGroup.query.filter_by(class_id=class_id).all():
+        group_id = group.id
+        GroupGrade.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        GroupSubmission.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        GroupQuizAnswer.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        TimeTracking.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+
+        conflict_ids = [c.id for c in GroupConflict.query.filter_by(group_id=group_id).all()]
+        if conflict_ids:
+            ConflictResolution.query.filter(ConflictResolution.conflict_id.in_(conflict_ids)).delete(synchronize_session=False)
+            ConflictParticipant.query.filter(ConflictParticipant.conflict_id.in_(conflict_ids)).delete(synchronize_session=False)
+        GroupConflict.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+
+        draft_ids = [d.id for d in DraftSubmission.query.filter_by(group_id=group_id).all()]
+        if draft_ids:
+            DraftFeedback.query.filter(DraftFeedback.draft_submission_id.in_(draft_ids)).delete(synchronize_session=False)
+        DraftSubmission.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+
+        PeerEvaluation.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        GroupContract.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        ReflectionJournal.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        GroupProgress.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        PeerReview.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        IndividualContribution.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        CollaborationMetrics.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+
+        StudentGroupMember.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        db.session.delete(group)
+
+
 # ============================================================
 # Route: /class/<int:class_id>/remove', methods=['POST']
 # Function: remove_class
@@ -1393,81 +1539,153 @@ def class_grades(class_id):
 @login_required
 @management_required
 def remove_class(class_id):
-    """Remove a class."""
+    """Remove a class and dependent records (group work, grades, reminders, etc.)."""
     class_obj = Class.query.get_or_404(class_id)
-    
+
     try:
         class_name = class_obj.name
-        
-        # First, delete all enrollments associated with this class
-        from models import Enrollment
-        enrollments = Enrollment.query.filter_by(class_id=class_id).all()
-        for enrollment in enrollments:
+
+        from models import (
+            Enrollment,
+            StudentGoal,
+            ClassSchedule,
+            Attendance,
+            Grade,
+            Assignment,
+            Submission,
+            QuizQuestion,
+            QuizProgress,
+            DiscussionThread,
+            AssignmentExtension,
+            QuarterGrade,
+            GroupTemplate,
+            GroupWorkReport,
+            ReportExport,
+            AnalyticsDashboard,
+            PerformanceBenchmark,
+            GroupRotation,
+            GroupRotationHistory,
+            AssignmentTemplate,
+            Feedback360,
+            Feedback360Response,
+            Feedback360Criteria,
+            DeadlineReminder,
+            ReminderNotification,
+            MessageGroup,
+            Announcement,
+            ScheduledAnnouncement,
+            GradeHistory,
+            AssignmentRedo,
+            RedoRequest,
+            ExtensionRequest,
+            AssignmentReopening,
+            DiscussionPost,
+            DiscussionAttachment,
+            QuizAnswer,
+            QuizOption,
+            QuizSection,
+        )
+
+        for enrollment in Enrollment.query.filter_by(class_id=class_id).all():
             db.session.delete(enrollment)
-        
-        # Delete all student goals associated with this class
-        from models import StudentGoal
-        student_goals = StudentGoal.query.filter_by(class_id=class_id).all()
-        for goal in student_goals:
+
+        for goal in StudentGoal.query.filter_by(class_id=class_id).all():
             db.session.delete(goal)
-        
-        # Delete all class schedules associated with this class
-        from models import ClassSchedule
-        schedules = ClassSchedule.query.filter_by(class_id=class_id).all()
-        for schedule in schedules:
+
+        for schedule in ClassSchedule.query.filter_by(class_id=class_id).all():
             db.session.delete(schedule)
-        
-        # Delete all attendance records associated with this class
-        from models import Attendance
-        attendance_records = Attendance.query.filter_by(class_id=class_id).all()
-        for attendance in attendance_records:
+
+        for attendance in Attendance.query.filter_by(class_id=class_id).all():
             db.session.delete(attendance)
-        
-        # Delete all assignment-related data for this class
-        from models import Grade, Assignment, Submission, QuizQuestion, QuizProgress, DiscussionThread, AssignmentExtension
+
+        QuarterGrade.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+        StudentAssistant.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+        StudentAssistantActionLog.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+        GroupTemplate.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+
+        reminder_ids = [r.id for r in DeadlineReminder.query.filter_by(class_id=class_id).all()]
+        for rid in reminder_ids:
+            ReminderNotification.query.filter_by(reminder_id=rid).delete(synchronize_session=False)
+        DeadlineReminder.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+
+        for ga in GroupAssignment.query.filter_by(class_id=class_id).all():
+            _cascade_delete_group_assignment(ga.id)
+
+        _purge_student_groups_for_class(class_id)
+
+        for f360 in Feedback360.query.filter_by(class_id=class_id).all():
+            Feedback360Response.query.filter_by(feedback360_id=f360.id).delete(synchronize_session=False)
+            Feedback360Criteria.query.filter_by(feedback360_id=f360.id).delete(synchronize_session=False)
+            db.session.delete(f360)
+
+        report_ids = [r.id for r in GroupWorkReport.query.filter_by(class_id=class_id).all()]
+        for rid in report_ids:
+            ReportExport.query.filter_by(report_id=rid).delete(synchronize_session=False)
+        GroupWorkReport.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+
+        AnalyticsDashboard.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+        PerformanceBenchmark.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+
+        rotation_ids = [r.id for r in GroupRotation.query.filter_by(class_id=class_id).all()]
+        for rot_id in rotation_ids:
+            GroupRotationHistory.query.filter_by(rotation_id=rot_id).delete(synchronize_session=False)
+        GroupRotation.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+
+        AssignmentTemplate.query.filter_by(class_id=class_id).delete(synchronize_session=False)
+
+        MessageGroup.query.filter_by(class_id=class_id).update({MessageGroup.class_id: None}, synchronize_session=False)
+        Announcement.query.filter_by(class_id=class_id).update({Announcement.class_id: None}, synchronize_session=False)
+        ScheduledAnnouncement.query.filter_by(class_id=class_id).update({ScheduledAnnouncement.class_id: None}, synchronize_session=False)
+
         assignments = Assignment.query.filter_by(class_id=class_id).all()
         for assignment in assignments:
-            # Delete all grades for this assignment
-            grades = Grade.query.filter_by(assignment_id=assignment.id).all()
-            for grade in grades:
-                db.session.delete(grade)
-            
-            # Delete all assignment submissions
-            submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
-            for submission in submissions:
-                db.session.delete(submission)
-            
-            # Delete all quiz questions
-            quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
-            for question in quiz_questions:
-                db.session.delete(question)
-            
-            # Delete all quiz progress
-            quiz_progress = QuizProgress.query.filter_by(assignment_id=assignment.id).all()
-            for progress in quiz_progress:
-                db.session.delete(progress)
-            
-            # Delete all discussion threads
-            discussion_threads = DiscussionThread.query.filter_by(assignment_id=assignment.id).all()
-            for thread in discussion_threads:
+            GradeHistory.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+            AssignmentRedo.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+            RedoRequest.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+            ExtensionRequest.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+            AssignmentReopening.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+
+            for thread in DiscussionThread.query.filter_by(assignment_id=assignment.id).all():
+                post_ids = [p.id for p in DiscussionPost.query.filter_by(thread_id=thread.id).all()]
+                if post_ids:
+                    DiscussionAttachment.query.filter(DiscussionAttachment.post_id.in_(post_ids)).delete(synchronize_session=False)
+                    DiscussionPost.query.filter(DiscussionPost.id.in_(post_ids)).delete(synchronize_session=False)
+                DiscussionAttachment.query.filter_by(thread_id=thread.id).delete(synchronize_session=False)
                 db.session.delete(thread)
-            
-            # Delete all assignment extensions
-            extensions = AssignmentExtension.query.filter_by(assignment_id=assignment.id).all()
-            for extension in extensions:
+
+            for grade in Grade.query.filter_by(assignment_id=assignment.id).all():
+                db.session.delete(grade)
+
+            for submission in Submission.query.filter_by(assignment_id=assignment.id).all():
+                db.session.delete(submission)
+
+            QuizProgress.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+
+            q_ids = [q.id for q in QuizQuestion.query.filter_by(assignment_id=assignment.id).all()]
+            if q_ids:
+                QuizAnswer.query.filter(QuizAnswer.question_id.in_(q_ids)).delete(synchronize_session=False)
+                QuizOption.query.filter(QuizOption.question_id.in_(q_ids)).delete(synchronize_session=False)
+                QuizQuestion.query.filter(QuizQuestion.id.in_(q_ids)).delete(synchronize_session=False)
+
+            for section in QuizSection.query.filter_by(assignment_id=assignment.id).all():
+                db.session.delete(section)
+
+            for extension in AssignmentExtension.query.filter_by(assignment_id=assignment.id).all():
                 db.session.delete(extension)
-            
-            # Then delete the assignment
+
             db.session.delete(assignment)
-        
-        # Finally, delete the class itself
+
+        db.session.execute(class_additional_teachers.delete().where(class_additional_teachers.c.class_id == class_id))
+        db.session.execute(class_substitute_teachers.delete().where(class_substitute_teachers.c.class_id == class_id))
+
         db.session.delete(class_obj)
         db.session.commit()
         flash(f'Class "{class_name}" and all associated data removed successfully!', 'success')
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception('remove_class failed for class_id=%s', class_id)
         flash(f'Error removing class: {str(e)}', 'danger')
-    
+
     return redirect(url_for('management.classes'))
 
 

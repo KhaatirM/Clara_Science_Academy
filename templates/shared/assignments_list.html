@@ -170,14 +170,17 @@
                             {% endif %}
                             {% if current_user.role in ['Director', 'School Administrator'] %}
                             <td data-label="Status">
-                                {% if assignment.status == 'Active' %}
+                                {% set _st = assignment|effective_assignment_status %}
+                                {% if _st == 'Active' %}
                                     <span class="badge bg-success">Active</span>
-                                {% elif assignment.status == 'Inactive' %}
+                                {% elif _st == 'Upcoming' %}
+                                    <span class="badge bg-info">Upcoming</span>
+                                {% elif _st == 'Inactive' %}
                                     <span class="badge bg-warning text-dark">Inactive</span>
-                                {% elif assignment.status == 'Voided' %}
+                                {% elif _st == 'Voided' %}
                                     <span class="badge bg-danger">Voided</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ assignment.status|title }}</span>
+                                    <span class="badge bg-secondary">{{ _st|title }}</span>
                                 {% endif %}
                             </td>
                             {% endif %}

@@ -175,8 +175,8 @@
                     <div class="dist-segment dist-ungraded" id="distUngraded" style="width: 100%" title="No score entered"></div>
                 </div>
             </div>
-            <p class="text-muted small mb-0 mt-2 grade-dist-footnote">
-                <i class="bi bi-info-circle me-1"></i>Entering <strong>0</strong> is a real grade (F). Leaving points blank means not entered yet.
+                       <p class="text-muted small mb-0 mt-2 grade-dist-footnote">
+                <i class="bi bi-info-circle me-1"></i>Entering <strong>0</strong> is a real grade (F). Leaving points blank means not entered yet. Students voided for this assignment are excluded from the spread.
             </p>
         </div>
     </div>
@@ -571,8 +571,15 @@
 {% block scripts %}
 {{ super() }}
 <script>
+function isVoidedScoreInput(input) {
+    const card = input && input.closest('.student-grade-card');
+    return !!(card && card.classList.contains('voided-disabled'));
+}
+
 // True when the teacher entered a numeric score (including 0). Empty field = not entered.
+// Voided students are excluded (their inputs may still show 0 / old points but must not affect spread).
 function isScoreInputGraded(input) {
+    if (isVoidedScoreInput(input)) return false;
     const raw = (input && input.value != null) ? String(input.value).trim() : '';
     if (raw === '') return false;
     const n = parseFloat(raw);
@@ -730,6 +737,7 @@ function updateGradedCount() {
     let gradedCount = 0;
 
     scoreInputs.forEach(input => {
+        if (isVoidedScoreInput(input)) return;
         if (isScoreInputGraded(input)) gradedCount++;
     });
     
@@ -1039,10 +1047,12 @@ function saveGradeAjax(studentId) {
 function updateDistributionChart() {
     const scoreInputs = document.querySelectorAll('.score-input');
     const counts = { a: 0, b: 0, c: 0, d: 0, f: 0, ungraded: 0 };
-    const total = scoreInputs.length;
     const totalPoints = {{ total_points if total_points else 100.0 }};
 
-    scoreInputs.forEach(input => {
+    const activeInputs = Array.from(scoreInputs).filter(inp => !isVoidedScoreInput(inp));
+    const total = activeInputs.length;
+
+    activeInputs.forEach(input => {
         if (!isScoreInputGraded(input)) {
             counts.ungraded++;
             return;
@@ -1074,7 +1084,7 @@ function updateDistributionChart() {
 
     let totalPercentage = 0;
     let countScored = 0;
-    scoreInputs.forEach(input => {
+    activeInputs.forEach(input => {
         if (!isScoreInputGraded(input)) return;
         const pointsEarned = parseFloat(input.value);
         const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
@@ -1114,12 +1124,13 @@ function filterByGrade(filter) {
         const pct = graded && totalPts > 0 ? (points / totalPts) * 100 : NaN;
 
         let show = true;
+        const voidedCard = card.classList.contains('voided-disabled');
         if (filter === 'passing') {
             show = graded && pct >= 70;
         } else if (filter === 'failing') {
             show = graded && pct < 70;
         } else if (filter === 'ungraded') {
-            show = !graded;
+            show = !graded && !voidedCard;
         }
 
         card.style.display = show ? 'block' : 'none';

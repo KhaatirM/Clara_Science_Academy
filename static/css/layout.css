@@ -127,8 +127,8 @@
     gap: 1rem;
 }
 
-/* Responsive Grid Adjustments */
-@media (max-width: 768px) {
+/* Responsive Grid Adjustments (aligned with dashboard drawer breakpoint) */
+@media (max-width: 991.98px) {
     .sidebar {
         transform: translateX(-100%);
     }

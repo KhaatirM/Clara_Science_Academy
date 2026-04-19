@@ -1001,7 +1001,8 @@ def assignments_and_grades():
             for student in enrolled_students:
                 table_student_grades[student.id] = {}
                 for assignment in class_assignments:
-                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+                    # Use latest grade if duplicates exist (quiz retakes)
+                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).order_by(Grade.graded_at.desc()).first()
                     if grade:
                         try:
                             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data

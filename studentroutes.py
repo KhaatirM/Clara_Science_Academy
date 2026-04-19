@@ -631,7 +631,8 @@ def student_dashboard():
     for assignment in assignments:
         # Get submission and grade status to check if completed
         submission = Submission.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
-        grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+        # Use latest grade if multiple exist (historical quiz retake behavior created duplicates)
+        grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).order_by(Grade.graded_at.desc()).first()
         
         # Only check due dates for non-completed assignments
         if assignment.due_date and not grade:  # Not completed if no grade
@@ -2377,10 +2378,11 @@ def take_quiz(assignment_id):
         flash("You are not enrolled in this class.", "danger")
         return redirect(url_for('student.student_assignments'))
 
+    # Use latest grade if multiple exist (quiz retakes)
     grade = Grade.query.filter_by(
         student_id=student.id,
         assignment_id=assignment_id
-    ).first()
+    ).order_by(Grade.graded_at.desc()).first()
     if assignment.status == 'Voided':
         flash("This assignment is no longer available.", "warning")
         return redirect(url_for('student.student_assignments'))
@@ -2727,7 +2729,7 @@ def submit_quiz(assignment_id):
         )
         db.session.add(submission)
         
-        # Create grade record using grade_data JSON format
+        # Create/update grade record using grade_data JSON format
         import json
         grade_percentage = (earned_points / total_points * 100) if total_points > 0 else 0
         grade_data = {
@@ -2739,13 +2741,29 @@ def submit_quiz(assignment_id):
             'feedback': f"Auto-graded quiz: {earned_points}/{total_points} points",
             'graded_at': datetime.now().isoformat()
         }
-        grade = Grade(
+        # Keep the latest attempt as the authoritative grade (do NOT keep "highest" as final).
+        # If older grade rows exist from previous attempts, update the newest and remove the rest.
+        existing_grade = Grade.query.filter_by(
             student_id=student.id,
-            assignment_id=assignment_id,
-            grade_data=json.dumps(grade_data),
-            graded_at=datetime.now()
-        )
-        db.session.add(grade)
+            assignment_id=assignment_id
+        ).order_by(Grade.graded_at.desc()).first()
+        if existing_grade:
+            existing_grade.grade_data = json.dumps(grade_data)
+            existing_grade.graded_at = datetime.now()
+            # Delete any older duplicates to avoid stale "first()" reads elsewhere
+            Grade.query.filter(
+                Grade.student_id == student.id,
+                Grade.assignment_id == assignment_id,
+                Grade.id != existing_grade.id
+            ).delete(synchronize_session=False)
+        else:
+            grade = Grade(
+                student_id=student.id,
+                assignment_id=assignment_id,
+                grade_data=json.dumps(grade_data),
+                graded_at=datetime.now()
+            )
+            db.session.add(grade)
         
         db.session.commit()
         flash('Quiz submitted successfully!', 'success')
@@ -2784,10 +2802,11 @@ def get_quiz_details(assignment_id):
         assignment_id=assignment_id
     ).count()
     
+    # Use latest grade if multiple exist (quiz retakes)
     grade = Grade.query.filter_by(
         student_id=student.id,
         assignment_id=assignment_id
-    ).first()
+    ).order_by(Grade.graded_at.desc()).first()
     
     # Calculate attempts remaining
     attempts_remaining = None

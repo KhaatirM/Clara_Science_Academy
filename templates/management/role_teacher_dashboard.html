@@ -446,7 +446,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value">{{ assignments|selectattr('due_date', 'lt', today)|list|length }}</div>
-                        <div class="stat-label">Past Due</div>
+                        <div class="stat-label">Calendar: after due</div>
                     </div>
                 </div>
             </div>
@@ -504,8 +504,8 @@
                         </thead>
                         <tbody>
                             {% for assignment in assignments %}
-                                {% set is_overdue = assignment.due_date < today %}
-                                <tr class="{% if is_overdue %}table-warning{% endif %}">
+                                {% set _rowst = assignment|effective_assignment_status %}
+                                <tr class="{% if _rowst == 'Inactive' %}table-light{% endif %}">
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="assignment-icon me-3">
@@ -527,14 +527,14 @@
                                         </div>
                                     </td>
                                     <td>
-                                        {% if is_overdue %}
-                                            <span class="badge bg-danger">
-                                                <i class="bi bi-exclamation-triangle me-1"></i>Past Due
-                                            </span>
+                                        {% if _rowst == 'Voided' %}
+                                            <span class="badge bg-secondary"><i class="bi bi-slash-circle me-1"></i>Voided</span>
+                                        {% elif _rowst == 'Upcoming' %}
+                                            <span class="badge bg-info"><i class="bi bi-clock me-1"></i>Upcoming</span>
+                                        {% elif _rowst == 'Inactive' %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-pause-circle me-1"></i>Inactive</span>
                                         {% else %}
-                                            <span class="badge bg-success">
-                                                <i class="bi bi-check-circle me-1"></i>Active
-                                            </span>
+                                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -589,8 +589,13 @@
                                             <i class="bi bi-journal-text"></i>
                                         </div>
                                         <div class="assignment-status">
-                                            {% if assignment.due_date < today %}
-                                                <span class="badge bg-danger">Past Due</span>
+                                            {% set _cardst = assignment|effective_assignment_status %}
+                                            {% if _cardst == 'Voided' %}
+                                                <span class="badge bg-secondary">Voided</span>
+                                            {% elif _cardst == 'Upcoming' %}
+                                                <span class="badge bg-info">Upcoming</span>
+                                            {% elif _cardst == 'Inactive' %}
+                                                <span class="badge bg-warning text-dark">Inactive</span>
                                             {% else %}
                                                 <span class="badge bg-success">Active</span>
                                             {% endif %}

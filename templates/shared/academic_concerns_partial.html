@@ -69,7 +69,7 @@
                 </div>
                 <div class="summary-stat-content">
                   <div class="summary-stat-value">{{ overdue_count|default(0) }}</div>
-                  <div class="summary-stat-label">Overdue Assignment{{ 's' if overdue_count|default(0) != 1 else '' }}</div>
+                  <div class="summary-stat-label">After calendar due date</div>
                 </div>
               </div>
             </div>
@@ -94,7 +94,7 @@
                 <option value="">All Alert Types</option>
                 <option value="failing">Failing Only</option>
                 <option value="missing">Missing Only</option>
-                <option value="overdue">Overdue Only</option>
+                <option value="overdue">Behind on due dates only</option>
               </select>
             </div>
             <div class="col-md-2">

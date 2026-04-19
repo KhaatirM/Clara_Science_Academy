@@ -122,14 +122,15 @@
                 </div>
               </div>
               <div>
-                {% if assignment.due_date and assignment.due_date > moment %}
-                  <span class="modern-badge modern-badge-warning">
-                    <i class="bi bi-clock-history"></i> Upcoming
-                  </span>
+                {% set _gst = assignment|effective_assignment_status %}
+                {% if _gst == 'Voided' %}
+                  <span class="modern-badge modern-badge-secondary"><i class="bi bi-slash-circle"></i> Voided</span>
+                {% elif _gst == 'Upcoming' %}
+                  <span class="modern-badge modern-badge-warning"><i class="bi bi-clock-history"></i> Upcoming</span>
+                {% elif _gst == 'Inactive' %}
+                  <span class="modern-badge modern-badge-secondary"><i class="bi bi-pause-circle"></i> Inactive</span>
                 {% else %}
-                  <span class="modern-badge modern-badge-success">
-                    <i class="bi bi-check-circle"></i> Past Due
-                  </span>
+                  <span class="modern-badge modern-badge-success"><i class="bi bi-check-circle"></i> Active</span>
                 {% endif %}
               </div>
             </div>

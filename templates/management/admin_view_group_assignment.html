@@ -32,12 +32,12 @@
       {% if time_info and time_info.status != 'no_due_date' and assignment_status not in ['Voided', 'Graded'] %}
         <div class="mt-2">
           {% if time_info.is_overdue %}
-            <span class="badge bg-danger text-white">
-              <i class="bi bi-exclamation-triangle me-1"></i>
+            <span class="badge bg-secondary text-white">
+              <i class="bi bi-calendar-event me-1"></i>
               {% if time_info.days > 0 %}
-                {{ time_info.days }} day{{ 's' if time_info.days != 1 else '' }} overdue
+                Due date was {{ time_info.days }} day{{ 's' if time_info.days != 1 else '' }} ago
               {% else %}
-                {{ time_info.hours }} hour{{ 's' if time_info.hours != 1 else '' }} overdue
+                Due time has passed ({{ time_info.hours }} hour{{ 's' if time_info.hours != 1 else '' }} ago)
               {% endif %}
             </span>
           {% else %}

@@ -707,6 +707,43 @@ class Assignment(db.Model):
     # Multiple file attachments (in addition to legacy single attachment fields above)
     attachment_list = db.relationship('AssignmentAttachment', backref='assignment', lazy=True, order_by='AssignmentAttachment.sort_order')
 
+    @property
+    def effective_creator(self):
+        """
+        Best-effort creator resolution.
+
+        Historical bug: some teacher-created assignments stored TeacherStaff.id in created_by
+        (but created_by references user.id). That can incorrectly resolve to a student User
+        with the same integer id. This property prefers the class teacher's User in those cases.
+        """
+        # If creator is a non-student user, trust it.
+        if self.creator and getattr(self.creator, 'role', None) and self.creator.role != 'Student':
+            return self.creator
+
+        # If created_by looks like a TeacherStaff id, map it to that teacher's user account.
+        if self.created_by:
+            try:
+                teacher_staff = db.session.get(TeacherStaff, self.created_by)
+                if teacher_staff:
+                    teacher_user = User.query.filter_by(teacher_staff_id=teacher_staff.id).first()
+                    if teacher_user:
+                        return teacher_user
+            except Exception:
+                pass
+
+        # Fall back to the class's primary teacher (if present).
+        try:
+            class_obj = self.class_info
+            if class_obj and getattr(class_obj, 'teacher_id', None):
+                teacher_user = User.query.filter_by(teacher_staff_id=class_obj.teacher_id).first()
+                if teacher_user:
+                    return teacher_user
+        except Exception:
+            pass
+
+        # Last resort: whatever relationship resolved (even if None / student).
+        return self.creator
+
     def __repr__(self):
         return f"Assignment('{self.title}', Class: {self.class_id})"
 
@@ -1732,6 +1769,33 @@ class GroupAssignment(db.Model):
     
     def __repr__(self):
         return f"GroupAssignment('{self.title}', Class: {self.class_id})"
+
+    @property
+    def effective_creator(self):
+        """See Assignment.effective_creator; same resolution strategy for group assignments."""
+        if self.creator and getattr(self.creator, 'role', None) and self.creator.role != 'Student':
+            return self.creator
+
+        if self.created_by:
+            try:
+                teacher_staff = db.session.get(TeacherStaff, self.created_by)
+                if teacher_staff:
+                    teacher_user = User.query.filter_by(teacher_staff_id=teacher_staff.id).first()
+                    if teacher_user:
+                        return teacher_user
+            except Exception:
+                pass
+
+        try:
+            class_obj = self.class_info
+            if class_obj and getattr(class_obj, 'teacher_id', None):
+                teacher_user = User.query.filter_by(teacher_staff_id=class_obj.teacher_id).first()
+                if teacher_user:
+                    return teacher_user
+        except Exception:
+            pass
+
+        return self.creator
 
 
 class GroupQuizQuestion(db.Model):

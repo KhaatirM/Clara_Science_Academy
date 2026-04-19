@@ -418,6 +418,60 @@ def create_app(config_class=None):
         html = str(value).replace('\r\n', '<br>\n').replace('\n', '<br>\n').replace('\r', '<br>\n')
         return Markup(html)
 
+    @app.template_filter('schooltime')
+    def schooltime_filter(value, fmt='%m/%d/%Y %I:%M %p'):
+        """
+        Format a datetime in the school's configured timezone.
+
+        Production hosts typically run in UTC. If DB datetimes are stored as UTC (often naive),
+        calling strftime() directly in templates will display UTC and appear "ahead" of EST.
+        This filter treats naive datetimes as UTC and converts to Config.SCHOOL_TIMEZONE.
+        """
+        if value is None:
+            return ''
+        try:
+            from datetime import datetime, timezone
+            from zoneinfo import ZoneInfo  # py3.9+
+            tz_name = (current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York')
+            school_tz = ZoneInfo(tz_name)
+
+            dt = value
+            if not isinstance(dt, datetime):
+                return str(dt)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            local_dt = dt.astimezone(school_tz)
+            return local_dt.strftime(fmt)
+        except Exception:
+            try:
+                import pytz
+                from datetime import datetime, timezone
+                tz_name = (current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York')
+                school_tz = pytz.timezone(tz_name)
+                dt = value
+                if not isinstance(dt, datetime):
+                    return str(dt)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                local_dt = dt.astimezone(school_tz)
+                return local_dt.strftime(fmt)
+            except Exception:
+                try:
+                    return value.strftime(fmt)  # last resort
+                except Exception:
+                    return str(value)
+
+    @app.template_filter('effective_assignment_status')
+    def effective_assignment_status_filter(assignment):
+        """Lifecycle status consistent with open/close/due dates and temporary status_override window."""
+        if assignment is None:
+            return ''
+        try:
+            from teacher_routes.assignment_utils import get_effective_assignment_status
+            return get_effective_assignment_status(assignment)
+        except Exception:
+            return getattr(assignment, 'status', None) or ''
+
     @app.template_filter('discussion_content')
     def discussion_content_filter(value):
         """Render discussion content: plain text or code block with line numbers.

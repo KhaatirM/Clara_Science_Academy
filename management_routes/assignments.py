@@ -1250,7 +1250,8 @@ def assignments_and_grades():
                     for student in enrolled_students:
                         table_student_grades[student.id] = {}
                         for assignment in class_assignments:
-                            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+                            # Use latest grade if duplicates exist (quiz retakes)
+                            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).order_by(Grade.graded_at.desc()).first()
                             if grade:
                                 try:
                                     grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
@@ -2149,7 +2150,8 @@ def grade_assignment(assignment_id):
                     }
                     grade_data = json.dumps(grade_data_dict)
 
-                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+                    # Use latest grade if duplicates exist (quiz retakes)
+                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).order_by(Grade.graded_at.desc()).first()
                     if grade:
                         # Don't update grades that are already voided (preserve void status)
                         if not grade.is_voided:
@@ -4290,7 +4292,8 @@ def grant_redo_from_request(request_id):
                 db.session.commit()
                 return jsonify({'success': True, 'message': 'Redo already granted for this student.'})
 
-            grade = Grade.query.filter_by(student_id=req.student_id, assignment_id=req.assignment_id).first()
+            # Use latest grade if duplicates exist (quiz retakes)
+            grade = Grade.query.filter_by(student_id=req.student_id, assignment_id=req.assignment_id).order_by(Grade.graded_at.desc()).first()
             orig_grade = None
             if grade and grade.grade_data:
                 try:

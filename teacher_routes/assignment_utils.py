@@ -20,6 +20,32 @@ def _as_utc_aware(dt):
     return datetime.combine(dt, datetime.min.time()).replace(tzinfo=timezone.utc)
 
 
+_QUIZ_SUBMISSION_SCORE_RE = re.compile(
+    r'Quiz\s+submitted\s+with\s+([0-9]*\.?[0-9]+)\s*/\s*([0-9]*\.?[0-9]+)\s*points?',
+    re.IGNORECASE,
+)
+
+
+def parse_quiz_submission_auto_score(comments):
+    """
+    Extract auto-graded points from the comment set by submit_quiz()
+    (e.g. 'Quiz submitted with 8.0/10.0 points'). Returns dict with
+    earned, total, percentage; or None if not a quiz auto-submit comment.
+    """
+    if not comments or not isinstance(comments, str):
+        return None
+    m = _QUIZ_SUBMISSION_SCORE_RE.search(comments.strip())
+    if not m:
+        return None
+    try:
+        earned = float(m.group(1))
+        total = float(m.group(2))
+    except (ValueError, TypeError):
+        return None
+    pct = (earned / total * 100.0) if total > 0 else 0.0
+    return {'earned': earned, 'total': total, 'percentage': round(pct, 2)}
+
+
 def parse_discussion_description(desc):
     """Parse discussion prompt, instructions, rubric from stored description."""
     prompt, instructions, rubric = '', '', ''
@@ -139,6 +165,30 @@ def calculate_assignment_status(assignment):
             return 'Active'
 
 
+def get_effective_assignment_status(assignment):
+    """
+    Lifecycle status for display (templates, reports).
+
+    - Voided rows stay Voided.
+    - If status_override + status_override_until is still in the future, keep the stored
+      status for that window (teacher/admin pinned Active/Inactive/etc.).
+    - Otherwise derive status from open_date / close_date / due_date via
+      calculate_assignment_status() so labels match actual availability dates.
+    """
+    if getattr(assignment, 'status', None) == 'Voided':
+        return 'Voided'
+    now = datetime.now(timezone.utc)
+    until = getattr(assignment, 'status_override_until', None)
+    override = getattr(assignment, 'status_override', None)
+    if until is not None and override:
+        until_aware = _as_utc_aware(until)
+        if until_aware and until_aware > now:
+            st = getattr(assignment, 'status', None)
+            if st and st != 'Voided':
+                return st
+    return calculate_assignment_status(assignment)
+
+
 def get_student_close_date(assignment, student_id):
     """
     Get the effective close date for a student, considering extensions.
@@ -213,9 +263,10 @@ def is_assignment_open_for_student(assignment, student_id):
         return False
 
     now = datetime.now(timezone.utc)  # Use timezone-aware datetime
+    lifecycle = get_effective_assignment_status(assignment)
 
     # Inactive assignments: block unless student has valid extension, reopening, or redo
-    if assignment.status == 'Inactive':
+    if lifecycle == 'Inactive':
         from models import AssignmentReopening, AssignmentRedo
         # First check: student may have extension—is their effective close_date still valid?
         student_close_date = get_student_close_date(assignment, student_id)
@@ -239,7 +290,7 @@ def is_assignment_open_for_student(assignment, student_id):
         return False  # Inactive and no extension/reopening/redo - cannot submit
 
     # Upcoming assignments: block unless student has active reopening or valid redo
-    if assignment.status == 'Upcoming':
+    if lifecycle == 'Upcoming':
         from models import AssignmentReopening, AssignmentRedo
         reopening = AssignmentReopening.query.filter_by(
             assignment_id=assignment.id,

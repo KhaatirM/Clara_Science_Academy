@@ -346,48 +346,61 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">{{ assignment.title }}</h6>
                                 {% set grade_info = assignment_grades.get(assignment.id, {}) %}
-                                {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
+                                {% set total_submissions = grade_info.get('total_submissions', 0) %}
+                                {% set graded_count = grade_info.get('graded_count', 0) %}
                                 {% set is_autogradeable = grade_info.get('is_autogradeable', False) %}
-                                {% set current_status = assignment.status %}
+                                {% set current_status = assignment|effective_assignment_status %}
                                 {% set all_voided = grade_info.get('all_voided', current_status == 'Voided') %}
                                 {% set partially_voided = grade_info.get('partially_voided', False) %}
-                                {% set needs_grading = grade_info.get('needs_grading', False) %}
-                                {% if all_voided or current_status == 'Voided' %}
-                                    <span class="badge bg-secondary">
-                                        <i class="bi bi-slash-circle me-1"></i>Voided
-                                    </span>
-                                {% elif partially_voided %}
-                                    <span class="badge bg-secondary" title="Voided for: {{ grade_info.get('voided_student_names', [])|join(', ') }}">
-                                        <i class="bi bi-slash-circle me-1"></i>Voided for {{ grade_info.get('voided_count', 0) }} student{{ 's' if grade_info.get('voided_count', 0) != 1 else '' }}
-                                    </span>
-                                {% elif current_status == 'Upcoming' %}
-                                    <span class="badge bg-info">
-                                        <i class="bi bi-clock me-1"></i>Upcoming
-                                    </span>
-                                {% elif has_grades %}
-                                    {% if assignment.assignment_type == 'quiz' and is_autogradeable %}
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-robot me-1"></i>Autograde
+                                <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+                                    {# Lifecycle status #}
+                                    {% if all_voided or current_status == 'Voided' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-slash-circle me-1"></i>Voided
+                                        </span>
+                                    {% elif partially_voided %}
+                                        <span class="badge bg-secondary" title="Voided for: {{ grade_info.get('voided_student_names', [])|join(', ') }}">
+                                            <i class="bi bi-slash-circle me-1"></i>Voided for {{ grade_info.get('voided_count', 0) }} student{{ 's' if grade_info.get('voided_count', 0) != 1 else '' }}
+                                        </span>
+                                    {% elif current_status == 'Upcoming' %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-clock me-1"></i>Upcoming
+                                        </span>
+                                    {% elif current_status == 'Inactive' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-pause-circle me-1"></i>Inactive
                                         </span>
                                     {% else %}
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-check-circle me-1"></i>Graded
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Active
                                         </span>
                                     {% endif %}
-                                {% elif current_status == 'Inactive' %}
-                                    <span class="badge bg-warning">
-                                        <i class="bi bi-pause-circle me-1"></i>Inactive
-                                    </span>
-                                    {% if needs_grading %}
-                                        <span class="badge bg-danger ms-1">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>Needs to be graded
-                                        </span>
+
+                                    {# Grading status (skip if voided) #}
+                                    {% if not (all_voided or current_status == 'Voided') %}
+                                        {% if (assignment.assignment_type == 'quiz') and is_autogradeable %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-robot me-1"></i>Autograde
+                                            </span>
+                                        {% elif total_submissions == 0 %}
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bi bi-inbox me-1"></i>No submissions
+                                            </span>
+                                        {% elif graded_count == 0 %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Needs grading
+                                            </span>
+                                        {% elif graded_count < total_submissions %}
+                                            <span class="badge bg-warning text-dark" title="{{ graded_count }}/{{ total_submissions }} graded">
+                                                <i class="bi bi-hourglass-split me-1"></i>Partially graded
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-check2-circle me-1"></i>Fully graded
+                                            </span>
+                                        {% endif %}
                                     {% endif %}
-                                {% else %}
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle me-1"></i>Active
-                                    </span>
-                                {% endif %}
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="mb-2 d-flex gap-2 flex-wrap">
@@ -417,7 +430,7 @@
                                 <div class="mb-2">
                                     <small class="text-muted">
                                         <i class="fas fa-calendar me-1"></i>
-                                        Due: {{ assignment.due_date.strftime('%m/%d/%Y') }}
+                                        Due: {{ assignment.due_date|schooltime('%m/%d/%Y') }}
                                     </small>
                                 </div>
                                 <div class="mb-2">
@@ -426,21 +439,22 @@
                                 <div class="mb-2">
                                     <small class="text-muted">
                                         <i class="bi bi-person me-1"></i>
-                                        {% if assignment.creator %}
+                                        {% set creator_user = assignment.effective_creator %}
+                                        {% if creator_user %}
                                                 {% set creator_name = '' %}
                                                 {% if assignment.proposing_student %}
                                                     {% set creator_name = (assignment.proposing_student.first_name ~ ' ' ~ assignment.proposing_student.last_name)|trim %}
                                                 {% endif %}
-                                                {% if not creator_name and assignment.creator.teacher_staff_profile %}
-                                                    {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                                {% if not creator_name and creator_user.teacher_staff_profile %}
+                                                    {% set creator_name = (creator_user.teacher_staff_profile.first_name ~ ' ' ~ creator_user.teacher_staff_profile.last_name)|trim %}
                                                 {% endif %}
-                                                {% if not creator_name and assignment.creator.student_profile %}
-                                                    {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                                {% if not creator_name and creator_user.student_profile %}
+                                                    {% set creator_name = (creator_user.student_profile.first_name ~ ' ' ~ creator_user.student_profile.last_name)|trim %}
                                                 {% endif %}
-                                                {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
-                                                    {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                                {% if not creator_name and (creator_user.first_name or creator_user.last_name) %}
+                                                    {% set creator_name = ((creator_user.first_name or '') ~ ' ' ~ (creator_user.last_name or ''))|trim %}
                                                 {% endif %}
-                                                {{ creator_name if creator_name else assignment.creator.username }}
+                                                {{ creator_name if creator_name else creator_user.username }}
                                         {% else %}
                                             Unknown
                                         {% endif %}
@@ -474,8 +488,9 @@
                     {% if item_type == 'group' %}
                     {% set group_assignment = assignment %}
                         {% set grade_info = assignment_grades.get('group_' ~ group_assignment.id, {}) %}
-                        {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
-                        {% set current_status = group_assignment.status %}
+                        {% set total_submissions = grade_info.get('total_submissions', 0) %}
+                        {% set graded_count = grade_info.get('graded_count', 0) %}
+                        {% set current_status = group_assignment|effective_assignment_status %}
                         {% set all_voided_ga = grade_info.get('all_voided', current_status == 'Voided') %}
                         {% set partially_voided_ga = grade_info.get('partially_voided', False) %}
                         {% set needs_grading_ga = grade_info.get('needs_grading', False) %}
@@ -484,6 +499,7 @@
                                 <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
                                     <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>{{ group_assignment.title }}</h6>
                                     <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+                                        {# Lifecycle status #}
                                         {% if all_voided_ga or current_status == 'Voided' %}
                                             <span class="badge bg-secondary">
                                                 <i class="bi bi-slash-circle me-1"></i>Voided
@@ -496,24 +512,37 @@
                                             <span class="badge bg-info bg-opacity-90">
                                                 <i class="bi bi-clock me-1"></i>Upcoming
                                             </span>
-                                        {% elif has_grades %}
-                                            <span class="badge bg-light text-dark">
-                                                <i class="bi bi-check-circle me-1"></i>Graded
-                                            </span>
                                         {% elif current_status == 'Inactive' %}
                                             <span class="badge bg-warning text-dark">
                                                 <i class="bi bi-pause-circle me-1"></i>Inactive
                                             </span>
-                                            {% if needs_grading_ga %}
-                                                <span class="badge bg-danger ms-1">
-                                                    <i class="bi bi-exclamation-circle me-1"></i>Needs to be graded
-                                                </span>
-                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-success">
                                                 <i class="bi bi-check-circle me-1"></i>Active
                                             </span>
                                         {% endif %}
+
+                                        {# Grading status (skip if voided) #}
+                                        {% if not (all_voided_ga or current_status == 'Voided') %}
+                                            {% if total_submissions == 0 %}
+                                                <span class="badge bg-light text-dark border">
+                                                    <i class="bi bi-inbox me-1"></i>No submissions
+                                                </span>
+                                            {% elif graded_count == 0 %}
+                                                <span class="badge bg-danger">
+                                                    <i class="bi bi-exclamation-circle me-1"></i>Needs grading
+                                                </span>
+                                            {% elif graded_count < total_submissions %}
+                                                <span class="badge bg-warning text-dark" title="{{ graded_count }}/{{ total_submissions }} graded">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Partially graded
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-check-circle me-1"></i>Fully graded
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+
                                         <span class="badge bg-light text-dark">Group</span>
                                     </div>
                                 </div>
@@ -534,7 +563,7 @@
                                     <div class="mb-2">
                                         <small class="text-muted">
                                             <i class="fas fa-calendar me-1"></i>
-                                            Due: {{ group_assignment.due_date.strftime('%m/%d/%Y') if group_assignment.due_date else 'No due date' }}
+                                            Due: {{ group_assignment.due_date|schooltime('%m/%d/%Y') if group_assignment.due_date else 'No due date' }}
                                         </small>
                                     </div>
                                     <div class="mb-2">
@@ -552,21 +581,22 @@
                                     <div class="mb-2">
                                         <small class="text-muted">
                                             <i class="bi bi-person me-1"></i>
-                                            {% if group_assignment.creator %}
+                                            {% set creator_user = group_assignment.effective_creator %}
+                                            {% if creator_user %}
                                                 {% set creator_name = '' %}
                                                 {% if group_assignment.proposing_student %}
                                                     {% set creator_name = (group_assignment.proposing_student.first_name ~ ' ' ~ group_assignment.proposing_student.last_name)|trim %}
                                                 {% endif %}
-                                                {% if not creator_name and group_assignment.creator.teacher_staff_profile %}
-                                                    {% set creator_name = (group_assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ group_assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                                {% if not creator_name and creator_user.teacher_staff_profile %}
+                                                    {% set creator_name = (creator_user.teacher_staff_profile.first_name ~ ' ' ~ creator_user.teacher_staff_profile.last_name)|trim %}
                                                 {% endif %}
-                                                {% if not creator_name and group_assignment.creator.student_profile %}
-                                                    {% set creator_name = (group_assignment.creator.student_profile.first_name ~ ' ' ~ group_assignment.creator.student_profile.last_name)|trim %}
+                                                {% if not creator_name and creator_user.student_profile %}
+                                                    {% set creator_name = (creator_user.student_profile.first_name ~ ' ' ~ creator_user.student_profile.last_name)|trim %}
                                                 {% endif %}
-                                                {% if not creator_name and (group_assignment.creator.first_name or group_assignment.creator.last_name) %}
-                                                    {% set creator_name = ((group_assignment.creator.first_name or '') ~ ' ' ~ (group_assignment.creator.last_name or ''))|trim %}
+                                                {% if not creator_name and (creator_user.first_name or creator_user.last_name) %}
+                                                    {% set creator_name = ((creator_user.first_name or '') ~ ' ' ~ (creator_user.last_name or ''))|trim %}
                                                 {% endif %}
-                                                {{ creator_name if creator_name else group_assignment.creator.username }}
+                                                {{ creator_name if creator_name else creator_user.username }}
                                             {% else %}
                                                 Unknown
                                             {% endif %}

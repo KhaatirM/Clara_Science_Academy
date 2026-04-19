@@ -175,6 +175,22 @@ def grade_assignment(assignment_id):
                         )
                         db.session.add(new_grade)
                     
+                    # If grade entered and no submission exists, auto-create in_person submission
+                    sub2 = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+                    if not sub2 and adjusted['points_earned'] > 0:
+                        teacher_staff = get_teacher_or_admin()
+                        sub2 = Submission(
+                            student_id=student_id,
+                            assignment_id=assignment_id,
+                            submission_type='in_person',
+                            submission_notes='Auto-marked: grade entered',
+                            marked_by=teacher_staff.id if teacher_staff else None,
+                            marked_at=datetime.now(),
+                            submitted_at=datetime.now(),
+                            file_path=None,
+                        )
+                        db.session.add(sub2)
+                    
                     grades_saved += 1
             else:
                 # Regular assignment grading (existing logic)
@@ -355,11 +371,8 @@ def grade_assignment(assignment_id):
         # Check if quiz has open-ended questions (short_answer or essay) that need manual grading
         has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
         
-        # If quiz has no open-ended questions, all questions are auto-graded
-        # Show a message and redirect back to assignment view
-        if not has_open_ended_questions:
-            flash('This quiz contains only auto-graded questions (Multiple Choice/True-False). All grades are automatically calculated when students submit their quizzes. No manual grading is required.', 'info')
-            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        # If quiz has no open-ended questions, it's auto-graded when students submit.
+        # Still allow manual grade entry (e.g., device damage / paper completion) via the standard grading UI.
         
         # Load answers for all students with selected_option relationship
         for student in students:

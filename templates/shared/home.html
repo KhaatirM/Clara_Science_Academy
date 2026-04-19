@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 5, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 18, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 5, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 18, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>April 5</strong> focuses on report-card safeguards, profile-sync confirmation fields, and admin alerting for generation checks. <strong>Early April</strong> adds the updated grading policy and GPA mappings, upgraded assignment/group-assignment workflows, student assistant expansion (quiz/discussion proposals), attendance cleanup, and stronger void-status consistency across teacher, admin, and student views.</p>
+                        <p class="updates-intro-text mb-0"><strong>April 18</strong> improves how teachers and administrators see assignment status and navigation on smaller screens: staff-facing pages no longer emphasize an &ldquo;overdue&rdquo; badge the way students might, and the dashboard sidebar uses a full slide-out menu under 992px width so every link stays readable (for example on scaled laptop displays). <strong>April 5</strong> and <strong>early April</strong> below cover report-card safeguards, the updated grading policy, assignment and group-assignment workflows, academic alerts, and related refinements.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- April 18, 2026 - Staff assignment labels & dashboard sidebar -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset-reverse me-2"></i>Staff Assignment Labels &amp; Dashboard Sidebar – April 18, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher and administrator assignment views:</strong> &ldquo;Overdue&rdquo; and &ldquo;Past Due&rdquo; style badges were removed from staff-facing assignment lists and headers. Status is shown with neutral, lifecycle-aware wording (for example active, inactive, upcoming, or voided) instead of framing work as overdue for the people who assigned it.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School leadership dashboards:</strong> Management dashboard cards and tables use the same idea—calendar and due-date context without an overdue badge directed at staff. Stat labels were adjusted so counts are not labeled as overdue for administrators.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic Concerns &amp; related tools:</strong> Summary and filter wording in the academic concerns experience was updated (for example &ldquo;After calendar due date&rdquo; and &ldquo;Behind on due dates only&rdquo;) so teachers and admins see clear language without an overdue badge. Similar wording updates apply to deadline reminders for teachers and the redo dashboard for administrators (past-deadline phrasing instead of &ldquo;Overdue&rdquo;).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignment (admin) time note:</strong> When the due moment has passed, the secondary note describes how long ago the due date was, without calling the assignment overdue for staff.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Dashboard sidebar on small and scaled screens:</strong> Below about 992px width (common on laptops with display scaling), the sidebar opens as a full-width slide-out drawer with full link text instead of a permanent narrow icon column. A legacy rule that could collapse the sidebar to zero width on very narrow viewports was removed. Main content gains top padding so it clears the fixed menu control, and horizontal scrolling on the page shell is reduced.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Staff see assignment and alert language that fits their role, and teachers and administrators can reach every sidebar destination on compact or scaled screens without hunting for icons or sideways scrolling.</p>
+                        </div>
+                    </div>
+
                     <!-- April 5, 2026 - Report cards, grading policy, alerts -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Report Cards, Grading Policy &amp; Safeguards – April 5, 2026</h6>
@@ -761,7 +791,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Academic alerts search and filters:</strong> The search and filter toolbar in the Academic Concerns modal has been restored. Teachers and administrators can search by student name, filter by type (All, Failing, Missing, Overdue), filter by GPA (All, Critical &lt;2.0, Warning 2.0–2.9, Below 3.0), sort by name/GPA/assignments count, and reset filters—making it easier to focus on the students who need the most attention.
+                                <strong>Academic alerts search and filters:</strong> The search and filter toolbar in the Academic Concerns modal has been restored. Teachers and administrators can search by student name, filter by type (All, Failing, Missing, after calendar due date), filter by GPA (All, Critical &lt;2.0, Warning 2.0–2.9, Below 3.0), sort by name/GPA/assignments count, and reset filters—making it easier to focus on the students who need the most attention.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -969,7 +999,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Group assignment view:</strong> The overdue badge is now hidden when a group assignment is Voided or Graded. Statistics (submissions, graded count) are fixed and accurate.
+                                <strong>Group assignment view:</strong> The past-due calendar badge is now hidden when a group assignment is Voided or Graded. Statistics (submissions, graded count) are fixed and accurate.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>

@@ -103,8 +103,13 @@
         <div class="grading-stat-card stat-submitted">
             <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
             <div class="stat-content">
-                <div class="stat-value">{{ submitted_count }}</div>
-                <div class="stat-label">Submitted</div>
+                <div class="stat-value">
+                    {{ submitted_count }}
+                    {% if assignment.assignment_type == 'quiz' and quiz_total_attempts is not none %}
+                    <span class="fs-6 fw-normal text-muted">/ {{ quiz_total_attempts }} {% if quiz_total_attempts == 1 %}try{% else %}tries{% endif %}</span>
+                    {% endif %}
+                </div>
+                <div class="stat-label">Submitted{% if assignment.assignment_type == 'quiz' %} (students){% endif %}</div>
             </div>
         </div>
         <div class="grading-stat-card stat-graded">
@@ -249,7 +254,7 @@
                                 {% endif %}
                                 {% if grade %}
                                     <span class="badge bg-success ms-2">
-                                        <i class="bi bi-star me-1"></i>Graded: {{ grade.score|round(1) }}%
+                                        <i class="bi bi-star me-1"></i>Graded: {{ grade.percentage|round(1) }}%
                                     </span>
                                 {% endif %}
                             </div>
@@ -257,11 +262,48 @@
                 
                 <div class="mt-3">
                     {% if submission %}
+                        {% if assignment.assignment_type == 'quiz' and student_item.quiz_attempts %}
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered align-middle mb-0 bg-white" style="font-size: 0.9rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width:3.5rem;">#</th>
+                                        <th scope="col">Submitted</th>
+                                        <th scope="col">Score that attempt</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for att in student_item.quiz_attempts %}
+                                    <tr>
+                                        <td class="fw-semibold">{{ att.attempt_num }}</td>
+                                        <td>{{ att.submission.submitted_at|schooltime('%m/%d/%Y %I:%M %p') }}</td>
+                                        <td>
+                                            {% if att.parsed_score %}
+                                                <span class="fw-semibold">{{ att.parsed_score.earned|round(1) }}</span>
+                                                / {{ att.parsed_score.total|round(1) }}
+                                                <span class="text-muted">({{ att.parsed_score.percentage }}%)</span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                                <small class="text-muted ms-1">(manual or non-quiz submit)</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if grade %}
+                            <p class="small text-muted mb-0 mt-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Current grade on file</strong> (official; includes manual grading): {{ grade.percentage|round(1) }}%
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="submission-info-row">
-                                    <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>Submitted:</span>
-                                    <strong>{{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}</strong>
+                                    <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>Latest submit:</span>
+                                    <strong>{{ submission.submitted_at|schooltime('%b %d, %Y at %I:%M %p') }}</strong>
                                 </div>
                                 <div class="submission-info-row">
                                     <span class="text-muted"><i class="bi bi-file-earmark me-1"></i>Type:</span>
@@ -318,7 +360,7 @@
                                 <div class="alert alert-success mb-2">
                                     <small>
                                         <i class="bi bi-star me-1"></i>
-                                        <strong>Grade:</strong> {{ grade.score|round(1) }}% 
+                                        <strong>Grade:</strong> {{ grade.percentage|round(1) }}% 
                                         {% if grade.comment %}
                                         <br><em>{{ grade.comment[:100] }}{% if grade.comment|length > 100 %}...{% endif %}</em>
                                         {% endif %}

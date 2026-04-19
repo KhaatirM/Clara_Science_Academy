@@ -158,8 +158,10 @@ def add_assignment_for_class(class_id):
                 flash("Cannot create assignment: No active school year.", "danger")
                 return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
             
-            teacher = get_teacher_or_admin()
-            teacher_id = teacher.id if teacher else None
+            # IMPORTANT:
+            # Assignment.created_by is a FK to user.id (not teacher_staff.id).
+            # Using teacher_staff.id here can collide with a student user.id and display the wrong creator.
+            creator_user_id = current_user.id
             
             new_assignment = Assignment(
                 title=title,
@@ -179,7 +181,7 @@ def add_assignment_for_class(class_id):
                 late_penalty_enabled=late_penalty_enabled,
                 late_penalty_per_day=late_penalty_per_day if late_penalty_enabled else 0.0,
                 late_penalty_max_days=late_penalty_max_days if late_penalty_enabled else 0,
-                created_by=teacher_id
+                created_by=creator_user_id
             )
             
             db.session.add(new_assignment)
@@ -347,6 +349,12 @@ def edit_assignment(assignment_id):
             category_weight = request.form.get('category_weight', type=float)
             if category_weight is None:
                 category_weight = 0.0
+
+            allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+            max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
+            late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+            late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
+            late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
 
             assignment.title = title
             assignment.description = description
@@ -1773,7 +1781,9 @@ def view_assignment_submissions(assignment_id):
     """View all submissions for an assignment"""
     from models import Submission, Enrollment, Student, Grade
     from datetime import datetime
-    
+    from collections import defaultdict
+    from teacher_routes.assignment_utils import parse_quiz_submission_auto_score
+
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
     
@@ -1796,25 +1806,36 @@ def view_assignment_submissions(assignment_id):
         Student.last_name, Student.first_name
     ).all()
     
-    # Get all submissions for this assignment
-    submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
-    submissions_dict = {sub.student_id: sub for sub in submissions}
-    
-    # Get all grades for this assignment
-    grades = Grade.query.filter_by(assignment_id=assignment_id).all()
-    grades_dict = {g.student_id: g for g in grades}
-    
+    # All submissions (quizzes may have multiple rows per student — one per completed attempt)
+    submissions = Submission.query.filter_by(assignment_id=assignment_id).order_by(
+        Submission.submitted_at.asc()
+    ).all()
+    submissions_by_student = defaultdict(list)
+    for sub in submissions:
+        submissions_by_student[sub.student_id].append(sub)
+
+    # Latest grade row per student (quiz retakes consolidate to one authoritative grade)
+    grades_ordered = Grade.query.filter_by(assignment_id=assignment_id).order_by(
+        Grade.graded_at.desc()
+    ).all()
+    grades_dict = {}
+    for g in grades_ordered:
+        if g.student_id not in grades_dict:
+            grades_dict[g.student_id] = g
+
     # Get extensions
     extensions = AssignmentExtension.query.filter_by(
         assignment_id=assignment_id,
         is_active=True
     ).all()
     extensions_dict = {ext.student_id: ext for ext in extensions}
-    
+
     # Calculate statistics
     total_students = len(students)
-    submitted_count = len(submissions)
-    graded_count = len([g for g in grades if not g.is_voided])
+    students_with_submission = set(submissions_by_student.keys())
+    submitted_count = len(students_with_submission)
+    quiz_total_attempts = len(submissions) if assignment.assignment_type == 'quiz' else None
+    graded_count = len([g for g in grades_dict.values() if not g.is_voided])
     late_count = 0
     on_time_count = 0
     
@@ -1831,10 +1852,20 @@ def view_assignment_submissions(assignment_id):
     # Prepare student data with submission status
     student_data = []
     for student in students:
-        submission = submissions_dict.get(student.id)
+        subs_for_student = submissions_by_student.get(student.id, [])
+        submission = subs_for_student[-1] if subs_for_student else None
         grade = grades_dict.get(student.id)
-        
-        # Determine submission status
+
+        quiz_attempts = []
+        if assignment.assignment_type == 'quiz' and subs_for_student:
+            for sub in subs_for_student:
+                quiz_attempts.append({
+                    'attempt_num': len(quiz_attempts) + 1,
+                    'submission': sub,
+                    'parsed_score': parse_quiz_submission_auto_score(sub.comments),
+                })
+
+        # Determine submission status (based on most recent attempt)
         if submission:
             due_date = assignment.due_date
             if student.id in extensions_dict:
@@ -1885,7 +1916,8 @@ def view_assignment_submissions(assignment_id):
             'has_grade_record': has_grade_record,
             'status': status,
             'submission_type': submission_type,
-            'extension': extensions_dict.get(student.id)
+            'extension': extensions_dict.get(student.id),
+            'quiz_attempts': quiz_attempts,
         })
     
     # Sort by status: submitted first, then not submitted
@@ -1901,6 +1933,7 @@ def view_assignment_submissions(assignment_id):
                          students=student_data,
                          total_students=total_students,
                          submitted_count=submitted_count,
+                         quiz_total_attempts=quiz_total_attempts,
                          graded_count=graded_count,
                          late_count=late_count,
                          on_time_count=on_time_count,

@@ -1137,7 +1137,8 @@ def class_grades(class_id):
             if assignment.status == 'Voided':
                 continue
                 
-            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+            # Use latest grade if duplicates exist (quiz retakes)
+            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).order_by(Grade.graded_at.desc()).first()
             if grade:
                 try:
                     grade_data = json.loads(grade.grade_data)

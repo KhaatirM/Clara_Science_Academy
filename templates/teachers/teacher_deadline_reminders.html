@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <div class="stat-value-deadline">{{ overdue|length }}</div>
-                    <div class="stat-label-deadline">Overdue</div>
+                    <div class="stat-label-deadline">After due date</div>
                 </div>
             </div>
         </div>
@@ -75,12 +75,12 @@
         </div>
     </div>
 
-    <!-- Overdue Assignments -->
+    <!-- Assignments past their due date (calendar) -->
     {% if overdue %}
     <div class="deadline-section animated-fade-in" style="animation-delay: 0.5s;">
         <div class="section-header section-danger">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <span>Overdue Assignments ({{ overdue|length }})</span>
+            <i class="bi bi-calendar-x me-2"></i>
+            <span>Assignments after due date ({{ overdue|length }})</span>
         </div>
         <div class="assignments-list">
             {% for assignment in overdue %}
@@ -93,7 +93,7 @@
                             <div class="assignment-meta">
                                 <span class="meta-item"><i class="bi bi-book me-1"></i>{{ assignment.class_info.class_name }}</span>
                                 <span class="meta-item"><i class="bi bi-calendar-x me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y at %I:%M %p') }}</span>
-                                <span class="meta-item danger-text"><i class="bi bi-exclamation-circle me-1"></i>{{ -assignment.days_until }} days overdue</span>
+                                <span class="meta-item danger-text"><i class="bi bi-calendar-event me-1"></i>{{ -assignment.days_until }} day{{ 's' if (-assignment.days_until) != 1 else '' }} after due date</span>
                             </div>
                         </div>
                         <div class="assignment-actions">

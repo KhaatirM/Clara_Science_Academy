@@ -1882,7 +1882,7 @@
                         </div>
                         <div class="assignments-stat-content">
                             <h3 class="assignments-stat-number">{{ assignments|selectattr('due_date')|rejectattr('due_date', 'none')|list|length }}</h3>
-                            <p class="assignments-stat-label">Due Today/Overdue</p>
+                            <p class="assignments-stat-label">With a due date</p>
                         </div>
                     </div>
                 </div>
@@ -1933,14 +1933,19 @@
                                     <td>{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</td>
                                     <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</td>
                                     <td>
-                                        {% if assignment.due_date and assignment.due_date.date() < today %}
-                                            <span class="badge bg-danger">Past Due</span>
-                                        {% elif assignment.due_date and assignment.due_date.date() == today %}
-                                            <span class="badge bg-warning">Due Today</span>
-                                        {% elif assignment.due_date %}
-                                            <span class="badge bg-success">Active</span>
+                                        {% set _st = assignment|effective_assignment_status %}
+                                        {% if not assignment.due_date %}
+                                            <span class="badge bg-secondary">No due date</span>
+                                        {% elif _st == 'Voided' %}
+                                            <span class="badge bg-secondary">Voided</span>
+                                        {% elif _st == 'Upcoming' %}
+                                            <span class="badge bg-info">Upcoming</span>
+                                        {% elif _st == 'Inactive' %}
+                                            <span class="badge bg-warning text-dark">Inactive</span>
+                                        {% elif assignment.due_date.date() == today %}
+                                            <span class="badge bg-warning text-dark">Due today</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">No Due Date</span>
+                                            <span class="badge bg-success">Active</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -2053,14 +2058,19 @@
                                         <i class="bi bi-journal-text"></i>
                                     </div>
                                     <div class="assignment-card-status">
-                                        {% if assignment.due_date and assignment.due_date.date() < today %}
-                                            <span class="badge bg-danger">Past Due</span>
-                                        {% elif assignment.due_date and assignment.due_date.date() == today %}
-                                            <span class="badge bg-warning">Due Today</span>
-                                        {% elif assignment.due_date %}
-                                            <span class="badge bg-success">Active</span>
+                                        {% set _stc = assignment|effective_assignment_status %}
+                                        {% if not assignment.due_date %}
+                                            <span class="badge bg-secondary">No due date</span>
+                                        {% elif _stc == 'Voided' %}
+                                            <span class="badge bg-secondary">Voided</span>
+                                        {% elif _stc == 'Upcoming' %}
+                                            <span class="badge bg-info">Upcoming</span>
+                                        {% elif _stc == 'Inactive' %}
+                                            <span class="badge bg-warning text-dark">Inactive</span>
+                                        {% elif assignment.due_date.date() == today %}
+                                            <span class="badge bg-warning text-dark">Due today</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">No Due Date</span>
+                                            <span class="badge bg-success">Active</span>
                                         {% endif %}
                                     </div>
                                 </div>

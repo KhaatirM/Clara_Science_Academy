@@ -24,167 +24,63 @@ def update_assignment_statuses(run_auto_zeros=False):
     try:
         from models import Assignment, GroupAssignment, db
         from datetime import timezone
-        
+        from teacher_routes.assignment_utils import calculate_assignment_status
+
         now = datetime.now(timezone.utc)
-        today = now.date()
-        
-        def ensure_aware(dt):
-            if dt is None:
-                return None
-            if dt.tzinfo is None:
-                return dt.replace(tzinfo=timezone.utc)
-            return dt
-        
+
+        def _clear_expired_override(entity):
+            if getattr(entity, 'status_override_until', None):
+                until_dt = entity.status_override_until
+                if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
+                    until_dt = until_dt.replace(tzinfo=timezone.utc)
+                if until_dt and until_dt < now:
+                    entity.status_override = None
+                    entity.status_override_until = None
+
+        def _override_active(entity):
+            if getattr(entity, 'status_override', None) and getattr(entity, 'status_override_until', None):
+                until_dt = entity.status_override_until
+                if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
+                    until_dt = until_dt.replace(tzinfo=timezone.utc)
+                if until_dt and until_dt > now:
+                    return True
+            return False
+
         # --- Regular Assignments ---
         assignments = Assignment.query.all()
         for assignment in assignments:
             try:
-                # Skip voided assignments - don't change their status
                 if assignment.status == 'Voided':
                     continue
-                # Clear expired status override, then run normal logic
-                if getattr(assignment, 'status_override_until', None):
-                    until_dt = assignment.status_override_until
-                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
-                        until_dt = until_dt.replace(tzinfo=timezone.utc)
-                    if until_dt and until_dt < now:
-                        assignment.status_override = None
-                        assignment.status_override_until = None
-                # Skip if status override is active (manual override until date)
-                if getattr(assignment, 'status_override', None) and getattr(assignment, 'status_override_until', None):
-                    until_dt = assignment.status_override_until
-                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
-                        until_dt = until_dt.replace(tzinfo=timezone.utc)
-                    if until_dt and until_dt > now:
-                        continue  # Don't overwrite - teacher set temporary override
-                
-                # Get raw dates first
-                raw_open_date = assignment.open_date if hasattr(assignment, 'open_date') and assignment.open_date else None
-                raw_close_date = assignment.close_date if hasattr(assignment, 'close_date') and assignment.close_date else None
-                due_date = assignment.due_date
-                
-                # Handle due_date - convert to date if datetime
-                if due_date:
-                    due_date = due_date.date() if hasattr(due_date, 'date') else due_date
-                
-                # Priority 1: Check if assignment is upcoming (open_date is in the future)
-                if raw_open_date:
-                    # Convert to timezone-aware datetime
-                    if isinstance(raw_open_date, datetime):
-                        open_date_dt = ensure_aware(raw_open_date)
-                    else:
-                        # It's a date object, convert to datetime at start of day
-                        from datetime import date as date_type
-                        if isinstance(raw_open_date, date_type):
-                            open_date_dt = datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-                        else:
-                            open_date_dt = ensure_aware(raw_open_date)
-                    if open_date_dt > now:
-                        # Assignment hasn't opened yet - set to Upcoming
-                        if assignment.status != 'Upcoming':
-                            assignment.status = 'Upcoming'
-                        continue
-                
-                # Priority 2: Check if assignment has closed (close_date is in the past)
-                if raw_close_date:
-                    # Convert to timezone-aware datetime
-                    if isinstance(raw_close_date, datetime):
-                        close_date_dt = ensure_aware(raw_close_date)
-                    else:
-                        # It's a date object, convert to datetime at end of day
-                        from datetime import date as date_type
-                        if isinstance(raw_close_date, date_type):
-                            close_date_dt = datetime.combine(raw_close_date, datetime.max.time()).replace(tzinfo=timezone.utc)
-                        else:
-                            close_date_dt = ensure_aware(raw_close_date)
-                    if close_date_dt < now:
-                        # Assignment has closed - set to Inactive
-                        if assignment.status != 'Inactive':
-                            assignment.status = 'Inactive'
-                        continue
-                
-                # Priority 3: Check if assignment is past due
-                if due_date and due_date < today:
-                    if assignment.status == 'Active':
-                        assignment.status = 'Overdue'
-                elif due_date and due_date >= today:
-                    # Assignment is not past due
-                    if assignment.status == 'Overdue':
-                        assignment.status = 'Active'
-                    # If status is Upcoming but open_date has passed, set to Active
-                    elif assignment.status == 'Upcoming' and (not raw_open_date or (raw_open_date and (
-                        (isinstance(raw_open_date, datetime) and ensure_aware(raw_open_date) <= now) or
-                        (not isinstance(raw_open_date, datetime) and datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) <= now)
-                    ))):
-                        assignment.status = 'Active'
-                
+                _clear_expired_override(assignment)
+                if _override_active(assignment):
+                    continue
+
+                new_status = calculate_assignment_status(assignment)
+                if assignment.status != new_status:
+                    assignment.status = new_status
+
             except (AttributeError, TypeError) as e:
-                # Skip assignments with invalid dates
                 print(f"Error updating assignment {assignment.id}: {e}")
                 continue
-        
-        # --- Group Assignments (same logic: due/close date -> Inactive) ---
-        from datetime import date as date_type
+
+        # --- Group Assignments (same date rules as individual) ---
         group_assignments = GroupAssignment.query.all()
         for ga in group_assignments:
             try:
                 if ga.status == 'Voided':
                     continue
-                # Clear expired status override
-                if getattr(ga, 'status_override_until', None):
-                    until_dt = ga.status_override_until
-                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
-                        until_dt = until_dt.replace(tzinfo=timezone.utc)
-                    if until_dt and until_dt < now:
-                        ga.status_override = None
-                        ga.status_override_until = None
-                # Skip if status override is active
-                if getattr(ga, 'status_override', None) and getattr(ga, 'status_override_until', None):
-                    until_dt = ga.status_override_until
-                    if hasattr(until_dt, 'tzinfo') and until_dt.tzinfo is None and hasattr(until_dt, 'replace'):
-                        until_dt = until_dt.replace(tzinfo=timezone.utc)
-                    if until_dt and until_dt > now:
-                        continue
-                raw_open_date = getattr(ga, 'open_date', None) and ga.open_date or None
-                raw_close_date = getattr(ga, 'close_date', None) and ga.close_date or None
-                due_date = ga.due_date
-                if due_date:
-                    due_date = due_date.date() if hasattr(due_date, 'date') else due_date
-                if raw_open_date:
-                    if isinstance(raw_open_date, datetime):
-                        open_date_dt = ensure_aware(raw_open_date)
-                    else:
-                        open_date_dt = datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) if isinstance(raw_open_date, date_type) else ensure_aware(raw_open_date)
-                    if open_date_dt > now:
-                        if ga.status != 'Upcoming':
-                            ga.status = 'Upcoming'
-                        continue
-                if raw_close_date:
-                    if isinstance(raw_close_date, datetime):
-                        close_date_dt = ensure_aware(raw_close_date)
-                    else:
-                        close_date_dt = datetime.combine(raw_close_date, datetime.max.time()).replace(tzinfo=timezone.utc) if isinstance(raw_close_date, date_type) else ensure_aware(raw_close_date)
-                    if close_date_dt < now:
-                        if ga.status != 'Inactive':
-                            ga.status = 'Inactive'
-                        continue
-                # When no close_date, treat past due_date as closed -> Inactive (so they go inactive on admin/student side)
-                if due_date and due_date < today:
-                    if ga.status != 'Inactive':
-                        ga.status = 'Inactive'
+                _clear_expired_override(ga)
+                if _override_active(ga):
                     continue
-                if due_date and due_date >= today:
-                    if ga.status == 'Overdue':
-                        ga.status = 'Active'
-                    elif ga.status == 'Upcoming' and (not raw_open_date or (raw_open_date and (
-                        (isinstance(raw_open_date, datetime) and ensure_aware(raw_open_date) <= now) or
-                        (not isinstance(raw_open_date, datetime) and datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) <= now)
-                    ))):
-                        ga.status = 'Active'
+
+                new_status = calculate_assignment_status(ga)
+                if ga.status != new_status:
+                    ga.status = new_status
             except (AttributeError, TypeError) as e:
                 print(f"Error updating group assignment {ga.id}: {e}")
                 continue
-        
+
         db.session.commit()
 
         # Apply automatic 0 for students with no grade 7 days after due/close only when explicitly requested.

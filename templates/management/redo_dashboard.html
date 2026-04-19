@@ -92,7 +92,7 @@
                         </div>
                         <div class="ms-3">
                             <h3 class="mb-0">{{ overdue_redos }}</h3>
-                            <p class="text-muted mb-0 small">Overdue</p>
+                            <p class="text-muted mb-0 small">Past redo deadline</p>
                         </div>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
                         <option value="pending">Pending</option>
                         <option value="submitted">Submitted</option>
                         <option value="graded">Graded</option>
-                        <option value="overdue">Overdue</option>
+                        <option value="overdue">Past redo deadline</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -232,7 +232,7 @@
                                 {% elif redo.is_used %}
                                     <span class="badge bg-info"><i class="bi bi-hourglass-split"></i> Submitted</span>
                                 {% elif redo.is_overdue %}
-                                    <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</span>
+                                    <span class="badge bg-danger"><i class="bi bi-calendar-x"></i> Deadline passed</span>
                                 {% else %}
                                     <span class="badge bg-warning"><i class="bi bi-clock"></i> Pending</span>
                                 {% endif %}
@@ -240,7 +240,7 @@
                             <td>
                                 {{ redo.redo_deadline.strftime('%m/%d/%Y') }}
                                 {% if redo.is_overdue %}
-                                    <br><small class="text-danger fw-bold">Overdue!</small>
+                                    <br><small class="text-danger fw-bold">Past deadline</small>
                                 {% endif %}
                             </td>
                             <td>

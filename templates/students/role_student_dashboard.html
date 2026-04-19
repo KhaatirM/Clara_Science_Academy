@@ -3034,18 +3034,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             </p>
                             <p class="student-assignment-teacher mb-2 small text-muted">
                                 <i class="bi bi-person me-1"></i>
-                                {% if assignment.creator %}
+                                {% set creator_user = assignment.effective_creator %}
+                                {% if creator_user %}
                                     {% set creator_name = '' %}
-                                    {% if assignment.creator.teacher_staff_profile %}
-                                        {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                    {% if creator_user.teacher_staff_profile %}
+                                        {% set creator_name = (creator_user.teacher_staff_profile.first_name ~ ' ' ~ creator_user.teacher_staff_profile.last_name)|trim %}
                                     {% endif %}
-                                    {% if not creator_name and assignment.creator.student_profile %}
-                                        {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                    {% if not creator_name and creator_user.student_profile %}
+                                        {% set creator_name = (creator_user.student_profile.first_name ~ ' ' ~ creator_user.student_profile.last_name)|trim %}
                                     {% endif %}
-                                    {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
-                                        {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                    {% if not creator_name and (creator_user.first_name or creator_user.last_name) %}
+                                        {% set creator_name = ((creator_user.first_name or '') ~ ' ' ~ (creator_user.last_name or ''))|trim %}
                                     {% endif %}
-                                    {{ creator_name if creator_name else assignment.creator.username }}
+                                    {{ creator_name if creator_name else creator_user.username }}
                                 {% else %}
                                     Unknown
                                 {% endif %}
@@ -3054,14 +3055,14 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             {% if assignment.open_date %}
                             <p class="student-assignment-due mb-2">
                                 <i class="bi bi-calendar-event me-1"></i>
-                                <strong>Opens:</strong> {{ assignment.open_date.strftime('%m/%d/%Y %I:%M %p') if assignment.open_date else 'TBD' }}
+                                <strong>Opens:</strong> {{ assignment.open_date|schooltime('%m/%d/%Y %I:%M %p') if assignment.open_date else 'TBD' }}
                             </p>
                             {% endif %}
                             
                             {% if assignment.due_date %}
                             <p class="student-assignment-due mb-2">
                                 <i class="bi bi-calendar-check me-1"></i>
-                                <strong>Due:</strong> {{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') if assignment.due_date else 'TBD' }}
+                                <strong>Due:</strong> {{ assignment.due_date|schooltime('%m/%d/%Y %I:%M %p') if assignment.due_date else 'TBD' }}
                             </p>
                             {% endif %}
                             
@@ -3240,18 +3241,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             </p>
                             <p class="student-assignment-teacher mb-2 small text-muted">
                                 <i class="bi bi-person me-1"></i>
-                                {% if assignment.creator %}
+                                {% set creator_user = assignment.effective_creator %}
+                                {% if creator_user %}
                                     {% set creator_name = '' %}
-                                    {% if assignment.creator.teacher_staff_profile %}
-                                        {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                    {% if creator_user.teacher_staff_profile %}
+                                        {% set creator_name = (creator_user.teacher_staff_profile.first_name ~ ' ' ~ creator_user.teacher_staff_profile.last_name)|trim %}
                                     {% endif %}
-                                    {% if not creator_name and assignment.creator.student_profile %}
-                                        {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                    {% if not creator_name and creator_user.student_profile %}
+                                        {% set creator_name = (creator_user.student_profile.first_name ~ ' ' ~ creator_user.student_profile.last_name)|trim %}
                                     {% endif %}
-                                    {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
-                                        {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                    {% if not creator_name and (creator_user.first_name or creator_user.last_name) %}
+                                        {% set creator_name = ((creator_user.first_name or '') ~ ' ' ~ (creator_user.last_name or ''))|trim %}
                                     {% endif %}
-                                    {{ creator_name if creator_name else assignment.creator.username }}
+                                    {{ creator_name if creator_name else creator_user.username }}
                                 {% else %}
                                     Unknown
                                 {% endif %}
@@ -3259,7 +3261,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <div class="student-assignment-card-meta">
                                 <span class="meta-item">
                                     <i class="bi bi-calendar3 me-1"></i>
-                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                    Due: {{ assignment.due_date|schooltime('%b %d, %Y') if assignment.due_date else 'No due date' }}
                                 </span>
                                 {% if assignment.quarter %}
                                 <span class="meta-item">
@@ -3502,18 +3504,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             </p>
                             <p class="student-assignment-teacher mb-2 small text-muted">
                                 <i class="bi bi-person me-1"></i>
-                                {% if assignment.creator %}
+                                {% set creator_user = assignment.effective_creator %}
+                                {% if creator_user %}
                                     {% set creator_name = '' %}
-                                    {% if assignment.creator.teacher_staff_profile %}
-                                        {% set creator_name = (assignment.creator.teacher_staff_profile.first_name ~ ' ' ~ assignment.creator.teacher_staff_profile.last_name)|trim %}
+                                    {% if creator_user.teacher_staff_profile %}
+                                        {% set creator_name = (creator_user.teacher_staff_profile.first_name ~ ' ' ~ creator_user.teacher_staff_profile.last_name)|trim %}
                                     {% endif %}
-                                    {% if not creator_name and assignment.creator.student_profile %}
-                                        {% set creator_name = (assignment.creator.student_profile.first_name ~ ' ' ~ assignment.creator.student_profile.last_name)|trim %}
+                                    {% if not creator_name and creator_user.student_profile %}
+                                        {% set creator_name = (creator_user.student_profile.first_name ~ ' ' ~ creator_user.student_profile.last_name)|trim %}
                                     {% endif %}
-                                    {% if not creator_name and (assignment.creator.first_name or assignment.creator.last_name) %}
-                                        {% set creator_name = ((assignment.creator.first_name or '') ~ ' ' ~ (assignment.creator.last_name or ''))|trim %}
+                                    {% if not creator_name and (creator_user.first_name or creator_user.last_name) %}
+                                        {% set creator_name = ((creator_user.first_name or '') ~ ' ' ~ (creator_user.last_name or ''))|trim %}
                                     {% endif %}
-                                    {{ creator_name if creator_name else assignment.creator.username }}
+                                    {{ creator_name if creator_name else creator_user.username }}
                                 {% else %}
                                     Unknown
                                 {% endif %}
@@ -3521,7 +3524,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <div class="student-assignment-card-meta">
                                 <span class="meta-item">
                                     <i class="bi bi-calendar3 me-1"></i>
-                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                    Due: {{ assignment.due_date|schooltime('%b %d, %Y') if assignment.due_date else 'No due date' }}
                                 </span>
                                 {% if assignment.quarter %}
                                 <span class="meta-item">

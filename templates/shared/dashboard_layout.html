@@ -33,7 +33,7 @@
         <div class="sidebar" id="sidebar">
             <h3 class="sidebar-heading text-center">{{ dashboard_title or current_user.role }}</h3>
             <!-- Sidebar toggle - visible on all screen sizes -->
-            <div class="sidebar-toggle" onclick="window.innerWidth <= 768 ? toggleMobileSidebar() : toggleSidebar()">
+            <div class="sidebar-toggle" onclick="sidebarIsDrawerMode() ? toggleMobileSidebar() : toggleSidebar()">
                 <div class="hamburger" id="hamburger-icon">
                     <span></span>
                     <span></span>
@@ -150,6 +150,11 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        /** Match CSS (max-width: 991.98px): off-canvas drawer with full nav labels */
+        function sidebarIsDrawerMode() {
+            return window.matchMedia('(max-width: 991.98px)').matches;
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
@@ -186,7 +191,7 @@
             const navLinks = document.querySelectorAll('.sidebar .nav-link');
             navLinks.forEach(link => {
                 link.addEventListener('click', function() {
-                    if (window.innerWidth <= 768) {
+                    if (sidebarIsDrawerMode()) {
                         toggleMobileSidebar();
                     }
                 });
@@ -200,36 +205,26 @@
             }
         });
         
-        // Sync sidebar with viewport: collapse on mobile/tablet, restore preference on desktop
-        function forceSidebarCollapsedOnMobile() {
+        // Drawer mode (< 992px): full-width flyout, no icon-only rail. Desktop: optional narrow rail from user preference.
+        function syncSidebarToViewport() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
             const sidebarToggle = document.querySelector('.sidebar-toggle');
             const overlay = document.getElementById('sidebarOverlay');
             const hamburgerIcon = document.getElementById('hamburger-icon');
             const collapseText = document.getElementById('collapse-text');
-            const width = window.innerWidth;
 
-            if (width <= 768) {
-                // Mobile: sidebar off-screen by default, floating hamburger to open it
+            if (sidebarIsDrawerMode()) {
                 sidebar.classList.remove('show');
                 if (overlay) overlay.classList.remove('show');
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('collapsed');
-                sidebarToggle.style.display = 'flex'; // show floating hamburger
-                hamburgerIcon.style.display = 'flex';
-                collapseText.style.display = 'none';
-            } else if (width <= 1200) {
-                // Tablet/small desktop: CSS shows icons-only; force collapsed state so layout and toggle match
-                sidebar.classList.remove('show');
-                if (overlay) overlay.classList.remove('show');
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('collapsed');
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('collapsed');
                 sidebarToggle.style.display = 'flex';
                 hamburgerIcon.style.display = 'flex';
                 collapseText.style.display = 'none';
             } else {
-                // Desktop (>1200px): show toggle and restore user preference
+                sidebar.classList.remove('show');
+                if (overlay) overlay.classList.remove('show');
                 sidebarToggle.style.display = 'flex';
                 const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
 
@@ -246,8 +241,8 @@
                 }
             }
         }
-        document.addEventListener('DOMContentLoaded', forceSidebarCollapsedOnMobile);
-        window.addEventListener('resize', forceSidebarCollapsedOnMobile);
+        document.addEventListener('DOMContentLoaded', syncSidebarToViewport);
+        window.addEventListener('resize', syncSidebarToViewport);
     </script>
     
     <!-- Password Change Popup Modal -->

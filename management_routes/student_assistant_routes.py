@@ -15,6 +15,7 @@ from models import (
     GroupAssignment, StudentGroup, StudentGroupMember, SchoolYear,
 )
 import json
+from utils.school_timezone import get_school_timezone_name
 
 bp = Blueprint('student_assistant', __name__, url_prefix='/assistant')
 
@@ -960,7 +961,7 @@ def assistant_add_quiz_assignment(class_id):
                 flash("Invalid class selection.", "danger")
                 return redirect(url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id))
 
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 flash("Invalid due date format.", "danger")
@@ -1211,7 +1212,7 @@ def assistant_add_discussion_assignment(class_id):
                 flash("Invalid class selection.", "danger")
                 return redirect(url_for('student_assistant.assistant_add_discussion_assignment', class_id=class_id))
 
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 flash("Invalid due date.", "danger")

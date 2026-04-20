@@ -27,6 +27,33 @@
     box-shadow: 0 3px 15px rgba(255, 193, 7, 0.2);
 }
 
+/* ===== System → Status: metric cards (CPU / Memory / Disk) =====
+ * Ensures Bootstrap progress tracks span the full card content width; percentage label is beside the title. */
+.tech-system-status-metrics .tech-system-status-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.tech-system-status-metrics .tech-system-status-card .tech-card-icon {
+    align-self: flex-start;
+}
+
+.tech-system-status-metrics .tech-system-status-card .tech-card-content {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.tech-system-status-metrics .tech-system-status-progress.progress {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+}
+
 /* ===== TECH CARDS ===== */
 .tech-card {
     background: white;
@@ -244,6 +271,41 @@
 
 .tech-action-link i {
     width: 20px;
+}
+
+/* ===== System page → Configuration tab (compact; avoids oversized cards) ===== */
+.tech-system-config .tech-quick-actions {
+    border-radius: 12px;
+}
+
+.tech-system-config .tech-quick-actions-header {
+    padding: 0.5rem 1rem;
+}
+
+.tech-system-config .tech-quick-actions-body {
+    padding: 0.75rem 1rem;
+}
+
+.tech-system-config .tech-quick-actions-header h5,
+.tech-system-config .tech-quick-actions-header h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.tech-system-config .form-label {
+    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
+}
+
+.tech-system-config .tech-action-link {
+    padding: 0.35rem 0;
+    font-size: 0.875rem;
+}
+
+.tech-system-config__meta strong.text-body {
+    font-weight: 600;
+    color: var(--bs-body-color, #212529) !important;
 }
 
 /* Responsive */

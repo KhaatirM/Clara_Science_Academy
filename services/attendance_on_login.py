@@ -6,8 +6,8 @@ Rules (in school local time):
 - Login 10:00 AM – 2:59 PM: marked Late
 - Outside that window: no auto-record (staff can mark manually)
 
-When SCHOOL_TIMEZONE is not set or is 'UTC', server local time is used so
-it works without configuration for single-timezone deployments.
+Effective school timezone comes from Tech (database) if set, else SCHOOL_TIMEZONE in
+environment / config (see utils.school_timezone).
 """
 
 from datetime import datetime
@@ -25,18 +25,17 @@ def _now_in_school_tz(app):
 
 
 def _now_in_school_tz_full(app):
-    """Return (date, hour, minute) for 'now' in school timezone (or server local)."""
-    tz_name = app.config.get('SCHOOL_TIMEZONE') or 'UTC'
+    """Return (date, hour, minute) for 'now' in the effective school timezone."""
+    from utils.school_timezone import get_school_timezone_name
+
+    tz_name = get_school_timezone_name()
     if ZoneInfo is None:
         now = datetime.now()
-        return now.date(), now.hour, now.minute
-    if tz_name.upper() == 'UTC':
-        now = datetime.now().astimezone()
         return now.date(), now.hour, now.minute
     try:
         tz = ZoneInfo(tz_name)
     except Exception:
-        tz = ZoneInfo('UTC')
+        tz = ZoneInfo("America/New_York")
     now = datetime.now(tz)
     return now.date(), now.hour, now.minute
 

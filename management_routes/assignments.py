@@ -24,6 +24,7 @@ import json
 from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
 from teacher_routes.assignment_utils import is_assignment_open_for_student
 from utils.grade_helpers import get_points_earned
+from utils.school_timezone import get_school_timezone_name
 
 bp = Blueprint('assignments', __name__)
 
@@ -163,7 +164,7 @@ def create_quiz_assignment():
         
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 raise ValueError("Invalid due date")
@@ -563,7 +564,7 @@ def create_discussion_assignment():
 
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 raise ValueError("Invalid due date")
@@ -1723,7 +1724,7 @@ def add_assignment():
         # Type assertion for due_date_str
         assert due_date_str is not None
         from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-        tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+        tz_name = get_school_timezone_name()
         due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
         if not due_date:
             flash("Invalid due date.", "danger")
@@ -2993,7 +2994,7 @@ def edit_assignment(assignment_id):
         
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 flash("Invalid due date.", "danger")
@@ -4500,7 +4501,7 @@ def change_assignment_status(assignment_id):
                 need_extend = True  # No close_date - set one so it stays open
             if need_extend:
                 import pytz
-                tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+                tz_name = get_school_timezone_name()
                 school_tz = pytz.timezone(tz_name)
                 end_of_today = datetime.now(school_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
                 assignment.close_date = end_of_today.astimezone(pytz.UTC)
@@ -5301,7 +5302,7 @@ def admin_edit_group_assignment(assignment_id):
 
                 # Dates (interpret form datetimes as school timezone)
                 from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-                tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+                tz_name = get_school_timezone_name()
                 due_date_str = request.form.get('due_date')
                 if due_date_str:
                     parsed = parse_form_datetime_as_school_tz(due_date_str, tz_name)

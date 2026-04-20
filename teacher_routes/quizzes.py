@@ -11,6 +11,7 @@ from models import (
     QuizProgress, QuestionBank, QuestionBankQuestion, QuestionBankOption
 )
 from datetime import datetime
+from utils.school_timezone import get_school_timezone_name
 
 bp = Blueprint('quizzes', __name__)
 
@@ -459,8 +460,8 @@ def create_discussion_assignment():
 
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-            from flask import current_app
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 flash("Invalid due date.", "danger")

@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timedelta
 
 # Core Flask imports
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session, Response
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, Response, current_app
 from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
@@ -245,7 +245,30 @@ def system():
         'log_level': SystemConfig.get_value('log_level', 'INFO')
     }
     site_theme_override = SystemConfig.get_value('site_theme_override') or ''
-    
+
+    from utils.school_timezone import (
+        get_school_timezone_name,
+        is_valid_iana_tz,
+        SYSTEM_CONFIG_KEY,
+        DEFAULT_SCHOOL_TIMEZONE,
+    )
+
+    db_school_tz = (SystemConfig.get_value(SYSTEM_CONFIG_KEY, '') or '').strip()
+    env_school_tz = (current_app.config.get('SCHOOL_TIMEZONE') or '').strip() or DEFAULT_SCHOOL_TIMEZONE
+    effective_school_tz = get_school_timezone_name()
+    try:
+        from zoneinfo import ZoneInfo
+
+        school_tz_now = datetime.now(ZoneInfo(effective_school_tz)).strftime('%Y-%m-%d %I:%M %p %Z')
+    except Exception:
+        school_tz_now = '—'
+    if db_school_tz and is_valid_iana_tz(db_school_tz):
+        school_tz_source = 'Tech database override (applies to everyone)'
+    elif db_school_tz:
+        school_tz_source = 'Invalid override stored; using server default'
+    else:
+        school_tz_source = 'Server configuration (SCHOOL_TIMEZONE in .env / hosting)'
+
     system_info = {
         'python_version': sys.version.split()[0],
         'flask_version': flask.__version__,
@@ -256,12 +279,19 @@ def system():
     # Get maintenance mode (from maintenance_control)
     maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
     
-    return render_template('tech/system.html', 
-                         **system_data,
-                         config=config_info,
-                         system_info=system_info,
-                         maintenance=maintenance,
-                         site_theme_override=site_theme_override)
+    return render_template(
+        'tech/system.html',
+        **system_data,
+        config=config_info,
+        system_info=system_info,
+        maintenance=maintenance,
+        site_theme_override=site_theme_override,
+        school_timezone_effective=effective_school_tz,
+        school_timezone_env=env_school_tz,
+        school_timezone_db_raw=db_school_tz,
+        school_timezone_source_label=school_tz_source,
+        school_timezone_now_sample=school_tz_now,
+    )
 
 
 THEME_CHOICES = [
@@ -270,6 +300,59 @@ THEME_CHOICES = [
     'sunset', 'midnight', 'desert', 'lavender', 'rose', 'cherry',
     'aurora', 'storm', 'wine', 'mint'
 ]
+
+
+@tech_blueprint.route('/school-timezone', methods=['POST'])
+@login_required
+@tech_required
+def set_school_timezone():
+    """Set or clear school-wide IANA timezone (SystemConfig). Applies to all users for dates and schooltime display."""
+    from utils.school_timezone import is_valid_iana_tz, SYSTEM_CONFIG_KEY
+
+    action = request.form.get('action', 'set')
+    if action == 'clear':
+        SystemConfig.set_value(
+            SYSTEM_CONFIG_KEY,
+            '',
+            description='School IANA timezone override (empty = use SCHOOL_TIMEZONE from server config)',
+            category='general',
+            user_id=current_user.id,
+        )
+        flash(
+            'School timezone override cleared. Everyone now uses the server default '
+            '(SCHOOL_TIMEZONE in environment, or Eastern if unset).',
+            'success',
+        )
+    else:
+        tz = (request.form.get('school_timezone') or '').strip()
+        if not tz:
+            flash('Enter an IANA timezone (for example America/New_York), or clear the override.', 'warning')
+        elif not is_valid_iana_tz(tz):
+            flash(
+                'Invalid timezone name. Use a valid IANA zone (e.g. America/Chicago). '
+                'See tz database lists online.',
+                'danger',
+            )
+        else:
+            SystemConfig.set_value(
+                SYSTEM_CONFIG_KEY,
+                tz,
+                description='School-wide IANA timezone for assignment windows, attendance logic, and displayed times',
+                category='general',
+                user_id=current_user.id,
+            )
+            flash(f'School timezone set to "{tz}" for everyone.', 'success')
+    try:
+        get_log_activity()(
+            user_id=current_user.id,
+            action='set_school_timezone',
+            details={'action': action, 'timezone': (request.form.get('school_timezone') or '').strip()},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+        )
+    except Exception:
+        pass
+    return redirect(url_for('tech.system'))
 
 
 @tech_blueprint.route('/site-theme', methods=['POST'])

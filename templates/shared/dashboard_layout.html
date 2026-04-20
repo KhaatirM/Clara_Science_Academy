@@ -32,6 +32,11 @@
         
         <div class="sidebar" id="sidebar">
             <h3 class="sidebar-heading text-center">{{ dashboard_title or current_user.role }}</h3>
+            {% if current_user.is_authenticated and school_timezone_display %}
+            <p class="sidebar-school-tz text-center small text-muted mb-2 px-2" title="Assignment due dates, open/close windows, and school-time labels use this timezone for everyone.">
+                <i class="bi bi-globe"></i> {{ school_timezone_display }}
+            </p>
+            {% endif %}
             <!-- Sidebar toggle - visible on all screen sizes -->
             <div class="sidebar-toggle" onclick="sidebarIsDrawerMode() ? toggleMobileSidebar() : toggleSidebar()">
                 <div class="hamburger" id="hamburger-icon">

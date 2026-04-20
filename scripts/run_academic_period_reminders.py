@@ -3,7 +3,7 @@ Run from cron (e.g. Render daily) or locally:
 
     python scripts/run_academic_period_reminders.py
 
-Uses SCHOOL_TIMEZONE / America/New_York for the calendar day check.
+Uses the effective school timezone (Tech DB override, then SCHOOL_TIMEZONE env) for the calendar day check.
 Set PUBLIC_BASE_URL so email links are absolute (optional).
 """
 import sys

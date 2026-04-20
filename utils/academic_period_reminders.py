@@ -33,7 +33,9 @@ REMINDER_DAYS_BEFORE_END = 14
 
 
 def _school_today():
-    tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+    from utils.school_timezone import get_school_timezone_name
+
+    tz_name = get_school_timezone_name()
     tz = pytz.timezone(tz_name)
     return datetime.now(tz).date()
 

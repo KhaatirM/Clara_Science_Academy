@@ -462,14 +462,17 @@ def create_app(config_class=None):
 
         Production hosts typically run in UTC. If DB datetimes are stored as UTC (often naive),
         calling strftime() directly in templates will display UTC and appear "ahead" of EST.
-        This filter treats naive datetimes as UTC and converts to Config.SCHOOL_TIMEZONE.
+        This filter treats naive datetimes as UTC and converts to the effective school timezone
+        (Tech DB override, then SCHOOL_TIMEZONE env, then Eastern).
         """
         if value is None:
             return ''
         try:
             from datetime import datetime, timezone
             from zoneinfo import ZoneInfo  # py3.9+
-            tz_name = (current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York')
+            from utils.school_timezone import get_school_timezone_name
+
+            tz_name = get_school_timezone_name()
             school_tz = ZoneInfo(tz_name)
 
             dt = value
@@ -483,7 +486,9 @@ def create_app(config_class=None):
             try:
                 import pytz
                 from datetime import datetime, timezone
-                tz_name = (current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York')
+                from utils.school_timezone import get_school_timezone_name
+
+                tz_name = get_school_timezone_name()
                 school_tz = pytz.timezone(tz_name)
                 dt = value
                 if not isinstance(dt, datetime):
@@ -575,6 +580,21 @@ def create_app(config_class=None):
                 if pref:
                     effective = pref
         return {'effective_theme': effective}
+
+    @app.context_processor
+    def inject_school_timezone_display():
+        """IANA zone used for assignment times, schooltime filter, and school-day logic (same for all users)."""
+        try:
+            from flask_login import current_user
+
+            if not current_user.is_authenticated:
+                return {}
+            from utils.school_timezone import get_school_timezone_name
+
+            return {"school_timezone_display": get_school_timezone_name()}
+        except Exception as e:
+            current_app.logger.warning("inject_school_timezone_display: %s", e)
+            return {"school_timezone_display": None}
 
     # Inject at_risk_alerts for teacher/admin dashboard pages (shown on all tabs)
     @app.context_processor

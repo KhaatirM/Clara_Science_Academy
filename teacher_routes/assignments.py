@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 from teacher_routes.assignment_utils import is_assignment_open_for_student, parse_form_datetime_as_school_tz
+from utils.school_timezone import get_school_timezone_name
 from models import (
     db, Class, Assignment, AssignmentAttachment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
     Grade, GroupAssignment, GroupGrade, GradeHistory, GroupSubmission, StudentGroup,
@@ -120,7 +121,7 @@ def add_assignment_for_class(class_id):
             if total_points is None or total_points <= 0:
                 total_points = 100.0
             
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 flash("Invalid due date format.", "danger")
@@ -299,7 +300,7 @@ def edit_assignment(assignment_id):
             if total_points is None or total_points <= 0:
                 total_points = 100.0
             
-            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
                 flash("Invalid due date format.", "danger")
@@ -1335,7 +1336,7 @@ def grant_extensions():
         if not all([assignment_id, class_id, extended_due_date_str, student_ids]):
             return jsonify({'success': False, 'message': 'Missing required fields'})
         
-        tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+        tz_name = get_school_timezone_name()
         extended_due_date = parse_form_datetime_as_school_tz(extended_due_date_str, tz_name)
         if not extended_due_date:
             return jsonify({'success': False, 'message': 'Invalid extended due date format'})
@@ -1728,7 +1729,7 @@ def change_assignment_status(assignment_id):
                 need_extend = True
             if need_extend:
                 import pytz
-                tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+                tz_name = get_school_timezone_name()
                 school_tz = pytz.timezone(tz_name)
                 end_of_today = datetime.now(school_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
                 assignment.close_date = end_of_today.astimezone(pytz.UTC)

@@ -57,62 +57,68 @@
             </div>
             
             <!-- System Performance Cards -->
-            <div class="row g-4 mb-4">
+            <div class="row g-4 mb-4 tech-system-status-metrics">
                 <div class="col-12 col-md-3">
-                    <div class="tech-card tech-card-primary">
+                    <div class="tech-card tech-card-primary tech-system-status-card">
                         <div class="tech-card-icon">
                             <i class="bi bi-cpu"></i>
                         </div>
                         <div class="tech-card-content">
-                            <h5 class="tech-card-title">CPU Usage</h5>
-                            <div class="progress mb-2" style="height: 20px;">
+                            <div class="d-flex justify-content-between align-items-baseline gap-2 mb-2">
+                                <h5 class="tech-card-title mb-0">CPU Usage</h5>
+                                <span class="tech-system-status-pct small fw-semibold text-nowrap">{{ cpu_percent if cpu_percent != 'N/A' else 'N/A' }}{% if cpu_percent != 'N/A' %}%{% endif %}</span>
+                            </div>
+                            <div class="progress w-100 tech-system-status-progress" style="height: 20px;">
                                 <div class="progress-bar {% if cpu_percent != 'N/A' and cpu_percent > 80 %}bg-danger{% elif cpu_percent != 'N/A' and cpu_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
-                                     style="width: {{ cpu_percent if cpu_percent != 'N/A' else 0 }}%">
-                                    {{ cpu_percent if cpu_percent != 'N/A' else 'N/A' }}%
-                                </div>
+                                     style="width: {{ cpu_percent if cpu_percent != 'N/A' else 0 }}%"
+                                     aria-valuenow="{{ cpu_percent if cpu_percent != 'N/A' else 0 }}" aria-valuemin="0" aria-valuemax="100" role="progressbar"></div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-12 col-md-3">
-                    <div class="tech-card tech-card-info">
+                    <div class="tech-card tech-card-info tech-system-status-card">
                         <div class="tech-card-icon">
                             <i class="bi bi-memory"></i>
                         </div>
                         <div class="tech-card-content">
-                            <h5 class="tech-card-title">Memory Usage</h5>
-                            <div class="progress mb-2" style="height: 20px;">
-                                <div class="progress-bar {% if memory_percent != 'N/A' and memory_percent > 80 %}bg-danger{% elif memory_percent != 'N/A' and memory_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
-                                     style="width: {{ memory_percent if memory_percent != 'N/A' else 0 }}%">
-                                    {{ memory_percent if memory_percent != 'N/A' else 'N/A' }}%
-                                </div>
+                            <div class="d-flex justify-content-between align-items-baseline gap-2 mb-2">
+                                <h5 class="tech-card-title mb-0">Memory Usage</h5>
+                                <span class="tech-system-status-pct small fw-semibold text-nowrap">{{ memory_percent if memory_percent != 'N/A' else 'N/A' }}{% if memory_percent != 'N/A' %}%{% endif %}</span>
                             </div>
-                            <small class="text-muted">{{ memory_used_gb if memory_used_gb != 'N/A' else 'N/A' }} GB / {{ memory_total_gb if memory_total_gb != 'N/A' else 'N/A' }} GB</small>
+                            <div class="progress w-100 tech-system-status-progress" style="height: 20px;">
+                                <div class="progress-bar {% if memory_percent != 'N/A' and memory_percent > 80 %}bg-danger{% elif memory_percent != 'N/A' and memory_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     style="width: {{ memory_percent if memory_percent != 'N/A' else 0 }}%"
+                                     aria-valuenow="{{ memory_percent if memory_percent != 'N/A' else 0 }}" aria-valuemin="0" aria-valuemax="100" role="progressbar"></div>
+                            </div>
+                            <small class="text-muted d-block mt-2">{{ memory_used_gb if memory_used_gb != 'N/A' else 'N/A' }} GB / {{ memory_total_gb if memory_total_gb != 'N/A' else 'N/A' }} GB</small>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-12 col-md-3">
-                    <div class="tech-card tech-card-warning">
+                    <div class="tech-card tech-card-warning tech-system-status-card">
                         <div class="tech-card-icon">
                             <i class="bi bi-hdd"></i>
                         </div>
                         <div class="tech-card-content">
-                            <h5 class="tech-card-title">Disk Usage</h5>
-                            <div class="progress mb-2" style="height: 20px;">
-                                <div class="progress-bar {% if disk_percent != 'N/A' and disk_percent > 80 %}bg-danger{% elif disk_percent != 'N/A' and disk_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
-                                     style="width: {{ disk_percent if disk_percent != 'N/A' else 0 }}%">
-                                    {{ disk_percent if disk_percent != 'N/A' else 'N/A' }}%
-                                </div>
+                            <div class="d-flex justify-content-between align-items-baseline gap-2 mb-2">
+                                <h5 class="tech-card-title mb-0">Disk Usage</h5>
+                                <span class="tech-system-status-pct small fw-semibold text-nowrap">{{ disk_percent if disk_percent != 'N/A' else 'N/A' }}{% if disk_percent != 'N/A' %}%{% endif %}</span>
                             </div>
-                            <small class="text-muted">{{ disk_used_gb if disk_used_gb != 'N/A' else 'N/A' }} GB / {{ disk_total_gb if disk_total_gb != 'N/A' else 'N/A' }} GB</small>
+                            <div class="progress w-100 tech-system-status-progress" style="height: 20px;">
+                                <div class="progress-bar {% if disk_percent != 'N/A' and disk_percent > 80 %}bg-danger{% elif disk_percent != 'N/A' and disk_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     style="width: {{ disk_percent if disk_percent != 'N/A' else 0 }}%"
+                                     aria-valuenow="{{ disk_percent if disk_percent != 'N/A' else 0 }}" aria-valuemin="0" aria-valuemax="100" role="progressbar"></div>
+                            </div>
+                            <small class="text-muted d-block mt-2">{{ disk_used_gb if disk_used_gb != 'N/A' else 'N/A' }} GB / {{ disk_total_gb if disk_total_gb != 'N/A' else 'N/A' }} GB</small>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-12 col-md-3">
-                    <div class="tech-card tech-card-success">
+                    <div class="tech-card tech-card-success tech-system-status-card">
                         <div class="tech-card-icon">
                             <i class="bi bi-clock-history"></i>
                         </div>
@@ -244,174 +250,198 @@
         </div>
 
         <!-- Configuration Tab -->
-        <div class="tab-pane fade" id="config" role="tabpanel">
-            <div class="row g-4">
-                <div class="col-12 col-lg-8">
+        <div class="tab-pane fade tech-system-config" id="config" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-12">
                     <div class="tech-quick-actions">
                         <div class="tech-quick-actions-header">
-                            <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>System Configuration</h5>
+                            <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Server settings</h6>
                         </div>
                         <div class="tech-quick-actions-body">
+                            <div class="tech-system-config__meta d-flex flex-wrap align-items-center column-gap-3 row-gap-1 small text-muted border-bottom pb-2 mb-3">
+                                <span><strong class="text-body">Python</strong> {{ system_info.python_version }}</span>
+                                <span><strong class="text-body">Flask</strong> {{ system_info.flask_version }}</span>
+                                <span><strong class="text-body">DB</strong> {{ system_info.database }}</span>
+                                <span><strong class="text-body">Mode</strong>
+                                    <span class="badge {% if system_info.server == 'Development' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ system_info.server }}</span>
+                                </span>
+                            </div>
                             <form method="POST" action="{{ url_for('tech.update_system_config') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <div class="row g-3">
-                                    <div class="col-12 col-md-6">
-                                        <div class="mb-3">
-                                            <label for="debug_mode" class="form-label">Debug Mode</label>
-                                            <select class="form-select" id="debug_mode" name="debug_mode">
-                                                <option value="Development Server" {% if config.debug_mode == 'Development Server' %}selected{% endif %}>Development Server</option>
-                                                <option value="Production Server" {% if config.debug_mode == 'Production Server' %}selected{% endif %}>Production Server</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="max_upload_size" class="form-label">Max Upload Size</label>
-                                            <select class="form-select" id="max_upload_size" name="max_upload_size">
-                                                <option value="8 MB" {% if config.max_upload_size == '8 MB' %}selected{% endif %}>8 MB</option>
-                                                <option value="16 MB" {% if config.max_upload_size == '16 MB' %}selected{% endif %}>16 MB</option>
-                                                <option value="32 MB" {% if config.max_upload_size == '32 MB' %}selected{% endif %}>32 MB</option>
-                                                <option value="64 MB" {% if config.max_upload_size == '64 MB' %}selected{% endif %}>64 MB</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="session_timeout" class="form-label">Session Timeout</label>
-                                            <select class="form-select" id="session_timeout" name="session_timeout">
-                                                <option value="1 hour" {% if config.session_timeout == '1 hour' %}selected{% endif %}>1 hour</option>
-                                                <option value="4 hours" {% if config.session_timeout == '4 hours' %}selected{% endif %}>4 hours</option>
-                                                <option value="8 hours" {% if config.session_timeout == '8 hours' %}selected{% endif %}>8 hours</option>
-                                                <option value="24 hours" {% if config.session_timeout == '24 hours' %}selected{% endif %}>24 hours</option>
-                                            </select>
-                                        </div>
+                                <div class="row g-2">
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <label for="debug_mode" class="form-label">Debug mode</label>
+                                        <select class="form-select form-select-sm" id="debug_mode" name="debug_mode">
+                                            <option value="Development Server" {% if config.debug_mode == 'Development Server' %}selected{% endif %}>Development Server</option>
+                                            <option value="Production Server" {% if config.debug_mode == 'Production Server' %}selected{% endif %}>Production Server</option>
+                                        </select>
                                     </div>
-                                    <div class="col-12 col-md-6">
-                                        <div class="mb-3">
-                                            <label for="backup_location" class="form-label">Backup Location</label>
-                                            <input type="text" class="form-control" id="backup_location" name="backup_location" value="{{ config.backup_location }}">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="log_level" class="form-label">Log Level</label>
-                                            <select class="form-select" id="log_level" name="log_level">
-                                                <option value="DEBUG" {% if config.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
-                                                <option value="INFO" {% if config.log_level == 'INFO' %}selected{% endif %}>INFO</option>
-                                                <option value="WARNING" {% if config.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
-                                                <option value="ERROR" {% if config.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="database_path" class="form-label">Database Path</label>
-                                            <input type="text" class="form-control" id="database_path" name="database_path" value="{{ config.database_path }}" readonly>
-                                        </div>
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <label for="max_upload_size" class="form-label">Max upload</label>
+                                        <select class="form-select form-select-sm" id="max_upload_size" name="max_upload_size">
+                                            <option value="8 MB" {% if config.max_upload_size == '8 MB' %}selected{% endif %}>8 MB</option>
+                                            <option value="16 MB" {% if config.max_upload_size == '16 MB' %}selected{% endif %}>16 MB</option>
+                                            <option value="32 MB" {% if config.max_upload_size == '32 MB' %}selected{% endif %}>32 MB</option>
+                                            <option value="64 MB" {% if config.max_upload_size == '64 MB' %}selected{% endif %}>64 MB</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <label for="session_timeout" class="form-label">Session timeout</label>
+                                        <select class="form-select form-select-sm" id="session_timeout" name="session_timeout">
+                                            <option value="1 hour" {% if config.session_timeout == '1 hour' %}selected{% endif %}>1 hour</option>
+                                            <option value="4 hours" {% if config.session_timeout == '4 hours' %}selected{% endif %}>4 hours</option>
+                                            <option value="8 hours" {% if config.session_timeout == '8 hours' %}selected{% endif %}>8 hours</option>
+                                            <option value="24 hours" {% if config.session_timeout == '24 hours' %}selected{% endif %}>24 hours</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-xl-3">
+                                        <label for="log_level" class="form-label">Log level</label>
+                                        <select class="form-select form-select-sm" id="log_level" name="log_level">
+                                            <option value="DEBUG" {% if config.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                            <option value="INFO" {% if config.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                            <option value="WARNING" {% if config.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                            <option value="ERROR" {% if config.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-lg-6">
+                                        <label for="backup_location" class="form-label">Backup path</label>
+                                        <input type="text" class="form-control form-control-sm" id="backup_location" name="backup_location" value="{{ config.backup_location }}">
+                                    </div>
+                                    <div class="col-12 col-lg-6">
+                                        <label for="database_path" class="form-label">Database path</label>
+                                        <input type="text" class="form-control form-control-sm bg-light" id="database_path" name="database_path" value="{{ config.database_path }}" readonly>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-end mt-3">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-save me-1"></i>Save Configuration
+                                <div class="d-flex justify-content-end mt-2">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-save me-1"></i>Save
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-12 col-lg-4">
-                    <div class="tech-quick-actions">
-                        <div class="tech-quick-actions-header">
-                            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
-                        </div>
-                        <div class="tech-quick-actions-body">
-                            <div class="mb-3">
-                                <strong>Python Version:</strong>
-                                <span class="badge bg-info ms-2">{{ system_info.python_version }}</span>
-                            </div>
-                            <div class="mb-3">
-                                <strong>Flask Version:</strong>
-                                <span class="badge bg-info ms-2">{{ system_info.flask_version }}</span>
-                            </div>
-                            <div class="mb-3">
-                                <strong>Database:</strong>
-                                <span class="badge bg-success ms-2">{{ system_info.database }}</span>
-                            </div>
-                            <div class="mb-3">
-                                <strong>Server:</strong>
-                                <span class="badge {% if system_info.server == 'Development' %}bg-warning{% else %}bg-success{% endif %} ms-2">{{ system_info.server }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="tech-quick-actions mt-4">
+                    <div class="tech-quick-actions h-100">
                         <div class="tech-quick-actions-header bg-primary text-white">
-                            <h5 class="mb-0"><i class="bi bi-palette me-2"></i>Site Theme (Everyone)</h5>
+                            <h6 class="mb-0"><i class="bi bi-palette me-2"></i>Site theme</h6>
                         </div>
                         <div class="tech-quick-actions-body">
-                            <p class="small text-muted mb-3">Override the theme for all users. Useful for seasonal themes (e.g. Snowy in winter, Holiday in December).</p>
+                            <p class="small text-muted mb-2">Overrides everyone’s theme until cleared.</p>
                             {% if site_theme_override %}
-                            <p class="mb-2"><strong>Current override:</strong> <span class="badge bg-info">{{ site_theme_override }}</span></p>
-                            <form method="POST" action="{{ url_for('tech.set_site_theme') }}" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <input type="hidden" name="action" value="clear"/>
-                                <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-x-circle me-1"></i>Clear override
-                                </button>
-                            </form>
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                <span class="badge bg-info">{{ site_theme_override }}</span>
+                                <form method="POST" action="{{ url_for('tech.set_site_theme') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="action" value="clear"/>
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm py-0">Clear</button>
+                                </form>
+                            </div>
                             {% else %}
-                            <p class="mb-2 text-muted small">No override — everyone sees their own theme.</p>
+                            <p class="small text-muted mb-2 mb-lg-0">No override (users keep their preference).</p>
                             {% endif %}
-                            <form method="POST" action="{{ url_for('tech.set_site_theme') }}" class="mt-3">
+                            <form method="POST" action="{{ url_for('tech.set_site_theme') }}" class="{% if site_theme_override %}mt-2{% endif %}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <input type="hidden" name="action" value="set"/>
-                                <div class="mb-2">
-                                    <label for="site_theme" class="form-label small">Set theme for everyone</label>
-                                    <select class="form-select form-select-sm" id="site_theme" name="theme">
-                                        <option value="default">Default</option>
-                                        <option value="light">Light</option>
-                                        <option value="dark">Dark</option>
-                                        <optgroup label="Seasonal">
-                                            <option value="snowy">Snowy (Winter)</option>
-                                            <option value="autumn">Autumn</option>
-                                            <option value="spring">Spring</option>
-                                            <option value="summer">Summer</option>
-                                            <option value="holiday">Holiday</option>
-                                        </optgroup>
-                                        <optgroup label="Color">
-                                            <option value="ocean">Ocean</option>
-                                            <option value="forest">Forest</option>
-                                            <option value="sunset">Sunset</option>
-                                            <option value="midnight">Midnight</option>
-                                            <option value="desert">Desert</option>
-                                            <option value="lavender">Lavender</option>
-                                            <option value="rose">Rose</option>
-                                            <option value="cherry">Cherry Blossom</option>
-                                            <option value="aurora">Aurora</option>
-                                            <option value="storm">Storm</option>
-                                            <option value="wine">Wine</option>
-                                            <option value="mint">Mint</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-check-circle me-1"></i>Apply to everyone
-                                </button>
+                                <label for="site_theme" class="form-label">Apply theme</label>
+                                <select class="form-select form-select-sm mb-2" id="site_theme" name="theme">
+                                    <option value="default">Default</option>
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <optgroup label="Seasonal">
+                                        <option value="snowy">Snowy (Winter)</option>
+                                        <option value="autumn">Autumn</option>
+                                        <option value="spring">Spring</option>
+                                        <option value="summer">Summer</option>
+                                        <option value="holiday">Holiday</option>
+                                    </optgroup>
+                                    <optgroup label="Color">
+                                        <option value="ocean">Ocean</option>
+                                        <option value="forest">Forest</option>
+                                        <option value="sunset">Sunset</option>
+                                        <option value="midnight">Midnight</option>
+                                        <option value="desert">Desert</option>
+                                        <option value="lavender">Lavender</option>
+                                        <option value="rose">Rose</option>
+                                        <option value="cherry">Cherry Blossom</option>
+                                        <option value="aurora">Aurora</option>
+                                        <option value="storm">Storm</option>
+                                        <option value="wine">Wine</option>
+                                        <option value="mint">Mint</option>
+                                    </optgroup>
+                                </select>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Apply to everyone</button>
                             </form>
                         </div>
                     </div>
-                    
-                    <div class="tech-quick-actions mt-4">
-                        <div class="tech-quick-actions-header">
-                            <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <div class="tech-quick-actions h-100">
+                        <div class="tech-quick-actions-header bg-secondary text-white">
+                            <h6 class="mb-0"><i class="bi bi-globe me-2"></i>School timezone</h6>
                         </div>
                         <div class="tech-quick-actions-body">
-                            <div class="d-grid gap-2">
-                                <form method="POST" action="{{ url_for('tech.restart_server') }}" class="d-inline">
+                            <div class="small mb-2">
+                                <span class="badge bg-dark">{{ school_timezone_effective }}</span>
+                                <span class="text-muted ms-1">{{ school_timezone_now_sample }}</span>
+                            </div>
+                            <p class="small text-muted mb-1">{{ school_timezone_source_label }}. Env: <code class="small">{{ school_timezone_env }}</code></p>
+                            {% if school_timezone_db_raw %}
+                            <p class="small mb-2">DB: <code class="small">{{ school_timezone_db_raw }}</code></p>
+                            {% endif %}
+                            {% if school_timezone_db_raw %}
+                            <form method="POST" action="{{ url_for('tech.set_school_timezone') }}" class="mb-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="action" value="clear"/>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm w-100 py-1">Clear override</button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('tech.set_school_timezone') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="action" value="set"/>
+                                <label for="school_timezone_input" class="form-label">IANA name</label>
+                                <input type="text" class="form-control form-control-sm mb-2" id="school_timezone_input" name="school_timezone" value="{{ school_timezone_effective }}" placeholder="America/New_York" list="iana-timezone-list" autocomplete="off"/>
+                                <datalist id="iana-timezone-list">
+                                    <option value="America/New_York">
+                                    <option value="America/Chicago">
+                                    <option value="America/Denver">
+                                    <option value="America/Phoenix">
+                                    <option value="America/Los_Angeles">
+                                    <option value="America/Anchorage">
+                                    <option value="Pacific/Honolulu">
+                                    <option value="America/Toronto">
+                                    <option value="America/Vancouver">
+                                    <option value="Europe/London">
+                                    <option value="UTC">
+                                </datalist>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Save for everyone</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <div class="tech-quick-actions h-100">
+                        <div class="tech-quick-actions-header">
+                            <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick actions</h6>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="d-grid gap-1">
+                                <form method="POST" action="{{ url_for('tech.restart_server') }}" class="m-0">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="tech-action-link w-100 text-start" onclick="return confirm('Are you sure you want to restart the server?')">
-                                        <i class="bi bi-arrow-clockwise me-2"></i>Restart Server
+                                    <button type="submit" class="tech-action-link w-100 text-start border rounded px-2 py-1 bg-light" onclick="return confirm('Are you sure you want to restart the server?')">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Restart server
                                     </button>
                                 </form>
-                                <a href="{{ url_for('tech.view_system_logs') }}" class="tech-action-link">
-                                    <i class="bi bi-file-text me-2"></i>View Logs
+                                <a href="{{ url_for('tech.view_system_logs') }}" class="tech-action-link border rounded px-2 py-1 bg-light">
+                                    <i class="bi bi-file-text me-2"></i>View logs
                                 </a>
-                                <form method="POST" action="{{ url_for('tech.clear_cache') }}" class="d-inline">
+                                <form method="POST" action="{{ url_for('tech.clear_cache') }}" class="m-0">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="tech-action-link w-100 text-start" onclick="return confirm('Clear all caches?')">
-                                        <i class="bi bi-trash me-2"></i>Clear Cache
+                                    <button type="submit" class="tech-action-link w-100 text-start border rounded px-2 py-1 bg-light" onclick="return confirm('Clear all caches?')">
+                                        <i class="bi bi-trash me-2"></i>Clear cache
                                     </button>
                                 </form>
                             </div>

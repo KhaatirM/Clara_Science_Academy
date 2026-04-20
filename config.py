@@ -60,8 +60,9 @@ class Config:
     # Generate a key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
 
-    # School timezone for dates, attendance, open/close times (e.g. 'America/New_York').
-    # Form datetimes (open_date, close_date) are interpreted in this timezone, then stored as UTC.
+    # School timezone for dates, attendance, open/close times (IANA, e.g. America/New_York).
+    # Tech can override this for everyone via System Management → Configuration (stored in the database).
+    # When no DB override exists, this env value is used. Form datetimes are interpreted in the effective zone, then stored as UTC.
     SCHOOL_TIMEZONE = os.environ.get('SCHOOL_TIMEZONE') or 'America/New_York'
 
     # Optional absolute base URL for links in cron-generated emails (no request context). No trailing slash.

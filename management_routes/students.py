@@ -4,7 +4,7 @@ Students routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required, teacher_required
+from decorators import management_required, teacher_required, permissions_required
 from models import (
     db, Student, User, Enrollment, Class, Grade, Assignment, ReportCard, SchoolYear,
     Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, StudentGroup, Submission,
@@ -68,7 +68,7 @@ def _calculate_expected_grad_date(grade_level, entrance_school_year):
 
 @bp.route('/add-student', methods=['GET', 'POST'])
 @login_required
-@management_required
+@permissions_required('students:edit')
 def add_student():
     """Add a new student"""
     if request.method == 'POST':
@@ -472,7 +472,7 @@ def get_student_details(student_id):
 
 @bp.route('/students')
 @login_required
-@management_required
+@permissions_required('students:view', 'students:edit')
 def students():
     # Get search parameters
     search_query = request.args.get('search', '').strip()
@@ -1714,7 +1714,7 @@ def view_student(student_id):
 
 @bp.route('/edit-student/<int:student_id>', methods=['POST'])
 @login_required
-@management_required
+@permissions_required('students:edit')
 def edit_student(student_id):
     """Edit student information via AJAX modal"""
     student = Student.query.get_or_404(student_id)

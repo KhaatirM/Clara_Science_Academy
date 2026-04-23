@@ -1,27 +1,78 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4" style="background: #f8f9fa; min-height: 100vh; padding: 2rem 0;">
+<style>
+    .staff-form-shell {
+        background: radial-gradient(1200px 600px at 10% 0%, rgba(99, 102, 241, 0.12), transparent 55%),
+                    radial-gradient(900px 500px at 90% 10%, rgba(16, 185, 129, 0.10), transparent 60%),
+                    #f8f9fa;
+    }
+
+    .staff-form-hero {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(16, 185, 129, 0.07), rgba(255, 255, 255, 0.95));
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .staff-card {
+        border: 1px solid rgba(15, 23, 42, 0.08) !important;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    .staff-card .card-header {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(255, 255, 255, 0.95));
+    }
+
+    .section-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: white;
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.25);
+        margin-right: 0.5rem;
+    }
+
+    .tile-soft {
+        border-width: 2px !important;
+        border-radius: 0.85rem !important;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .tile-soft:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
+    }
+
+    .tile-warning.btn-outline-warning {
+        border-width: 2px;
+    }
+</style>
+<div class="container-fluid px-2 px-md-4 py-4 staff-form-shell" style="min-height: 100vh;">
     <div class="mb-4">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem; padding: 2rem; color: white; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
-            <h2 class="mb-2" style="font-weight: 700; font-size: 2rem;">
-                <i class="bi bi-person-plus me-2"></i>{% if edit_mode %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}
+        <div class="p-3 p-md-4 rounded-3 staff-form-hero">
+            <h2 class="mb-1 fw-bold">
+                {% if edit_mode %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}
             </h2>
-            <p class="mb-0" style="opacity: 0.95; font-size: 1.1rem;">{% if edit_mode %}Update existing staff member details{% else %}Complete the form below to add a new staff member to the system{% endif %}</p>
+            <p class="mb-0 text-muted">{% if edit_mode %}Update existing staff member details{% else %}Complete the form below to add a new staff member to the system{% endif %}</p>
         </div>
     </div>
 
     <form method="POST" action="{{ url_for('management.add_teacher_staff') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
         <div class="row g-4">
-            <!-- Personal Information Card -->
-            <div class="col-12">
-                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
-                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
-                            <i class="bi bi-person me-2"></i>Personal Information
-                        </h5>
+            <!-- 1 | 2 Layout -->
+            <div class="col-12 col-lg-6 d-flex">
+            <!-- 1. Personal Information Card -->
+                <div class="card border-0 shadow-sm flex-fill h-100 staff-card" style="border-radius: 0.85rem; overflow: hidden;">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0 fw-semibold"><span class="section-num">1</span>Personal Information</h5>
                     </div>
                     <div class="card-body" style="padding: 1.5rem;">
+            <div class="row g-3">
             <div class="col-12 col-md-5">
                 <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="first_name" name="first_name"
@@ -66,19 +117,19 @@
                 <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" value="{{ staff_data.email if staff_data else '' }}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                  <div class="invalid-feedback">A valid email address is required.</div>
             </div>
+            </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Address Card -->
-            <div class="col-12">
-                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.25rem;">
-                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
-                            <i class="bi bi-geo-alt me-2"></i>Address
-                        </h5>
+            <div class="col-12 col-lg-6 d-flex">
+            <!-- 2. Address Card -->
+                <div class="card border-0 shadow-sm flex-fill h-100 staff-card" style="border-radius: 0.85rem; overflow: hidden;">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0 fw-semibold"><span class="section-num">2</span>Address</h5>
                     </div>
                     <div class="card-body" style="padding: 1.5rem;">
+            <div class="row g-3">
             <div class="col-12">
                 <label for="street_address" class="form-label">Street Address <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="street_address" name="street_address" placeholder="1234 Main St" value="{{ staff_data.street_address if staff_data else '' }}" required>
@@ -157,85 +208,98 @@
                 <div class="invalid-feedback">Zip code is required.</div>
             </div>
 
+            </div>
                     </div>
                 </div>
             </div>
             
             <!-- Emergency Contact Card -->
             <div class="col-12">
-                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
-                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
-                            <i class="bi bi-exclamation-triangle me-2"></i>Emergency Contact
-                        </h5>
+                <div class="card border-0 shadow-sm staff-card" style="border-radius: 0.85rem; overflow: hidden;">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0 fw-semibold"><span class="section-num">3</span>Emergency Contact</h5>
                     </div>
                     <div class="card-body" style="padding: 1.5rem;">
-            <div class="col-12 col-md-5">
-                <label for="emergency_contact_name" class="form-label">First Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name"
-                       value="{{ staff_data.emergency_contact_name if staff_data else '' }}" required>
-                <div class="invalid-feedback">Emergency contact first name is required.</div>
-            </div>
-            <div class="col-12 col-md-5">
-                <label for="emergency_contact_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="emergency_contact_last_name" name="emergency_contact_last_name"
-                       value="{{ staff_data.emergency_contact_last_name if staff_data else '' }}" required>
-                <div class="invalid-feedback">Emergency contact last name is required.</div>
-            </div>
-            <div class="col-12 col-md-2">
-                <label for="emergency_contact_relationship" class="form-label">Relationship</label>
-                <select class="form-select" id="emergency_contact_relationship" name="emergency_contact_relationship">
-                    <option value="">Choose...</option>
-                    {% set relationships = ["Spouse", "Parent", "Sibling", "Partner", "Friend", "Other"] %}
-                    {% for rel in relationships %}
-                        <option value="{{ rel }}" {% if staff_data and staff_data.emergency_contact_relationship == rel %}selected{% endif %}>{{ rel }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-md-4">
-                <label for="emergency_contact_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone"
-                       value="{{ staff_data.emergency_contact_phone if staff_data else '' }}" required placeholder="e.g., 555-123-4567">
-                <div class="invalid-feedback">Emergency contact phone is required.</div>
-            </div>
-            <div class="col-12 col-md-4">
-                <label for="emergency_contact_email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="emergency_contact_email" name="emergency_contact_email"
-                       value="{{ staff_data.emergency_contact_email if staff_data else '' }}" placeholder="emergency@example.com">
-                <div class="form-text">Optional email for emergency contact.</div>
-            </div>
+                        <div class="row g-3 align-items-start">
+                            <div class="col-12 col-lg-8">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="fw-semibold">Emergency Contact Info</span>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-5">
+                                        <label for="emergency_contact_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name"
+                                               value="{{ staff_data.emergency_contact_name if staff_data else '' }}" required>
+                                        <div class="invalid-feedback">Emergency contact first name is required.</div>
+                                    </div>
+                                    <div class="col-12 col-md-5">
+                                        <label for="emergency_contact_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="emergency_contact_last_name" name="emergency_contact_last_name"
+                                               value="{{ staff_data.emergency_contact_last_name if staff_data else '' }}" required>
+                                        <div class="invalid-feedback">Emergency contact last name is required.</div>
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <label for="emergency_contact_relationship" class="form-label">Relationship</label>
+                                        <select class="form-select" id="emergency_contact_relationship" name="emergency_contact_relationship">
+                                            <option value="">Choose...</option>
+                                            {% set relationships = ["Spouse", "Parent", "Sibling", "Partner", "Friend", "Other"] %}
+                                            {% for rel in relationships %}
+                                                <option value="{{ rel }}" {% if staff_data and staff_data.emergency_contact_relationship == rel %}selected{% endif %}>{{ rel }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label for="emergency_contact_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone"
+                                               value="{{ staff_data.emergency_contact_phone if staff_data else '' }}" required placeholder="e.g., 555-123-4567">
+                                        <div class="invalid-feedback">Emergency contact phone is required.</div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label for="emergency_contact_email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="emergency_contact_email" name="emergency_contact_email"
+                                               value="{{ staff_data.emergency_contact_email if staff_data else '' }}" placeholder="emergency@example.com">
+                                        <div class="form-text">Optional email for emergency contact.</div>
+                                    </div>
+                                </div>
+                            </div>
 
-            <div class="col-12 col-md-6 mt-3">
-                <label for="staff_image" class="form-label fw-bold" style="color: #495057;">
-                    <i class="bi bi-image me-1 text-primary"></i>Image Upload
-                </label>
-                <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
-                 {% if edit_mode and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
-                    <div class="form-text mt-1">Current image: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
-                    <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px; border-radius: 0.5rem;">
-                {% elif edit_mode and staff_data and staff_data.image %}
-                     <div class="form-text mt-1">Currently using: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
-                     <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px; border-radius: 0.5rem;">
-                {% endif %}
-            </div>
+                            <div class="col-12 col-lg-4">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="fw-semibold">Staff Image</span>
+                                </div>
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="small text-muted mb-2">
+                                        Upload a profile image for staff directories and class views.
+                                    </div>
+                                    <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*">
+                                    {% if edit_mode and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
+                                        <div class="form-text mt-2">Current image: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
+                                        <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2 w-100" style="max-height: 220px; object-fit: cover;">
+                                    {% elif edit_mode and staff_data and staff_data.image %}
+                                        <div class="form-text mt-2">Currently using: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
+                                        <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2 w-100" style="max-height: 220px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="form-text mt-2">Optional. If empty, a default image will be used.</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             
             <!-- Professional Information Card -->
             <div class="col-12">
-                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; padding: 1.25rem;">
-                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
-                            <i class="bi bi-briefcase me-2"></i>Professional Information
-                        </h5>
+                <div class="card border-0 shadow-sm staff-card" style="border-radius: 0.85rem; overflow: hidden;">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0 fw-semibold">Professional Information</h5>
                     </div>
                     <div class="card-body" style="padding: 1.5rem;">
             <div class="col-12 col-md-6">
                 <label for="assigned_role" class="form-label">Assigned Role <span class="text-danger">*</span></label>
                 <select class="form-select" id="assigned_role" name="assigned_role" required>
                     <option value="">Choose role...</option>
-                    {% set roles = ["Director", "School Administrator", "Math Teacher", "Physics Teacher", "English Language Arts Teacher", "History Teacher", "Science Teacher", "Substitute Teacher", "School Counselor", "IT Support", "Other Staff"] %}
+                    {% set roles = ["Teacher", "School Administrator", "IT Support", "Counselor", "Substitute", "Other Staff"] %}
                     {% for role_option in roles %}
                     <option value="{{ role_option }}" {% if staff_data and staff_data.assigned_role == role_option %}selected{% endif %}>{{ role_option }}</option>
                     {% endfor %}
@@ -253,21 +317,58 @@
                 <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
                     <i class="bi bi-building me-1 text-primary"></i>Department(s) <span class="text-danger">*</span>
                 </label>
-                <div class="row g-3 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
+                <div class="row g-2">
                     {% set departments = ["Mathematics", "Science", "English", "History & Social Studies", "Physical Education & Health", "Music & Arts", "Computer Science & Technology", "Administration", "Counseling", "Special Education", "Foreign Language", "Business"] %}
                     {% for dept in departments %}
-                    <div class="col-6 col-sm-4 col-md-3">
-                        <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                            <input class="form-check-input" type="checkbox" name="department" value="{{ dept }}"
-                                   id="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
-                                   {% if staff_data and staff_data.department and dept in staff_data.department.split(', ') %}checked{% endif %} style="cursor: pointer;">
-                            <label class="form-check-label" for="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}" style="cursor: pointer; font-weight: 500;">{{ dept }}</label>
-                        </div>
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <input class="btn-check" type="checkbox" name="department" value="{{ dept }}"
+                               id="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
+                               {% if staff_data and staff_data.department and dept in staff_data.department.split(', ') %}checked{% endif %}>
+                        <label class="btn btn-outline-primary w-100 text-start p-3 tile-soft" for="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}">
+                            <div class="fw-semibold">{{ dept }}</div>
+                        </label>
                     </div>
                     {% endfor %}
                 </div>
                 <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Select all applicable departments</div>
                 <div class="invalid-feedback">Please select at least one department.</div>
+            </div>
+
+            <!-- Permissions (shown when Administration department is selected for non-admin roles) -->
+            <div class="col-12" id="permissionsSection" style="display: none;">
+                <label class="form-label fw-bold d-block mb-2" style="color: #495057;">
+                    <i class="bi bi-shield-lock me-1 text-primary"></i>Administration Permissions
+                </label>
+                <div class="alert alert-info mb-3">
+                    Permissions are required when <strong>Administration</strong> is selected for roles that are not <strong>School Administrator</strong>.
+                    This prevents accidental access and controls whether non-teaching staff can be assigned to classes.
+                </div>
+                <div class="row g-2">
+                    {% set perms = [
+                        ('students:view', 'View students'),
+                        ('students:edit', 'Edit student information'),
+                        ('report_cards:view', 'View report cards'),
+                        ('report_cards:generate', 'Generate report cards'),
+                        ('classes:manage', 'Manage classes'),
+                        ('teachers_staff:manage', 'Manage teachers & staff'),
+                        ('attendance:manage', 'Manage attendance'),
+                        ('assignments_grades:manage', 'Manage assignments & grades'),
+                        ('communications:manage', 'Manage communications'),
+                        ('billing:manage', 'Manage billing & financials'),
+                        ('classes:assignable', 'Allow this staff member to be assigned to classes')
+                    ] %}
+                    {% for perm_key, perm_label in perms %}
+                    <div class="col-12 col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="{{ perm_key }}"
+                                   id="perm_{{ perm_key|replace(':','_') }}"
+                                   {% if staff_permissions and perm_key in staff_permissions %}checked{% endif %}>
+                            <label class="form-check-label" for="perm_{{ perm_key|replace(':','_') }}">{{ perm_label }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>If no permissions are selected, the account will have very limited access even in Administration.</div>
             </div>
             <div class="col-12 col-md-6">
                 <label for="position" class="form-label">Position</label>
@@ -276,7 +377,7 @@
                 <div class="form-text">Optional position title within the department.</div>
             </div>
             
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-6" id="teachingFieldsSubject">
                 <label for="subject" class="form-label">Primary Subject(s) Taught</label>
                 <input type="text" class="form-control" id="subject" name="subject"
                        value="{{ staff_data.subject if staff_data else '' }}" placeholder="e.g., Algebra I, Chemistry">
@@ -285,35 +386,44 @@
 
             <div class="col-12 col-md-6">
                 <label class="form-label d-block">Employment Type <span class="text-danger">*</span></label>
-                {% set emp_types = ["Full Time", "Part Time"] %}
-                {% for emp_type in emp_types %}
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="employment_type" id="emp_{{ emp_type|lower|replace(' ', '_') }}"
-                           value="{{ emp_type }}" {% if staff_data and staff_data.employment_type == emp_type %}checked{% endif %} required>
-                    <label class="form-check-label" for="emp_{{ emp_type|lower|replace(' ', '_') }}">{{ emp_type }}</label>
+                <div class="row g-2" role="group" aria-label="Employment Type">
+                    {% set current_emp = staff_data.employment_type if staff_data else '' %}
+
+                    <div class="col-12 col-lg-6">
+                        <input class="btn-check" type="radio" name="employment_type" id="emp_full_time" value="Full Time"
+                               {% if current_emp == 'Full Time' %}checked{% endif %} required>
+                        <label class="btn btn-outline-primary w-100 text-start p-3 tile-soft" for="emp_full_time">
+                            <div class="fw-semibold">Full Time</div>
+                            <div class="small text-muted">Standard full schedule</div>
+                        </label>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <input class="btn-check" type="radio" name="employment_type" id="emp_part_time" value="Part Time"
+                               {% if current_emp == 'Part Time' %}checked{% endif %} required>
+                        <label class="btn btn-outline-primary w-100 text-start p-3 tile-soft" for="emp_part_time">
+                            <div class="fw-semibold">Part Time</div>
+                            <div class="small text-muted">Reduced schedule</div>
+                        </label>
+                    </div>
                 </div>
-                {% endfor %}
-                 <div class="invalid-feedback d-block">Please select employment type.</div>
+                <div class="invalid-feedback d-block">Please select employment type.</div>
             </div>
             
             <!-- Temporary Access Section -->
             <div class="col-12">
                 <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107 !important;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
-                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
-                            <i class="bi bi-clock-history me-2"></i>Temporary Access Settings
-                        </h5>
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0 fw-semibold">Temporary Access Settings</h5>
                     </div>
                     <div class="card-body" style="padding: 1.5rem;">
-                        <div class="form-check mb-3 p-3" style="background: #fff3cd; border-radius: 0.5rem; border: 2px solid #ffc107;">
-                            <input class="form-check-input" type="checkbox" id="is_temporary" name="is_temporary" 
-                                   {% if staff_data and staff_data.is_temporary %}checked{% endif %}
-                                   onchange="toggleTemporaryAccess()" style="cursor: pointer; width: 1.25rem; height: 1.25rem;">
-                            <label class="form-check-label fw-bold" for="is_temporary" style="cursor: pointer; font-size: 1.05rem; color: #856404;">
-                                This is a temporary staff member
-                            </label>
-                            <div class="form-text mt-2" style="color: #856404;"><i class="bi bi-info-circle me-1"></i>Enable this for temporary staff who need time-limited access.</div>
-                        </div>
+                        <input class="btn-check" type="checkbox" id="is_temporary" name="is_temporary"
+                               {% if staff_data and staff_data.is_temporary %}checked{% endif %}
+                               onchange="toggleTemporaryAccess()">
+                        <label class="btn btn-outline-warning w-100 text-start p-3 mb-3 tile-soft tile-warning" for="is_temporary">
+                            <div class="fw-semibold">This is a temporary staff member</div>
+                            <div class="small text-muted">Enable time-limited access for this account.</div>
+                        </label>
                         
                         <div id="temporaryAccessFields" style="display: none;">
                             <div class="row g-3">
@@ -349,19 +459,19 @@
                 {% endif %}
             </div>
             
-            <div class="col-12">
+            <div class="col-12" id="teachingFieldsGrades">
                 <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
                     <i class="bi bi-mortarboard me-1 text-primary"></i>Grade(s) Taught/Overseeing
                 </label>
-                <div class="row g-2 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
+                <div class="row g-2">
                     {% set grades = ["Kindergarten", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "N/A - Staff"] %}
                     {% for grade_option in grades %}
-                    <div class="col-6 col-sm-4 col-md-3">
-                        <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="grades_taught" value="{{ grade_option }}"
                                    id="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
-                                   {% if staff_data and staff_data.grade_taught and grade_option in staff_data.grade_taught %}checked{% endif %} style="cursor: pointer;">
-                            <label class="form-check-label" for="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}" style="cursor: pointer; font-weight: 500;">{{ grade_option }}</label>
+                                   {% if staff_data and staff_data.grade_taught and grade_option in staff_data.grade_taught %}checked{% endif %}>
+                            <label class="form-check-label" for="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}">{{ grade_option }}</label>
                         </div>
                     </div>
                     {% endfor %}
@@ -382,11 +492,11 @@
             </div>
             </div>
 
-        <div class="d-flex flex-column flex-md-row gap-3 mt-4">
-            <button class="btn btn-lg" type="submit" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);">
+        <div class="d-flex flex-column flex-md-row gap-2 mt-4">
+            <button class="btn btn-primary btn-lg" type="submit">
                 <i class="bi bi-check-circle me-2"></i>{% if edit_mode %}Update{% else %}Add Teacher/Staff{% endif %}
             </button>
-            <a href="{{ url_for('management.teachers') }}" class="btn btn-lg" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); text-decoration: none;">
+            <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary btn-lg">
                 <i class="bi bi-x-circle me-2"></i>{% if edit_mode %}Cancel{% else %}Discard{% endif %}
             </a>
         </div>
@@ -426,6 +536,21 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize temporary access toggle on page load
         toggleTemporaryAccess();
+
+        function selectedDepartments() {
+            const boxes = document.querySelectorAll('input[name="department"]:checked');
+            return Array.from(boxes).map(b => b.value);
+        }
+
+        function updatePermissionsVisibility() {
+            const roleSelect = document.getElementById('assigned_role');
+            const roleVal = roleSelect ? (roleSelect.value || '') : '';
+            const depts = selectedDepartments();
+            const hasAdminDept = depts.includes('Administration');
+            const shouldShow = hasAdminDept && roleVal && roleVal !== 'School Administrator';
+            const section = document.getElementById('permissionsSection');
+            if (section) section.style.display = shouldShow ? 'block' : 'none';
+        }
         
         // Check if current user is Tech role
                        const isTechUser = {{ 'true' if current_user.role in ['Tech', 'IT Support'] else 'false' }};
@@ -465,6 +590,26 @@
                 roleLabel.parentNode.appendChild(infoDiv);
             }
         }
+
+        // Permissions visibility wiring
+        const roleSelect = document.getElementById('assigned_role');
+        if (roleSelect) roleSelect.addEventListener('change', updatePermissionsVisibility);
+        const deptBoxes = document.querySelectorAll('input[name="department"]');
+        deptBoxes.forEach(cb => cb.addEventListener('change', updatePermissionsVisibility));
+        updatePermissionsVisibility();
+
+        function updateTeachingFields() {
+            const roleSelect = document.getElementById('assigned_role');
+            const roleVal = roleSelect ? (roleSelect.value || '') : '';
+            const isTeachingRole = (roleVal === 'Teacher' || roleVal === 'Substitute' || roleVal === 'Counselor');
+            const subjectWrap = document.getElementById('teachingFieldsSubject');
+            const gradesWrap = document.getElementById('teachingFieldsGrades');
+            if (subjectWrap) subjectWrap.style.display = isTeachingRole ? '' : 'none';
+            if (gradesWrap) gradesWrap.style.display = isTeachingRole ? '' : 'none';
+        }
+
+        if (roleSelect) roleSelect.addEventListener('change', updateTeachingFields);
+        updateTeachingFields();
     });
     </script>
 </div>

@@ -46,6 +46,9 @@ def add_teacher_staff():
         # Handle multiple department selections
         departments = request.form.getlist('department')
         department = ', '.join(departments) if departments else ''
+        # Permissions (only meaningful for Administration department + non-admin roles)
+        permissions = request.form.getlist('permissions')
+        permissions_json = json.dumps(permissions) if permissions else None
         position = request.form.get('position', '').strip()
         subject = request.form.get('subject', '').strip()
         employment_type = request.form.get('employment_type', '').strip()
@@ -58,6 +61,8 @@ def add_teacher_staff():
         if current_user.role in ['Tech', 'IT Support']:
             assigned_role = 'IT Support'
             department = 'Administration'
+            # Tech users implicitly get the tech-only experience; permissions not used here
+            permissions_json = None
         
         # Address fields
         street = request.form.get('street_address', '').strip()
@@ -205,6 +210,7 @@ def add_teacher_staff():
             user.google_workspace_email = generated_workspace_email  # Set generated workspace email
             user.is_temporary_password = True  # New users must change password
             user.password_changed_at = None
+            user.permissions = permissions_json
             
             db.session.add(user)
             db.session.commit()
@@ -226,7 +232,7 @@ def add_teacher_staff():
             flash(f'Error adding {assigned_role.lower()}: {str(e)}', 'danger')
             return redirect(request.url)
     
-    return render_template('management/add_teacher_staff.html')
+    return render_template('management/add_teacher_staff.html', staff_permissions=[])
 
 
 
@@ -258,9 +264,15 @@ def edit_teacher_staff(staff_id):
         # Professional information
         assigned_role = request.form.get('assigned_role', 'Teacher').strip()
         hire_date = request.form.get('hire_date', '').strip()
+        employment_status = (request.form.get('employment_status', '') or '').strip() or 'Active'
+        marked_for_removal = request.form.get('marked_for_removal') == 'on'
+        removal_note = (request.form.get('removal_note', '') or '').strip()
         # Handle multiple department selections
         departments = request.form.getlist('department')
         department = ', '.join(departments) if departments else ''
+        # Permissions (only meaningful for Administration department + non-admin roles)
+        permissions = request.form.getlist('permissions')
+        permissions_json = json.dumps(permissions) if permissions else None
         position = request.form.get('position', '').strip()
         subject = request.form.get('subject', '').strip()
         employment_type = request.form.get('employment_type', '').strip()
@@ -304,6 +316,10 @@ def edit_teacher_staff(staff_id):
             # Professional information
             teacher_staff.assigned_role = assigned_role
             teacher_staff.hire_date = hire_date
+            teacher_staff.employment_status = employment_status
+            teacher_staff.marked_for_removal = marked_for_removal
+            teacher_staff.removal_note = removal_note or None
+            teacher_staff.status_updated_at = datetime.utcnow()
             teacher_staff.department = department
             teacher_staff.position = position
             teacher_staff.subject = subject
@@ -354,6 +370,7 @@ def edit_teacher_staff(staff_id):
             if user:
                 user.email = email
                 user.role = assigned_role
+                user.permissions = permissions_json
             
             db.session.commit()
             
@@ -371,7 +388,22 @@ def edit_teacher_staff(staff_id):
             flash(error_msg, 'danger')
             return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
     
-    return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+    staff_permissions = []
+    try:
+        if teacher_staff.user and getattr(teacher_staff.user, 'permissions', None):
+            raw = teacher_staff.user.permissions
+            staff_permissions = json.loads(raw) if isinstance(raw, str) else (list(raw) if raw else [])
+            if not isinstance(staff_permissions, list):
+                staff_permissions = []
+    except Exception:
+        staff_permissions = []
+
+    return render_template(
+        'management/add_teacher_staff.html',
+        teacher_staff=teacher_staff,
+        editing=True,
+        staff_permissions=staff_permissions
+    )
 
 
 
@@ -431,6 +463,73 @@ def remove_teacher_staff(staff_id):
 
 
 # ============================================================
+# Staff directory (current + former) — embedded on Teachers & Staff for
+# Directors & School Administrators only (see teachers_view=directory)
+# ============================================================
+
+def _staff_directory_context():
+    """Template variables for current/former lists; callers must enforce role."""
+    tab = (request.args.get('staff_dir_tab') or request.args.get('tab', 'current')).strip()
+    if tab not in ('current', 'former'):
+        tab = 'current'
+    q = (request.args.get('staff_dir_q') or request.args.get('q', '')).strip()
+
+    def _search_filter():
+        if not q:
+            return None
+        like = f'%{q}%'
+        return db.or_(
+            TeacherStaff.first_name.ilike(like),
+            TeacherStaff.last_name.ilike(like),
+            TeacherStaff.middle_initial.ilike(like),
+            TeacherStaff.email.ilike(like),
+            TeacherStaff.staff_id.ilike(like),
+            TeacherStaff.assigned_role.ilike(like),
+            TeacherStaff.department.ilike(like),
+            TeacherStaff.position.ilike(like),
+            TeacherStaff.subject.ilike(like),
+            TeacherStaff.phone.ilike(like),
+        )
+
+    current_base = TeacherStaff.query.filter(
+        TeacherStaff.is_deleted == False,
+        db.or_(
+            TeacherStaff.employment_status.in_(['Active', 'On Leave']),
+            TeacherStaff.employment_status == '',
+            TeacherStaff.employment_status.is_(None),
+        ),
+    )
+    former_base = TeacherStaff.query.filter(
+        db.or_(
+            TeacherStaff.is_deleted == True,
+            TeacherStaff.employment_status == 'Inactive',
+        ),
+    )
+
+    sf = _search_filter()
+    current_count = current_base.count()
+    former_count = former_base.count()
+
+    q_current = current_base
+    q_former = former_base
+    if sf is not None:
+        q_current = q_current.filter(sf)
+        q_former = q_former.filter(sf)
+
+    current_staff = q_current.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+    former_staff = q_former.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+
+    return {
+        'staff_dir_tab': tab,
+        'staff_dir_q': q,
+        'staff_dir_current_staff': current_staff,
+        'staff_dir_former_staff': former_staff,
+        'staff_dir_current_count': current_count,
+        'staff_dir_former_count': former_count,
+    }
+
+
+# ============================================================
 # Route: /teachers
 # Function: teachers
 # ============================================================
@@ -439,6 +538,33 @@ def remove_teacher_staff(staff_id):
 @login_required
 @management_required
 def teachers():
+    teachers_view = request.args.get('teachers_view', 'manage')
+    if teachers_view not in ('manage', 'directory'):
+        teachers_view = 'manage'
+    if teachers_view == 'directory' and current_user.role not in ['School Administrator', 'Director']:
+        teachers_view = 'manage'
+
+    if teachers_view == 'directory':
+        ctx = _staff_directory_context()
+        return render_template(
+            'management/role_dashboard.html',
+            section='teachers',
+            active_tab='teachers',
+            teachers_view='directory',
+            teachers=[],
+            search_query='',
+            search_type='all',
+            department_filter='',
+            role_filter='',
+            employment_filter='',
+            sort_by='name',
+            sort_order='asc',
+            total_teachers=0,
+            teachers_with_accounts=0,
+            teachers_without_accounts=0,
+            **ctx,
+        )
+
     # Get search parameters
     search_query = request.args.get('search', '').strip()
     search_type = request.args.get('search_type', 'all')
@@ -582,7 +708,8 @@ def teachers():
                          teachers_with_accounts=teachers_with_accounts,
                          teachers_without_accounts=teachers_without_accounts,
                          section='teachers',
-                         active_tab='teachers')
+                         active_tab='teachers',
+                         teachers_view='manage')
 
 
 
@@ -602,6 +729,8 @@ def api_teachers():
         'first_name': teacher.first_name,
         'last_name': teacher.last_name,
         'role': teacher.user.role if teacher.user else 'No Role'
+        ,
+        'permissions': teacher.user.permissions if teacher.user and hasattr(teacher.user, 'permissions') else None
     } for teacher in teachers])
 
 
@@ -843,9 +972,13 @@ def view_teacher(teacher_id):
             'last_name': teacher.last_name,
             'staff_id': teacher.staff_id,
             'dob': _fmt_date(getattr(teacher, 'dob', None)),
+            'staff_ssn': getattr(teacher, 'staff_ssn', None),
             'role': role,
             'assigned_role': getattr(teacher, 'assigned_role', None),
             'employment_type': getattr(teacher, 'employment_type', None),
+            'employment_status': getattr(teacher, 'employment_status', 'Active'),
+            'marked_for_removal': bool(getattr(teacher, 'marked_for_removal', False)),
+            'removal_note': getattr(teacher, 'removal_note', None),
             'subject': getattr(teacher, 'subject', None),
             'email': teacher.email,
             'google_workspace_email': teacher.user.google_workspace_email if teacher.user and hasattr(teacher.user, 'google_workspace_email') else None,
@@ -957,6 +1090,9 @@ def edit_teacher(teacher_id):
                 teacher.user.role = 'IT Support'
             else:
                 teacher.user.role = request.form.get('assigned_role', teacher.user.role)
+                # Permissions update (if provided)
+                perms = request.form.getlist('permissions')
+                teacher.user.permissions = json.dumps(perms) if perms else None
             
             # Update Google Workspace email
             google_workspace_email = request.form.get('google_workspace_email', '').strip()

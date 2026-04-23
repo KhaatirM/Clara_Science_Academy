@@ -4,7 +4,7 @@ Dashboard routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required
+from decorators import management_required, permissions_required
 from models import (
     db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo, AssignmentReopening,
     User, ExtensionRequest
@@ -25,7 +25,14 @@ bp = Blueprint('dashboard', __name__)
 
 @bp.route('/dashboard')
 @login_required
-@management_required
+@permissions_required(
+    'students:view', 'students:edit',
+    'teachers_staff:manage',
+    'classes:manage',
+    'assignments_grades:manage',
+    'attendance:manage',
+    'report_cards:view', 'report_cards:generate',
+)
 def management_dashboard():
     from datetime import datetime, timedelta
     from sqlalchemy import or_, and_

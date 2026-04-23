@@ -4,7 +4,7 @@ Classes routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required
+from decorators import management_required, is_teacher_role, has_permission
 from models import (
     db,
     Class,
@@ -44,6 +44,28 @@ from .utils import allowed_file
 
 
 bp = Blueprint('classes', __name__)
+
+
+def _staff_can_be_assigned_to_classes(staff):
+    """
+    Decide whether a TeacherStaff record can be selected as a class teacher/additional/sub.
+    - Teachers/Substitutes/Counselors: allowed
+    - Other Staff: only if they have explicit permission 'classes:assignable'
+    """
+    if not staff:
+        return False
+    try:
+        user = getattr(staff, 'user', None)
+        role = (getattr(user, 'role', None) or getattr(staff, 'assigned_role', None) or '').strip()
+        if role in ['Director', 'School Administrator']:
+            return True
+        if is_teacher_role(role) or role in ['Counselor', 'Substitute']:
+            return True
+        if user and has_permission(user, 'classes:assignable'):
+            return True
+        return False
+    except Exception:
+        return False
 
 
 def calculate_assignment_graded_status(assignment):
@@ -315,7 +337,10 @@ def manage_class(class_id):
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
     # Get available teachers for assignment
-    available_teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
+    available_teachers = [
+        t for t in TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
+        if _staff_can_be_assigned_to_classes(t)
+    ]
     
     # Get today's date for age calculations
     today = date.today()
@@ -649,7 +674,10 @@ def class_roster(class_id):
             enrolled_students.append(student)
     
     # Get available teachers for assignment
-    available_teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
+    available_teachers = [
+        t for t in TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
+        if _staff_can_be_assigned_to_classes(t)
+    ]
     
     # Get today's date for age calculations
     today = date.today()
@@ -2178,7 +2206,10 @@ def manage_class_roster(class_id):
             enrolled_students.append(student)
     
     # Get all teachers for the summary display
-    available_teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
+    available_teachers = [
+        t for t in TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
+        if _staff_can_be_assigned_to_classes(t)
+    ]
     
     return render_template('management/manage_class_roster.html', 
                          class_info=class_info,

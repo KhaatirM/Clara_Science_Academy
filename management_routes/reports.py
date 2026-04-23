@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required
+from decorators import management_required, permissions_required
 from models import db, ReportCard, SchoolYear, Class, Student, Enrollment
 
 
@@ -186,7 +186,7 @@ def _notify_admins_report_card_generated(student, school_year, quarter_str, repo
 
 @bp.route('/report/card/generate', methods=['GET', 'POST'])
 @login_required
-@management_required
+@permissions_required('report_cards:generate')
 def generate_report_card_form():
     students = Student.query.order_by(Student.last_name, Student.first_name).all()
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
@@ -606,7 +606,7 @@ def generate_report_card_form():
 
 @bp.route('/report/card/view/<int:report_card_id>')
 @login_required
-@management_required
+@permissions_required('report_cards:view', 'report_cards:generate')
 def view_report_card(report_card_id):
     report_card = ReportCard.query.get_or_404(report_card_id)
     
@@ -662,7 +662,7 @@ def view_report_card(report_card_id):
 
 @bp.route('/report/card/pdf/<int:report_card_id>')
 @login_required
-@management_required
+@permissions_required('report_cards:generate')
 def generate_report_card_pdf(report_card_id):
     """Generate and download a PDF report card based on student's grade level"""
     try:
@@ -890,7 +890,7 @@ def generate_report_card_pdf(report_card_id):
 
 @bp.route('/report-cards')
 @login_required
-@management_required
+@permissions_required('report_cards:view', 'report_cards:generate')
 def report_cards():
     """Enhanced report cards management with grade categories and filtering."""
     # Get filter parameters
@@ -940,7 +940,7 @@ def report_cards():
 
 @bp.route('/report-cards/category/<category>')
 @login_required
-@management_required
+@permissions_required('report_cards:view', 'report_cards:generate')
 def report_cards_by_category(category):
     """Display students by grade category for report card generation."""
     # Define category mappings
@@ -993,7 +993,7 @@ def report_cards_by_category(category):
 
 @bp.route('/report-cards/delete/<int:report_card_id>', methods=['POST'])
 @login_required
-@management_required
+@permissions_required('report_cards:generate')
 def delete_report_card(report_card_id):
     """Delete a report card."""
     try:

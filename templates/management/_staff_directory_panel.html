@@ -1,0 +1,151 @@
+{# Roster sub-view: current vs former; matches Manage page card styling (no second page title). #}
+<div class="teachers-search-card mb-4">
+    <div class="teachers-search-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <h5 class="mb-0">
+            <i class="bi bi-funnel me-2"></i>Show
+        </h5>
+        <span class="text-muted small">
+            <span class="me-2">{{ staff_dir_current_count }} current</span>
+            <span>· {{ staff_dir_former_count }} former</span>
+        </span>
+    </div>
+    <div class="teachers-search-body">
+        <ul class="nav nav-pills flex-wrap gap-2 mb-3">
+            <li class="nav-item">
+                <a class="nav-link {% if staff_dir_tab == 'current' %}active{% endif %}" href="{{ url_for('management.teachers', teachers_view='directory', staff_dir_tab='current', staff_dir_q=staff_dir_q) }}">
+                    <i class="bi bi-person-check-fill me-1"></i>Current
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if staff_dir_tab == 'former' %}active{% endif %}" href="{{ url_for('management.teachers', teachers_view='directory', staff_dir_tab='former', staff_dir_q=staff_dir_q) }}">
+                    <i class="bi bi-person-x-fill me-1"></i>Former
+                </a>
+            </li>
+        </ul>
+        <form method="get" class="row g-2 align-items-end mb-0">
+            <input type="hidden" name="teachers_view" value="directory">
+            <input type="hidden" name="staff_dir_tab" value="{{ staff_dir_tab }}">
+            <div class="col-12 col-md-6 col-lg-4">
+                <label for="staff_dir_q" class="form-label small fw-semibold text-muted mb-1">Search this list</label>
+                <input type="text" class="form-control" id="staff_dir_q" name="staff_dir_q" value="{{ staff_dir_q }}" placeholder="Name, email, staff ID…">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-teachers-search"><i class="bi bi-search me-1"></i>Search</button>
+            </div>
+            {% if staff_dir_q %}
+            <div class="col-auto">
+                <a href="{{ url_for('management.teachers', teachers_view='directory', staff_dir_tab=staff_dir_tab) }}" class="btn btn-teachers-reset">Clear</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="teachers-table-card">
+    <div class="teachers-table-header">
+        <h5 class="mb-0">
+            <i class="bi bi-table me-2"></i>{% if staff_dir_tab == 'current' %}Current employees{% else %}Former employees{% endif %}
+        </h5>
+    </div>
+    <div class="teachers-table-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle teachers-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if staff_dir_tab == 'current' %}
+                        {% for t in staff_dir_current_staff %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ t.first_name }}{% if t.middle_initial %} {{ t.middle_initial }}.{% endif %} {{ t.last_name }}</div>
+                                {% if t.staff_id %}<small class="text-muted">ID: {{ t.staff_id }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {% if t.user %}
+                                    <span class="badge bg-info text-dark">{{ t.user.role }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">No Account</span>
+                                {% endif %}
+                                {% if t.assigned_role and (not t.user or t.assigned_role != t.user.role) %}
+                                    <div class="small text-muted">{{ t.assigned_role }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if t.department %}
+                                    <span class="small">{{ t.department[:80] }}{% if t.department|length > 80 %}…{% endif %}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td><span class="small text-break">{{ t.email or '—' }}</span></td>
+                            <td>
+                                {% set es = t.employment_status|default('Active') %}
+                                {% if t.marked_for_removal|default(false) %}
+                                    <span class="badge bg-danger">Marked</span>
+                                {% elif es == 'On Leave' %}
+                                    <span class="badge bg-warning text-dark">On leave</span>
+                                {% else %}
+                                    <span class="badge bg-success">Active</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-teachers-action-view" onclick="viewTeacher({{ t.id }})" title="View details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-5">No rows match.</td></tr>
+                        {% endfor %}
+                    {% else %}
+                        {% for t in staff_dir_former_staff %}
+                        <tr class="{% if t.is_deleted %}table-secondary{% endif %}">
+                            <td>
+                                <div class="fw-bold text-dark">{{ t.first_name }}{% if t.middle_initial %} {{ t.middle_initial }}.{% endif %} {{ t.last_name }}</div>
+                                {% if t.staff_id %}<small class="text-muted">ID: {{ t.staff_id }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {% if t.user %}
+                                    <span class="badge bg-info text-dark">{{ t.user.role }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">No Account</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if t.department %}
+                                    <span class="small">{{ t.department[:80] }}{% if t.department|length > 80 %}…{% endif %}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td><span class="small text-break">{{ t.email or '—' }}</span></td>
+                            <td>
+                                {% if t.is_deleted %}
+                                    <span class="badge bg-dark">Removed</span>
+                                    {% if t.deleted_at %}<div class="small text-muted">{{ t.deleted_at.strftime('%Y-%m-%d') }}</div>{% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                                {% if t.marked_for_removal|default(false) %}
+                                    <span class="badge bg-danger ms-1">Marked</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-teachers-action-view" onclick="viewTeacher({{ t.id }})" title="View record">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-5">No rows match.</td></tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

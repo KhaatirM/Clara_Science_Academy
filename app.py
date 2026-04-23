@@ -130,6 +130,29 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: low_grade_threshold column check failed (may already exist): {e}")
 
+        # Add user.permissions column if missing (fine-grained permissions for staff)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(user)"))
+                    columns = [row[1] for row in r]
+                    if 'permissions' not in columns:
+                        conn.execute(text("ALTER TABLE user ADD COLUMN permissions TEXT"))
+                        conn.commit()
+                        print("Added user.permissions column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'user' AND column_name = 'permissions'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text('ALTER TABLE "user" ADD COLUMN permissions TEXT'))
+                        conn.commit()
+                        print("Added user.permissions column.")
+        except Exception as e:
+            print(f"Note: permissions column check failed (may already exist): {e}")
+
         # Add message.is_edited / parent_message_id if missing (ORM expects them; older DBs may lack them)
         try:
             with db.engine.connect() as conn:
@@ -166,6 +189,55 @@ def create_app(config_class=None):
                         print("Added message.parent_message_id column.")
         except Exception as e:
             print(f"Note: message table column check failed (may already exist): {e}")
+
+        # Add teacher_staff employment status columns if missing (staff lifecycle tracking)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(teacher_staff)"))
+                    columns = [row[1] for row in r]
+                    if 'employment_status' not in columns:
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN employment_status VARCHAR(30) DEFAULT 'Active'"))
+                        conn.commit()
+                        print("Added teacher_staff.employment_status column.")
+                    if 'marked_for_removal' not in columns:
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN marked_for_removal INTEGER DEFAULT 0"))
+                        conn.commit()
+                        print("Added teacher_staff.marked_for_removal column.")
+                    if 'removal_note' not in columns:
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN removal_note TEXT"))
+                        conn.commit()
+                        print("Added teacher_staff.removal_note column.")
+                    if 'status_updated_at' not in columns:
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN status_updated_at DATETIME"))
+                        conn.commit()
+                        print("Added teacher_staff.status_updated_at column.")
+                elif dialect == 'postgresql':
+                    def _pg_has(col):
+                        r = conn.execute(text(
+                            "SELECT 1 FROM information_schema.columns "
+                            "WHERE table_schema = 'public' AND table_name = 'teacher_staff' AND column_name = :c"
+                        ), {"c": col})
+                        return r.fetchone() is not None
+                    if not _pg_has('employment_status'):
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN employment_status VARCHAR(30) NOT NULL DEFAULT 'Active'"))
+                        conn.commit()
+                        print("Added teacher_staff.employment_status column.")
+                    if not _pg_has('marked_for_removal'):
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN marked_for_removal BOOLEAN NOT NULL DEFAULT false"))
+                        conn.commit()
+                        print("Added teacher_staff.marked_for_removal column.")
+                    if not _pg_has('removal_note'):
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN removal_note TEXT"))
+                        conn.commit()
+                        print("Added teacher_staff.removal_note column.")
+                    if not _pg_has('status_updated_at'):
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN status_updated_at TIMESTAMP"))
+                        conn.commit()
+                        print("Added teacher_staff.status_updated_at column.")
+        except Exception as e:
+            print(f"Note: teacher_staff status columns check failed (may already exist): {e}")
 
         # Add student profile confirmation columns if missing (report cards + enrollment policy)
         _student_cols = [
@@ -548,6 +620,64 @@ def create_app(config_class=None):
         html = escaped.replace('\r\n', '<br>\n').replace('\n', '<br>\n').replace('\r', '<br>\n')
         return Markup(html)
 
+    @app.template_filter('quiz_content')
+    def quiz_content_filter(value):
+        """
+        Render quiz question/option content with safe formatting:
+        - Supports triple-backtick fenced blocks: ```lang ... ```
+        - Preserves line breaks
+        """
+        from markupsafe import Markup, escape
+        if value is None:
+            return Markup('')
+        s = str(value)
+
+        # Normalize newlines
+        s = s.replace('\r\n', '\n').replace('\r', '\n')
+
+        parts = []
+        i = 0
+        while True:
+            start = s.find('```', i)
+            if start == -1:
+                parts.append(('text', s[i:]))
+                break
+            # text before fence
+            parts.append(('text', s[i:start]))
+            # find end fence
+            fence_header_end = s.find('\n', start + 3)
+            if fence_header_end == -1:
+                # treat remainder as text
+                parts.append(('text', s[start:]))
+                break
+            lang = s[start + 3:fence_header_end].strip() or 'text'
+            end = s.find('```', fence_header_end + 1)
+            if end == -1:
+                # no closing fence; treat remainder as text
+                parts.append(('text', s[start:]))
+                break
+            code = s[fence_header_end + 1:end]
+            parts.append(('code', (lang, code)))
+            i = end + 3
+
+        out_html = []
+        for kind, payload in parts:
+            if kind == 'text':
+                escaped_txt = escape(payload)
+                out_html.append(escaped_txt.replace('\n', '<br>\n'))
+            else:
+                lang, code = payload
+                code_esc = '\n'.join(escape(line) for line in code.split('\n'))
+                out_html.append(
+                    Markup(
+                        f'<div class="quiz-code-block" data-lang="{escape(lang)}">'
+                        f'<span class="badge text-bg-secondary mb-2">{escape(lang)}</span>'
+                        f'<pre class="mb-0 p-3 bg-dark text-light rounded-3"><code>{code_esc}</code></pre>'
+                        f'</div>'
+                    )
+                )
+        return Markup(''.join(str(x) for x in out_html))
+
     @app.template_filter('discussion_preview')
     def discussion_preview_filter(value, maxlen=200):
         """Return plain-text preview for discussion list (strips code prefix if present)."""
@@ -582,6 +712,55 @@ def create_app(config_class=None):
         return {'effective_theme': effective}
 
     @app.context_processor
+    def inject_permissions_helpers():
+        """Expose permission helpers to templates."""
+        try:
+            from decorators import has_permission, get_user_permissions
+
+            def has_perm(perm):
+                try:
+                    return has_permission(current_user, perm)
+                except Exception:
+                    return False
+
+            def perms():
+                try:
+                    return sorted(list(get_user_permissions(current_user)))
+                except Exception:
+                    return []
+
+            return {"has_perm": has_perm, "current_user_permissions": perms()}
+        except Exception:
+            return {"has_perm": lambda _p: False, "current_user_permissions": []}
+
+    @app.context_processor
+    def inject_role_display():
+        """Single place to control how a user's role is displayed in the sidebar."""
+        try:
+            role = (getattr(current_user, 'role', None) or '').strip()
+            if not current_user.is_authenticated:
+                return {"current_user_role_display": role}
+            profile = getattr(current_user, 'teacher_staff_profile', None)
+            dept = (getattr(profile, 'department', None) or '').strip() if profile else ''
+            # Normalize legacy teacher roles to simplified display
+            if role in ['Math Teacher', 'Science Teacher', 'History Teacher', 'Physics Teacher', 'English Language Arts Teacher']:
+                display = 'Teacher'
+            elif role == 'School Counselor':
+                display = 'Counselor'
+            elif role == 'Substitute Teacher':
+                display = 'Substitute'
+            else:
+                display = role or 'User'
+            if dept and dept != 'Administration':
+                return {"current_user_role_display": f"{display} • {dept}"}
+            if dept == 'Administration' and role not in ['School Administrator', 'Director']:
+                # Show subtle hint that access is permission-based
+                return {"current_user_role_display": f"{display} • Administration"}
+            return {"current_user_role_display": display}
+        except Exception:
+            return {"current_user_role_display": getattr(current_user, 'role', '')}
+
+    @app.context_processor
     def inject_school_timezone_display():
         """IANA zone used for assignment times, schooltime filter, and school-day logic (same for all users)."""
         try:
@@ -604,9 +783,16 @@ def create_app(config_class=None):
             return out
         role = getattr(current_user, 'role', '') or ''
         is_admin = role in ['Director', 'School Administrator']
-        teacher_roles = ['History Teacher', 'Science Teacher', 'Physics Teacher',
-                        'English Language Arts Teacher', 'Math Teacher', 'Substitute Teacher',
-                        'School Counselor', 'School Administrator', 'Director']
+        teacher_roles = [
+            # Simplified roles
+            'Teacher', 'Substitute', 'Counselor',
+            # Legacy roles still present in existing accounts
+            'History Teacher', 'Science Teacher', 'Physics Teacher',
+            'English Language Arts Teacher', 'Math Teacher', 'Substitute Teacher',
+            'School Counselor',
+            # Admin roles are allowed too
+            'School Administrator', 'Director'
+        ]
         is_teacher = role in teacher_roles or 'Teacher' in role
         if not (is_teacher or is_admin):
             return out

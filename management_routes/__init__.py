@@ -5,9 +5,9 @@ This package contains all management-related routes organized by functional area
 Each module focuses on a specific aspect of management functionality.
 """
 
-from flask import Blueprint, redirect, url_for
+from flask import Blueprint, redirect, url_for, request
 from flask_login import login_required
-from decorators import management_required
+from decorators import management_required, permissions_required
 
 # Create the main management blueprint
 management_blueprint = Blueprint('management', __name__)
@@ -55,7 +55,7 @@ from .calendar import (
 )
 from .students import students as students_func, student_jobs as student_jobs_func, add_student as add_student_func, download_students_csv as download_students_csv_func, download_students_template as download_students_template_func, upload_students_csv as upload_students_csv_func, student_report_card_history as student_report_card_history_func, view_student as view_student_func, admin_create_student_group as admin_create_student_group_func, generate_report_card_for_student as generate_report_card_for_student_func, void_assignment_for_students as void_assignment_for_students_func, unvoid_assignment_for_students as unvoid_assignment_for_students_func, bulk_void_assignments as bulk_void_assignments_func
 from .teachers import (
-    teachers as teachers_func, 
+    teachers as teachers_func,
     add_teacher_staff as add_teacher_staff_func, 
     teacher_work_days as teacher_work_days_func, 
     add_teacher_work_days as add_teacher_work_days_func,
@@ -149,56 +149,75 @@ from .administration import (
 # Register main routes on main blueprint with correct endpoint names for backward compatibility
 @management_blueprint.route('/dashboard', endpoint='management_dashboard')
 @login_required
-@management_required
+@permissions_required(
+    'students:view', 'students:edit',
+    'teachers_staff:manage',
+    'classes:manage',
+    'assignments_grades:manage',
+    'attendance:manage',
+    'report_cards:view', 'report_cards:generate',
+)
 def management_dashboard_route():
     """Management dashboard route - delegates to dashboard module"""
     return management_dashboard_func()
 
 @management_blueprint.route('/students', endpoint='students')
 @login_required
-@management_required
+@permissions_required('students:view', 'students:edit')
 def students_route():
     """Students route - delegates to students module"""
     return students_func()
 
 @management_blueprint.route('/teachers', endpoint='teachers')
 @login_required
-@management_required
+@permissions_required('teachers_staff:manage')
 def teachers_route():
     """Teachers route - delegates to teachers module"""
     return teachers_func()
 
-@management_blueprint.route('/classes', endpoint='classes')
+@management_blueprint.route('/staff-directory')
 @login_required
 @management_required
+def staff_directory_legacy_redirect():
+    """Old URL: merged into Teachers & Staff (teachers_view=directory)."""
+    return redirect(url_for(
+        'management.teachers',
+        teachers_view='directory',
+        staff_dir_tab=request.args.get('tab') or request.args.get('staff_dir_tab', 'current'),
+        staff_dir_q=request.args.get('q') or request.args.get('staff_dir_q', ''),
+    ))
+
+@management_blueprint.route('/classes', endpoint='classes')
+@login_required
+@permissions_required('classes:manage')
 def classes_route():
     """Classes route - delegates to classes module"""
     return classes_func()
 
 @management_blueprint.route('/assignments-and-grades', endpoint='assignments_and_grades')
 @login_required
-@management_required
+@permissions_required('assignments_grades:manage')
 def assignments_and_grades_route():
     """Assignments and grades route - delegates to assignments module"""
     return assignments_and_grades_func()
 
 @management_blueprint.route('/unified-attendance', endpoint='unified_attendance')
 @login_required
-@management_required
+@permissions_required('attendance:manage')
 def unified_attendance_route():
     """Unified attendance route - delegates to attendance module"""
     return unified_attendance_func()
 
 @management_blueprint.route('/report-cards', endpoint='report_cards')
 @login_required
-@management_required
+@permissions_required('report_cards:view', 'report_cards:generate')
 def report_cards_route():
     """Report cards route - delegates to reports module"""
     return report_cards_func()
 
 @management_blueprint.route('/billing', endpoint='billing')
 @login_required
-@management_required
+@permissions_required('billing:manage')
 def billing_route():
     """Billing route - delegates to administration module"""
     return billing_func()
@@ -206,14 +225,14 @@ def billing_route():
 # Add aliases for common action routes
 @management_blueprint.route('/add-student', methods=['GET', 'POST'], endpoint='add_student')
 @login_required
-@management_required
+@permissions_required('students:edit')
 def add_student_route():
     """Add student route - delegates to students module"""
     return add_student_func()
 
 @management_blueprint.route('/view-student/<int:student_id>', endpoint='view_student')
 @login_required
-@management_required
+@permissions_required('students:view', 'students:edit')
 def view_student_route(student_id):
     """View student route - delegates to students module"""
     return view_student_func(student_id)
@@ -249,7 +268,7 @@ def calendar_route():
 
 @management_blueprint.route('/communications', endpoint='communications')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def communications_route():
     """Communications route - delegates to communications module"""
     return communications_func()
@@ -257,56 +276,56 @@ def communications_route():
 # Add aliases for communications sub-routes to maintain backward compatibility
 @management_blueprint.route('/communications/messages', endpoint='management_messages')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_messages_route():
     """Messages route - delegates to communications module"""
     return management_messages_func()
 
 @management_blueprint.route('/communications/messages/send', methods=['GET', 'POST'], endpoint='management_send_message')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_send_message_route():
     """Send message route - delegates to communications module"""
     return management_send_message_func()
 
 @management_blueprint.route('/communications/messages/<int:message_id>', endpoint='management_view_message')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_view_message_route(message_id):
     """View message route - delegates to communications module"""
     return management_view_message_func(message_id)
 
 @management_blueprint.route('/communications/groups', endpoint='management_groups')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_groups_route():
     """Groups route - delegates to communications module"""
     return management_groups_func()
 
 @management_blueprint.route('/communications/groups/create', methods=['GET', 'POST'], endpoint='management_create_group')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_create_group_route():
     """Create group route - delegates to communications module"""
     return management_create_group_func()
 
 @management_blueprint.route('/communications/groups/<int:group_id>', endpoint='management_view_group')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_view_group_route(group_id):
     """View group route - delegates to communications module"""
     return management_view_group_func(group_id)
 
 @management_blueprint.route('/communications/announcements/create', methods=['GET', 'POST'], endpoint='management_create_announcement')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_create_announcement_route():
     """Create announcement route - delegates to communications module"""
     return management_create_announcement_func()
 
 @management_blueprint.route('/communications/announcements/schedule', methods=['GET', 'POST'], endpoint='management_schedule_announcement')
 @login_required
-@management_required
+@permissions_required('communications:manage')
 def management_schedule_announcement_route():
     """Schedule announcement route - delegates to communications module"""
     return management_schedule_announcement_func()

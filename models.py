@@ -36,6 +36,10 @@ class User(db.Model, UserMixin):
     # Low grade threshold for students (0-100): show assignments graded below this percentage.
     # E.g. 70 = "show assignments below 70%". Null = feature disabled.
     low_grade_threshold = db.Column(db.Integer, nullable=True)
+
+    # Fine-grained permissions (JSON list), primarily for non-admin staff in Administration department.
+    # Example: '["students:view","report_cards:generate"]'
+    permissions = db.Column(db.Text, nullable=True)
     
     # Google OAuth tokens (encrypted)
     _google_refresh_token = db.Column(db.String(512), nullable=True)
@@ -241,6 +245,12 @@ class TeacherStaff(db.Model):
     # Deletion tracking
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete flag - marks teacher as deleted while preserving data
     deleted_at = db.Column(db.DateTime, nullable=True)  # When the teacher was deleted
+
+    # Employment status tracking (for staff who no longer work here)
+    employment_status = db.Column(db.String(30), default='Active', nullable=False)  # Active, Inactive, On Leave
+    marked_for_removal = db.Column(db.Boolean, default=False, nullable=False)  # flagged for removal / cleanup
+    removal_note = db.Column(db.Text, nullable=True)  # optional reason / context
+    status_updated_at = db.Column(db.DateTime, nullable=True)
     
     # File uploads
     resume_filename = db.Column(db.String(255), nullable=True)

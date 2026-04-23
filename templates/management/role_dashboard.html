@@ -786,7 +786,7 @@
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr>
+                                <tr {% if teacher.marked_for_removal|default(false) %}style="opacity: 0.65;"{% elif (teacher.employment_status|default('Active')) != 'Active' %}style="opacity: 0.8;"{% endif %}>
                                     <td colspan="7" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
                                         No students found.
@@ -1237,27 +1237,48 @@
         </div>
 
     {% elif section == 'teachers' %}
-        <!-- Teachers & Staff Management View -->
+        <!-- Teachers & Staff: one page, mode toggle for Directors / School Administrators -->
+        {% set teachers_mode = teachers_view|default('manage') %}
         <div class="container-fluid px-2 px-md-4">
-            <!-- Modern Teachers Header -->
             <div class="teachers-admin-header mb-4">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div class="flex-grow-1" style="min-width: 220px;">
                         <h2 class="teachers-admin-title mb-1">
-                            <i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Management
+                            <i class="bi bi-person-badge-fill me-2"></i>Teachers &amp; Staff
                         </h2>
                         <p class="teachers-admin-subtitle mb-0">
-                            <i class="bi bi-briefcase me-2"></i>Manage teachers, staff records, and account information
+                            {% if teachers_mode == 'directory' and current_user.role in ['Director', 'School Administrator'] %}
+                            <i class="bi bi-archive me-2"></i>Browse everyone on payroll plus inactive or removed records. To edit someone who is still active, switch to <strong>Manage</strong>.
+                            {% else %}
+                            <i class="bi bi-briefcase me-2"></i>Search, add, and maintain active staff records and accounts.
+                            {% endif %}
                         </p>
                     </div>
-                    <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end">
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        <ul class="nav nav-pills flex-wrap gap-1 mb-0">
+                            <li class="nav-item">
+                                <a class="nav-link py-2 px-3 {% if teachers_mode != 'directory' %}active{% endif %}" href="{{ url_for('management.teachers') }}">
+                                    <i class="bi bi-sliders me-1"></i>Manage
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link py-2 px-3 {% if teachers_mode == 'directory' %}active{% endif %}" href="{{ url_for('management.teachers', teachers_view='directory', staff_dir_tab='current', staff_dir_q='') }}">
+                                    <i class="bi bi-people me-1"></i>Roster
+                                </a>
+                            </li>
+                        </ul>
+                        {% endif %}
+                        {% if teachers_mode != 'directory' %}
                         <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-teachers-add">
                             <i class="bi bi-plus-circle me-2"></i>Add New Staff
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
+            {% if teachers_mode != 'directory' %}
             <!-- Statistics Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-3">
@@ -1568,7 +1589,17 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge bg-success">Active</span>
+                                        {% set staff_status = teacher.employment_status|default('Active') %}
+                                        {% if teacher.marked_for_removal|default(false) %}
+                                            <span class="badge bg-danger">Marked</span>
+                                            <div><small class="text-muted">For removal</small></div>
+                                        {% elif staff_status == 'Inactive' %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% elif staff_status == 'On Leave' %}
+                                            <span class="badge bg-warning text-dark">On Leave</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
@@ -1666,6 +1697,21 @@
                                             {% endif %}
                                         </span>
                                     </div>
+                                    <div class="teacher-card-detail">
+                                        <i class="bi bi-shield-check me-2"></i>
+                                        <span>Status:
+                                            {% set staff_status = teacher.employment_status|default('Active') %}
+                                            {% if teacher.marked_for_removal|default(false) %}
+                                                <span class="badge bg-danger">Marked for removal</span>
+                                            {% elif staff_status == 'Inactive' %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% elif staff_status == 'On Leave' %}
+                                                <span class="badge bg-warning text-dark">On Leave</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="teacher-card-footer">
                                     <button type="button" class="btn btn-sm btn-teachers-card-action" onclick="viewTeacher({{ teacher.id }})">
@@ -1689,6 +1735,10 @@
                     </div>
                 </div>
             </div>
+
+            {% else %}
+            {% include 'management/_staff_directory_panel.html' %}
+            {% endif %}
 
         </div>
 
@@ -3820,12 +3870,55 @@
         fetch(`/management/view-teacher/${teacherId}`)
             .then(response => response.json())
             .then(data => {
+                if (!data || data.error) {
+                    alert(data && data.error ? data.error : 'Could not load teacher/staff details.');
+                    return;
+                }
+                const removalNoteSafe = String(data.removal_note || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 // Populate the edit modal form fields
                 document.getElementById('profileEditModalLabel').innerText = 'Edit Teacher/Staff';
                 let form = document.getElementById('profileEditForm');
                 let body = document.getElementById('profileEditModalBody');
                 body.innerHTML = `
                     <div class="container-fluid px-0">
+                        <!-- Employment / roster status (top of form — easy to find) -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden; border-left: 6px solid #6f42c1 !important;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #6f42c1 0%, #9b59b6 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-person-lines-fill me-2"></i>Employment &amp; roster status
+                                </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold" style="color: #495057;">
+                                            <i class="bi bi-shield-check me-1 text-primary"></i>Staff status
+                                        </label>
+                                        <select class="form-select" name="employment_status" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                            <option value="Active" ${(data.employment_status || 'Active') === 'Active' ? 'selected' : ''}>Active</option>
+                                            <option value="On Leave" ${(data.employment_status || '') === 'On Leave' ? 'selected' : ''}>On Leave</option>
+                                            <option value="Inactive" ${(data.employment_status || '') === 'Inactive' ? 'selected' : ''}>Inactive (no longer employed)</option>
+                                        </select>
+                                        <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Inactive keeps the record for history; use Remove only when you are ready to delete login access.</small>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="p-3 w-100" style="background: ${data.marked_for_removal ? '#f8d7da' : '#f8f9fa'}; border-radius: 0.5rem; border: 2px solid ${data.marked_for_removal ? '#dc3545' : '#e9ecef'};">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="checkbox" id="marked_for_removal_edit_top" name="marked_for_removal" ${data.marked_for_removal ? 'checked' : ''}>
+                                                <label class="form-check-label fw-bold" for="marked_for_removal_edit_top" style="cursor: pointer;">
+                                                    <i class="bi bi-exclamation-octagon me-1 text-danger"></i>Marked for removal
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold" style="color: #495057;">Removal note (optional)</label>
+                                        <textarea class="form-control" name="removal_note" rows="2" placeholder="e.g. Last day, contract ended, do not assign classes…">${removalNoteSafe}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Basic Information Card -->
                         <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
                             <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">

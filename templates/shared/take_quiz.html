@@ -200,7 +200,7 @@
                                                 </div>
                                             </div>
                                             
-                                            <p class="fw-bold mb-4" style="color: #2c3e50; font-size: 1.2rem; line-height: 1.6;">{{ question.question_text }}</p>
+                                            <div class="fw-bold mb-4" style="color: #2c3e50; font-size: 1.2rem; line-height: 1.6;">{{ question.question_text|quiz_content }}</div>
                                             
                                             {% if question.question_type == 'multiple_choice' %}
                                                 <div class="options-review">
@@ -219,7 +219,7 @@
                                                                 <div class="flex-grow-1">
                                                                     <div class="d-flex align-items-center">
                                                                         <span class="fw-bold me-2" style="color: #495057; font-size: 1.1rem;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
-                                                                        <span class="flex-grow-1" style="font-size: 1.05rem;">{{ option.option_text }}</span>
+                                                                        <span class="flex-grow-1" style="font-size: 1.05rem;">{{ option.option_text|quiz_content }}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
@@ -382,7 +382,7 @@
                                                 </div>
                                             </div>
                                             
-                                            <p class="fw-bold mb-4" style="color: #2c3e50; font-size: 1.2rem; line-height: 1.6;">{{ question.question_text }}</p>
+                                            <div class="fw-bold mb-4" style="color: #2c3e50; font-size: 1.2rem; line-height: 1.6;">{{ question.question_text|quiz_content }}</div>
                                             
                                             {% if question.question_type == 'multiple_choice' %}
                                                 <div class="options-review">
@@ -401,7 +401,7 @@
                                                                 <div class="flex-grow-1">
                                                                     <div class="d-flex align-items-center">
                                                                         <span class="fw-bold me-2" style="color: #495057; font-size: 1.1rem;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
-                                                                        <span class="flex-grow-1" style="font-size: 1.05rem;">{{ option.option_text }}</span>
+                                                                        <span class="flex-grow-1" style="font-size: 1.05rem;">{{ option.option_text|quiz_content }}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
@@ -435,7 +435,7 @@
                                                             {% endif %}
                                                                 </div>
                                                                 <div class="flex-grow-1">
-                                                            <span style="font-size: 1.05rem;">{{ option.option_text }}</span>
+                                                            <span style="font-size: 1.05rem;">{{ option.option_text|quiz_content }}</span>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
                                                             {% if option.is_correct %}
@@ -563,7 +563,7 @@
                                             </div>
                                             <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
                                         </div>
-                                        <p class="mb-4 fw-bold quiz-question-text" style="color: #2c3e50; font-size: 1.3rem; line-height: 1.7;">{{ question.question_text }}</p>
+                                        <div class="mb-4 fw-bold quiz-question-text" style="color: #2c3e50; font-size: 1.3rem; line-height: 1.7;">{{ question.question_text|quiz_content }}</div>
                                         
                                         {% if question.question_type == 'multiple_choice' %}
                                             <div class="options-container">
@@ -575,7 +575,7 @@
                                                                style="cursor: pointer; width: 1.25rem; height: 1.25rem; margin-top: 0.3rem;">
                                                         <label class="form-check-label w-100" for="option_{{ option.id }}" style="cursor: pointer; padding-left: 0.5rem;">
                                                             <span class="badge me-3 px-2 py-1" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0.375rem; font-weight: 600; min-width: 2rem; text-align: center;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}</span>
-                                                            <span class="quiz-option-text" style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
+                                                            <span class="quiz-option-text" style="font-size: 1.05rem; color: #495057;">{{ option.option_text|quiz_content }}</span>
                                                         </label>
                                                     </div>
                                                 {% endfor %}
@@ -591,7 +591,7 @@
                                                                style="cursor: pointer; width: 1.25rem; height: 1.25rem; margin-top: 0.3rem;">
                                                         <label class="form-check-label w-100" for="option_{{ option.id }}" style="cursor: pointer; padding-left: 0.5rem;">
                                                             <i class="bi {% if 'true' in option.option_text.lower() %}bi-check-circle text-success{% else %}bi-x-circle text-danger{% endif %} me-2" style="font-size: 1.25rem;"></i>
-                                                            <span class="quiz-option-text" style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
+                                                            <span class="quiz-option-text" style="font-size: 1.05rem; color: #495057;">{{ option.option_text|quiz_content }}</span>
                                                         </label>
                                                     </div>
                                                 {% endfor %}

@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 18, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 23, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,38 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 18, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 23, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>April 18</strong> improves how teachers and administrators see assignment status and navigation on smaller screens: staff-facing pages no longer emphasize an &ldquo;overdue&rdquo; badge the way students might, and the dashboard sidebar uses a full slide-out menu under 992px width so every link stays readable (for example on scaled laptop displays). <strong>April 5</strong> and <strong>early April</strong> below cover report-card safeguards, the updated grading policy, assignment and group-assignment workflows, academic alerts, and related refinements.</p>
+                        <p class="updates-intro-text mb-0"><strong>April 23</strong> focuses on day-to-day admin workflows: Teachers &amp; Staff now includes a single built-in roster view that can show both current and former employees, and the quiz builder now supports Google-Forms-style drag-and-drop for sections and questions with working move/delete behaviors. <strong>April 18</strong>, <strong>April 5</strong>, and <strong>early April</strong> below cover assignment status wording, navigation, report-card safeguards, grading policy, assignment and group-assignment workflows, academic alerts, and related refinements.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- April 23, 2026 - Staff roster merge & quiz builder fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-stars me-2"></i>Staff &amp; Quiz Builder – April 23, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teachers &amp; Staff – current + former roster:</strong> A roster view is now built into the Teachers &amp; Staff area for <strong>Directors</strong> and <strong>School Administrators</strong>. You can switch between <strong>current employees</strong> and <strong>former employees</strong> (inactive/removed) and search by name, email, role, department, or staff ID.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Cleaner navigation:</strong> The separate Staff Directory tab/link was removed to avoid redundancy; everything lives under <strong>Teachers &amp; Staff</strong>. Existing staff-directory links continue to work via an automatic redirect.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz creation – drag and drop like Google Forms:</strong> Sections and questions can now be reordered by <strong>click-and-drag</strong> using a grip handle. Sections move as a group with their questions.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz creation – move + delete fixed:</strong> Moving a question to a different section now works reliably, section membership is clearly shown, and deleting sections/questions works correctly.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Admins can quickly find both active and historical employee records without switching pages. Quiz creation is faster and less error-prone when building multi-section quizzes.</p>
+                        </div>
+                    </div>
                     <!-- April 18, 2026 - Staff assignment labels & dashboard sidebar -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset-reverse me-2"></i>Staff Assignment Labels &amp; Dashboard Sidebar – April 18, 2026</h6>
@@ -1476,11 +1501,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar27_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownApr23_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMar27_2026', 'true');
+            sessionStorage.setItem('updateModalShownApr23_2026', 'true');
         }, 500);
     }
 });

@@ -11,7 +11,7 @@ from flask_wtf.csrf import CSRFError
 from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 
 # Authentication and decorators
-from decorators import is_teacher_role
+from decorators import is_teacher_role, has_any_permission
 
 # Application imports - lazy import to avoid circular dependency
 def get_log_activity():
@@ -262,6 +262,22 @@ def dashboard():
     elif current_user.role in ['Tech', 'IT Support']:
         return redirect(url_for('tech.tech_dashboard'))
     else:
+        # Permission-based Administration staff (e.g. Other Staff with Administration department)
+        # should land on the management dashboard if they have any management permissions.
+        mgmt_perms = [
+            'students:view', 'students:edit',
+            'teachers_staff:manage',
+            'classes:manage',
+            'assignments_grades:manage',
+            'attendance:manage',
+            'report_cards:view', 'report_cards:generate',
+        ]
+        try:
+            if has_any_permission(current_user, mgmt_perms):
+                return redirect(url_for('management.management_dashboard'))
+        except Exception:
+            pass
+
         # Fallback for unknown roles
         return render_template('shared/home.html')
 

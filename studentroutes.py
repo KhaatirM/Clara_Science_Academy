@@ -139,6 +139,10 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
         try:
             import json
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            if isinstance(grade_data, dict):
+                grading_status = (grade_data.get('grading_status') or '').strip().lower()
+                if assignment.assignment_type == 'quiz' and grading_status == 'pending':
+                    return 'Submitted or Awaiting Grade'
             # Has score/points_earned = actual grade entered (covers legacy grades without graded_at)
             has_score = (
                 grade.graded_at or
@@ -2351,6 +2355,20 @@ def take_quiz(assignment_id):
         student_id=student.id,
         assignment_id=assignment_id
     ).order_by(Grade.graded_at.desc()).first()
+
+    grade_data = None
+    grading_status = None
+    grade_percentage = None
+    if grade and getattr(grade, 'grade_data', None):
+        try:
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            if isinstance(grade_data, dict):
+                grading_status = (grade_data.get('grading_status') or '').strip().lower() or None
+                grade_percentage = grade_data.get('percentage', None)
+        except Exception:
+            grade_data = None
+            grading_status = None
+            grade_percentage = None
     if assignment.status == 'Voided':
         flash("This assignment is no longer available.", "warning")
         return redirect(url_for('student.student_assignments'))
@@ -2376,8 +2394,12 @@ def take_quiz(assignment_id):
         is_active=True
     ).first()
     
-    # Allow access if assignment is active, or if student has an active reopening
-    if assignment.status not in ['Active', 'Inactive'] and not active_reopening:
+    # Allow access if the assignment is currently open for this student (date-aware),
+    # or if they have an active reopening override.
+    #
+    # Important: student dashboards use the effective lifecycle (open/close dates + overrides),
+    # so relying on the stored status field here can incorrectly block access.
+    if (not is_assignment_open_for_student(assignment, student.id)) and (not active_reopening):
         flash("This assignment is no longer available.", "danger")
         return redirect(url_for('student.student_assignments'))
     
@@ -2448,6 +2470,8 @@ def take_quiz(assignment_id):
         joinedload(QuizQuestion.section),
         joinedload(QuizQuestion.options)
     ).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+
+    has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in questions)
     
     # Shuffle questions only on retake if enabled
     # Reshuffle is only for retakes, not for initial attempts
@@ -2479,6 +2503,10 @@ def take_quiz(assignment_id):
                          questions=questions,
                          submission=submission,
                          grade=grade,
+                         grade_data=grade_data,
+                         grading_status=grading_status,
+                         grade_percentage=grade_percentage,
+                         has_open_ended_questions=has_open_ended_questions,
                          student=student,
                          existing_answers=existing_answers,
                          quiz_options_by_question=quiz_options_by_question,
@@ -2644,6 +2672,7 @@ def submit_quiz(assignment_id):
         questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
         total_points = 0
         earned_points = 0
+        has_open_ended = False
         
         # Process each question
         for question in questions:
@@ -2676,6 +2705,7 @@ def submit_quiz(assignment_id):
                 # Get text answer
                 answer_text = request.form.get(f'question_{question.id}', '')
                 points_earned = 0  # Manual grading required for text answers
+                has_open_ended = True
                 
                 # Save answer
                 answer = QuizAnswer(
@@ -2707,7 +2737,8 @@ def submit_quiz(assignment_id):
             'max_score': total_points,
             'percentage': round(grade_percentage, 2),
             'feedback': f"Auto-graded quiz: {earned_points}/{total_points} points",
-            'graded_at': datetime.now().isoformat()
+            'graded_at': datetime.now().isoformat(),
+            'grading_status': 'pending' if has_open_ended else 'final',
         }
         # Keep the latest attempt as the authoritative grade (do NOT keep "highest" as final).
         # If older grade rows exist from previous attempts, update the newest and remove the rest.

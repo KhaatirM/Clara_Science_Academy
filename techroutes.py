@@ -14,7 +14,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, SystemConfig, StudentDevice
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, SystemConfig, StudentDevice, AdminAuditLog
 from scripts.gpa_scheduler import calculate_student_gpa
 from copy import copy
 
@@ -36,6 +36,145 @@ def get_user_activity_log():
 from werkzeug.security import generate_password_hash
 
 tech_blueprint = Blueprint('tech', __name__)
+
+
+def _parse_dt_ymd(s):
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s.strip(), '%Y-%m-%d')
+    except Exception:
+        return None
+
+
+@tech_blueprint.route('/audit-logs')
+@login_required
+@tech_required
+def audit_logs():
+    """View management audit logs (Tech-only)."""
+    q = (request.args.get('q') or '').strip()
+    method = (request.args.get('method') or '').strip().upper()
+    status = request.args.get('status', '').strip()
+    user_id = request.args.get('user_id', '').strip()
+    start = _parse_dt_ymd(request.args.get('start'))
+    end = _parse_dt_ymd(request.args.get('end'))
+
+    page = request.args.get('page', type=int) or 1
+    per_page = min(200, max(20, request.args.get('per_page', type=int) or 50))
+
+    qry = AdminAuditLog.query
+    if start:
+        qry = qry.filter(AdminAuditLog.created_at >= start)
+    if end:
+        qry = qry.filter(AdminAuditLog.created_at < (end + timedelta(days=1)))
+    if method:
+        qry = qry.filter(AdminAuditLog.method == method)
+    if status.isdigit():
+        qry = qry.filter(AdminAuditLog.status_code == int(status))
+    if user_id.isdigit():
+        qry = qry.filter(AdminAuditLog.user_id == int(user_id))
+    if q:
+        like = f"%{q}%"
+        qry = qry.filter(
+            or_(
+                AdminAuditLog.path.ilike(like),
+                AdminAuditLog.endpoint.ilike(like),
+                AdminAuditLog.user_role.ilike(like),
+                AdminAuditLog.ip_address.ilike(like),
+            )
+        )
+
+    qry = qry.order_by(AdminAuditLog.created_at.desc())
+    pagination = qry.paginate(page=page, per_page=per_page, error_out=False)
+
+    user_options = []
+    for u in User.query.order_by(User.username.asc()).all():
+        user_options.append({'id': u.id, 'label': f"{u.username} ({u.role})"})
+
+    return render_template(
+        'tech/admin_audit_logs.html',
+        logs=pagination.items,
+        pagination=pagination,
+        q=q,
+        method=method,
+        status=status,
+        user_id=user_id,
+        start=request.args.get('start', ''),
+        end=request.args.get('end', ''),
+        per_page=per_page,
+        user_options=user_options,
+    )
+
+
+@tech_blueprint.route('/audit-logs/export.csv')
+@login_required
+@tech_required
+def export_audit_logs_csv():
+    """Export filtered audit logs to CSV (Tech-only)."""
+    q = (request.args.get('q') or '').strip()
+    method = (request.args.get('method') or '').strip().upper()
+    status = request.args.get('status', '').strip()
+    user_id = request.args.get('user_id', '').strip()
+    start = _parse_dt_ymd(request.args.get('start'))
+    end = _parse_dt_ymd(request.args.get('end'))
+
+    qry = AdminAuditLog.query
+    if start:
+        qry = qry.filter(AdminAuditLog.created_at >= start)
+    if end:
+        qry = qry.filter(AdminAuditLog.created_at < (end + timedelta(days=1)))
+    if method:
+        qry = qry.filter(AdminAuditLog.method == method)
+    if status.isdigit():
+        qry = qry.filter(AdminAuditLog.status_code == int(status))
+    if user_id.isdigit():
+        qry = qry.filter(AdminAuditLog.user_id == int(user_id))
+    if q:
+        like = f"%{q}%"
+        qry = qry.filter(
+            or_(
+                AdminAuditLog.path.ilike(like),
+                AdminAuditLog.endpoint.ilike(like),
+                AdminAuditLog.user_role.ilike(like),
+                AdminAuditLog.ip_address.ilike(like),
+            )
+        )
+
+    qry = qry.order_by(AdminAuditLog.created_at.desc()).limit(20000)
+    rows = qry.all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        'created_at', 'user_id', 'user_role', 'teacher_staff_id',
+        'method', 'status_code', 'duration_ms', 'endpoint', 'path',
+        'ip_address', 'user_agent',
+        'query_params', 'form_data', 'json_data',
+    ])
+    for r in rows:
+        writer.writerow([
+            r.created_at.isoformat() if r.created_at else '',
+            r.user_id or '',
+            r.user_role or '',
+            r.teacher_staff_id or '',
+            r.method or '',
+            r.status_code or '',
+            r.duration_ms or '',
+            r.endpoint or '',
+            r.path or '',
+            r.ip_address or '',
+            r.user_agent or '',
+            r.query_params or '',
+            r.form_data or '',
+            r.json_data or '',
+        ])
+
+    out = buf.getvalue().encode('utf-8')
+    return Response(
+        out,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=admin_audit_logs.csv'},
+    )
 
 @tech_blueprint.route('/dashboard')
 @login_required

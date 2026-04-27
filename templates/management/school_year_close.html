@@ -1,0 +1,46 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid py-4" style="max-width: 720px;">
+  <h2 class="mb-2"><i class="bi bi-archive me-2"></i>Close school year</h2>
+  <p class="text-muted mb-4">
+    This runs <strong>end-of-year report cards</strong> (official, Q1–Q4, with attendance and comments)
+    for every <strong>current</strong> student who has an <strong>active enrollment</strong> in the year you select,
+    then <strong>archives</strong> that year: assignments for those classes are set to Inactive (Voided items stay Voided),
+    enrollments are deactivated, classes are marked inactive, and the school year is marked inactive.
+    Grades and report card records remain in the database for transcripts.
+  </p>
+
+  <div class="alert alert-warning">
+    <strong>Irreversible workflow.</strong> Create your next school year and classes before or after running this.
+    Directors and School Administrators only.
+  </div>
+
+  <form method="post" class="card shadow-sm border-0">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="school_year_id" class="form-label fw-semibold">School year to close</label>
+        <select name="school_year_id" id="school_year_id" class="form-select" required>
+          <option value="">Choose…</option>
+          {% for sy in school_years %}
+          <option value="{{ sy.id }}">{{ sy.name }}{% if sy.is_active %} (currently active){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="confirm" class="form-label fw-semibold">Confirmation</label>
+        <input type="text" class="form-control" name="confirm" id="confirm" autocomplete="off"
+               placeholder="Type CLOSE YEAR" required>
+        <div class="form-text">Type <code>CLOSE YEAR</code> in capital letters to proceed.</div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-danger">
+          <i class="bi bi-check2-circle me-1"></i>Run close &amp; archive
+        </button>
+        <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

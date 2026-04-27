@@ -109,34 +109,59 @@
             </div>
 
             {% if grade %}
-                <!-- Already Graded Section -->
+                {% set is_pending = (grading_status == 'pending') %}
+                <!-- Grade / Pending Section -->
                 <div class="card border-0 shadow-lg mb-4" style="border-radius: 1rem; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; padding: 2rem;">
+                    <div class="card-header text-white" style="background: {% if is_pending %}linear-gradient(135deg, #f59e0b 0%, #f97316 100%){% else %}linear-gradient(135deg, #28a745 0%, #20c997 100%){% endif %}; border: none; padding: 2rem;">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                             <h4 class="mb-0" style="font-weight: 700; font-size: 1.75rem;">
-                                <i class="bi bi-check-circle-fill me-3"></i>Quiz Completed and Graded
+                                {% if is_pending %}
+                                    <i class="bi bi-hourglass-split me-3"></i>Quiz Submitted (Grade Pending)
+                                {% else %}
+                                    <i class="bi bi-check-circle-fill me-3"></i>Quiz Completed and Graded
+                                {% endif %}
                             </h4>
                             <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 1rem; border: 1px solid rgba(255,255,255,0.3);">
-                                <i class="bi bi-trophy-fill me-1"></i>Graded
+                                {% if is_pending %}
+                                    <i class="bi bi-hourglass-split me-1"></i>Pending
+                                {% else %}
+                                    <i class="bi bi-trophy-fill me-1"></i>Graded
+                                {% endif %}
                             </span>
                         </div>
                     </div>
                     <div class="card-body p-4" style="background: white;">
                         <!-- Grade Display Card -->
-                        <div class="alert border-0 shadow-sm mb-4" style="border-radius: 1rem; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-left: 4px solid #28a745;">
+                        <div class="alert border-0 shadow-sm mb-4" style="border-radius: 1rem; background: {% if is_pending %}linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%){% else %}linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%){% endif %}; border-left: 4px solid {% if is_pending %}#f59e0b{% else %}#28a745{% endif %};">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                                 <div>
-                                    <h3 class="mb-2 fw-bold" style="color: #155724; font-size: 2rem;">
-                                        <i class="bi bi-star-fill me-2"></i>Your Grade: {{ grade.grade_percentage }}%
+                                    <h3 class="mb-2 fw-bold" style="color: {% if is_pending %}#92400e{% else %}#155724{% endif %}; font-size: 2rem;">
+                                        {% if is_pending %}
+                                            <i class="bi bi-hourglass-split me-2"></i>Grade Pending
+                                        {% else %}
+                                            <i class="bi bi-star-fill me-2"></i>Your Grade: {{ grade_percentage }}%
+                                        {% endif %}
                                     </h3>
-                                    <p class="mb-0" style="color: #155724; opacity: 0.8;">This quiz has been graded.{% if show_correct_answers %} Review your answers below.{% endif %}</p>
+                                    <p class="mb-0" style="color: {% if is_pending %}#92400e{% else %}#155724{% endif %}; opacity: 0.85;">
+                                        {% if is_pending %}
+                                            This quiz includes short answer/essay questions that require manual grading. Your teacher will finalize your score soon.
+                                        {% else %}
+                                            This quiz has been graded.{% if show_correct_answers %} Review your answers below.{% endif %}
+                                        {% endif %}
+                                    </p>
                                 </div>
                                 <div class="text-center">
                                     {% set correct_count = existing_answers.values()|selectattr('is_correct', 'equalto', True)|list|length %}
                                     {% set total_questions = questions|length %}
-                                    <div class="badge px-4 py-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; font-size: 1.1rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
-                                        <i class="bi bi-check-circle me-2"></i>{{ correct_count }} / {{ total_questions }} Correct
-                                    </div>
+                                    {% if not is_pending %}
+                                        <div class="badge px-4 py-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; font-size: 1.1rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                                            <i class="bi bi-check-circle me-2"></i>{{ correct_count }} / {{ total_questions }} Correct
+                                        </div>
+                                    {% else %}
+                                        <div class="badge px-4 py-3" style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; font-size: 1.05rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                                            <i class="bi bi-info-circle me-2"></i>Auto-graded so far: {{ grade_data.get('points_earned', 0) }} / {{ grade_data.get('total_points', 0) }}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

@@ -5,10 +5,21 @@ Administration routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, User
+from models import db, User, AdminAuditLog, TeacherStaff
+from datetime import datetime, timedelta
+import json
 
 
 bp = Blueprint('administration', __name__)
+
+
+def _parse_dt_ymd(s):
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s.strip(), '%Y-%m-%d')
+    except Exception:
+        return None
 
 
 # ============================================================

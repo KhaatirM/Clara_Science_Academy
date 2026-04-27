@@ -5,10 +5,27 @@ Teachers routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay
+from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay, Assignment, Attendance, Submission, GroupGrade, Class, Student
 from werkzeug.security import generate_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+
+
+def _parse_dt_ymd(s):
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s.strip(), '%Y-%m-%d')
+    except Exception:
+        return None
+
+
+def _filter_by_date_range(qry, col, start_dt, end_dt):
+    if start_dt:
+        qry = qry.filter(col >= start_dt)
+    if end_dt:
+        qry = qry.filter(col < (end_dt + timedelta(days=1)))
+    return qry
 
 
 bp = Blueprint('teachers', __name__)
@@ -433,6 +450,36 @@ def remove_teacher_staff(staff_id):
         return redirect(url_for('management.teachers'))
     
     try:
+        # If this staff member is assigned as primary teacher for any class,
+        # reassign those classes to a placeholder so class workflows keep working.
+        from models import Class
+        placeholder_email = 'unassigned.teacher@clarascienceacademy.org'
+        placeholder = TeacherStaff.query.filter_by(email=placeholder_email).first()
+        if not placeholder:
+            placeholder = TeacherStaff(
+                first_name='Unassigned',
+                last_name='Teacher',
+                email=placeholder_email,
+                assigned_role='Unassigned (system)',
+                employment_status='Inactive',
+                is_deleted=True,
+            )
+            db.session.add(placeholder)
+            db.session.flush()
+
+        # Move primary-teacher classes away from the removed account.
+        primary_classes = Class.query.filter_by(teacher_id=staff_id).all()
+        for c in primary_classes:
+            c.teacher_id = placeholder.id
+
+        # Remove from additional/substitute teacher mappings to avoid showing deleted staff in class rosters.
+        try:
+            from models import class_additional_teachers, class_substitute_teachers
+            db.session.execute(class_additional_teachers.delete().where(class_additional_teachers.c.teacher_id == staff_id))
+            db.session.execute(class_substitute_teachers.delete().where(class_substitute_teachers.c.teacher_id == staff_id))
+        except Exception:
+            pass
+
         # Soft delete: Mark teacher as deleted instead of actually deleting
         teacher_staff.is_deleted = True
         teacher_staff.deleted_at = datetime.utcnow()
@@ -1009,6 +1056,137 @@ def view_teacher(teacher_id):
         current_app.logger.error(f"Error serializing teacher data {teacher_id}: {str(e)}")
         return jsonify({'error': 'Could not load teacher/staff details.'}), 500
 
+
+@bp.route('/staff-activity-record/<int:teacher_id>')
+@login_required
+@management_required
+def staff_activity_record(teacher_id):
+    """
+    Print-friendly activity record for a staff member.
+    Includes: assignments created, attendance taken, manual submission marks, group grades given.
+    """
+    if current_user.role not in ['Director', 'School Administrator']:
+        abort(403)
+
+    teacher = TeacherStaff.query.get_or_404(teacher_id)
+
+    start = _parse_dt_ymd(request.args.get('start'))
+    end = _parse_dt_ymd(request.args.get('end'))
+    if not start and not end:
+        # default: last 180 days
+        end = datetime.utcnow()
+        start = end - timedelta(days=180)
+
+    # Assignments created: handle both normal created_by(User.id) and historical created_by(TeacherStaff.id).
+    user_ids = [u.id for u in User.query.filter_by(teacher_staff_id=teacher_id).all()]
+    created_assignments_q = Assignment.query
+    if user_ids:
+        created_assignments_q = created_assignments_q.filter(
+            db.or_(Assignment.created_by.in_(user_ids), Assignment.created_by == teacher_id)
+        )
+    else:
+        created_assignments_q = created_assignments_q.filter(Assignment.created_by == teacher_id)
+    created_assignments_q = _filter_by_date_range(created_assignments_q, Assignment.created_at, start, end)
+    created_assignments = created_assignments_q.order_by(Assignment.created_at.desc()).limit(5000).all()
+
+    # Attendance taken (per-student class attendance)
+    attendance_q = Attendance.query.filter(Attendance.teacher_id == teacher_id)
+    attendance_q = _filter_by_date_range(attendance_q, Attendance.created_at, start, end)
+    attendance_records = attendance_q.order_by(Attendance.created_at.desc()).limit(5000).all()
+
+    # Manual submission marks
+    marked_submissions_q = Submission.query.filter(Submission.marked_by == teacher_id)
+    marked_submissions_q = _filter_by_date_range(marked_submissions_q, Submission.marked_at, start, end)
+    marked_submissions = marked_submissions_q.order_by(Submission.marked_at.desc()).limit(5000).all()
+
+    # Group grades given
+    group_grades_q = GroupGrade.query.filter(GroupGrade.graded_by == teacher_id)
+    group_grades_q = _filter_by_date_range(group_grades_q, GroupGrade.graded_at, start, end)
+    group_grades = group_grades_q.order_by(GroupGrade.graded_at.desc()).limit(5000).all()
+
+    return render_template(
+        'management/staff_activity_record.html',
+        teacher=teacher,
+        start=start.date().isoformat() if start else '',
+        end=end.date().isoformat() if end else '',
+        created_assignments=created_assignments,
+        attendance_records=attendance_records,
+        marked_submissions=marked_submissions,
+        group_grades=group_grades,
+    )
+
+
+@bp.route('/staff-activity-record/<int:teacher_id>/export.csv')
+@login_required
+@management_required
+def export_staff_activity_record_csv(teacher_id):
+    """CSV export for the staff activity record."""
+    if current_user.role not in ['Director', 'School Administrator']:
+        abort(403)
+
+    teacher = TeacherStaff.query.get_or_404(teacher_id)
+    start = _parse_dt_ymd(request.args.get('start'))
+    end = _parse_dt_ymd(request.args.get('end'))
+    if not start and not end:
+        end = datetime.utcnow()
+        start = end - timedelta(days=180)
+
+    user_ids = [u.id for u in User.query.filter_by(teacher_staff_id=teacher_id).all()]
+    created_assignments_q = Assignment.query
+    if user_ids:
+        created_assignments_q = created_assignments_q.filter(
+            db.or_(Assignment.created_by.in_(user_ids), Assignment.created_by == teacher_id)
+        )
+    else:
+        created_assignments_q = created_assignments_q.filter(Assignment.created_by == teacher_id)
+    created_assignments_q = _filter_by_date_range(created_assignments_q, Assignment.created_at, start, end)
+    created_assignments = created_assignments_q.order_by(Assignment.created_at.desc()).limit(20000).all()
+
+    attendance_q = Attendance.query.filter(Attendance.teacher_id == teacher_id)
+    attendance_q = _filter_by_date_range(attendance_q, Attendance.created_at, start, end)
+    attendance_records = attendance_q.order_by(Attendance.created_at.desc()).limit(20000).all()
+
+    marked_submissions_q = Submission.query.filter(Submission.marked_by == teacher_id)
+    marked_submissions_q = _filter_by_date_range(marked_submissions_q, Submission.marked_at, start, end)
+    marked_submissions = marked_submissions_q.order_by(Submission.marked_at.desc()).limit(20000).all()
+
+    group_grades_q = GroupGrade.query.filter(GroupGrade.graded_by == teacher_id)
+    group_grades_q = _filter_by_date_range(group_grades_q, GroupGrade.graded_at, start, end)
+    group_grades = group_grades_q.order_by(GroupGrade.graded_at.desc()).limit(20000).all()
+
+    import csv
+    import io
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['SECTION', 'timestamp', 'class', 'item', 'details'])
+
+    for a in created_assignments:
+        cls = a.class_info.name if a.class_info else ''
+        w.writerow(['assignment_created', a.created_at.isoformat() if a.created_at else '', cls, a.title, a.assignment_type])
+
+    for r in attendance_records:
+        cls = r.class_info.name if r.class_info else ''
+        stu = f"{r.student.first_name} {r.student.last_name}" if r.student else ''
+        w.writerow(['attendance_taken', r.created_at.isoformat() if r.created_at else '', cls, stu, f"{r.date} {r.status}"])
+
+    for s in marked_submissions:
+        cls = s.assignment.class_info.name if s.assignment and s.assignment.class_info else ''
+        item = s.assignment.title if s.assignment else f"assignment_id={s.assignment_id}"
+        w.writerow(['submission_marked', s.marked_at.isoformat() if s.marked_at else '', cls, item, f"{s.submission_type} {s.submission_notes or ''}"])
+
+    for g in group_grades:
+        cls = g.group_assignment.class_info.name if g.group_assignment and g.group_assignment.class_info else ''
+        item = g.group_assignment.title if g.group_assignment else f"group_assignment_id={g.group_assignment_id}"
+        stu = f"{g.student.first_name} {g.student.last_name}" if g.student else f"student_id={g.student_id}"
+        w.writerow(['group_grade_given', g.graded_at.isoformat() if g.graded_at else '', cls, item, stu])
+
+    out = buf.getvalue().encode('utf-8')
+    return Response(
+        out,
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename=staff_activity_{teacher.id}.csv'},
+    )
 
 
 # ============================================================

@@ -5,12 +5,112 @@ This package contains all management-related routes organized by functional area
 Each module focuses on a specific aspect of management functionality.
 """
 
-from flask import Blueprint, redirect, url_for, request
+from flask import Blueprint, redirect, url_for, request, g
 from flask_login import login_required
 from decorators import management_required, permissions_required
 
 # Create the main management blueprint
 management_blueprint = Blueprint('management', __name__)
+
+
+def _audit_sanitize_mapping(d):
+    """Remove sensitive/noisy fields before storing in audit log."""
+    if not isinstance(d, dict):
+        return {}
+    redacted = {}
+    sensitive_keys = {'password', 'new_password', 'confirm_password', 'csrf_token'}
+    for k, v in d.items():
+        if k in sensitive_keys:
+            redacted[k] = '[REDACTED]'
+        else:
+            # avoid storing huge payloads
+            sv = str(v)
+            redacted[k] = sv if len(sv) <= 2000 else (sv[:2000] + '…')
+    return redacted
+
+
+@management_blueprint.before_app_request
+def _audit_before_request():
+    # Only track management URLs; keep overhead low elsewhere.
+    try:
+        if not request.path.startswith('/management'):
+            return
+        g._audit_started_at = __import__('time').time()
+    except Exception:
+        return
+
+
+@management_blueprint.after_app_request
+def _audit_after_request(response):
+    # Log privileged access for management URLs only.
+    try:
+        if not request.path.startswith('/management'):
+            return response
+
+        # Avoid logging static content.
+        if request.endpoint and (request.endpoint.endswith('static') or '.static' in request.endpoint):
+            return response
+
+        from flask_login import current_user
+        from models import db, AdminAuditLog
+        import json
+        import time
+
+        started = getattr(g, '_audit_started_at', None)
+        duration_ms = int((time.time() - started) * 1000) if started else None
+
+        user_id = current_user.id if getattr(current_user, 'is_authenticated', False) else None
+        role = getattr(current_user, 'role', None) if user_id else None
+        teacher_staff_id = getattr(current_user, 'teacher_staff_id', None) if user_id else None
+
+        # Query params
+        qp = _audit_sanitize_mapping(dict(request.args))
+
+        # Form data (ignore for file uploads)
+        form_data = None
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            if request.mimetype and request.mimetype.startswith('multipart/'):
+                form_data = {'_multipart': True, '_keys': list(request.form.keys())[:200]}
+            else:
+                # request.form can have list values; flatten by first item for readability
+                flattened = {}
+                for k in request.form.keys():
+                    vals = request.form.getlist(k)
+                    flattened[k] = vals if len(vals) > 1 else (vals[0] if vals else '')
+                form_data = _audit_sanitize_mapping(flattened)
+
+        json_body = None
+        if request.is_json:
+            try:
+                json_body = request.get_json(silent=True)
+                if isinstance(json_body, dict):
+                    json_body = _audit_sanitize_mapping(json_body)
+            except Exception:
+                json_body = None
+
+        log = AdminAuditLog(
+            user_id=user_id,
+            user_role=role,
+            teacher_staff_id=teacher_staff_id,
+            method=request.method,
+            endpoint=request.endpoint,
+            path=request.path,
+            status_code=getattr(response, 'status_code', None),
+            duration_ms=duration_ms,
+            ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+            user_agent=(request.headers.get('User-Agent') or '')[:500],
+            query_params=json.dumps(qp) if qp else None,
+            form_data=json.dumps(form_data) if form_data else None,
+            json_data=json.dumps(json_body) if json_body else None,
+        )
+        db.session.add(log)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return response
+    except Exception:
+        return response
 
 # Import all route modules to register their routes
 from . import (
@@ -62,7 +162,9 @@ from .teachers import (
     delete_teacher_work_day as delete_teacher_work_day_func,
     edit_teacher_staff as edit_teacher_staff_func,
     remove_teacher_staff as remove_teacher_staff_func,
-    view_teacher as view_teacher_func
+    view_teacher as view_teacher_func,
+    staff_activity_record as staff_activity_record_func,
+    export_staff_activity_record_csv as export_staff_activity_record_csv_func,
 )
 from .classes import (
     classes as classes_func, 
@@ -120,7 +222,7 @@ from .assignments import (
     export_quiz_to_google_forms as export_quiz_to_google_forms_func
 )
 from .attendance import unified_attendance as unified_attendance_func, attendance_reports as attendance_reports_func, attendance_analytics as attendance_analytics_func
-from .reports import report_cards as report_cards_func, generate_report_card_form as generate_report_card_form_func, report_cards_by_category as report_cards_by_category_func, view_report_card as view_report_card_func, generate_report_card_pdf as generate_report_card_pdf_func, delete_report_card as delete_report_card_func
+from .reports import report_cards as report_cards_func, generate_report_card_form as generate_report_card_form_func, report_cards_by_category as report_cards_by_category_func, view_report_card as view_report_card_func, generate_report_card_pdf as generate_report_card_pdf_func, delete_report_card as delete_report_card_func, close_school_year as close_school_year_func
 from .communications import (
     communications as communications_func,
     management_messages as management_messages_func,
@@ -143,7 +245,7 @@ from .administration import (
     google_disconnect_account as google_disconnect_account_func,
     edit_school_year as edit_school_year_func,
     edit_academic_period as edit_academic_period_func,
-    edit_active_school_year as edit_active_school_year_func
+    edit_active_school_year as edit_active_school_year_func,
 )
 
 # Register main routes on main blueprint with correct endpoint names for backward compatibility
@@ -201,6 +303,7 @@ def assignments_and_grades_route():
     """Assignments and grades route - delegates to assignments module"""
     return assignments_and_grades_func()
 
+
 @management_blueprint.route('/unified-attendance', endpoint='unified_attendance')
 @login_required
 @permissions_required('attendance:manage')
@@ -214,6 +317,13 @@ def unified_attendance_route():
 def report_cards_route():
     """Report cards route - delegates to reports module"""
     return report_cards_func()
+
+@management_blueprint.route('/school-year/close', methods=['GET', 'POST'], endpoint='close_school_year')
+@login_required
+@management_required
+def close_school_year_route():
+    """End-of-year archive and bulk report cards"""
+    return close_school_year_func()
 
 @management_blueprint.route('/billing', endpoint='billing')
 @login_required
@@ -768,6 +878,20 @@ def remove_teacher_staff_route(staff_id):
 def view_teacher_route(teacher_id):
     """View teacher staff route - delegates to teachers module"""
     return view_teacher_func(teacher_id)
+
+
+@management_blueprint.route('/staff-activity-record/<int:teacher_id>', endpoint='staff_activity_record')
+@login_required
+@management_required
+def staff_activity_record_route(teacher_id):
+    return staff_activity_record_func(teacher_id)
+
+
+@management_blueprint.route('/staff-activity-record/<int:teacher_id>/export.csv', endpoint='export_staff_activity_record_csv')
+@login_required
+@management_required
+def export_staff_activity_record_csv_route(teacher_id):
+    return export_staff_activity_record_csv_func(teacher_id)
 
 # Add aliases for group assignment admin routes
 @management_blueprint.route('/group-assignment/<int:assignment_id>/view', endpoint='admin_view_group_assignment')

@@ -132,6 +132,13 @@ class Student(db.Model):
     # GPA field
     gpa = db.Column(db.Float, default=0.0)
 
+    # Deletion tracking (soft delete, like TeacherStaff)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    marked_for_removal = db.Column(db.Boolean, default=False, nullable=False)
+    removal_note = db.Column(db.Text, nullable=True)
+    status_updated_at = db.Column(db.DateTime, nullable=True)
+
     # Relationship to the User model
     user = db.relationship('User', backref='student_profile', uselist=False)
     
@@ -1071,6 +1078,41 @@ class GradeHistory(db.Model):
     
     def __repr__(self):
         return f"GradeHistory(Grade: {self.grade_id}, Changed: {self.changed_at})"
+
+
+class AdminAuditLog(db.Model):
+    """
+    Append-only audit log for privileged (management/admin) access.
+    Records who accessed what, when, and basic request metadata.
+    """
+    __tablename__ = 'admin_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_role = db.Column(db.String(64), nullable=True)
+    teacher_staff_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+
+    method = db.Column(db.String(10), nullable=False)
+    endpoint = db.Column(db.String(200), nullable=True)
+    path = db.Column(db.String(500), nullable=False)
+    status_code = db.Column(db.Integer, nullable=True)
+    duration_ms = db.Column(db.Integer, nullable=True)
+
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(500), nullable=True)
+
+    # JSON blobs (stored as text) so schema stays stable as routes evolve.
+    query_params = db.Column(db.Text, nullable=True)
+    form_data = db.Column(db.Text, nullable=True)
+    json_data = db.Column(db.Text, nullable=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], lazy=True)
+    teacher_staff = db.relationship('TeacherStaff', foreign_keys=[teacher_staff_id], lazy=True)
+
+    def __repr__(self):
+        return f"AdminAuditLog(user={self.user_id}, {self.method} {self.path}, {self.status_code})"
 
 
 class AssignmentRedo(db.Model):

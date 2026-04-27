@@ -23,7 +23,11 @@ except ImportError:
 import json
 from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
 from teacher_routes.assignment_utils import is_assignment_open_for_student
-from utils.grade_helpers import get_points_earned
+from utils.grade_helpers import (
+    get_points_earned,
+    requires_explicit_submission_for_file_assignment,
+    submission_record_confirmed_for_grading,
+)
 from utils.school_timezone import get_school_timezone_name
 
 bp = Blueprint('assignments', __name__)
@@ -1075,6 +1079,8 @@ def assignments_and_grades():
                     
                     # Check if quiz is auto-gradeable (all questions are multiple_choice or true_false)
                     is_autogradeable = False
+                    has_open_ended_questions = False
+                    pending_manual_grading = 0
                     if assignment.assignment_type == 'quiz':
                         from models import QuizQuestion
                         quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
@@ -1082,6 +1088,46 @@ def assignments_and_grades():
                             # Check if all questions are auto-gradeable
                             auto_gradeable_types = ['multiple_choice', 'true_false']
                             is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
+                            has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
+
+                        # If quiz has open-ended questions, treat submissions as needing grading until
+                        # those open-ended answers are graded (is_correct is no longer None).
+                        if has_open_ended_questions and total_submissions > 0:
+                            try:
+                                from models import QuizAnswer, QuizQuestion as QQ, Submission as Sub
+                                from sqlalchemy import distinct
+                                # Students who have submitted this quiz
+                                submitted_student_ids = [
+                                    r[0]
+                                    for r in (
+                                        db.session.query(distinct(Sub.student_id))
+                                        .filter(Sub.assignment_id == assignment.id, Sub.submission_type != 'not_submitted')
+                                        .all()
+                                    )
+                                ]
+                                if submitted_student_ids:
+                                    open_q_ids = [
+                                        q.id for q in quiz_questions
+                                        if q.question_type in ['short_answer', 'essay']
+                                    ]
+                                    if open_q_ids:
+                                        pending_student_ids = [
+                                            r[0]
+                                            for r in (
+                                                db.session.query(distinct(QuizAnswer.student_id))
+                                                .join(QQ, QuizAnswer.question_id == QQ.id)
+                                                .filter(
+                                                    QQ.assignment_id == assignment.id,
+                                                    QuizAnswer.student_id.in_(submitted_student_ids),
+                                                    QuizAnswer.question_id.in_(open_q_ids),
+                                                    QuizAnswer.is_correct.is_(None),
+                                                )
+                                                .all()
+                                            )
+                                        ]
+                                        pending_manual_grading = len(pending_student_ids)
+                            except Exception:
+                                pending_manual_grading = 0
                     
                     total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
                     avg_pct = round((total_score / len(graded_grades) / total_points * 100), 1) if graded_grades and total_points > 0 else 0
@@ -1109,6 +1155,8 @@ def assignments_and_grades():
                         'average_score': avg_pct,
                         'type': 'individual',
                         'is_autogradeable': is_autogradeable,
+                        'has_open_ended_questions': has_open_ended_questions,
+                        'pending_manual_grading': pending_manual_grading,
                         'all_voided': all_voided,
                         'partially_voided': partially_voided,
                         'voided_count': voided_count,
@@ -1937,6 +1985,9 @@ def _save_single_student_grade(assignment_id, student_id):
         return False, 'Invalid score'
 
     sub_for_adjustments = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+    if requires_explicit_submission_for_file_assignment(assignment) and not submission_record_confirmed_for_grading(sub_for_adjustments):
+        return False, 'Set submission to Online or In-Person before entering a grade.'
+
     adjusted = _apply_assignment_adjustments(
         assignment=assignment,
         entered_points=points_earned,
@@ -1969,15 +2020,16 @@ def _save_single_student_grade(assignment_id, student_id):
             late_penalty_applied=adjusted['late_penalty_applied']
         )
         db.session.add(grade)
-        sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-        if not sub and adjusted['points_earned'] > 0:
-            sub = Submission(
-                student_id=student_id, assignment_id=assignment_id,
-                submission_type='in_person', submission_notes='Auto-marked: grade entered',
-                marked_by=teacher.id if teacher else None,
-                marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
-            )
-            db.session.add(sub)
+        if not requires_explicit_submission_for_file_assignment(assignment):
+            sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+            if not sub and adjusted['points_earned'] > 0:
+                sub = Submission(
+                    student_id=student_id, assignment_id=assignment_id,
+                    submission_type='in_person', submission_notes='Auto-marked: grade entered',
+                    marked_by=teacher.id if teacher else None,
+                    marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
+                )
+                db.session.add(sub)
 
     db.session.commit()
     return True, 'Saved'
@@ -2078,6 +2130,96 @@ def grade_assignment(assignment_id):
                     teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
                 # Collect user IDs for grade-update digest (one notification per student after save)
                 graded_user_ids = []
+
+                # Quiz per-question grading (open-ended quizzes use teacher_grade_quiz.html form)
+                if assignment.assignment_type == 'quiz' and request.form.get('grading_mode') == 'per_question':
+                    quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+                    grades_saved = 0
+                    for student in students:
+                        existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student.id).first()
+                        if existing_grade and existing_grade.is_voided:
+                            continue
+
+                        sub = Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+                        # Prevent accidental mass "0" grades: only grade students who submitted (or already have a grade).
+                        if sub is None and existing_grade is None:
+                            continue
+
+                        earned_points = 0.0
+                        for question in quiz_questions:
+                            if question.question_type in ['short_answer', 'essay']:
+                                points_key = f'points_{student.id}_q{question.id}'
+                                raw_val = request.form.get(points_key, '')
+                                try:
+                                    q_points = float(raw_val) if str(raw_val).strip() != '' else 0.0
+                                except (ValueError, TypeError):
+                                    q_points = 0.0
+                                earned_points += q_points
+
+                                answer = QuizAnswer.query.filter_by(student_id=student.id, question_id=question.id).first()
+                                if answer:
+                                    answer.points_earned = q_points
+                                    answer.is_correct = (q_points == float(question.points))
+                            else:
+                                answer = QuizAnswer.query.filter_by(student_id=student.id, question_id=question.id).first()
+                                if answer:
+                                    earned_points += float(answer.points_earned or 0.0)
+
+                        comments = request.form.get(f'comment_{student.id}', '').strip()
+                        adjusted = _apply_assignment_adjustments(
+                            assignment=assignment,
+                            entered_points=earned_points,
+                            submission_record=sub,
+                            notes_type='On-Time'
+                        )
+                        grade_data_dict = {
+                            'score': adjusted['points_earned'],
+                            'points_earned': adjusted['points_earned'],
+                            'raw_points': adjusted['raw_points'],
+                            'extra_credit_points': adjusted['extra_credit_points'],
+                            'late_penalty_applied': adjusted['late_penalty_applied'],
+                            'days_late': adjusted['days_late'],
+                            'total_points': adjusted['total_points'],
+                            'max_score': adjusted['max_score'],
+                            'percentage': adjusted['percentage'],
+                            'comment': comments or '',
+                            'feedback': comments or '',
+                            'graded_at': datetime.utcnow().isoformat(),
+                            # Manual grading finalizes mixed-question quizzes.
+                            'grading_status': 'final',
+                        }
+                        grade_json = json.dumps(grade_data_dict)
+
+                        if existing_grade:
+                            existing_grade.grade_data = grade_json
+                            existing_grade.graded_at = datetime.utcnow()
+                            existing_grade.extra_credit_points = adjusted['extra_credit_points']
+                            existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
+                            from management_routes.late_enrollment_utils import check_and_void_grade
+                            check_and_void_grade(existing_grade)
+                        else:
+                            grade = Grade(
+                                student_id=student.id,
+                                assignment_id=assignment_id,
+                                grade_data=grade_json,
+                                graded_at=datetime.utcnow(),
+                                extra_credit_points=adjusted['extra_credit_points'],
+                                late_penalty_applied=adjusted['late_penalty_applied']
+                            )
+                            db.session.add(grade)
+
+                        grades_saved += 1
+
+                        # Track for notifications
+                        if getattr(student, 'user_id', None):
+                            graded_user_ids.append(student.user_id)
+
+                    db.session.commit()
+                    flash(f"Saved {grades_saved} quiz grades.", "success")
+                    return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
+
+                file_grade_requires_sub = requires_explicit_submission_for_file_assignment(assignment)
+                pdf_grade_skipped = 0
                 for student in students:
                     score = request.form.get(f'score_{student.id}')
                     comment = request.form.get(f'comment_{student.id}')
@@ -2122,11 +2264,22 @@ def grade_assignment(assignment_id):
                         assignment_id=assignment_id
                     ).first()
 
-                    # Always process grade - blank/empty means 0 and not submitted
-                    try:
-                        points_earned = float(score) if (score is not None and str(score).strip()) else 0.0
-                    except (ValueError, TypeError):
-                        points_earned = 0.0
+                    if file_grade_requires_sub:
+                        if score is None or str(score).strip() == '':
+                            continue
+                        if not submission_record_confirmed_for_grading(submission_for_adjustments):
+                            pdf_grade_skipped += 1
+                            continue
+                        try:
+                            points_earned = float(score)
+                        except (ValueError, TypeError):
+                            continue
+                    else:
+                        # Non-file: blank/empty score is treated as 0 (legacy behavior)
+                        try:
+                            points_earned = float(score) if (score is not None and str(score).strip()) else 0.0
+                        except (ValueError, TypeError):
+                            points_earned = 0.0
 
                     adjusted = _apply_assignment_adjustments(
                         assignment=assignment,
@@ -2213,8 +2366,8 @@ def grade_assignment(assignment_id):
                             grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
                         grade.grade_data = json.dumps(grade_data_dict)
 
-                    # Only auto-create in_person submission when score > 0 (blank = 0 and not submitted)
-                    if adjusted['points_earned'] > 0:
+                    # Auto-create in_person submission from points only for non-file assignments
+                    if adjusted['points_earned'] > 0 and not file_grade_requires_sub:
                         submission = Submission.query.filter_by(
                             student_id=student.id,
                             assignment_id=assignment_id
@@ -2243,6 +2396,12 @@ def grade_assignment(assignment_id):
                         graded_user_ids,
                         assignment_title=assignment.title,
                         link=url_for('student.student_grades')
+                    )
+                if pdf_grade_skipped:
+                    flash(
+                        f'{pdf_grade_skipped} student(s) skipped: for file/paper assignments, set submission to '
+                        'Online or In-Person before saving a score.',
+                        'warning',
                     )
                 flash('Grades updated successfully.', 'success')
                 return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
@@ -2639,35 +2798,6 @@ def sync_google_forms_submissions(assignment_id):
     return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
 
 
-
-
-# ============================================================
-# Route: /assignment/<int:assignment_id>/center
-# Function: assignment_command_center (tabbed hub - one page for View / Grade / Stats)
-# ============================================================
-
-@bp.route('/assignment/<int:assignment_id>/center')
-@login_required
-@management_required
-def assignment_command_center(assignment_id):
-    """Single command-center page for an assignment: Overview, Grade, Statistics in one place."""
-    assignment = Assignment.query.get_or_404(assignment_id)
-    class_info = assignment.class_info if assignment.class_id else None
-    submission_count = Submission.query.filter_by(assignment_id=assignment_id).filter(
-        Submission.submission_type != 'not_submitted'
-    ).count()
-    graded_count = Grade.query.filter_by(assignment_id=assignment_id).filter(
-        Grade.is_voided == False,
-        Grade.grade_data != None,
-        Grade.grade_data != ''
-    ).count()
-    return render_template(
-        'management/assignment_command_center.html',
-        assignment=assignment,
-        class_info=class_info,
-        submission_count=submission_count,
-        graded_count=graded_count,
-    )
 
 
 # ============================================================

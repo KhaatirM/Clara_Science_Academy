@@ -14,7 +14,7 @@ from models import (
 )
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from sqlalchemy import or_, and_, text
+from sqlalchemy import or_, and_, text, exists
 from datetime import datetime, timedelta, date
 import os
 import json
@@ -23,8 +23,73 @@ import io
 import uuid
 import random
 from .utils import allowed_file
+from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
 
 bp = Blueprint('students', __name__)
+
+STUDENTS_PER_PAGE = 40
+
+
+def _strip_student_user_account(student):
+    """Remove portal login only; keep Student row and academic history."""
+    if not getattr(student, 'user', None):
+        return
+    user = student.user
+    Notification.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    MessageGroupMember.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    db.session.delete(user)
+
+
+def _provision_student_login_if_needed(student):
+    """
+    Create a Student User for grade 4+ when missing. Caller commits.
+    Returns True if a new user was added to the session.
+    """
+    if not grade_may_have_login(student.grade_level):
+        return False
+    if getattr(student, 'is_deleted', False) or student.user:
+        return False
+    first_name = (student.first_name or '').strip()
+    last_name = (student.last_name or '').strip()
+    if not first_name or not last_name:
+        return False
+
+    first = first_name.lower().replace(' ', '').replace('-', '')
+    last = last_name.lower().replace(' ', '').replace('-', '')
+    generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
+    existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+    if existing_user:
+        counter = 2
+        while existing_user:
+            generated_workspace_email = f"{first}.{last}{counter}@clarascienceacademy.org"
+            existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+            counter += 1
+
+    if not student.email:
+        student.email = generated_workspace_email
+
+    base_username = f"{first_name[0].lower()}{last_name.lower()}"
+    username = base_username
+    counter = 1
+    while User.query.filter_by(username=username).first():
+        username = f"{base_username}{counter}"
+        counter += 1
+
+    dob = student.dob or ''
+    year = dob.split('-')[0] if '-' in dob else str(random.randint(2000, 2010))
+    password = f"{first_name.lower()}{year[-4:]}"
+
+    user = User()
+    user.username = username
+    user.password_hash = generate_password_hash(password)
+    user.role = 'Student'
+    user.student_id = student.id
+    user.email = student.email
+    user.google_workspace_email = generated_workspace_email
+    user.is_temporary_password = True
+    user.password_changed_at = None
+    db.session.add(user)
+    return True
 
 
 def _build_entrance_school_year_options(start_year=2020):
@@ -291,26 +356,30 @@ def add_student():
             if not email and generated_workspace_email:
                 student.email = generated_workspace_email
             
-            # Create user account
-            user = User()
-            user.username = username
-            user.password_hash = generate_password_hash(password)
-            user.role = 'Student'
-            user.student_id = student.id
-            user.email = student.email  # Set personal email from student record
-            user.google_workspace_email = generated_workspace_email  # Set generated workspace email
-            user.is_temporary_password = True  # New users must change password
-            user.password_changed_at = None
-            
-            db.session.add(user)
-            db.session.commit()
-            
-            # Show success message with credentials
-            success_msg = f'Student added successfully! Username: {username}, Password: {password}.'
-            if generated_workspace_email:
-                success_msg += f' Google Workspace Email: {generated_workspace_email}.'
-            success_msg += ' Student will be required to change password on first login.'
-            flash(success_msg, 'success')
+            if grade_may_have_login(grade_level):
+                user = User()
+                user.username = username
+                user.password_hash = generate_password_hash(password)
+                user.role = 'Student'
+                user.student_id = student.id
+                user.email = student.email
+                user.google_workspace_email = generated_workspace_email
+                user.is_temporary_password = True
+                user.password_changed_at = None
+                db.session.add(user)
+                db.session.commit()
+                success_msg = f'Student added successfully! Username: {username}, Password: {password}.'
+                if generated_workspace_email:
+                    success_msg += f' Google Workspace Email: {generated_workspace_email}.'
+                success_msg += ' Student will be required to change password on first login.'
+                flash(success_msg, 'success')
+            else:
+                db.session.commit()
+                flash(
+                    'Student added successfully. No portal account was created—students in 3rd grade and below '
+                    'receive login access when they reach 4th grade.',
+                    'success',
+                )
             return redirect(url_for('management.students'))
             
         except Exception as e:
@@ -479,11 +548,20 @@ def students():
     search_type = request.args.get('search_type', 'all')
     grade_filter = request.args.get('grade_level', '')
     status_filter = request.args.get('status', '')
+    alert_filter = request.args.get('alert_filter', '').strip()
     sort_by = request.args.get('sort', 'name')
     sort_order = request.args.get('order', 'asc')
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        page = 1
     
-    # Build the query
-    query = Student.query
+    # Build the query (exclude soft-deleted students by default, unless requested)
+    if status_filter == 'former':
+        query = Student.query.filter(Student.is_deleted == True)
+    elif status_filter == 'all':
+        query = Student.query
+    else:
+        query = Student.query.filter(Student.is_deleted == False)
     
     # Apply search filter if query exists
     if search_query:
@@ -554,13 +632,22 @@ def students():
     # Apply grade level filter
     if grade_filter:
         query = query.filter(Student.grade_level == int(grade_filter))
+
+    if alert_filter == 'critical':
+        query = query.filter(Student.gpa.isnot(None), Student.gpa < 2.0)
+    elif alert_filter == 'warning':
+        query = query.filter(Student.gpa.isnot(None), Student.gpa >= 2.0, Student.gpa < 3.0)
+    elif alert_filter == 'good':
+        query = query.filter(Student.gpa.isnot(None), Student.gpa >= 3.0)
     
-    # Apply status filter (account status)
-    if status_filter:
+    # Apply status filter (account status) — only has_account / no_account
+    # Use EXISTS on user.student_id; Student.user.isnot(None) breaks on SQLAlchemy 2.x.
+    _has_login = exists().where(User.student_id == Student.id)
+    if status_filter in ('has_account', 'no_account'):
         if status_filter == 'has_account':
-            query = query.filter(Student.user.isnot(None))
-        elif status_filter == 'no_account':
-            query = query.filter(Student.user.is_(None))
+            query = query.filter(_has_login)
+        else:
+            query = query.filter(~_has_login)
     
     # Apply sorting
     if sort_by == 'name':
@@ -583,29 +670,37 @@ def students():
             query = query.order_by(Student.gpa.desc(), Student.last_name, Student.first_name)
         else:
             query = query.order_by(Student.gpa, Student.last_name, Student.first_name)
+    elif sort_by == 'gpa_desc':
+        query = query.order_by(Student.gpa.desc(), Student.last_name, Student.first_name)
     else:
         # Default sorting
         query = query.order_by(Student.last_name, Student.first_name)
     
-    # Get all students
-    students = query.all()
-    
-    # Calculate additional stats for display
-    total_students = len(students)
-    students_with_accounts = len([s for s in students if s.user])
+    stats_query = query
+    total_students = stats_query.count()
+    students_with_accounts = stats_query.filter(
+        exists().where(User.student_id == Student.id)
+    ).count()
     students_without_accounts = total_students - students_with_accounts
+    high_gpa_count = stats_query.filter(Student.gpa.isnot(None), Student.gpa >= 3.5).count()
+
+    pagination = query.paginate(page=page, per_page=STUDENTS_PER_PAGE, error_out=False)
+    students = pagination.items
     
     return render_template('management/role_dashboard.html', 
                          students=students,
+                         pagination=pagination,
                          search_query=search_query,
                          search_type=search_type,
                          grade_filter=grade_filter,
                          status_filter=status_filter,
+                         alert_filter=alert_filter,
                          sort_by=sort_by,
                          sort_order=sort_order,
                          total_students=total_students,
                          students_with_accounts=students_with_accounts,
                          students_without_accounts=students_without_accounts,
+                         high_gpa_count=high_gpa_count,
                          section='students',
                          active_tab='students')
 
@@ -799,6 +894,7 @@ def upload_students_csv():
         updated_count = 0
         error_count = 0
         errors = []
+        touched_student_ids = set()
         
         for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header row
             try:
@@ -896,6 +992,7 @@ def upload_students_csv():
                     student.gpa = gpa
                     
                     updated_count += 1
+                    touched_student_ids.add(student.id)
                 else:
                     # Create new student
                     student = Student(
@@ -937,6 +1034,8 @@ def upload_students_csv():
                         student.student_id = row['Student ID'].strip()
                     
                     db.session.add(student)
+                    db.session.flush()
+                    touched_student_ids.add(student.id)
                     added_count += 1
                 
             except Exception as e:
@@ -946,6 +1045,16 @@ def upload_students_csv():
         
         # Commit all changes
         try:
+            db.session.commit()
+
+            for sid in touched_student_ids:
+                st = Student.query.get(sid)
+                if not st or getattr(st, 'is_deleted', False):
+                    continue
+                if not grade_may_have_login(st.grade_level):
+                    _strip_student_user_account(st)
+                else:
+                    _provision_student_login_if_needed(st)
             db.session.commit()
             
             # Prepare success message
@@ -1738,7 +1847,10 @@ def edit_student(student_id):
         student.first_name = request.form.get('first_name', student.first_name).strip()
         student.last_name = request.form.get('last_name', student.last_name).strip()
         student.dob = request.form.get('dob', student.dob)
-        student.grade_level = request.form.get('grade_level', student.grade_level)
+        raw_grade = request.form.get('grade_level', student.grade_level)
+        parsed_grade = parse_grade_level_for_policy(raw_grade)
+        if parsed_grade is not None:
+            student.grade_level = parsed_grade
         gender = request.form.get('gender', getattr(student, 'gender', '')).strip()
         entrance_school_year = request.form.get('entrance_date', getattr(student, 'entrance_date', '')).strip()
         if not gender:
@@ -1798,7 +1910,12 @@ def edit_student(student_id):
             else:
                 # Clear the Google Workspace email if field is empty
                 student.user.google_workspace_email = None
-        
+
+        if not grade_may_have_login(student.grade_level):
+            _strip_student_user_account(student)
+        else:
+            _provision_student_login_if_needed(student)
+
         db.session.commit()
         return jsonify({'success': True, 'message': 'Student updated successfully.'})
     except Exception as e:
@@ -1843,170 +1960,31 @@ def check_student_id(student_id):
 @login_required
 @management_required
 def remove_student(student_id):
-    """Remove a student and all associated data"""
+    """Soft-remove a student (preserve record like staff)."""
     try:
         student = Student.query.get_or_404(student_id)
-        
-        # Delete all related records first to avoid foreign key constraints
-        from models import (
-            Attendance,
-            SchoolDayAttendance,
-            StudentGoal,
-            StudentGroupMember,
-            Grade,
-            Submission,
-            GroupSubmission,
-            GroupGrade,
-            AssignmentExtension,
-            Enrollment,
-            MessageGroupMember,
-            Notification,
-            QuizAnswer,
-            QuizProgress,
-            DiscussionPost,
-            DiscussionThread,
-            DiscussionAttachment,
-            ReportCard,
-            GroupQuizAnswer,
-            CleaningTeamMember,
-            GradeHistory,
-            AssignmentRedo,
-            RedoRequest,
-            ExtensionRequest,
-            AssignmentReopening,
-            QuarterGrade,
-            PeerEvaluation,
-            PeerReview,
-            ReflectionJournal,
-            DraftSubmission,
-            DraftFeedback,
-            GroupContract,
-            Feedback360,
-            Feedback360Response,
-            Feedback360Criteria,
-            ReminderNotification,
-            StudentAssistant,
-            StudentAssistantActionLog,
-            IndividualContribution,
-            GroupConflict,
-            ConflictResolution,
-            ConflictParticipant,
-        )
 
-        # Delete enrollment records first (these reference the student)
-        Enrollment.query.filter_by(student_id=student_id).delete()
+        from datetime import datetime, timezone
+        from models import Enrollment
 
-        # Delete attendance records (both class and school day attendance)
-        Attendance.query.filter_by(student_id=student_id).delete()
-        SchoolDayAttendance.query.filter_by(student_id=student_id).delete()
+        # Mark as deleted (record preserved)
+        student.is_deleted = True
+        student.deleted_at = datetime.now(timezone.utc)
+        student.marked_for_removal = False
+        student.status_updated_at = datetime.now(timezone.utc)
 
-        # Delete student goals
-        StudentGoal.query.filter_by(student_id=student_id).delete()
+        # Deactivate enrollments so they no longer appear in active rosters
+        for enr in Enrollment.query.filter_by(student_id=student_id).all():
+            enr.is_active = False
+            if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
+                enr.dropped_at = datetime.now(timezone.utc)
 
-        # Delete group memberships
-        StudentGroupMember.query.filter_by(student_id=student_id).delete()
+        # Remove associated login account (keep student profile data)
+        _strip_student_user_account(student)
 
-        QuarterGrade.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-        StudentAssistant.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-        if student.user:
-            StudentAssistantActionLog.query.filter_by(assistant_user_id=student.user.id).delete(
-                synchronize_session=False
-            )
-
-        ReminderNotification.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-
-        Feedback360Response.query.filter_by(respondent_id=student_id).delete(synchronize_session=False)
-        for f360 in Feedback360.query.filter_by(target_student_id=student_id).all():
-            Feedback360Response.query.filter_by(feedback360_id=f360.id).delete(synchronize_session=False)
-            Feedback360Criteria.query.filter_by(feedback360_id=f360.id).delete(synchronize_session=False)
-            db.session.delete(f360)
-
-        PeerEvaluation.query.filter(
-            (PeerEvaluation.evaluator_id == student_id) | (PeerEvaluation.evaluatee_id == student_id)
-        ).delete(synchronize_session=False)
-        PeerReview.query.filter(
-            (PeerReview.reviewer_id == student_id) | (PeerReview.reviewee_id == student_id)
-        ).delete(synchronize_session=False)
-        ReflectionJournal.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-        GroupContract.query.filter_by(agreed_by=student_id).delete(synchronize_session=False)
-        IndividualContribution.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-
-        for gc in GroupConflict.query.filter_by(reported_by=student_id).all():
-            cid = gc.id
-            ConflictResolution.query.filter_by(conflict_id=cid).delete(synchronize_session=False)
-            ConflictParticipant.query.filter_by(conflict_id=cid).delete(synchronize_session=False)
-            db.session.delete(gc)
-        ConflictParticipant.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-
-        draft_ids = [d.id for d in DraftSubmission.query.filter_by(student_id=student_id).all()]
-        if draft_ids:
-            DraftFeedback.query.filter(DraftFeedback.draft_submission_id.in_(draft_ids)).delete(synchronize_session=False)
-        DraftSubmission.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-
-        # Discussion: threads this student started, then replies they authored elsewhere
-        for thread in DiscussionThread.query.filter_by(student_id=student_id).all():
-            post_ids = [p.id for p in DiscussionPost.query.filter_by(thread_id=thread.id).all()]
-            if post_ids:
-                DiscussionAttachment.query.filter(DiscussionAttachment.post_id.in_(post_ids)).delete(synchronize_session=False)
-                DiscussionPost.query.filter(DiscussionPost.id.in_(post_ids)).delete(synchronize_session=False)
-            DiscussionAttachment.query.filter_by(thread_id=thread.id).delete(synchronize_session=False)
-            db.session.delete(thread)
-        for post in DiscussionPost.query.filter_by(student_id=student_id).all():
-            DiscussionAttachment.query.filter_by(post_id=post.id).delete(synchronize_session=False)
-            db.session.delete(post)
-
-        GradeHistory.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-
-        # Redo / extension rows before grades and submissions (FKs)
-        AssignmentRedo.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-        RedoRequest.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-        ExtensionRequest.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-        AssignmentReopening.query.filter_by(student_id=student_id).delete(synchronize_session=False)
-
-        # Delete grades
-        Grade.query.filter_by(student_id=student_id).delete()
-
-        # Delete assignment submissions
-        Submission.query.filter_by(student_id=student_id).delete()
-        
-        # Delete group submissions
-        GroupSubmission.query.filter_by(submitted_by=student_id).delete()
-        
-        # Delete group grades
-        GroupGrade.query.filter_by(student_id=student_id).delete()
-        
-        # Delete assignment extensions
-        AssignmentExtension.query.filter_by(student_id=student_id).delete()
-        
-        # Delete quiz answers and progress
-        QuizAnswer.query.filter_by(student_id=student_id).delete()
-        QuizProgress.query.filter_by(student_id=student_id).delete()
-        
-        # Delete discussion posts
-        DiscussionPost.query.filter_by(student_id=student_id).delete()
-        
-        # Delete report cards
-        ReportCard.query.filter_by(student_id=student_id).delete()
-        
-        # Delete group quiz answers
-        GroupQuizAnswer.query.filter_by(student_id=student_id).delete()
-        
-        # Delete cleaning team memberships
-        CleaningTeamMember.query.filter_by(student_id=student_id).delete()
-        
-        # Delete associated user account if it exists
-        if student.user:
-            # Delete notifications before deleting the user
-            Notification.query.filter_by(user_id=student.user.id).delete()
-            # Delete message group memberships before deleting the user
-            MessageGroupMember.query.filter_by(user_id=student.user.id).delete()
-            db.session.delete(student.user)
-        
-        # Finally, delete the student
-        db.session.delete(student)
         db.session.commit()
-        
-        flash('Student removed successfully.', 'success')
+
+        flash('Student removed (record preserved).', 'success')
         return redirect(url_for('management.students'))
         
     except Exception as e:

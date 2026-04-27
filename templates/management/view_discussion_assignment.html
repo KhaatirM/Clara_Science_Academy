@@ -501,9 +501,9 @@
 <script>
 function goBack() {
     {% if current_user.role in ['Director', 'School Administrator'] %}
-    window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+    window.location.href = "{{ url_for('management.assignments_and_grades', class_id=assignment.class_id) }}";
     {% else %}
-    window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+    window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades', class_id=assignment.class_id) }}";
     {% endif %}
 }
 

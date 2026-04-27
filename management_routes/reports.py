@@ -132,6 +132,245 @@ def _detect_quarter_grade_inconsistency(all_quarter_grades):
     return (not is_contiguous), graded_flags
 
 
+def _quarter_str_from_selection(quarters_to_include):
+    """Build stored ReportCard.quarter label (e.g. Q1, Q1-Q4) from selected quarters."""
+    valid_quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    quarters_to_include = [q for q in (quarters_to_include or []) if q in valid_quarters]
+    if not quarters_to_include:
+        return None
+    if len(quarters_to_include) == 1:
+        return quarters_to_include[0]
+    quarter_nums = sorted([int(q.replace('Q', '')) for q in quarters_to_include])
+    if len(quarter_nums) == len(quarters_to_include) and quarter_nums == list(
+        range(min(quarter_nums), max(quarter_nums) + 1)
+    ):
+        return f"Q{quarter_nums[0]}-Q{quarter_nums[-1]}"
+    return quarters_to_include[-1]
+
+
+def persist_report_card_record(
+    student_id_int,
+    school_year_id_int,
+    class_ids_int,
+    quarters_to_include,
+    report_type='official',
+    include_attendance=True,
+    include_comments=True,
+    enrollment_must_be_active=True,
+    notify_admins=True,
+):
+    """
+    Persist report card JSON (and optional admin notifications). Does not build PDF.
+    Returns a dict with ok, error, and render payload keys on success.
+    """
+    out = {
+        'ok': False,
+        'error': None,
+        'warnings': [],
+        'student': None,
+        'report_card': None,
+        'valid_class_ids': [],
+        'quarters_to_include': [],
+        'quarter_str': None,
+        'calculated_grades': {},
+        'calculated_grades_by_quarter': {},
+        'report_card_data': {},
+        'inconsistency_flag': False,
+        'quarter_flags': [],
+        'include_attendance': include_attendance,
+        'include_comments': include_comments,
+        'report_type': report_type,
+    }
+    valid_quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    quarters_clean = [q for q in (quarters_to_include or []) if q in valid_quarters]
+    if not quarters_clean:
+        out['error'] = 'Invalid or empty quarter selection.'
+        return out
+
+    quarter_str = _quarter_str_from_selection(quarters_clean)
+    if not quarter_str:
+        out['error'] = 'Could not determine report period from quarters.'
+        return out
+
+    valid_class_ids = []
+    for class_id in class_ids_int:
+        q = Enrollment.query.filter_by(student_id=student_id_int, class_id=class_id)
+        if enrollment_must_be_active:
+            q = q.filter_by(is_active=True)
+        if q.first():
+            valid_class_ids.append(class_id)
+        else:
+            out['warnings'].append(
+                f"Student is not enrolled ({'active' if enrollment_must_be_active else 'any'}) "
+                f"in class ID {class_id}."
+            )
+
+    if not valid_class_ids:
+        out['error'] = 'No valid classes for this student.'
+        return out
+
+    student = Student.query.get(student_id_int)
+    if not student:
+        out['error'] = 'Student not found.'
+        return out
+
+    if not getattr(student, 'gender', None):
+        out['error'] = (
+            'Student profile is missing Gender. Update the student record before generating a report card.'
+        )
+        return out
+    if not _is_valid_school_year_label(getattr(student, 'entrance_date', None)):
+        out['error'] = (
+            'Student profile is missing a valid Entrance School Year (YYYY-YYYY). '
+            'Update the student record before generating a report card.'
+        )
+        return out
+
+    try:
+        from utils.quarter_grade_calculator import update_all_quarter_grades_for_student, get_quarter_grades_for_report
+
+        update_all_quarter_grades_for_student(
+            student_id=student_id_int,
+            school_year_id=school_year_id_int,
+            force=True,
+        )
+        all_quarter_grades = get_quarter_grades_for_report(
+            student_id=student_id_int,
+            school_year_id=school_year_id_int,
+            class_ids=valid_class_ids,
+        )
+
+        calculated_grades_by_quarter = {}
+        for q in quarters_clean:
+            q_key = q
+            q_num_key = q.replace('Q', '')
+            if q_key in all_quarter_grades:
+                calculated_grades_by_quarter[q] = all_quarter_grades[q_key]
+            elif q_num_key in all_quarter_grades:
+                calculated_grades_by_quarter[q] = all_quarter_grades[q_num_key]
+            else:
+                calculated_grades_by_quarter[q] = {}
+
+        inconsistency_flag, quarter_flags = _detect_quarter_grade_inconsistency(all_quarter_grades)
+
+        if len(quarters_clean) == 1:
+            calculated_grades = calculated_grades_by_quarter.get(quarters_clean[0], {})
+        else:
+            calculated_grades = calculated_grades_by_quarter.get(quarters_clean[0], {})
+
+        report_card = ReportCard.query.filter_by(
+            student_id=student_id_int,
+            school_year_id=school_year_id_int,
+            quarter=quarter_str,
+        ).first()
+
+        if not report_card:
+            report_card = ReportCard()
+            report_card.student_id = student_id_int
+            report_card.school_year_id = school_year_id_int
+            report_card.quarter = quarter_str
+            db.session.add(report_card)
+
+        report_card_data = {
+            'classes': valid_class_ids,
+            'report_type': report_type,
+            'include_attendance': include_attendance,
+            'include_comments': include_comments,
+            'grades': calculated_grades,
+            'grades_by_quarter': calculated_grades_by_quarter,
+            'selected_quarters': quarters_clean,
+        }
+
+        if include_attendance:
+            from models import Attendance
+            attendance_data = {}
+            for class_id in valid_class_ids:
+                attendance_records = Attendance.query.filter_by(
+                    student_id=student_id_int,
+                    class_id=class_id,
+                ).all()
+                attendance_summary = {
+                    'Present': 0,
+                    'Unexcused Absence': 0,
+                    'Excused Absence': 0,
+                    'Tardy': 0,
+                }
+                for att in attendance_records:
+                    status = att.status or 'Present'
+                    if status in attendance_summary:
+                        attendance_summary[status] += 1
+                    else:
+                        attendance_summary['Present'] += 1
+                class_obj = Class.query.get(class_id)
+                attendance_data[class_obj.name if class_obj else f"Class {class_id}"] = attendance_summary
+            report_card_data['attendance'] = attendance_data
+
+        def _format_date_for_save(value):
+            if value is None or (isinstance(value, str) and not value.strip()):
+                return None
+            from datetime import date, datetime as _dt
+            if isinstance(value, (date, _dt)):
+                return value.strftime('%m/%d/%Y')
+            if isinstance(value, str):
+                for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
+                    try:
+                        return _dt.strptime(value.strip(), fmt).strftime('%m/%d/%Y')
+                    except Exception:
+                        continue
+            return None
+
+        student_name = f"{student.first_name} {student.last_name}"
+        expected_grad_date = _calculate_expected_grad_from_student(student)
+        student_address = (
+            f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, "
+            f"{getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}"
+        ).strip(', ')
+        report_card_data['student_display'] = {
+            'name': student_name,
+            'gender': getattr(student, 'gender', None),
+            'address': student_address or None,
+            'dob': _format_date_for_save(getattr(student, 'dob', None)),
+            'entrance_date': getattr(student, 'entrance_date', None),
+            'expected_grad_date': expected_grad_date,
+            'phone': getattr(student, 'phone', None),
+        }
+
+        report_card.grades_details = json.dumps(report_card_data)
+        report_card.generated_at = datetime.utcnow()
+        db.session.commit()
+
+        if notify_admins:
+            _notify_admins_report_card_generated(
+                student=student,
+                school_year=report_card.school_year,
+                quarter_str=report_card.quarter,
+                report_type=report_type,
+                generated_at_utc=report_card.generated_at or datetime.utcnow(),
+                report_card_id=report_card.id,
+                inconsistency_flag=inconsistency_flag,
+                quarter_flags=quarter_flags,
+            )
+
+        out.update({
+            'ok': True,
+            'student': student,
+            'report_card': report_card,
+            'valid_class_ids': valid_class_ids,
+            'quarters_to_include': quarters_clean,
+            'quarter_str': quarter_str,
+            'calculated_grades': calculated_grades,
+            'calculated_grades_by_quarter': calculated_grades_by_quarter,
+            'report_card_data': report_card_data,
+            'inconsistency_flag': inconsistency_flag,
+            'quarter_flags': quarter_flags,
+        })
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('persist_report_card_record failed')
+        out['error'] = str(exc)
+    return out
+
+
 def _notify_admins_report_card_generated(student, school_year, quarter_str, report_type, generated_at_utc,
                                          report_card_id=None, inconsistency_flag=False, quarter_flags=None):
     """
@@ -230,204 +469,44 @@ def generate_report_card_form():
         if not quarters_to_include:
             flash("Invalid quarter selection. Please select valid quarters.", 'danger')
             return redirect(request.url)
-        
-        # Determine the report period based on selected quarters
-        # If only one quarter selected, use that; otherwise use range (e.g., "Q1-Q2")
-        if len(quarters_to_include) == 1:
-            quarter_str = quarters_to_include[0]
-        else:
-            # Sort quarters and create range string
-            quarter_nums = sorted([int(q.replace('Q', '')) for q in quarters_to_include])
-            if len(quarter_nums) == len(quarters_to_include) and quarter_nums == list(range(min(quarter_nums), max(quarter_nums) + 1)):
-                # Consecutive quarters - show as range
-                quarter_str = f"Q{quarter_nums[0]}-Q{quarter_nums[-1]}"
-            else:
-                # Non-consecutive - use the latest quarter as primary, but show all
-                quarter_str = quarters_to_include[-1]  # Use last selected as primary
-        
-        current_app.logger.info(f"Selected quarters: {quarters_to_include}, Report period: {quarter_str}")
 
-        # Verify all selected classes exist and student is ACTIVELY enrolled
-        valid_class_ids = []
-        for class_id in class_ids_int:
-            enrollment = Enrollment.query.filter_by(
-                student_id=student_id_int,
-                class_id=class_id,
-                is_active=True  # Only include active enrollments
-            ).first()
-            
-            if enrollment:
-                valid_class_ids.append(class_id)
-            else:
-                flash(f"Student is not actively enrolled in one of the selected classes (ID: {class_id}).", 'warning')
-        
-        if not valid_class_ids:
-            flash("No valid classes selected for this student.", 'danger')
-            return redirect(request.url)
-        
-        # Calculate grades for selected classes only
-        # Filter grades by selected class_ids
-        from models import Grade, Assignment
-        student = Student.query.get(student_id_int)
-        
-        # Student confirmation fields are now synced from the student record.
-        if not getattr(student, 'gender', None):
-            flash('Student profile is missing Gender. Please update the student record before generating a report card.', 'danger')
-            return redirect(request.url)
-        if not _is_valid_school_year_label(getattr(student, 'entrance_date', None)):
-            flash('Student profile is missing a valid Entrance School Year (YYYY-YYYY). Please update the student record before generating a report card.', 'danger')
-            return redirect(request.url)
-
-        # Update quarter grades in database (calculates/refreshes if needed)
-        from utils.quarter_grade_calculator import update_all_quarter_grades_for_student, get_quarter_grades_for_report
-        
-        # Update/calculate quarter grades for this student
-        # Force recalculation to ensure accurate weighted averages based on points
-        update_all_quarter_grades_for_student(
-            student_id=student_id_int,
-            school_year_id=school_year_id_int,
-            force=True  # Force recalculation to use corrected weighted average calculation
+        rc_result = persist_report_card_record(
+            student_id_int=student_id_int,
+            school_year_id_int=school_year_id_int,
+            class_ids_int=class_ids_int,
+            quarters_to_include=quarters_to_include,
+            report_type=report_type,
+            include_attendance=include_attendance,
+            include_comments=include_comments,
+            enrollment_must_be_active=True,
+            notify_admins=True,
         )
-        
-        # Get quarter grades from database (all quarters)
-        all_quarter_grades = get_quarter_grades_for_report(
-            student_id=student_id_int,
-            school_year_id=school_year_id_int,
-            class_ids=valid_class_ids
-        )
-        
-        # Filter to only include selected quarters
-        # Note: get_quarter_grades_for_report may return keys as 'Q1', 'Q2', etc. or '1', '2', etc.
-        # We need to handle both formats
-        calculated_grades_by_quarter = {}
-        for q in quarters_to_include:
-            # Try both 'Q1' format and '1' format
-            q_key = q
-            q_num_key = q.replace('Q', '')
-            
-            if q_key in all_quarter_grades:
-                calculated_grades_by_quarter[q] = all_quarter_grades[q_key]
-            elif q_num_key in all_quarter_grades:
-                calculated_grades_by_quarter[q] = all_quarter_grades[q_num_key]
-            else:
-                # Include empty dict for quarters without data (will show "—" in template)
-                calculated_grades_by_quarter[q] = {}
-
-        inconsistency_flag, quarter_flags = _detect_quarter_grade_inconsistency(all_quarter_grades)
-        if inconsistency_flag:
+        if not rc_result['ok']:
+            flash(rc_result['error'], 'danger')
+            return redirect(request.url)
+        for w in rc_result.get('warnings') or []:
+            flash(w, 'warning')
+        if rc_result.get('inconsistency_flag'):
             flash(
                 "Heads up: quarter grades look inconsistent (example: Q1 has grades, Q2 missing, Q3/Q4 have grades). "
                 "An administrator alert was generated for review.",
-                'warning'
+                'warning',
             )
-        
-        # Set the primary calculated_grades to the first selected quarter (or the determined quarter_str)
-        if len(quarters_to_include) == 1:
-            calculated_grades = calculated_grades_by_quarter.get(quarters_to_include[0], {})
-        else:
-            # For multiple quarters, use the first one as primary, but all will be shown
-            calculated_grades = calculated_grades_by_quarter.get(quarters_to_include[0], {})
-        
-        # Get or create report card
-        report_card = ReportCard.query.filter_by(
-            student_id=student_id_int,
-            school_year_id=school_year_id_int,
-            quarter=quarter_str
-        ).first()
-        
-        if not report_card:
-            report_card = ReportCard()
-            report_card.student_id = student_id_int
-            report_card.school_year_id = school_year_id_int
-            report_card.quarter = quarter_str
-            db.session.add(report_card)
-        
-        # Store grades with metadata about selected classes and options
-        report_card_data = {
-            'classes': valid_class_ids,
-            'report_type': report_type,
-            'include_attendance': include_attendance,
-            'include_comments': include_comments,
-            'grades': calculated_grades,
-            'grades_by_quarter': calculated_grades_by_quarter,  # Store all quarter grades
-            'selected_quarters': quarters_to_include,  # Full list so PDF shows Q1–Q4, not just Q1 and Q4 from "Q1-Q4"
-        }
-        
-        # Add attendance if requested
-        if include_attendance:
-            from models import Attendance
-            attendance_data = {}
-            for class_id in valid_class_ids:
-                # Get attendance for this class in the quarter period
-                # For now, get all attendance for this student in this class
-                attendance_records = Attendance.query.filter_by(
-                    student_id=student_id_int,
-                    class_id=class_id
-                ).all()
-                
-                attendance_summary = {
-                    'Present': 0,
-                    'Unexcused Absence': 0,
-                    'Excused Absence': 0,
-                    'Tardy': 0
-                }
-                
-                for att in attendance_records:
-                    status = att.status or 'Present'
-                    if status in attendance_summary:
-                        attendance_summary[status] += 1
-                    else:
-                        attendance_summary['Present'] += 1
-                
-                class_obj = Class.query.get(class_id)
-                attendance_data[class_obj.name if class_obj else f"Class {class_id}"] = attendance_summary
-            
-            report_card_data['attendance'] = attendance_data
 
-        # Save synced student confirmation data so View → Download stays consistent.
-        def _format_date_for_save(value):
-            if value is None or (isinstance(value, str) and not value.strip()):
-                return None
-            from datetime import date, datetime as _dt
-            if isinstance(value, (date, _dt)):
-                return value.strftime('%m/%d/%Y')
-            if isinstance(value, str):
-                for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
-                    try:
-                        return _dt.strptime(value.strip(), fmt).strftime('%m/%d/%Y')
-                    except Exception:
-                        continue
-            return None
-        student_name = f"{student.first_name} {student.last_name}"
-        expected_grad_date = _calculate_expected_grad_from_student(student)
-        student_address = f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', ')
-        report_card_data['student_display'] = {
-            'name': student_name,
-            'gender': getattr(student, 'gender', None),
-            'address': student_address or None,
-            'dob': _format_date_for_save(getattr(student, 'dob', None)),
-            'entrance_date': getattr(student, 'entrance_date', None),
-            'expected_grad_date': expected_grad_date,
-            'phone': getattr(student, 'phone', None),
-        }
-        
-        # Update report card (save for record keeping)
-        report_card.grades_details = json.dumps(report_card_data)
-        report_card.generated_at = datetime.utcnow()
-        db.session.commit()
+        student = rc_result['student']
+        report_card = rc_result['report_card']
+        valid_class_ids = rc_result['valid_class_ids']
+        calculated_grades = rc_result['calculated_grades']
+        calculated_grades_by_quarter = rc_result['calculated_grades_by_quarter']
+        report_card_data = rc_result['report_card_data']
+        quarters_to_include = rc_result['quarters_to_include']
 
-        # Alert Director / School Administrator in-app + email after save.
-        _notify_admins_report_card_generated(
-            student=student,
-            school_year=report_card.school_year,
-            quarter_str=report_card.quarter,
-            report_type=report_type,
-            generated_at_utc=report_card.generated_at or datetime.utcnow(),
-            report_card_id=report_card.id,
-            inconsistency_flag=inconsistency_flag,
-            quarter_flags=quarter_flags
+        current_app.logger.info(
+            "Report card persisted: quarters=%s label=%s",
+            quarters_to_include,
+            rc_result.get('quarter_str'),
         )
-        
+
         # Generate and return PDF directly
         try:
             from weasyprint import HTML
@@ -485,7 +564,7 @@ def generate_report_card_form():
             
             # Choose template based on grade level and report type
             template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
-            if student.grade_level in [1, 2]:
+            if student.grade_level in [0, 1, 2]:
                 template_name = f'management/{template_prefix}_report_card_pdf_template_1_2.html'
             elif student.grade_level == 3:
                 template_name = f'management/{template_prefix}_report_card_pdf_template_3.html'
@@ -800,7 +879,7 @@ def generate_report_card_pdf(report_card_id):
 
         # Choose template based on grade level and report type
         template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
-        if student.grade_level in [1, 2]:
+        if student.grade_level in [0, 1, 2]:
             template_name = f'management/{template_prefix}_report_card_pdf_template_1_2.html'
         elif student.grade_level == 3:
             template_name = f'management/{template_prefix}_report_card_pdf_template_3.html'
@@ -1010,4 +1089,117 @@ def delete_report_card(report_card_id):
         flash(f'Error deleting report card: {str(e)}', 'danger')
     
     return redirect(request.referrer or url_for('management.report_cards'))
+
+
+# ============================================================
+# End of school year: report cards + archive classes
+# (Registered on management blueprint in management_routes/__init__.py)
+# ============================================================
+
+def close_school_year():
+    """
+    For a selected school year: generate official Q1–Q4 report cards for all current
+    students with active enrollments in that year, then deactivate those enrollments,
+    mark classes inactive, set individual and group assignments to Inactive (preserving
+    Voided), and mark the school year inactive. Historical grades and report card rows
+    remain in the database.
+    """
+    from models import Assignment, GroupAssignment
+
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+
+    if request.method == 'GET':
+        return render_template('management/school_year_close.html', school_years=school_years)
+
+    school_year_id = request.form.get('school_year_id', type=int)
+    confirm = (request.form.get('confirm') or '').strip()
+    if confirm != 'CLOSE YEAR':
+        flash('You must type CLOSE YEAR exactly to confirm.', 'danger')
+        return render_template('management/school_year_close.html', school_years=school_years)
+
+    if not school_year_id:
+        flash('Select a school year.', 'danger')
+        return render_template('management/school_year_close.html', school_years=school_years)
+
+    sy = SchoolYear.query.get_or_404(school_year_id)
+
+    classes_in_year = Class.query.filter_by(school_year_id=sy.id).all()
+    class_ids = [c.id for c in classes_in_year]
+
+    students = (
+        Student.query.filter(Student.is_deleted == False)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
+
+    ok_n = 0
+    skip_n = 0
+    err_n = 0
+    errors_sample = []
+
+    quarters_full = ['Q1', 'Q2', 'Q3', 'Q4']
+    for student in students:
+        enrs = (
+            Enrollment.query.join(Class, Enrollment.class_id == Class.id)
+            .filter(
+                Class.school_year_id == sy.id,
+                Enrollment.student_id == student.id,
+                Enrollment.is_active == True,
+            )
+            .all()
+        )
+        if not enrs:
+            skip_n += 1
+            continue
+        cid_list = list({e.class_id for e in enrs})
+        res = persist_report_card_record(
+            student_id_int=student.id,
+            school_year_id_int=sy.id,
+            class_ids_int=cid_list,
+            quarters_to_include=quarters_full,
+            report_type='official',
+            include_attendance=True,
+            include_comments=True,
+            enrollment_must_be_active=True,
+            notify_admins=False,
+        )
+        if res['ok']:
+            ok_n += 1
+        else:
+            err_n += 1
+            if len(errors_sample) < 15:
+                errors_sample.append(f"{student.first_name} {student.last_name}: {res['error']}")
+
+    if class_ids:
+        Assignment.query.filter(
+            Assignment.class_id.in_(class_ids),
+            Assignment.status != 'Voided',
+        ).update({Assignment.status: 'Inactive'}, synchronize_session=False)
+        GroupAssignment.query.filter(
+            GroupAssignment.class_id.in_(class_ids),
+            GroupAssignment.status != 'Voided',
+        ).update({GroupAssignment.status: 'Inactive'}, synchronize_session=False)
+
+        Enrollment.query.filter(Enrollment.class_id.in_(class_ids)).update(
+            {Enrollment.is_active: False},
+            synchronize_session=False,
+        )
+
+        Class.query.filter(Class.id.in_(class_ids)).update(
+            {Class.is_active: False},
+            synchronize_session=False,
+        )
+
+    sy.is_active = False
+    db.session.commit()
+
+    msg = (
+        f"School year {sy.name} closed. "
+        f"Report cards saved: {ok_n}. Skipped (no active enrollment in this year): {skip_n}. Errors: {err_n}."
+    )
+    flash(msg, 'success' if err_n == 0 else 'warning')
+    if errors_sample:
+        flash('Examples: ' + '; '.join(errors_sample), 'warning')
+
+    return redirect(url_for('management.report_cards'))
 

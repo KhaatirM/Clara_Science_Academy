@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 23, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 26, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,63 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 23, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 26, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>April 23</strong> focuses on day-to-day admin workflows: Teachers &amp; Staff now includes a single built-in roster view that can show both current and former employees, and the quiz builder now supports Google-Forms-style drag-and-drop for sections and questions with working move/delete behaviors. <strong>April 18</strong>, <strong>April 5</strong>, and <strong>early April</strong> below cover assignment status wording, navigation, report-card safeguards, grading policy, assignment and group-assignment workflows, academic alerts, and related refinements.</p>
+                        <p class="updates-intro-text mb-0"><strong>April 26</strong> focuses on grading safety, auditability, and smoother staff workflows: PDF/Paper grading now requires explicit submission status to prevent accidental mass zeros, mixed-question quizzes show <strong>Grade Pending</strong> until open-ended questions are finalized, and Tech-only audit logs and printable staff activity records provide stronger visibility. <strong>April 23</strong>, <strong>April 18</strong>, <strong>April 5</strong>, and <strong>early April</strong> below cover earlier improvements.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- April 26, 2026 - Grading safeguards, audit logs, staff record -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-shield-check me-2"></i>Grading Safeguards, Audit Logs &amp; Staff Records – April 26, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF/Paper grading safeguard (prevents accidental mass zeros):</strong> For PDF/Paper assignments, a numeric grade is only saved when the student’s <strong>Submission Status</strong> is set to <strong>Online</strong> or <strong>In-Person</strong>. Blank scores remain “not entered.”
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Mixed-question quizzes — Grade Pending until finalized:</strong> Quizzes with essay/short answer questions now show auto-graded points immediately, but display <strong>Grade Pending</strong> to students until a teacher saves the manual scores (then the quiz becomes final).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher + management grading consistency:</strong> Teacher and administrator grading now follow the same safety rules, and per-question quiz grading avoids creating grades for students who did not submit.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grade spread accuracy:</strong> Grade distribution calculations properly account for <strong>voided</strong> records so charts and “not entered” counts are not misleading.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grading Help updated + shown by default:</strong> The grading help popup was expanded with clear rules (0 vs blank, PDF/Paper submission requirement, auto-save behavior, quiz pending/final) and appears automatically unless the user disables it.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Discussion assignment back button fixed:</strong> Back now returns to the correct class context instead of the generic Assignments &amp; Grades landing view.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher removal protection:</strong> When a teacher/staff member is removed, their assigned classes are reassigned to a placeholder so schedules remain intact, while historical records (created assignments, grades, markings) stay linked.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Audit logging — Tech only:</strong> All management access/actions are logged in a dedicated audit log. Viewing/exporting audit logs is restricted to <strong>Tech / IT Support</strong> (removed from School Admin+).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Printable staff activity record:</strong> Administrators can generate and export a printable record of a staff member’s assignments, attendance actions, submissions markings, and group grades.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic Alert popup behavior:</strong> Academic Alerts still appear across dashboards, but won’t pop up while you’re actively grading an assignment to keep the grading screen uncluttered.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Grading is safer and harder to do “by accident,” students get clearer quiz status, and leadership/tech teams have stronger visibility into actions and staff activity without widening access.</p>
+                        </div>
+                    </div>
+
                     <!-- April 23, 2026 - Staff roster merge & quiz builder fixes -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-stars me-2"></i>Staff &amp; Quiz Builder – April 23, 2026</h6>
@@ -1501,11 +1551,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownApr23_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownApr26_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownApr23_2026', 'true');
+            sessionStorage.setItem('updateModalShownApr26_2026', 'true');
         }, 500);
     }
 });

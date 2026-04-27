@@ -1,4 +1,5 @@
 {% extends "shared/dashboard_layout.html" %}
+{% set disable_academic_alert_popup = true %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
@@ -42,9 +43,11 @@
             </div>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('teacher.grading.grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
-                <i class="bi bi-bar-chart-fill me-1"></i>Statistics
-            </a>
+            {% if role_prefix != 'management' %}
+                <a href="{{ url_for('teacher.grading.grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+                </a>
+            {% endif %}
             <button onclick="goBack()" class="btn-grading-back">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </button>
@@ -338,7 +341,11 @@
 
 <script>
 function goBack() {
-    window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+    {% if role_prefix == 'management' %}
+        window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+    {% else %}
+        window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+    {% endif %}
 }
 
 function updateStudentTotalScore(studentId) {

@@ -320,7 +320,8 @@
                             <i class="bi bi-people-fill me-2"></i>Students Management
                         </h2>
                         <p class="students-admin-subtitle mb-0">
-                            <i class="bi bi-mortarboard me-2"></i>Manage student records, accounts, and information
+                            <i class="bi bi-mortarboard me-2"></i>Manage student records and information.
+                            <span class="text-muted">Portal accounts are created starting in <strong>4th grade</strong> (K–3 stay off the student login until then).</span>
                         </p>
                     </div>
                     <div>
@@ -372,7 +373,7 @@
                             <i class="bi bi-trophy-fill"></i>
                         </div>
                         <div class="students-stat-content">
-                            <h3 class="students-stat-number">{{ students|selectattr('gpa')|selectattr('gpa', 'ge', 3.5)|list|length }}</h3>
+                            <h3 class="students-stat-number">{{ high_gpa_count|default(0) }}</h3>
                             <p class="students-stat-label">GPA ≥ 3.5</p>
                         </div>
                     </div>
@@ -387,7 +388,8 @@
                     </h5>
                 </div>
                 <div class="students-search-body">
-                <form method="GET" action="{{ url_for('management.students') }}" class="row g-3">
+                <form method="GET" action="{{ url_for('management.students') }}" class="row g-3" id="studentsFilterForm">
+                    <input type="hidden" name="page" value="1">
                     <!-- Search Query -->
                     <div class="col-md-4">
                         <label for="search" class="form-label">Search Term</label>
@@ -418,6 +420,7 @@
                         <label for="grade_level" class="form-label">Grade Level</label>
                         <select class="form-select" id="grade_level" name="grade_level">
                             <option value="">All Grades</option>
+                            <option value="0" {% if grade_filter == '0' %}selected{% endif %}>Kindergarten</option>
                             <option value="1" {% if grade_filter == '1' %}selected{% endif %}>1st Grade</option>
                             <option value="2" {% if grade_filter == '2' %}selected{% endif %}>2nd Grade</option>
                             <option value="3" {% if grade_filter == '3' %}selected{% endif %}>3rd Grade</option>
@@ -440,6 +443,10 @@
                             <option value="">All Students</option>
                             <option value="has_account" {% if status_filter == 'has_account' %}selected{% endif %}>Has Account</option>
                             <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            <option value="former" {% if status_filter == 'former' %}selected{% endif %}>Former (Removed)</option>
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All (Current + Former)</option>
+                            {% endif %}
                         </select>
                     </div>
                     
@@ -569,7 +576,7 @@
             </div>
 
             <!-- Search Results Info -->
-            {% if search_query or grade_filter or status_filter %}
+            {% if search_query or grade_filter or status_filter or alert_filter %}
             <div class="students-results-banner mb-4">
                 <i class="bi bi-info-circle me-2"></i>
                 <strong>Search Results:</strong> Found {{ total_students }} student(s)
@@ -577,74 +584,26 @@
                 {% if grade_filter %} in grade {{ grade_filter }}{% endif %}
                 {% if status_filter == 'has_account' %} with accounts{% endif %}
                 {% if status_filter == 'no_account' %} without accounts{% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Academic Alerts Summary -->
-            {% set critical_students = [] %}
-            {% set warning_students = [] %}
-            {% for student in students %}
-                {% if student.gpa %}
-                    {% if student.gpa < 2.0 %}
-                        {% set _ = critical_students.append(student) %}
-                    {% elif student.gpa >= 2.0 and student.gpa < 3.0 %}
-                        {% set _ = warning_students.append(student) %}
-                    {% endif %}
-                {% endif %}
-            {% endfor %}
-            
-            {% if critical_students|length > 0 or warning_students|length > 0 %}
-            <div class="academic-alerts-banner mb-4">
-                <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="alert-icon">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-2">
-                                <i class="bi bi-bell-fill me-2"></i>Academic Performance Alerts
-                            </h5>
-                            <div class="row g-3">
-                                {% if critical_students|length > 0 %}
-                                <div class="col-md-6">
-                                    <div class="alert-stat-box alert-critical">
-                                        <div class="alert-stat-icon">
-                                            <i class="bi bi-exclamation-octagon-fill"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="mb-0">{{ critical_students|length }}</h4>
-                                            <small>Critical Alert (GPA &lt; 2.0)</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if warning_students|length > 0 %}
-                                <div class="col-md-6">
-                                    <div class="alert-stat-box alert-warning-box">
-                                        <div class="alert-stat-icon alert-warning-icon">
-                                            <i class="bi bi-exclamation-triangle-fill"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="mb-0">{{ warning_students|length }}</h4>
-                                            <small>Warning (GPA 2.0-2.9)</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                </div>
+                {% if status_filter == 'former' %} (former/removed){% endif %}
+                {% if status_filter == 'all' %} (including former/removed){% endif %}
             </div>
             {% endif %}
 
             <!-- Students Table -->
             <div class="students-table-card">
+                {% if pagination is defined and pagination.pages > 1 %}
+                <p class="text-muted small px-3 pt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>List and card views show <strong>{{ pagination.per_page }}</strong> students per page.
+                    Grouped-by-grade uses only the current page.
+                </p>
+                {% endif %}
                 <div class="students-table-header">
                     <h5 class="mb-0">
                         <i class="bi bi-table me-2"></i>Student Records
-                        <span class="badge bg-primary ms-2">{{ students|length }} Total</span>
+                        <span class="badge bg-primary ms-2">{{ students|length }} on this page</span>
+                        {% if pagination is defined and pagination.total is defined %}
+                        <span class="badge bg-secondary ms-1">{{ pagination.total }} matching</span>
+                        {% endif %}
                     </h5>
                     <div class="students-table-view-toggle">
                         <button class="btn btn-sm btn-students-view active" onclick="switchStudentsView('table')">
@@ -663,9 +622,6 @@
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
-                                <th>
-                                    <i class="bi bi-bell me-1"></i>Alert
-                                </th>
                                 <th>Name</th>
                                 <th>Grade Level</th>
                                 <th>Student ID</th>
@@ -688,25 +644,6 @@
                                     {% endif %}
                                 {% endif %}
                                 <tr class="student-row student-alert-{{ alert_level }}">
-                                    <td class="text-center">
-                                        {% if alert_level == 'critical' %}
-                                            <span class="alert-indicator alert-critical" title="Critical: GPA below 2.0">
-                                                <i class="bi bi-exclamation-octagon-fill"></i>
-                                            </span>
-                                        {% elif alert_level == 'warning' %}
-                                            <span class="alert-indicator alert-warning" title="Warning: GPA below 3.0">
-                                                <i class="bi bi-exclamation-triangle-fill"></i>
-                                            </span>
-                                        {% elif alert_level == 'excellent' %}
-                                            <span class="alert-indicator alert-excellent" title="Excellent: GPA 3.5+">
-                                                <i class="bi bi-star-fill"></i>
-                                            </span>
-                                        {% else %}
-                                            <span class="alert-indicator alert-none">
-                                                <i class="bi bi-dash-circle"></i>
-                                            </span>
-                                        {% endif %}
-                                    </td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="student-avatar-mini">
@@ -762,9 +699,15 @@
                                     </td>
                                     <td>
                                         {% if student.user %}
+                                            {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                            <span class="badge text-white border account-badge-young" style="font-weight:500;background-color:#fd7e14;border-color:#e8590c!important;">
+                                                <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
+                                            </span>
+                                            {% else %}
                                             <span class="badge bg-success text-white border border-success" style="font-weight: 500;">
                                                 <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
                                             </span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-warning text-dark border border-warning" style="font-weight: 500;">
                                                 <i class="bi bi-x-circle me-1"></i>No Account
@@ -786,7 +729,7 @@
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr {% if teacher.marked_for_removal|default(false) %}style="opacity: 0.65;"{% elif (teacher.employment_status|default('Active')) != 'Active' %}style="opacity: 0.8;"{% endif %}>
+                                <tr>
                                     <td colspan="7" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
                                         No students found.
@@ -838,7 +781,11 @@
                                         <i class="bi bi-person-circle me-2"></i>
                                         <span>Account: 
                                             {% if student.user %}
+                                                {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                                <span class="badge text-white" style="background-color:#fd7e14;">{{ student.user.username }}</span>
+                                                {% else %}
                                                 <span class="badge bg-success">{{ student.user.username }}</span>
+                                                {% endif %}
                                             {% else %}
                                                 <span class="badge bg-warning">No Account</span>
                                             {% endif %}
@@ -909,17 +856,6 @@
                                         {% endif %}
                                         <div class="col-12 col-md-6 col-lg-4 col-xl-3">
                                             <div class="student-grouped-card student-card-alert-{{ alert_level }}">
-                                                <div class="student-grouped-alert">
-                                                    {% if alert_level == 'critical' %}
-                                                        <i class="bi bi-exclamation-octagon-fill text-danger"></i>
-                                                    {% elif alert_level == 'warning' %}
-                                                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                                                    {% elif alert_level == 'excellent' %}
-                                                        <i class="bi bi-star-fill text-success"></i>
-                                                    {% else %}
-                                                        <i class="bi bi-check-circle text-muted"></i>
-                                                    {% endif %}
-                                                </div>
                                                 <div class="student-grouped-header">
                                                     <div class="student-grouped-avatar">
                                                         {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
@@ -952,7 +888,11 @@
                                                         <div>
                                                             <div class="grouped-stat-value">
                                                                 {% if student.user %}
+                                                                    {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                                                    <i class="bi bi-check-circle" style="color:#fd7e14;"></i>
+                                                                    {% else %}
                                                                     <i class="bi bi-check-circle text-success"></i>
+                                                                    {% endif %}
                                                                 {% else %}
                                                                     <i class="bi bi-x-circle text-danger"></i>
                                                                 {% endif %}
@@ -981,6 +921,37 @@
                     </div>
                     {% endif %}
                 </div>
+
+                {% if pagination is defined and pagination.pages > 1 %}
+                <div class="students-table-footer border-top px-3 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 bg-light bg-opacity-50">
+                    <div class="text-muted small">
+                        Page {{ pagination.page }} of {{ pagination.pages }}
+                        · Showing
+                        {% if pagination.total == 0 %}0{% else %}{{ (pagination.page - 1) * pagination.per_page + 1 }}{% endif %}–
+                        {{ [pagination.page * pagination.per_page, pagination.total]|min }}
+                        of {{ pagination.total }}
+                    </div>
+                    <nav aria-label="Students pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('management.students', page=pagination.prev_num, search=search_query or '', search_type=search_type, grade_level=grade_filter or '', status=status_filter or '', alert_filter=alert_filter or '', sort=sort_by, order=sort_order, view_mode=request.args.get('view_mode', '')) if pagination.has_prev else '#' }}">Prev</a>
+                            </li>
+                            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                {% if p %}
+                                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('management.students', page=p, search=search_query or '', search_type=search_type, grade_level=grade_filter or '', status=status_filter or '', alert_filter=alert_filter or '', sort=sort_by, order=sort_order, view_mode=request.args.get('view_mode', '')) }}">{{ p }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('management.students', page=pagination.next_num, search=search_query or '', search_type=search_type, grade_level=grade_filter or '', status=status_filter or '', alert_filter=alert_filter or '', sort=sort_by, order=sort_order, view_mode=request.args.get('view_mode', '')) if pagination.has_next else '#' }}">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
             </div>
 
             <!-- View Student Modal -->
@@ -3357,6 +3328,13 @@
                                     <h3 class="mb-2" style="font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${safeData.first_name} ${safeData.middle_initial ? safeData.middle_initial + '. ' : ''}${safeData.last_name}</h3>
                                     <p class="mb-1" style="font-size: 1.1rem; opacity: 0.95; font-weight: 600;">${safeData.assigned_role || safeData.position || 'Staff Member'}</p>
                                     ${safeData.subject && safeData.subject !== 'N/A' ? `<p class="mb-0" style="font-size: 0.95rem; opacity: 0.85;"><i class="bi bi-book me-1"></i>${safeData.subject}</p>` : ''}
+                                    <div class="mt-3">
+                                        <a href="{{ url_for('management.staff_activity_record', teacher_id=0) }}".replace('0', teacherId)
+                                           class="btn btn-light btn-sm"
+                                           style="border-radius: 999px; padding: 0.5rem 1rem; font-weight: 600;">
+                                            <i class="bi bi-printer me-1"></i>Printable activity record
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

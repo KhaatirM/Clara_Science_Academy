@@ -349,6 +349,8 @@
                                 {% set total_submissions = grade_info.get('total_submissions', 0) %}
                                 {% set graded_count = grade_info.get('graded_count', 0) %}
                                 {% set is_autogradeable = grade_info.get('is_autogradeable', False) %}
+                                {% set has_open_ended_questions = grade_info.get('has_open_ended_questions', False) %}
+                                {% set pending_manual_grading = grade_info.get('pending_manual_grading', 0) %}
                                 {% set current_status = assignment|effective_assignment_status %}
                                 {% set all_voided = grade_info.get('all_voided', current_status == 'Voided') %}
                                 {% set partially_voided = grade_info.get('partially_voided', False) %}
@@ -382,6 +384,20 @@
                                             <span class="badge bg-success">
                                                 <i class="bi bi-robot me-1"></i>Autograde
                                             </span>
+                                        {% elif (assignment.assignment_type == 'quiz') and has_open_ended_questions %}
+                                            {% if total_submissions == 0 %}
+                                                <span class="badge bg-light text-dark border">
+                                                    <i class="bi bi-inbox me-1"></i>No submissions
+                                                </span>
+                                            {% elif pending_manual_grading > 0 %}
+                                                <span class="badge bg-danger" title="{{ pending_manual_grading }} submission{{ 's' if pending_manual_grading != 1 else '' }} need manual grading">
+                                                    <i class="bi bi-exclamation-triangle me-1"></i>Needs grading
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-check2-circle me-1"></i>Fully graded
+                                                </span>
+                                            {% endif %}
                                         {% elif total_submissions == 0 %}
                                             <span class="badge bg-light text-dark border">
                                                 <i class="bi bi-inbox me-1"></i>No submissions

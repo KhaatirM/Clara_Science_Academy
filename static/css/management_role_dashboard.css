@@ -817,6 +817,14 @@
         padding: 1.5rem;
     }
 
+    /* Full-width cards; global style.css sets .student-card { width: 120px } for legacy UI */
+    .students-cards-body .student-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
     .student-card {
         background: white;
         border-radius: 15px;
@@ -895,6 +903,7 @@
         padding: 1rem 1.5rem;
         background: #f8f9fa;
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
         border-top: 1px solid #e9ecef;
     }

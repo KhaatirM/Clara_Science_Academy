@@ -1,4 +1,5 @@
 {% extends "shared/dashboard_layout.html" %}
+{% set disable_academic_alert_popup = true %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
@@ -146,6 +147,14 @@
     {% endif %}
     
     <!-- Grade distribution: summary pills + compact bar (0 = graded F; empty field = not entered) -->
+    {# Pre-compute voided count so initial spread excludes them (JS also enforces this). #}
+    {% set ns_spread = namespace(voided_count=0) %}
+    {% for s in students %}
+        {% set gd = grades.get(s.id) %}
+        {% if gd and (gd.is_voided or gd.get('is_voided')) %}
+            {% set ns_spread.voided_count = ns_spread.voided_count + 1 %}
+        {% endif %}
+    {% endfor %}
     <div class="card mb-4 border-0 shadow-sm grade-distribution-card">
         <div class="card-body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -163,7 +172,7 @@
                 <span class="grade-dist-pill dist-c"><span class="grade-dist-dot"></span>C <strong id="countC">0</strong></span>
                 <span class="grade-dist-pill dist-d"><span class="grade-dist-dot"></span>D <strong id="countD">0</strong></span>
                 <span class="grade-dist-pill dist-f"><span class="grade-dist-dot"></span>F <strong id="countF">0</strong></span>
-                <span class="grade-dist-pill dist-ungraded"><span class="grade-dist-dot"></span>Not entered <strong id="countUngraded">{{ students|length }}</strong></span>
+                <span class="grade-dist-pill dist-ungraded"><span class="grade-dist-dot"></span>Not entered <strong id="countUngraded">{{ students|length - ns_spread.voided_count }}</strong></span>
             </div>
             <div class="grade-distribution grade-distribution-v2">
                 <div class="distribution-bar distribution-bar-v2" role="img" aria-label="Grade distribution">
@@ -542,25 +551,77 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted mb-4">Use this guide to correctly record grades and submission status.</p>
+                <p class="text-muted mb-4">Use this guide to record grades correctly and avoid accidental zeros.</p>
+                <div class="alert alert-warning border-0 mb-4" style="background: rgba(255, 193, 7, 0.15);">
+                    <div class="d-flex gap-2">
+                        <div><i class="bi bi-exclamation-triangle-fill text-warning"></i></div>
+                        <div>
+                            <div class="fw-semibold">Important</div>
+                            <div class="small">
+                                Leaving points <strong>blank</strong> means “not entered yet.” Entering <strong>0</strong> is a real grade (F).
+                                Students <strong>voided</strong> for this assignment are excluded from the grade spread and will not be updated.
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="mb-3">
                     <h6><i class="bi bi-clipboard-check text-primary me-2"></i>Submission Status</h6>
-                    <p class="mb-1"><strong>Not Submitted</strong> — Student did not turn in the assignment. No grade needed unless giving a zero.</p>
-                    <p class="mb-1"><strong>Submitted (Paper/In-Person)</strong> — Student handed in a physical paper or turned it in during class.</p>
-                    <p class="mb-1"><strong>Submitted (Online)</strong> — Student submitted digitally through the app.</p>
+                    <p class="mb-1"><strong>Not Submitted</strong> — Use when nothing was turned in yet.</p>
+                    <p class="mb-1"><strong>Submitted (Paper/In-Person)</strong> — Use when a student hands in paper or work is collected in class.</p>
+                    <p class="mb-1"><strong>Submitted (Online)</strong> — Use when the student submits digitally through the app.</p>
+                    {% if assignment.assignment_type|lower in ['pdf', 'paper', 'pdf_paper'] %}
+                    <div class="mt-2 small">
+                        <span class="badge bg-warning text-dark"><i class="bi bi-shield-check me-1"></i>PDF/Paper rule</span>
+                        A numeric grade will only save when Submission Status is <strong>Online</strong> or <strong>In-Person</strong>.
+                        This prevents “everyone got 0” if a page is opened and left.
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="mb-3">
                     <h6><i class="bi bi-sticky text-primary me-2"></i>Submission Notes</h6>
-                    <p class="mb-0">Optional notes such as "Turned in late," "Resubmitted," or "Excused absence."</p>
+                    <p class="mb-0">
+                        Optional notes such as <strong>On-Time</strong>, <strong>Late</strong>, or <strong>Other</strong>.
+                        If late penalties are enabled for this assignment, choosing <strong>Late</strong> can apply the penalty.
+                    </p>
                 </div>
                 <div class="mb-3">
                     <h6><i class="bi bi-star text-primary me-2"></i>Points Earned</h6>
-                    <p class="mb-0">Points the student earned out of the total. If extra credit is enabled for this assignment, you can enter points above the base total up to the configured EC maximum. Enter 0 for no credit or not submitted.</p>
+                    <p class="mb-0">
+                        Points the student earned out of the total. If extra credit is enabled, you can enter points above the base total
+                        (up to the assignment’s extra credit limit). Use <strong>0</strong> only when you truly mean a zero.
+                    </p>
                 </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-lightning-charge text-primary me-2"></i>Auto-save vs Save All</h6>
+                    <p class="mb-0">
+                        Typing in Points Earned auto-saves after a short pause. Use <strong>Save All Grades</strong> to save multiple changes at once.
+                        If you see “Save failed,” check Submission Status and required fields.
+                    </p>
+                </div>
+                {% if assignment.assignment_type == 'quiz' %}
+                <div class="mb-3">
+                    <h6><i class="bi bi-hourglass-split text-primary me-2"></i>Quiz grading (auto + manual)</h6>
+                    <p class="mb-0">
+                        Multiple choice / true-false questions are auto-graded on submission. Short answer / essay questions require manual grading.
+                        Students may see <strong>Grade Pending</strong> until you finalize the score.
+                    </p>
+                </div>
+                {% endif %}
                 <div class="mb-0">
                     <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
                     <p class="mb-0">Optional comment visible to the student. Add constructive feedback to help them improve.</p>
                 </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <div class="form-check m-0">
+                    <input class="form-check-input" type="checkbox" id="disableGradingHelpModal">
+                    <label class="form-check-label" for="disableGradingHelpModal">
+                        Don’t show this automatically again
+                    </label>
+                </div>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    Got it
+                </button>
             </div>
         </div>
     </div>
@@ -571,6 +632,8 @@
 {% block scripts %}
 {{ super() }}
 <script>
+const GRADING_FILE_REQUIRES_SUBMISSION = {{ (assignment.assignment_type|lower in ['pdf', 'paper', 'pdf_paper'])|tojson }};
+
 function isVoidedScoreInput(input) {
     const card = input && input.closest('.student-grade-card');
     return !!(card && card.classList.contains('voided-disabled'));
@@ -750,7 +813,28 @@ function updateGradedCount() {
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('gradingForm');
     
-    // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
+    // Grading help modal: show every time unless user disables it.
+    try {
+        const helpModalEl = document.getElementById('gradingHelpModal');
+        const disableCheckbox = document.getElementById('disableGradingHelpModal');
+        const disabledKey = 'clara:disableGradingHelpModal';
+        const isDisabled = localStorage.getItem(disabledKey) === '1';
+
+        if (!isDisabled && helpModalEl) {
+            const helpModal = new bootstrap.Modal(helpModalEl);
+            helpModal.show();
+        }
+
+        if (disableCheckbox) {
+            disableCheckbox.checked = isDisabled;
+            disableCheckbox.addEventListener('change', () => {
+                localStorage.setItem(disabledKey, disableCheckbox.checked ? '1' : '0');
+            });
+        }
+    } catch (e) {
+        console.warn('Help modal init failed:', e);
+    }
+
     // Initialize character counters
     document.querySelectorAll('.comment-input').forEach(textarea => {
         updateCharCount(textarea);
@@ -1013,6 +1097,23 @@ function saveGradeAjax(studentId) {
     const notesOtherInput = document.querySelector(`input[name="submission_notes_${studentId}"]`);
     const submissionNotes = (notesTypeSelect?.value === 'Other' && notesOtherInput) ? notesOtherInput.value : (notesTypeSelect?.value || '');
 
+    if (GRADING_FILE_REQUIRES_SUBMISSION) {
+        const st = submissionType?.value || '';
+        const rawScore = (scoreInput?.value ?? '').trim();
+        if (rawScore !== '' && st !== 'in_person' && st !== 'online') {
+            if (!autoSaveIndicator) {
+                autoSaveIndicator = document.createElement('div');
+                autoSaveIndicator.className = 'auto-save-indicator';
+                document.body.appendChild(autoSaveIndicator);
+            }
+            autoSaveIndicator.style.display = 'block';
+            autoSaveIndicator.className = 'auto-save-indicator error';
+            autoSaveIndicator.innerHTML = '<i class="bi bi-exclamation-triangle"></i><span>Mark Online or In-Person before scoring</span>';
+            setTimeout(() => { autoSaveIndicator.style.display = 'none'; }, 3000);
+            return;
+        }
+    }
+
     const formData = new FormData();
     formData.append('csrf_token', '{{ csrf_token() }}');
     formData.append('score', scoreInput?.value || '');
@@ -1029,9 +1130,16 @@ function saveGradeAjax(studentId) {
     })
     .then(r => r.json())
     .then(data => {
+        if (!data.success) {
+            if (autoSaveIndicator) {
+                autoSaveIndicator.className = 'auto-save-indicator error';
+                autoSaveIndicator.innerHTML = '<i class="bi bi-exclamation-triangle"></i><span>' + (data.error || 'Save failed') + '</span>';
+            }
+            console.warn('Save response:', data);
+            return;
+        }
         autoSaveIndicator.className = 'auto-save-indicator saved';
         autoSaveIndicator.innerHTML = '<i class="bi bi-check-circle-fill"></i><span>Saved!</span>';
-        if (!data.success) console.warn('Save response:', data);
     })
     .catch(err => {
         autoSaveIndicator.className = 'auto-save-indicator error';

@@ -171,6 +171,29 @@ def login():
                                 error_message='Temporary access expired'
                             )
                             return render_template('shared/login.html')
+
+                if user.role == 'Student' and user.student_id:
+                    from models import Student
+                    from utils.student_login_policy import grade_may_have_login
+                    st = Student.query.get(user.student_id)
+                    if st and (
+                        getattr(st, 'is_deleted', False) or not grade_may_have_login(st.grade_level)
+                    ):
+                        flash(
+                            'Student accounts are not active for your grade level yet. '
+                            'Portal access begins in 4th grade. Contact the office if you need help.',
+                            'danger',
+                        )
+                        get_log_activity()(
+                            user_id=user.id,
+                            action='login_failed',
+                            details={'username': username, 'reason': 'student_grade_no_portal'},
+                            ip_address=request.remote_addr,
+                            user_agent=request.headers.get('User-Agent'),
+                            success=False,
+                            error_message='Student portal not active for grade',
+                        )
+                        return render_template('shared/login.html')
                 
                 # Convert remember to boolean
                 remember = bool(request.form.get('remember'))
@@ -891,6 +914,18 @@ def google_callback():
         ).first()
         
         if user:
+            if user.role == 'Student' and user.student_id:
+                from models import Student
+                from utils.student_login_policy import grade_may_have_login
+                st = Student.query.get(user.student_id)
+                if st and (
+                    getattr(st, 'is_deleted', False) or not grade_may_have_login(st.grade_level)
+                ):
+                    flash(
+                        'Google sign-in is not available for your grade yet. Portal access begins in 4th grade.',
+                        'danger',
+                    )
+                    return redirect(url_for('auth.login'))
             # User exists - log them in
             login_user(user, remember=True)
             

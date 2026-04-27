@@ -1,0 +1,218 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    .card { box-shadow: none !important; }
+    a[href]:after { content: ""; }
+  }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h2 class="mb-1"><i class="bi bi-file-earmark-text me-2"></i>Staff activity record</h2>
+      <div class="text-muted small">
+        <strong>{{ teacher.first_name }} {{ teacher.last_name }}</strong>
+        {% if teacher.staff_id %}· <span class="mono">{{ teacher.staff_id }}</span>{% endif %}
+        · {{ teacher.email }}
+      </div>
+      <div class="text-muted small">Range: {{ start }} → {{ end }}</div>
+    </div>
+    <div class="d-flex gap-2 no-print">
+      <a class="btn btn-outline-secondary" href="{{ url_for('management.teachers') }}">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <button class="btn btn-outline-primary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Print
+      </button>
+      <a class="btn btn-primary" href="{{ url_for('management.export_staff_activity_record_csv', teacher_id=teacher.id, start=start, end=end) }}">
+        <i class="bi bi-download me-1"></i>Export CSV
+      </a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3 no-print">
+    <div class="card-body">
+      <form class="row g-2 align-items-end" method="GET" action="{{ url_for('management.staff_activity_record', teacher_id=teacher.id) }}">
+        <div class="col-6 col-md-3">
+          <label class="form-label small text-muted">Start</label>
+          <input type="date" class="form-control" name="start" value="{{ start }}">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label small text-muted">End</label>
+          <input type="date" class="form-control" name="end" value="{{ end }}">
+        </div>
+        <div class="col-12 col-md-3">
+          <button class="btn btn-success w-100" type="submit">
+            <i class="bi bi-search me-1"></i>Update range
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="row g-3 g-md-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <strong><i class="bi bi-journal-text me-2"></i>Assignments created</strong>
+          <span class="text-muted ms-2">({{ created_assignments|length }})</span>
+        </div>
+        <div class="card-body p-0">
+          {% if created_assignments %}
+          <div class="table-responsive">
+            <table class="table table-striped mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Created</th>
+                  <th>Class</th>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in created_assignments %}
+                <tr>
+                  <td class="small text-muted">{{ a.created_at.strftime('%Y-%m-%d %I:%M %p') if a.created_at else '' }}</td>
+                  <td class="small">{{ a.class_info.name if a.class_info else '—' }}</td>
+                  <td>{{ a.title }}</td>
+                  <td class="small text-muted">{{ (a.assignment_type or '') }}</td>
+                  <td class="small text-muted">{{ a.due_date.strftime('%Y-%m-%d') if a.due_date else '' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="p-3 text-muted">No assignments found in this range.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <strong><i class="bi bi-calendar-check me-2"></i>Attendance records taken</strong>
+          <span class="text-muted ms-2">({{ attendance_records|length }})</span>
+        </div>
+        <div class="card-body p-0">
+          {% if attendance_records %}
+          <div class="table-responsive">
+            <table class="table table-striped mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Recorded</th>
+                  <th>Date</th>
+                  <th>Class</th>
+                  <th>Student</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in attendance_records %}
+                <tr>
+                  <td class="small text-muted">{{ r.created_at.strftime('%Y-%m-%d %I:%M %p') if r.created_at else '' }}</td>
+                  <td class="small">{{ r.date.strftime('%Y-%m-%d') if r.date else '' }}</td>
+                  <td class="small">{{ r.class_info.name if r.class_info else '—' }}</td>
+                  <td class="small">{{ (r.student.first_name ~ ' ' ~ r.student.last_name) if r.student else '—' }}</td>
+                  <td class="small">{{ r.status }}</td>
+                  <td class="small text-muted">{{ (r.notes or '')|truncate(80) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="p-3 text-muted">No attendance records found in this range.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <strong><i class="bi bi-clipboard-check me-2"></i>Manual submission marks</strong>
+          <span class="text-muted ms-2">({{ marked_submissions|length }})</span>
+        </div>
+        <div class="card-body p-0">
+          {% if marked_submissions %}
+          <div class="table-responsive">
+            <table class="table table-striped mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Marked</th>
+                  <th>Class</th>
+                  <th>Assignment</th>
+                  <th>Submission type</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in marked_submissions %}
+                <tr>
+                  <td class="small text-muted">{{ s.marked_at.strftime('%Y-%m-%d %I:%M %p') if s.marked_at else '' }}</td>
+                  <td class="small">{{ s.assignment.class_info.name if s.assignment and s.assignment.class_info else '—' }}</td>
+                  <td class="small">{{ s.assignment.title if s.assignment else ('assignment_id=' ~ s.assignment_id) }}</td>
+                  <td class="small">{{ s.submission_type }}</td>
+                  <td class="small text-muted">{{ (s.submission_notes or '')|truncate(80) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="p-3 text-muted">No manual submission marks found in this range.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <strong><i class="bi bi-people-fill me-2"></i>Group grades given</strong>
+          <span class="text-muted ms-2">({{ group_grades|length }})</span>
+        </div>
+        <div class="card-body p-0">
+          {% if group_grades %}
+          <div class="table-responsive">
+            <table class="table table-striped mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Graded</th>
+                  <th>Class</th>
+                  <th>Assignment</th>
+                  <th>Student</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for g in group_grades %}
+                <tr>
+                  <td class="small text-muted">{{ g.graded_at.strftime('%Y-%m-%d %I:%M %p') if g.graded_at else '' }}</td>
+                  <td class="small">{{ g.group_assignment.class_info.name if g.group_assignment and g.group_assignment.class_info else '—' }}</td>
+                  <td class="small">{{ g.group_assignment.title if g.group_assignment else ('group_assignment_id=' ~ g.group_assignment_id) }}</td>
+                  <td class="small">{{ (g.student.first_name ~ ' ' ~ g.student.last_name) if g.student else ('student_id=' ~ g.student_id) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="p-3 text-muted">No group grades found in this range.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

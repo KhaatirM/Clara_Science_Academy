@@ -351,7 +351,7 @@ def edit_teacher_staff(staff_id):
                 access_expires_str = request.form.get('access_expires_at', '').strip()
                 if access_expires_str:
                     try:
-                        from datetime import datetime, timezone
+                        from datetime import timezone
                         access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
                         access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
                         teacher_staff.access_expires_at = access_expires_at

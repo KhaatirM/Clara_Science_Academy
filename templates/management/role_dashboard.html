@@ -3833,15 +3833,15 @@
                     if (result.success) {
                       location.reload();
                     } else {
-                      alert('Error: ' + result.message);
+                      showToast(result.message || 'Could not update student.', 'danger');
                     }
                   })
-                  .catch(() => alert('Could not update student.'));
+                  .catch(() => showToast('Could not update student.', 'danger'));
                 };
                 var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
                 modal.show();
             })
-            .catch(() => alert('Could not load student details.'));
+            .catch(() => showToast('Could not load student details.', 'danger'));
     }
 
     function editTeacher(teacherId) {
@@ -3849,7 +3849,7 @@
             .then(response => response.json())
             .then(data => {
                 if (!data || data.error) {
-                    alert(data && data.error ? data.error : 'Could not load teacher/staff details.');
+                    showToast((data && data.error) ? data.error : 'Could not load teacher/staff details.', 'danger');
                     return;
                 }
                 const removalNoteSafe = String(data.removal_note || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -4408,10 +4408,10 @@
                         if (result.success) {
                             location.reload();
                         } else {
-                            alert('Error: ' + result.message);
+                            showToast(result.message || 'Could not update teacher/staff.', 'danger');
                         }
                     })
-                    .catch(() => alert('Could not update teacher/staff.'));
+                    .catch(() => showToast('Could not update teacher/staff.', 'danger'));
                 };
                 var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
                 modal.show();
@@ -4473,7 +4473,7 @@
                     }
                 };
             })
-            .catch(() => alert('Could not load teacher details.'));
+            .catch(() => showToast('Could not load teacher details.', 'danger'));
     }
 
     function removeTeacher(teacherId, teacherName) {
@@ -4488,10 +4488,10 @@
                 if (response.ok) {
                     location.reload();
                 } else {
-                    alert('Error removing teacher/staff member.');
+                    showToast('Error removing teacher/staff member.', 'danger');
                 }
             })
-            .catch(() => alert('Could not remove teacher/staff member.'));
+            .catch(() => showToast('Could not remove teacher/staff member.', 'danger'));
         }
     }
 
@@ -4515,6 +4515,39 @@
             
             document.body.appendChild(form);
             form.submit();
+        }
+    }
+
+    // Replace blocking alert() popups with Bootstrap toasts
+    function showToast(message, type) {
+        try {
+            const toastType = type || 'info'; // success, danger, warning, info
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${toastType} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            const safeMsg = String(message || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${safeMsg}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { delay: 6000 });
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        } catch (e) {
+            console.warn('Toast failed:', e);
         }
     }
     

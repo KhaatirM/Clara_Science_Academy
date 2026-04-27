@@ -702,13 +702,22 @@ def create_app(config_class=None):
         from models import SystemConfig
         effective = 'default'
         if current_user.is_authenticated:
-            site_override = SystemConfig.get_value('site_theme_override')
-            if site_override:
-                effective = site_override
-            else:
-                pref = getattr(current_user, 'theme_preference', None)
-                if pref:
-                    effective = pref
+            try:
+                site_override = SystemConfig.get_value('site_theme_override')
+                if site_override:
+                    effective = site_override
+                else:
+                    pref = getattr(current_user, 'theme_preference', None)
+                    if pref:
+                        effective = pref
+            except Exception as e:
+                # If the request transaction is in a failed state (e.g., prior DB error),
+                # ensure we can still render error pages without cascading failures.
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                current_app.logger.warning("inject_theme failed; falling back to default theme: %s", e)
         return {'effective_theme': effective}
 
     @app.context_processor
@@ -1277,6 +1286,10 @@ def create_app(config_class=None):
         """Handle 500 server errors."""
         # Log error for debugging
         print(f"500 Error: {error}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         
         # Return user-friendly error page
         return render_template('shared/error.html', 
@@ -1306,6 +1319,10 @@ def create_app(config_class=None):
         import traceback
         print(f"Unexpected error: {error}")
         traceback.print_exc()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return render_template('shared/error.html', 
                              error_code=500,
                              error_message="An unexpected error occurred. Please try again later.",

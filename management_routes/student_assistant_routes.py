@@ -16,6 +16,7 @@ from models import (
 )
 import json
 from utils.school_timezone import get_school_timezone_name
+from utils.grade_helpers import numeric_score_from_grade_dict
 
 bp = Blueprint('student_assistant', __name__, url_prefix='/assistant')
 
@@ -513,8 +514,9 @@ def grade_group_assignment(class_id, assignment_id):
             group_submission_status[sub.group_id] = 'online'
 
     total_students = len(all_students)
-    graded_count = len([g for g in grades_by_student.values() if g.get('score', 0) > 0])
-    total_score = sum(g.get('score', 0) for g in grades_by_student.values() if g.get('score', 0) > 0)
+    numeric_scores = [numeric_score_from_grade_dict(g) for g in grades_by_student.values()]
+    graded_count = sum(1 for n in numeric_scores if n > 0)
+    total_score = sum(n for n in numeric_scores if n > 0)
     average_score = (total_score / graded_count) if graded_count > 0 else 0
 
     if request.method == 'POST':
@@ -529,7 +531,7 @@ def grade_group_assignment(class_id, assignment_id):
             valid_student_ids = set(students_by_id.keys())
 
             graded_by_id = None  # Student assistant - no teacher
-            total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+            total_points = float(group_assignment.total_points or 100.0)
             effective_max = max(total_points, 100.0)
             saved_count = 0
             changes = []

@@ -25,6 +25,7 @@ from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses,
 from teacher_routes.assignment_utils import is_assignment_open_for_student
 from utils.grade_helpers import (
     get_points_earned,
+    numeric_score_from_grade_dict,
 )
 from utils.school_timezone import get_school_timezone_name
 
@@ -5122,8 +5123,9 @@ def admin_grade_group_assignment(assignment_id):
         
         # Calculate statistics
         total_students = len(all_students)
-        graded_count = len([g for g in grades_by_student.values() if g.get('score', 0) > 0])
-        total_score = sum([g.get('score', 0) for g in grades_by_student.values() if g.get('score', 0) > 0])
+        numeric_scores = [numeric_score_from_grade_dict(g) for g in grades_by_student.values()]
+        graded_count = sum(1 for n in numeric_scores if n > 0)
+        total_score = sum(n for n in numeric_scores if n > 0)
         average_score = (total_score / graded_count) if graded_count > 0 else 0
         
         if request.method == 'POST':
@@ -5174,7 +5176,7 @@ def admin_grade_group_assignment(assignment_id):
                     current_app.logger.info(f"[group_grade] graded_by_id={graded_by_id} total_points={group_assignment.total_points}")
                 except Exception:
                     pass
-                total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                total_points = float(group_assignment.total_points or 100.0)
                 # UI sends 0-100 scale; accept up to max(total_points, 100) so percentage-style entry always saves
                 effective_max = max(total_points, 100.0)
                 saved_count = 0
@@ -5295,7 +5297,7 @@ def admin_grade_group_assignment(assignment_id):
                 flash('Error saving grades. Please try again.', 'error')
         
         # Get total points from assignment (default to 100 if not set)
-        assignment_total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+        assignment_total_points = float(group_assignment.total_points or 100.0)
         
         return render_template('management/admin_grade_group_assignment.html',
                              group_assignment=group_assignment,

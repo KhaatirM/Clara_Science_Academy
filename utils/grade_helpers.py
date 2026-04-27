@@ -20,3 +20,17 @@ def get_points_earned(grade_data):
 def get_score(grade_data):
     """Alias for get_points_earned for consistency."""
     return get_points_earned(grade_data)
+
+
+def numeric_score_from_grade_dict(gdict, default=0.0):
+    """
+    Float score for stats/comparisons. grade_data JSON may store score/points_earned as strings;
+    comparing str to int raises TypeError in Python 3.
+    """
+    if not isinstance(gdict, dict):
+        return float(default)
+    v = gdict.get('points_earned', gdict.get('score', default))
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return float(default)

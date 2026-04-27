@@ -429,6 +429,84 @@ def edit_teacher_staff(staff_id):
 # Function: remove_teacher_staff
 # ============================================================
 
+def _remove_staff_wants_json():
+    """AJAX remove from dashboard: return JSON instead of redirect so the UI can refresh reliably."""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return True
+    accept = (request.headers.get('Accept') or '').lower()
+    return 'application/json' in accept
+
+
+def _actor_user_id_for_staff_removal(excluded_user_ids):
+    """Account that will own reassigned records after removing staff user row(s)."""
+    excluded = {int(x) for x in excluded_user_ids if x is not None}
+    uid = getattr(current_user, 'id', None)
+    if uid is not None and uid not in excluded:
+        return uid
+    q = User.query
+    if excluded:
+        q = q.filter(~User.id.in_(excluded))
+    alt = q.order_by(User.id).first()
+    return alt.id if alt else None
+
+
+def _detach_user_references_before_delete(user_id, fallback_user_id):
+    """
+    Reassign NOT NULL FKs that point at user_id, and delete membership-style rows.
+    Required before deleting a User; otherwise SQLAlchemy emits SET NULL updates that
+    violate NOT NULL (e.g. message_group.created_by).
+    """
+    from models import (
+        Announcement,
+        AnnouncementReadReceipt,
+        BugReport,
+        GradeHistory,
+        Message,
+        MessageGroup,
+        MessageGroupMember,
+        MessageReaction,
+        Notification,
+        QuestionBank,
+        ScheduledAnnouncement,
+    )
+
+    if fallback_user_id is None or int(user_id) == int(fallback_user_id):
+        raise ValueError('Invalid fallback user for detaching references')
+
+    uid = int(user_id)
+    fb = int(fallback_user_id)
+
+    MessageGroup.query.filter_by(created_by=uid).update(
+        {MessageGroup.created_by: fb}, synchronize_session=False
+    )
+    QuestionBank.query.filter_by(created_by=uid).update(
+        {QuestionBank.created_by: fb}, synchronize_session=False
+    )
+    GradeHistory.query.filter_by(changed_by=uid).update(
+        {GradeHistory.changed_by: fb}, synchronize_session=False
+    )
+    Announcement.query.filter_by(sender_id=uid).update(
+        {Announcement.sender_id: fb}, synchronize_session=False
+    )
+    ScheduledAnnouncement.query.filter_by(sender_id=uid).update(
+        {ScheduledAnnouncement.sender_id: fb}, synchronize_session=False
+    )
+    BugReport.query.filter_by(user_id=uid).update(
+        {BugReport.user_id: fb}, synchronize_session=False
+    )
+    Message.query.filter_by(sender_id=uid).update(
+        {Message.sender_id: fb}, synchronize_session=False
+    )
+    Message.query.filter_by(recipient_id=uid).update(
+        {Message.recipient_id: fb}, synchronize_session=False
+    )
+
+    Notification.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    MessageGroupMember.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    MessageReaction.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    AnnouncementReadReceipt.query.filter_by(user_id=uid).delete(synchronize_session=False)
+
+
 @bp.route('/remove-teacher-staff/<int:staff_id>', methods=['POST'])
 @login_required
 @management_required
@@ -446,7 +524,10 @@ def remove_teacher_staff(staff_id):
     
     # Check if already deleted
     if teacher_staff.is_deleted:
-        flash('This teacher/staff member has already been deleted.', 'warning')
+        msg = 'This teacher/staff member has already been deleted.'
+        if _remove_staff_wants_json():
+            return jsonify({'success': False, 'message': msg}), 400
+        flash(msg, 'warning')
         return redirect(url_for('management.teachers'))
     
     try:
@@ -489,8 +570,17 @@ def remove_teacher_staff(staff_id):
         
         # Delete associated User account(s) - this removes login access
         user_accounts = User.query.filter_by(teacher_staff_id=staff_id).all()
-        for user in user_accounts:
-            db.session.delete(user)
+        if user_accounts:
+            uids = [u.id for u in user_accounts]
+            fallback_uid = _actor_user_id_for_staff_removal(uids)
+            if not fallback_uid:
+                raise ValueError(
+                    'No user account is available to reassign messaging and audit references. '
+                    'Cannot remove this staff login safely.'
+                )
+            for user in user_accounts:
+                _detach_user_references_before_delete(user.id, fallback_uid)
+                db.session.delete(user)
         
         # IMPORTANT: Do NOT modify class assignments, assignments, grades, or any other data
         # All foreign key references to this teacher remain intact
@@ -498,12 +588,21 @@ def remove_teacher_staff(staff_id):
         # The teacher will simply not appear in active teacher lists due to is_deleted flag
         
         db.session.commit()
-        flash(f'Teacher/Staff member "{teacher_staff.first_name} {teacher_staff.last_name}" has been removed. Their account has been deleted, but all their work (assignments, grades, etc.) has been preserved.', 'success')
+        success_msg = (
+            f'Teacher/Staff member "{teacher_staff.first_name} {teacher_staff.last_name}" has been removed. '
+            'Their account has been deleted, but all their work (assignments, grades, etc.) has been preserved.'
+        )
+        if _remove_staff_wants_json():
+            return jsonify({'success': True, 'message': success_msg})
+        flash(success_msg, 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting teacher/staff: {str(e)}")
-        flash(f'Error removing teacher/staff member: {str(e)}', 'danger')
-    
+        err_msg = f'Error removing teacher/staff member: {str(e)}'
+        if _remove_staff_wants_json():
+            return jsonify({'success': False, 'message': err_msg}), 500
+        flash(err_msg, 'danger')
+
     return redirect(url_for('management.teachers'))
 
 # Report Card Generation - API endpoint to get classes for a student

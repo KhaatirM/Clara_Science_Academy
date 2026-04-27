@@ -1503,6 +1503,21 @@
         color: #43e97b;
     }
 
+    /* Staff table: roomier headers (avoid tight / mid-word wraps like "Employmen|t") */
+    .teachers-table.table thead th {
+        padding: 0.9rem 1.15rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .teachers-table.table tbody td {
+        padding: 0.85rem 1.1rem;
+        vertical-align: middle;
+    }
+
     /* Teacher Action Buttons */
     .btn-teachers-action-view {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

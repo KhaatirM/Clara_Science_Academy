@@ -149,6 +149,9 @@ def management_required(f):
 
                 # Teachers & staff (view/manage)
                 'management.teachers': ['teachers_staff:manage'],
+                'management.edit_teacher_staff': ['teachers_staff:manage'],
+                'management.remove_teacher_staff': ['teachers_staff:manage'],
+                'management.view_teacher': ['teachers_staff:manage'],
                 'teachers.teachers': ['teachers_staff:manage'],
                 'teachers.edit_teacher_staff': ['teachers_staff:manage'],
                 'teachers.remove_teacher_staff': ['teachers_staff:manage'],

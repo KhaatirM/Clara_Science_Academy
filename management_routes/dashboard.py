@@ -43,7 +43,8 @@ def management_dashboard():
         # Basic stats
         stats = {
             'students': Student.query.count(),
-            'teachers': TeacherStaff.query.count(),
+            # Match Teachers & Staff "manage" list: exclude soft-deleted records
+            'teachers': TeacherStaff.query.filter(TeacherStaff.is_deleted == False).count(),
             'classes': Class.query.count(),
             'assignments': Assignment.query.count()
         }

@@ -12,11 +12,7 @@ from models import (
 )
 import json
 from datetime import datetime
-from utils.grade_helpers import (
-    get_points_earned,
-    requires_explicit_submission_for_file_assignment,
-    submission_record_confirmed_for_grading,
-)
+from utils.grade_helpers import get_points_earned
 
 bp = Blueprint('grading', __name__)
 
@@ -88,7 +84,6 @@ def grade_assignment(assignment_id):
         # Handle quiz per-question grading or regular assignment grading
         try:
             grades_saved = 0
-            pdf_grade_skipped = 0
 
             # Get enrolled students for this class
             enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
@@ -189,7 +184,6 @@ def grade_assignment(assignment_id):
                     grades_saved += 1
             else:
                 # Regular assignment grading (existing logic)
-                file_grade_requires_sub = requires_explicit_submission_for_file_assignment(assignment)
                 for student_id in student_ids:
                     comments = request.form.get(f'comment_{student_id}', '').strip()
                     submission_type = request.form.get(f'submission_type_{student_id}', '') or ''
@@ -243,9 +237,6 @@ def grade_assignment(assignment_id):
                         continue
 
                     sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-                    if file_grade_requires_sub and not submission_record_confirmed_for_grading(sub):
-                        pdf_grade_skipped += 1
-                        continue
 
                     adjusted = _apply_assignment_adjustments(
                         assignment=assignment,
@@ -283,9 +274,9 @@ def grade_assignment(assignment_id):
                         )
                         db.session.add(new_grade)
 
-                    # Infer in-person submission from points only for non-file assignments
+                    # Infer in-person submission when a positive grade is saved and none exists yet
                     sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-                    if not sub and not file_grade_requires_sub:
+                    if not sub and points_earned > 0:
                         sub = Submission(
                             student_id=student_id,
                             assignment_id=assignment_id,
@@ -302,15 +293,9 @@ def grade_assignment(assignment_id):
             
             db.session.commit()
 
-            if pdf_grade_skipped > 0:
-                flash(
-                    f'{pdf_grade_skipped} student(s) skipped: for file/paper assignments, set submission to '
-                    'Online or In-Person before saving a score.',
-                    'warning',
-                )
             if grades_saved > 0:
                 flash(f'{grades_saved} grade(s) saved successfully!', 'success')
-            elif pdf_grade_skipped == 0:
+            else:
                 flash('No grades were updated. Please enter scores to save.', 'warning')
             
             return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
@@ -545,11 +530,6 @@ def save_student_grade(assignment_id, student_id):
             return jsonify({'success': False, 'error': 'Invalid score'}), 400
 
         sub_for_adjustments = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-        if requires_explicit_submission_for_file_assignment(assignment) and not submission_record_confirmed_for_grading(sub_for_adjustments):
-            return jsonify({
-                'success': False,
-                'error': 'Set submission to Online or In-Person before entering a grade.',
-            }), 400
 
         adjusted = _apply_assignment_adjustments(
             assignment=assignment,
@@ -584,16 +564,15 @@ def save_student_grade(assignment_id, student_id):
                 late_penalty_applied=adjusted['late_penalty_applied']
             )
             db.session.add(new_grade)
-            if not requires_explicit_submission_for_file_assignment(assignment):
-                sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-                if not sub and adjusted['points_earned'] > 0:
-                    sub = Submission(
-                        student_id=student_id, assignment_id=assignment_id,
-                        submission_type='in_person', submission_notes='Auto-marked: grade entered',
-                        marked_by=teacher_staff.id if teacher_staff else None,
-                        marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
-                    )
-                    db.session.add(sub)
+            sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+            if not sub and adjusted['points_earned'] > 0:
+                sub = Submission(
+                    student_id=student_id, assignment_id=assignment_id,
+                    submission_type='in_person', submission_notes='Auto-marked: grade entered',
+                    marked_by=teacher_staff.id if teacher_staff else None,
+                    marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
+                )
+                db.session.add(sub)
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'Saved'})

@@ -1478,13 +1478,12 @@
                     <table class="table table-hover align-middle teachers-table">
                         <thead class="table-dark">
                             <tr>
-                                <th style="min-width: 200px;">Name</th>
-                                <th style="min-width: 120px;">Role</th>
-                                <th style="min-width: 150px;">Department</th>
-                                <th style="min-width: 180px;">Email</th>
-                                <th style="min-width: 100px;">Username</th>
-                                <th style="min-width: 100px;">Employment</th>
-                                <th style="min-width: 80px;">Status</th>
+                                <th style="min-width: 220px;">Name</th>
+                                <th style="min-width: 140px;">Role</th>
+                                <th style="min-width: 160px;">Department</th>
+                                <th style="min-width: 200px;">Email</th>
+                                <th style="min-width: 130px;">Employment</th>
+                                <th style="min-width: 110px;">Status</th>
                                 <th style="min-width: 200px;">Actions</th>
                             </tr>
                         </thead>
@@ -1546,13 +1545,6 @@
                                         </div>
                                     </td>
                                     <td>
-                                        {% if teacher.user %}
-                                            <span class="badge bg-primary">{{ teacher.user.username }}</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">No Account</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
                                         {% if teacher.employment_type %}
                                             <span class="badge bg-secondary">{{ teacher.employment_type }}</span>
                                         {% else %}
@@ -1588,7 +1580,7 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-5">
+                                    <td colspan="7" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
                                         No teachers or staff found matching your criteria.
                                     </td>
@@ -1647,16 +1639,6 @@
                                     <div class="teacher-card-detail">
                                         <i class="bi bi-envelope me-2"></i>
                                         <span class="text-truncate" style="max-width: 200px;">{{ teacher.email or 'N/A' }}</span>
-                                    </div>
-                                    <div class="teacher-card-detail">
-                                        <i class="bi bi-person-circle me-2"></i>
-                                        <span>Username: 
-                                            {% if teacher.user %}
-                                                <span class="badge bg-primary">{{ teacher.user.username }}</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">No Account</span>
-                                            {% endif %}
-                                        </span>
                                     </div>
                                     <div class="teacher-card-detail">
                                         <i class="bi bi-calendar-check me-2"></i>
@@ -4478,18 +4460,30 @@
 
     function removeTeacher(teacherId, teacherName) {
         if (confirm(`Are you sure you want to remove ${teacherName}? This action cannot be undone.`)) {
+            const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
             fetch(`/management/remove-teacher-staff/${teacherId}`, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
-                    'Content-Type': 'application/json',
-                }
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {}),
+                },
             })
-            .then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    showToast('Error removing teacher/staff member.', 'danger');
+            .then(async (response) => {
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = {};
                 }
+                if (response.ok && data.success) {
+                    const base = window.location.pathname + window.location.search;
+                    const sep = window.location.search ? '&' : '?';
+                    window.location.assign(base + sep + '_refresh=' + Date.now());
+                    return;
+                }
+                showToast(data.message || 'Error removing teacher/staff member.', 'danger');
             })
             .catch(() => showToast('Could not remove teacher/staff member.', 'danger'));
         }

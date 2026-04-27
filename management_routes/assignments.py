@@ -25,8 +25,6 @@ from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses,
 from teacher_routes.assignment_utils import is_assignment_open_for_student
 from utils.grade_helpers import (
     get_points_earned,
-    requires_explicit_submission_for_file_assignment,
-    submission_record_confirmed_for_grading,
 )
 from utils.school_timezone import get_school_timezone_name
 
@@ -1985,8 +1983,6 @@ def _save_single_student_grade(assignment_id, student_id):
         return False, 'Invalid score'
 
     sub_for_adjustments = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-    if requires_explicit_submission_for_file_assignment(assignment) and not submission_record_confirmed_for_grading(sub_for_adjustments):
-        return False, 'Set submission to Online or In-Person before entering a grade.'
 
     adjusted = _apply_assignment_adjustments(
         assignment=assignment,
@@ -2020,16 +2016,15 @@ def _save_single_student_grade(assignment_id, student_id):
             late_penalty_applied=adjusted['late_penalty_applied']
         )
         db.session.add(grade)
-        if not requires_explicit_submission_for_file_assignment(assignment):
-            sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-            if not sub and adjusted['points_earned'] > 0:
-                sub = Submission(
-                    student_id=student_id, assignment_id=assignment_id,
-                    submission_type='in_person', submission_notes='Auto-marked: grade entered',
-                    marked_by=teacher.id if teacher else None,
-                    marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
-                )
-                db.session.add(sub)
+        sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
+        if not sub and adjusted['points_earned'] > 0:
+            sub = Submission(
+                student_id=student_id, assignment_id=assignment_id,
+                submission_type='in_person', submission_notes='Auto-marked: grade entered',
+                marked_by=teacher.id if teacher else None,
+                marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
+            )
+            db.session.add(sub)
 
     db.session.commit()
     return True, 'Saved'
@@ -2218,8 +2213,6 @@ def grade_assignment(assignment_id):
                     flash(f"Saved {grades_saved} quiz grades.", "success")
                     return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
 
-                file_grade_requires_sub = requires_explicit_submission_for_file_assignment(assignment)
-                pdf_grade_skipped = 0
                 for student in students:
                     score = request.form.get(f'score_{student.id}')
                     comment = request.form.get(f'comment_{student.id}')
@@ -2264,22 +2257,13 @@ def grade_assignment(assignment_id):
                         assignment_id=assignment_id
                     ).first()
 
-                    if file_grade_requires_sub:
-                        if score is None or str(score).strip() == '':
-                            continue
-                        if not submission_record_confirmed_for_grading(submission_for_adjustments):
-                            pdf_grade_skipped += 1
-                            continue
-                        try:
-                            points_earned = float(score)
-                        except (ValueError, TypeError):
-                            continue
-                    else:
-                        # Non-file: blank/empty score is treated as 0 (legacy behavior)
-                        try:
-                            points_earned = float(score) if (score is not None and str(score).strip()) else 0.0
-                        except (ValueError, TypeError):
-                            points_earned = 0.0
+                    # Match teacher grading: blank score means "not entered" (avoids mass zeros on Save All)
+                    if score is None or str(score).strip() == '':
+                        continue
+                    try:
+                        points_earned = float(score)
+                    except (ValueError, TypeError):
+                        continue
 
                     adjusted = _apply_assignment_adjustments(
                         assignment=assignment,
@@ -2366,8 +2350,8 @@ def grade_assignment(assignment_id):
                             grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
                         grade.grade_data = json.dumps(grade_data_dict)
 
-                    # Auto-create in_person submission from points only for non-file assignments
-                    if adjusted['points_earned'] > 0 and not file_grade_requires_sub:
+                    # Auto-create in_person submission when a positive grade is saved and none exists yet
+                    if adjusted['points_earned'] > 0:
                         submission = Submission.query.filter_by(
                             student_id=student.id,
                             assignment_id=assignment_id
@@ -2396,12 +2380,6 @@ def grade_assignment(assignment_id):
                         graded_user_ids,
                         assignment_title=assignment.title,
                         link=url_for('student.student_grades')
-                    )
-                if pdf_grade_skipped:
-                    flash(
-                        f'{pdf_grade_skipped} student(s) skipped: for file/paper assignments, set submission to '
-                        'Online or In-Person before saving a score.',
-                        'warning',
                     )
                 flash('Grades updated successfully.', 'success')
                 return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))

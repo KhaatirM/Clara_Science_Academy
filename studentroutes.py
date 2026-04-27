@@ -3549,9 +3549,21 @@ def submit_group_assignment(assignment_id):
     if not enrollment:
         return jsonify({'success': False, 'message': 'You are not enrolled in this class'}), 403
     
-    # Find which group the student belongs to for this assignment
+    # Find which group the student belongs to for this assignment.
+    # Prefer frozen roster snapshot so later reshuffles don't affect old assignments.
     student_group = None
-    if group_assignment.selected_group_ids:
+    try:
+        from models import GroupAssignmentMemberSnapshot
+        snap = GroupAssignmentMemberSnapshot.query.filter_by(
+            group_assignment_id=assignment_id,
+            student_id=student.id,
+        ).first()
+        if snap and snap.group_id:
+            student_group = StudentGroup.query.get(snap.group_id)
+    except Exception:
+        student_group = None
+
+    if student_group is None and group_assignment.selected_group_ids:
         # Assignment is for specific groups
         import json
         selected_group_ids = json.loads(group_assignment.selected_group_ids)
@@ -3563,7 +3575,7 @@ def submit_group_assignment(assignment_id):
             if membership:
                 student_group = StudentGroup.query.get(group_id)
                 break
-    else:
+    elif student_group is None:
         # Assignment is for all groups in the class
         membership = StudentGroupMember.query.join(StudentGroup).filter(
             StudentGroupMember.student_id == student.id,

@@ -2558,6 +2558,31 @@ def admin_create_group_pdf_assignment(class_id):
         )
         
         db.session.add(group_assignment)
+
+        # Freeze membership snapshot so future group reshuffles don't affect this assignment's roster.
+        try:
+            from models import GroupAssignmentMemberSnapshot, StudentGroupMember, StudentGroup
+            db.session.flush()
+            selected_ids = []
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else (group_assignment.selected_group_ids or [])
+            except Exception:
+                selected_ids = []
+            if not selected_ids:
+                selected_ids = [g.id for g in StudentGroup.query.filter_by(class_id=effective_class_id, is_active=True).all()]
+            if selected_ids:
+                member_rows = StudentGroupMember.query.filter(StudentGroupMember.group_id.in_(selected_ids)).all()
+                for m in member_rows:
+                    if not m.student_id:
+                        continue
+                    db.session.add(GroupAssignmentMemberSnapshot(
+                        group_assignment_id=group_assignment.id,
+                        group_id=m.group_id,
+                        student_id=m.student_id,
+                    ))
+        except Exception:
+            pass
+
         db.session.commit()
         
         flash(f'Group PDF assignment "{title}" created successfully!', 'success')
@@ -2664,6 +2689,52 @@ def admin_create_group_quiz_assignment(class_id):
         
         db.session.add(group_assignment)
         db.session.flush()  # Get the assignment ID
+
+        # Freeze membership snapshot so future group reshuffles don't affect this assignment's roster.
+        try:
+            from models import GroupAssignmentMemberSnapshot, StudentGroupMember, StudentGroup
+            selected_ids = []
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else (group_assignment.selected_group_ids or [])
+            except Exception:
+                selected_ids = []
+            if not selected_ids:
+                selected_ids = [g.id for g in StudentGroup.query.filter_by(class_id=class_obj.id, is_active=True).all()]
+            if selected_ids:
+                member_rows = StudentGroupMember.query.filter(StudentGroupMember.group_id.in_(selected_ids)).all()
+                for m in member_rows:
+                    if not m.student_id:
+                        continue
+                    db.session.add(GroupAssignmentMemberSnapshot(
+                        group_assignment_id=group_assignment.id,
+                        group_id=m.group_id,
+                        student_id=m.student_id,
+                    ))
+        except Exception:
+            pass
+
+        # Freeze membership snapshot so future group reshuffles don't affect this assignment's roster.
+        try:
+            from models import GroupAssignmentMemberSnapshot, StudentGroupMember, StudentGroup
+            selected_ids = []
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else (group_assignment.selected_group_ids or [])
+            except Exception:
+                selected_ids = []
+            if not selected_ids:
+                selected_ids = [g.id for g in StudentGroup.query.filter_by(class_id=class_obj.id, is_active=True).all()]
+            if selected_ids:
+                member_rows = StudentGroupMember.query.filter(StudentGroupMember.group_id.in_(selected_ids)).all()
+                for m in member_rows:
+                    if not m.student_id:
+                        continue
+                    db.session.add(GroupAssignmentMemberSnapshot(
+                        group_assignment_id=group_assignment.id,
+                        group_id=m.group_id,
+                        student_id=m.student_id,
+                    ))
+        except Exception:
+            pass
         
         # Save quiz questions
         question_count = 0

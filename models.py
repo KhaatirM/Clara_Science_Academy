@@ -1720,6 +1720,33 @@ class StudentGroupMember(db.Model):
         return f"StudentGroupMember(Group: {self.group_id}, Student: {self.student_id})"
 
 
+class GroupAssignmentMemberSnapshot(db.Model):
+    """
+    Frozen group membership for a specific GroupAssignment.
+
+    Why: group membership can change over time, but old group assignments should retain
+    the roster that existed when the assignment was created (for grading/submissions/history).
+    """
+    __tablename__ = 'group_assignment_member_snapshot'
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=True, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('group_assignment_id', 'group_id', 'student_id', name='uq_ga_snapshot_ga_group_student'),
+    )
+
+    group_assignment = db.relationship('GroupAssignment', backref='member_snapshots')
+    group = db.relationship('StudentGroup')
+    student = db.relationship('Student')
+
+    def __repr__(self):
+        return f"GroupAssignmentMemberSnapshot(ga={self.group_assignment_id}, group={self.group_id}, student={self.student_id})"
+
+
 class GroupAssignment(db.Model):
     """
     Model for assignments that are specifically for groups.

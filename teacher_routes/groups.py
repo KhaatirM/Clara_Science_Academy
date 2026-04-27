@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
-from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, Enrollment, Student, SchoolYear
+from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, Enrollment, Student, SchoolYear, GroupAssignmentMemberSnapshot
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import json
@@ -504,6 +504,30 @@ def save_group_assignment(class_id):
         )
         db.session.add(new_assignment)
         db.session.flush()  # Get the ID for file path
+
+        # Freeze membership snapshot so future group reshuffles don't affect this assignment's roster.
+        try:
+            selected_ids = []
+            try:
+                selected_ids = json.loads(new_assignment.selected_group_ids) if isinstance(new_assignment.selected_group_ids, str) else (new_assignment.selected_group_ids or [])
+            except Exception:
+                selected_ids = []
+            # Teacher create flow always has selected_groups, but fall back defensively.
+            if not selected_ids:
+                selected_ids = [g.id for g in StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()]
+            if selected_ids:
+                member_rows = StudentGroupMember.query.filter(StudentGroupMember.group_id.in_(selected_ids)).all()
+                for m in member_rows:
+                    if not m.student_id:
+                        continue
+                    db.session.add(GroupAssignmentMemberSnapshot(
+                        group_assignment_id=new_assignment.id,
+                        group_id=m.group_id,
+                        student_id=m.student_id,
+                    ))
+        except Exception:
+            # Non-fatal: assignment still exists; snapshot can be backfilled later if needed.
+            pass
         
         # Handle file upload
         if 'assignment_file' in request.files:

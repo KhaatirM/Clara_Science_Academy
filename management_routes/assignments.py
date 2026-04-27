@@ -4839,7 +4839,7 @@ def grant_group_extensions(assignment_id):
 @management_required
 def admin_view_group_assignment(assignment_id):
     """View details of a specific group assignment - Management view."""
-    from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension, Assignment
+    from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension, Assignment, GroupAssignmentMemberSnapshot
     from types import SimpleNamespace
     import json
     
@@ -4854,23 +4854,47 @@ def admin_view_group_assignment(assignment_id):
         # Get submissions for this assignment
         submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
         
-        # Get groups for this class - filter by selected groups if specified
-        if group_assignment.selected_group_ids:
-            # Parse the selected group IDs
-            try:
-                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
-                # Filter to only selected groups
-                groups = StudentGroup.query.filter(
-                    StudentGroup.class_id == group_assignment.class_id,
-                    StudentGroup.is_active == True,
-                    StudentGroup.id.in_(selected_ids)
-                ).all()
-            except:
-                # If parsing fails, get all groups
-                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        # Get groups for this assignment.
+        # Prefer frozen membership snapshot so later group reshuffles don't affect old assignments.
+        snap_rows = GroupAssignmentMemberSnapshot.query.filter_by(group_assignment_id=assignment_id).all()
+        snapshot_members_by_group_id = {}
+        if snap_rows:
+            for r in snap_rows:
+                snapshot_members_by_group_id.setdefault(r.group_id, []).append(r.student_id)
+
+            group_ids = sorted({gid for gid in snapshot_members_by_group_id.keys() if gid is not None})
+            group_objs = StudentGroup.query.filter(StudentGroup.id.in_(group_ids)).all() if group_ids else []
+            group_by_id = {g.id: g for g in group_objs}
+
+            student_ids = sorted({sid for sids in snapshot_members_by_group_id.values() for sid in (sids or [])})
+            students = Student.query.filter(Student.id.in_(student_ids)).all() if student_ids else []
+            students_by_id = {s.id: s for s in students}
+
+            groups = []
+            for gid in group_ids:
+                gobj = group_by_id.get(gid)
+                gname = getattr(gobj, 'name', None) or f'Deleted group #{gid}'
+                members = [SimpleNamespace(student=students_by_id.get(sid), student_id=sid) for sid in snapshot_members_by_group_id.get(gid, []) if sid]
+                groups.append(SimpleNamespace(id=gid, name=gname, members=[m for m in members if getattr(m, 'student', None)]))
+            # group_id NULL (e.g., deleted groups) - keep visible as a virtual group
+            null_members = snapshot_members_by_group_id.get(None, [])
+            if null_members:
+                members = [SimpleNamespace(student=students_by_id.get(sid), student_id=sid) for sid in null_members if sid]
+                groups.append(SimpleNamespace(id=0, name='Students from deleted group', members=[m for m in members if getattr(m, 'student', None)]))
         else:
-            # If no specific groups selected, get all groups
-            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+            # Fallback: current groups (legacy behavior)
+            if group_assignment.selected_group_ids:
+                try:
+                    selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+                    groups = StudentGroup.query.filter(
+                        StudentGroup.class_id == group_assignment.class_id,
+                        StudentGroup.is_active == True,
+                        StudentGroup.id.in_(selected_ids)
+                    ).all()
+                except Exception:
+                    groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+            else:
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
         
         # Get extensions for this group assignment
         try:
@@ -4914,7 +4938,8 @@ def admin_view_group_assignment(assignment_id):
             if getattr(group, 'id', None) == 0:
                 total_students += len(getattr(group, 'members', []))
             else:
-                total_students += len(group.members)
+                # If snapshot is present, `groups` are SimpleNamespaces and always have .members
+                total_students += len(getattr(group, 'members', []))
         
         # Calculate submission statistics
         submitted_group_ids = {s.group_id for s in submissions if getattr(s, 'group_id', None)}
@@ -4924,8 +4949,13 @@ def admin_view_group_assignment(assignment_id):
         submission_student_ids = set()
         for gs in submissions:
             if (gs.attachment_file_path or gs.attachment_filename) and gs.group_id:
-                for m in gs.group.members if gs.group else []:
-                    submission_student_ids.add(m.student_id)
+                # Prefer snapshot membership for this assignment/group_id
+                if snap_rows and gs.group_id in snapshot_members_by_group_id:
+                    for sid in snapshot_members_by_group_id.get(gs.group_id, []):
+                        submission_student_ids.add(sid)
+                else:
+                    for m in gs.group.members if gs.group else []:
+                        submission_student_ids.add(m.student_id)
         for gg in all_group_grades:
             if gg.grade_data and not gg.is_voided:
                 try:
@@ -5017,7 +5047,7 @@ def admin_view_group_assignment(assignment_id):
 @login_required
 def admin_grade_group_assignment(assignment_id):
     """Grade a group assignment - Allows teachers and administrators."""
-    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff, Student, GroupSubmission
+    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff, Student, GroupSubmission, GroupAssignmentMemberSnapshot
     from teacher_routes.utils import is_authorized_for_class
     from types import SimpleNamespace
     import json
@@ -5032,25 +5062,44 @@ def admin_grade_group_assignment(assignment_id):
                 flash("You are not authorized to grade this assignment.", "danger")
                 return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         
-        # Get groups for this class - filter by selected groups if specified
-        if group_assignment.selected_group_ids:
-            # Parse the selected group IDs
-            try:
-                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
-                # Filter to only selected groups
-                groups = StudentGroup.query.filter(
-                    StudentGroup.class_id == group_assignment.class_id,
-                    StudentGroup.is_active == True,
-                    StudentGroup.id.in_(selected_ids)
-                ).all()
-            except:
-                # If parsing fails, get all groups
-                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        # Get groups for this assignment.
+        # Prefer frozen membership snapshot so later group reshuffles don't affect old assignments.
+        snap_rows = GroupAssignmentMemberSnapshot.query.filter_by(group_assignment_id=assignment_id).all()
+        snapshot_members_by_group_id = {}
+        if snap_rows:
+            for r in snap_rows:
+                snapshot_members_by_group_id.setdefault(r.group_id, []).append(r.student_id)
+            group_ids = sorted({gid for gid in snapshot_members_by_group_id.keys() if gid is not None})
+            group_objs = StudentGroup.query.filter(StudentGroup.id.in_(group_ids)).all() if group_ids else []
+            group_by_id = {g.id: g for g in group_objs}
+            student_ids = sorted({sid for sids in snapshot_members_by_group_id.values() for sid in (sids or [])})
+            roster_students = Student.query.filter(Student.id.in_(student_ids)).all() if student_ids else []
+            students_by_id = {s.id: s for s in roster_students}
+            groups = []
+            for gid in group_ids:
+                gobj = group_by_id.get(gid)
+                gname = getattr(gobj, 'name', None) or f'Deleted group #{gid}'
+                members = [SimpleNamespace(student=students_by_id.get(sid), student_id=sid) for sid in snapshot_members_by_group_id.get(gid, []) if sid]
+                groups.append(SimpleNamespace(id=gid, name=gname, members=[m for m in members if getattr(m, 'student', None)]))
+            null_members = snapshot_members_by_group_id.get(None, [])
+            if null_members:
+                members = [SimpleNamespace(student=students_by_id.get(sid), student_id=sid) for sid in null_members if sid]
+                groups.append(SimpleNamespace(id=0, name='Students from deleted group', members=[m for m in members if getattr(m, 'student', None)]))
         else:
-            # If no specific groups selected, get all groups
-            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
-        
-        groups = list(groups)  # So we can append virtual group
+            # Fallback: current groups (legacy behavior)
+            if group_assignment.selected_group_ids:
+                try:
+                    selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+                    groups = StudentGroup.query.filter(
+                        StudentGroup.class_id == group_assignment.class_id,
+                        StudentGroup.is_active == True,
+                        StudentGroup.id.in_(selected_ids)
+                    ).all()
+                except Exception:
+                    groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+            else:
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+            groups = list(groups)  # So we can append virtual group
         
         # Collect all students from all groups
         all_students = []

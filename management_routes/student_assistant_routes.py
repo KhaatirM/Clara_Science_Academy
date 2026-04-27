@@ -481,6 +481,15 @@ def grade_group_assignment(class_id, assignment_id):
                     gd = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
                     gd['comment'] = grade.comments or ''
                     gd['comments'] = grade.comments or ''
+                    sn = numeric_score_from_grade_dict(gd)
+                    gd['score'] = sn
+                    gd['points_earned'] = sn
+                    for _k in ('total_points', 'max_score', 'percentage'):
+                        if _k in gd and gd[_k] is not None and gd[_k] != '':
+                            try:
+                                gd[_k] = float(gd[_k])
+                            except (TypeError, ValueError):
+                                pass
                     grades_by_student[grade.student_id] = gd
                 except Exception:
                     grades_by_student[grade.student_id] = {'score': 0, 'comments': '', 'comment': ''}

@@ -251,12 +251,12 @@
                         {% set student = member.student %}
                         {% set student_id = student.id %}
                         {% set grade_data = grades.get(student_id, {}) %}
-                        {% set score_value = grade_data.get('score', 0) if grade_data else 0 %}
+                        {% set score_value = (grade_data.get('score', 0)|float) if grade_data else 0 %}
                         {% set comment_data = grade_data.get('comment', '') or grade_data.get('comments', '') if grade_data else '' %}
                         {% set sub_type = grade_data.get('submission_type') if grade_data else '' %}
                         {% set group_has_submission = group_submission_status.get(group.id, 'not_submitted') if group_submission_status else 'not_submitted' %}
                         {% set display_sub_type = sub_type or group_has_submission %}
-                        {% set score_pct = (score_value / total_points * 100) if total_points and total_points > 0 else 0 %}
+                        {% set score_pct = (score_value / (total_points|float) * 100) if (total_points|float) > 0 else 0 %}
                         {% set performance_class = 'excellent' if score_pct >= 90 else ('good' if score_pct >= 80 else ('warning' if score_pct >= 70 else ('failing' if score_pct > 0 else 'ungraded'))) %}
                         
                         <div class="student-grade-card {{ performance_class }}" data-student-id="{{ student_id }}" data-group-id="{{ group.id }}">
@@ -309,18 +309,18 @@
                                             
                                             <!-- Quick Letter Grade Buttons -->
                                             <div class="letter-grade-buttons mb-2">
-                                                <button type="button" class="btn-letter-grade btn-grade-a" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.95)|round(1) }})" title="A (95%)">A</button>
-                                                <button type="button" class="btn-letter-grade btn-grade-b" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.85)|round(1) }})" title="B (85%)">B</button>
-                                                <button type="button" class="btn-letter-grade btn-grade-c" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.75)|round(1) }})" title="C (75%)">C</button>
-                                                <button type="button" class="btn-letter-grade btn-grade-d" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.65)|round(1) }})" title="D (65%)">D</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-a" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.95)|round(1) }})" title="A (95%)">A</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-b" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.85)|round(1) }})" title="B (85%)">B</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-c" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.75)|round(1) }})" title="C (75%)">C</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-d" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.65)|round(1) }})" title="D (65%)">D</button>
                                             </div>
                                             
                                             <!-- Common Grade Presets -->
                                             <div class="grade-presets mb-2">
-                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ total_points }})">💯</button>
-                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.9)|round(1) }})">90%</button>
-                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.8)|round(1) }})">80%</button>
-                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points * 0.7)|round(1) }})">70%</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ total_points|float }})">💯</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.9)|round(1) }})">90%</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.8)|round(1) }})">80%</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.7)|round(1) }})">70%</button>
                                                 <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, 0)">0</button>
                                             </div>
                                             

@@ -5085,6 +5085,16 @@ def admin_grade_group_assignment(assignment_id):
                         # Add comments from the separate field
                         grade_data['comment'] = grade.comments or ''
                         grade_data['comments'] = grade.comments or ''
+                        # JSON may store numbers as strings; template math (/) must not mix str and float
+                        sn = numeric_score_from_grade_dict(grade_data)
+                        grade_data['score'] = sn
+                        grade_data['points_earned'] = sn
+                        for _k in ('total_points', 'max_score', 'percentage'):
+                            if _k in grade_data and grade_data[_k] is not None and grade_data[_k] != '':
+                                try:
+                                    grade_data[_k] = float(grade_data[_k])
+                                except (TypeError, ValueError):
+                                    pass
                         grades_by_student[grade.student_id] = grade_data
                     except:
                         grades_by_student[grade.student_id] = {'score': 0, 'comments': '', 'comment': ''}

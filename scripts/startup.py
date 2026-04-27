@@ -14,18 +14,12 @@ def run_database_fix():
     """Run the database fix script if needed."""
     try:
         print("🔧 Checking database configuration...")
-        
-        # Check if we're in production (Render environment)
-        if os.getenv('RENDER'):
-            print("✓ Running in Render production environment")
-            
-            # Check if DATABASE_URL is available
-            database_url = os.getenv('DATABASE_URL')
-            if not database_url:
-                print("⚠️  DATABASE_URL not found, skipping database fix")
-                return True
-            
-            print("✓ DATABASE_URL found, running database fix...")
+
+        # Run DB fixes whenever DATABASE_URL is present (production-like environments, including Render release phase).
+        database_url = os.getenv('DATABASE_URL')
+        if database_url:
+            is_render = bool(os.getenv('RENDER'))
+            print(f"✓ DATABASE_URL detected (Render={is_render}), running database fix scripts...")
             
             # Run the database fix scripts
             scripts_to_run = [
@@ -89,7 +83,7 @@ def run_database_fix():
                 return False
                 
         else:
-            print("ℹ️  Running in development environment, skipping database fix")
+            print("ℹ️  DATABASE_URL not set; skipping database fix scripts")
             return True
             
     except subprocess.TimeoutExpired:

@@ -39,6 +39,7 @@ def run_database_fix():
                 'fix_class_table_schema.py',
                 'fix_production_voided_fields.py',
                 'fix_production_teacher_staff_deleted_fields.py',
+                'fix_production_student_deleted_fields.py',
                 'add_quiz_sections.py'
             ]
             

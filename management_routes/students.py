@@ -1851,8 +1851,8 @@ def edit_student(student_id):
         parsed_grade = parse_grade_level_for_policy(raw_grade)
         if parsed_grade is not None:
             student.grade_level = parsed_grade
-        gender = request.form.get('gender', getattr(student, 'gender', '')).strip()
-        entrance_school_year = request.form.get('entrance_date', getattr(student, 'entrance_date', '')).strip()
+        gender = (request.form.get('gender') or getattr(student, 'gender', '') or '').strip()
+        entrance_school_year = (request.form.get('entrance_date') or getattr(student, 'entrance_date', '') or '').strip()
         if not gender:
             return jsonify({'success': False, 'message': 'Gender is required.'}), 400
         if gender not in ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other']:
@@ -2674,13 +2674,21 @@ def api_dynamic_teams():
 def submit_cleaning_inspection():
     """Submit a cleaning inspection result"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'error': 'JSON body is required'}), 400
         
         # Create new inspection record
+        team_id = data.get('team_id')
+        inspection_date_raw = data.get('inspection_date')
+        inspector_name = (data.get('inspector_name') or '').strip()
+        if not team_id or not inspection_date_raw or not inspector_name:
+            return jsonify({'success': False, 'error': 'team_id, inspection_date, and inspector_name are required'}), 400
+
         inspection = CleaningInspection(
-            team_id=data['team_id'],
-            inspection_date=datetime.strptime(data['inspection_date'], '%Y-%m-%d').date(),
-            inspector_name=data['inspector_name'],
+            team_id=team_id,
+            inspection_date=datetime.strptime(str(inspection_date_raw), '%Y-%m-%d').date(),
+            inspector_name=inspector_name,
             inspector_notes=data.get('inspector_notes', ''),
             
             # Deductions

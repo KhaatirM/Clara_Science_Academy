@@ -866,14 +866,26 @@ def student_assignments():
             Grade.is_voided == False
         ).first() is not None
         
-        # Calculate attempts remaining for quiz assignments
+        # Calculate attempts remaining for quiz assignments (includes teacher-granted reopenings).
         attempts_remaining = None
+        quiz_lockout = False
         if assignment.assignment_type == 'quiz' and assignment.max_attempts:
             submissions_count = Submission.query.filter_by(
                 student_id=student.id,
                 assignment_id=assignment.id
             ).count()
-            attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+            from models import AssignmentReopening
+            active_reopening = AssignmentReopening.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=student.id,
+                is_active=True
+            ).first()
+            effective_max_attempts = assignment.max_attempts
+            if active_reopening and active_reopening.additional_attempts > 0:
+                effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+            attempts_remaining = max(0, (effective_max_attempts or 0) - submissions_count) if effective_max_attempts else None
+            # If they've already submitted and have no attempts left, treat as "inactive for this student" until reopened.
+            quiz_lockout = bool(submission) and attempts_remaining == 0
         
         assignment_data = (assignment, submission, student_status, attempts_remaining, False, has_any_grades)  # False = individual
         
@@ -887,6 +899,9 @@ def student_assignments():
             continue
 
         can_submit_now = is_assignment_open_for_student(assignment, student.id)
+        if quiz_lockout:
+            # Lockout overrides the date window: quiz is effectively inactive for this student until reopened.
+            can_submit_now = False
         if lifecycle == 'Upcoming':
             if can_submit_now:
                 active_assignments.append(assignment_data)
@@ -898,7 +913,11 @@ def student_assignments():
             else:
                 inactive_assignments.append(assignment_data)
         else:
-            active_assignments.append(assignment_data)
+            # Active lifecycle but lockout should place it with other inactive items.
+            if quiz_lockout:
+                inactive_assignments.append(assignment_data)
+            else:
+                active_assignments.append(assignment_data)
     
     # Fetch group assignments for the same classes and apply same filters (eager-load creator)
     group_assignments_query = GroupAssignment.query.options(
@@ -2736,7 +2755,10 @@ def submit_quiz(assignment_id):
             'total_points': total_points,
             'max_score': total_points,
             'percentage': round(grade_percentage, 2),
-            'feedback': f"Auto-graded quiz: {earned_points}/{total_points} points",
+            # Do not write system-generated text into feedback; teachers expect feedback to be human-written.
+            'feedback': '',
+            # Keep a system summary for UI/debug without showing as teacher feedback.
+            'auto_score_summary': f"{earned_points}/{total_points}",
             'graded_at': datetime.now().isoformat(),
             'grading_status': 'pending' if has_open_ended else 'final',
         }
@@ -2810,7 +2832,16 @@ def get_quiz_details(assignment_id):
     # Calculate attempts remaining
     attempts_remaining = None
     if assignment.max_attempts:
-        attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+        from models import AssignmentReopening
+        active_reopening = AssignmentReopening.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            is_active=True
+        ).first()
+        effective_max_attempts = assignment.max_attempts
+        if active_reopening and active_reopening.additional_attempts > 0:
+            effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+        attempts_remaining = max(0, (effective_max_attempts or 0) - submissions_count) if effective_max_attempts else None
     
     # Get grade data
     score = None
@@ -3765,7 +3796,6 @@ def download_assignment_file(assignment_id):
 
     student_id = getattr(current_user, 'student_id', None)
     if not student_id:
-        from flask import abort
         abort(403, description="Your account is not properly linked. Please contact your administrator.")
     student = Student.query.get_or_404(student_id)
 

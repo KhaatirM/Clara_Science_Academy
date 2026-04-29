@@ -151,6 +151,10 @@ def management_api_class_groups(class_id):
         })
         
     except Exception as e:
+        # Preserve Flask's normal 404/403 handling
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            raise
         print(f"Error fetching groups: {e}")
         return jsonify({'success': False, 'message': 'Error fetching groups'}), 500
 

@@ -322,6 +322,7 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
+                        {% if user %}
                         <form method="POST" action="{{ url_for('tech.reset_user_password', user_id=user.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Reset password for {{ user.username }}?')">
@@ -340,6 +341,11 @@
                                 <i class="bi bi-trash"></i> Delete User
                             </button>
                         </form>
+                        {% else %}
+                        <div class="alert alert-secondary mb-0">
+                            <small>No portal user account is linked to this student.</small>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

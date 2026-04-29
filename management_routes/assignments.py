@@ -486,7 +486,8 @@ def question_banks_json():
 @management_required
 def save_to_bank():
     """Create a question bank from JSON body: { name, questions: [{ question_text, question_type, points, options }] }."""
-    data = request.get_json() or {}
+    # Use silent=True so non-JSON POSTs return 400 instead of raising 415 and becoming a 500.
+    data = request.get_json(silent=True) or {}
     name = (data.get('name') or '').strip()
     questions = data.get('questions') or []
     if not name:
@@ -1938,12 +1939,15 @@ def _save_single_student_grade(assignment_id, student_id):
     if not enrollment:
         return None, 'Student not in class'
 
-    score_val = request.form.get('score', request.json.get('score') if request.is_json else None)
+    payload = request.get_json(silent=True) if request.is_json else None
+    payload = payload if isinstance(payload, dict) else {}
+
+    score_val = request.form.get('score') if request.form.get('score') is not None else payload.get('score')
     score_raw = str(score_val).strip() if score_val is not None else ''
-    comment = request.form.get('comment', request.json.get('comment', '')) or ''
-    submission_type = request.form.get('submission_type', request.json.get('submission_type', '')) or ''
-    notes_type = request.form.get('submission_notes_type', request.json.get('submission_notes_type', 'On-Time')) or 'On-Time'
-    notes_other = request.form.get('submission_notes', request.json.get('submission_notes', '')) or ''
+    comment = request.form.get('comment') if request.form.get('comment') is not None else (payload.get('comment') or '')
+    submission_type = request.form.get('submission_type') if request.form.get('submission_type') is not None else (payload.get('submission_type') or '')
+    notes_type = request.form.get('submission_notes_type') if request.form.get('submission_notes_type') is not None else (payload.get('submission_notes_type') or 'On-Time')
+    notes_other = request.form.get('submission_notes') if request.form.get('submission_notes') is not None else (payload.get('submission_notes') or '')
     submission_notes = notes_other if notes_type == 'Other' else notes_type
 
     total_points = assignment.total_points if assignment.total_points else 100.0
@@ -4842,7 +4846,8 @@ def admin_view_group_assignment(assignment_id):
     from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension, Assignment, GroupAssignmentMemberSnapshot
     from types import SimpleNamespace
     import json
-    
+
+    group_assignment = None
     try:
         # First check if this is actually a group assignment
         group_assignment = GroupAssignment.query.get(assignment_id)
@@ -5034,7 +5039,10 @@ def admin_view_group_assignment(assignment_id):
     except Exception as e:
         print(f"Error viewing group assignment: {e}")
         flash('Error accessing group assignment details.', 'error')
-        return redirect(url_for('management.assignments_and_grades', class_id=group_assignment.class_id))
+        class_id = getattr(group_assignment, 'class_id', None) if group_assignment else None
+        if class_id:
+            return redirect(url_for('management.assignments_and_grades', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades'))
 
 
 
@@ -5052,6 +5060,7 @@ def admin_grade_group_assignment(assignment_id):
     from types import SimpleNamespace
     import json
     
+    group_assignment = None
     try:
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         
@@ -5374,7 +5383,10 @@ def admin_grade_group_assignment(assignment_id):
     except Exception as e:
         print(f"Error grading group assignment: {e}")
         flash('Error accessing group assignment grading.', 'error')
-        return redirect(url_for('management.assignments_and_grades', class_id=group_assignment.class_id))
+        class_id = getattr(group_assignment, 'class_id', None) if group_assignment else None
+        if class_id:
+            return redirect(url_for('management.assignments_and_grades', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades'))
 
 
 
@@ -5388,6 +5400,9 @@ def admin_grade_group_assignment(assignment_id):
 @management_required
 def admin_delete_group_assignment(assignment_id):
     """Delete a group assignment - Management view."""
+    from werkzeug.exceptions import NotFound
+
+    group_assignment = None
     try:
         from models import GroupAssignment, GroupGrade, GroupSubmission, DeadlineReminder
         
@@ -5414,12 +5429,17 @@ def admin_delete_group_assignment(assignment_id):
         db.session.commit()
         
         flash('Group assignment deleted successfully!', 'success')
+    except NotFound:
+        raise
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting assignment: {str(e)}', 'danger')
     
     # Redirect back to the appropriate page
-    return redirect(url_for('management.assignments_and_grades', class_id=group_assignment.class_id))
+    class_id = getattr(group_assignment, 'class_id', None) if group_assignment else None
+    if class_id:
+        return redirect(url_for('management.assignments_and_grades', class_id=class_id))
+    return redirect(url_for('management.assignments_and_grades'))
 
 
 

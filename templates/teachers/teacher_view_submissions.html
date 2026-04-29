@@ -380,7 +380,7 @@
                                 <i class="bi bi-file-earmark-text me-1"></i>Paper Submission
                             </span>
                             {% endif %}
-                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}#student_{{ student.id }}" 
+                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}#student-card-{{ student.id }}" 
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil-square me-1"></i>Grade
                             </a>
@@ -397,7 +397,7 @@
                             {% endif %}
                         </div>
                         <div class="submission-actions mt-3">
-                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}#student_{{ student.id }}" 
+                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}#student-card-{{ student.id }}" 
                                class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-pencil-square me-1"></i>Mark Submission
                             </a>

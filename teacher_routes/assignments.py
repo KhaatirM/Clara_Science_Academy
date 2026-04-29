@@ -1997,6 +1997,42 @@ def remove_assignment(assignment_id):
             db.session.flush()
         except Exception as e:
             current_app.logger.warning(f"Could not delete deadline reminders: {e}")
+
+        # Delete dependent rows that reference this assignment.
+        # Without this, SQLAlchemy may try to NULL out FKs (e.g. Grade.assignment_id) and hit NOT NULL constraints.
+        try:
+            from models import (
+                Grade, Submission,
+                DiscussionAttachment, DiscussionPost, DiscussionThread,
+                QuizProgress, QuizAnswer, QuizOption, QuizQuestion, QuizSection,
+            )
+
+            # Discussion (delete attachments -> posts -> threads)
+            thread_ids = [t.id for t in DiscussionThread.query.filter_by(assignment_id=assignment_id).all()]
+            if thread_ids:
+                # Attachments on posts
+                post_ids = [p.id for p in DiscussionPost.query.filter(DiscussionPost.thread_id.in_(thread_ids)).all()]
+                if post_ids:
+                    DiscussionAttachment.query.filter(DiscussionAttachment.post_id.in_(post_ids)).delete(synchronize_session=False)
+                # Attachments on threads
+                DiscussionAttachment.query.filter(DiscussionAttachment.thread_id.in_(thread_ids)).delete(synchronize_session=False)
+                DiscussionPost.query.filter(DiscussionPost.thread_id.in_(thread_ids)).delete(synchronize_session=False)
+                DiscussionThread.query.filter(DiscussionThread.id.in_(thread_ids)).delete(synchronize_session=False)
+
+            # Quiz (answers/options/questions/sections/progress)
+            q_ids = [q.id for q in QuizQuestion.query.filter_by(assignment_id=assignment_id).all()]
+            if q_ids:
+                QuizAnswer.query.filter(QuizAnswer.question_id.in_(q_ids)).delete(synchronize_session=False)
+                QuizOption.query.filter(QuizOption.question_id.in_(q_ids)).delete(synchronize_session=False)
+                QuizQuestion.query.filter(QuizQuestion.id.in_(q_ids)).delete(synchronize_session=False)
+            QuizSection.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+            QuizProgress.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+
+            # Core grading/submissions
+            Grade.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+            Submission.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+        except Exception as e:
+            current_app.logger.warning(f"Could not delete dependent assignment data: {e}")
         
         # Delete associated file if it exists
         if assignment.attachment_filename:

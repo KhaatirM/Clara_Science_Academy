@@ -57,7 +57,7 @@
                         <th>Department</th>
                         <th>Email</th>
                         <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -94,7 +94,7 @@
                                     <span class="badge bg-success">Active</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end">
+                            <td>
                                 <button type="button" class="btn btn-sm btn-teachers-action-view" onclick="viewTeacher({{ t.id }})" title="View details">
                                     <i class="bi bi-eye"></i>
                                 </button>
@@ -134,7 +134,7 @@
                                     <span class="badge bg-danger ms-1">Marked</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end">
+                            <td>
                                 <button type="button" class="btn btn-sm btn-teachers-action-view" onclick="viewTeacher({{ t.id }})" title="View record">
                                     <i class="bi bi-eye"></i>
                                 </button>

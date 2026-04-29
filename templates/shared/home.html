@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 26, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 29, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,47 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 26, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 29, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>April 26</strong> focuses on grading, auditability, and smoother staff workflows: mixed-question quizzes show <strong>Grade Pending</strong> until open-ended questions are finalized, and Tech-only audit logs and printable staff activity records provide stronger visibility. <strong>April 23</strong>, <strong>April 18</strong>, <strong>April 5</strong>, and <strong>early April</strong> below cover earlier improvements.</p>
+                        <p class="updates-intro-text mb-0"><strong>April 29</strong> improves <strong>dashboard layout at browser zoom</strong>, <strong>quiz grading and student quiz rules</strong>, and <strong>admin Student &amp; Staff tables</strong> (centering, clearer badges, and fairer GPA display). <strong>April 26</strong> and earlier releases below still describe grading safeguards, roster tools, report cards, and the rest of the changelog.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- April 29, 2026 - Dashboard zoom, quiz UX, admin tables -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset-reverse me-2"></i>Dashboard Zoom, Quiz Grading &amp; Admin Tables – April 29, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Sidebar and zoom:</strong> The dashboard keeps a <strong>fixed sidebar</strong> aligned with main content using an in-flow spacer and width sync on window resize and <strong>Visual Viewport</strong> changes (browser zoom). The slide-out drawer is used primarily below about <strong>576px</strong> width so laptops and tablets at zoom keep the persistent rail; nav labels wrap more reliably in narrow rails.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz grading:</strong> All quiz assignments open in the <strong>unified quiz grading</strong> view. The total score reflects <strong>auto-graded</strong> points plus <strong>manual</strong> short answer/essay scores. <strong>Grade</strong> links from the submissions list jump to the correct student card, with improved scroll positioning.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student quiz feedback:</strong> Auto-graded score summaries are stored separately from teacher <strong>feedback</strong>, so students do not see system-generated text presented as a teacher comment.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz attempts and reopen:</strong> When students use all allowed attempts, the quiz moves to <strong>inactive</strong> for them. Granting <strong>additional attempts</strong> via reopen updates both the student dashboard and the quiz details view so retakes work as expected.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Management (leadership):</strong> Streamlined statistics and a compact <strong>account status</strong> legend; <strong>Academic Status</strong> badges use high-contrast colors for readability; <strong>GPA</strong> correctly shows <strong>0.00</strong> when that is the stored value (instead of hiding it as &ldquo;No Data&rdquo;). Column headers and cell content are <strong>centered</strong> for easier scanning.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teachers &amp; Staff (leadership):</strong> The <strong>Staff Records</strong> table and integrated <strong>directory</strong> roster use the same centered layout for headers and columns, including actions.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Dashboards stay usable on scaled displays and zoomed browsers; quiz grading and student-facing quiz data are clearer and more trustworthy; school administrators get cleaner student and staff lists that are easier to read at a glance.</p>
+                        </div>
+                    </div>
+
                     <!-- April 26, 2026 - Grading safeguards, audit logs, staff record -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-shield-check me-2"></i>Grading Safeguards, Audit Logs &amp; Staff Records – April 26, 2026</h6>
@@ -608,7 +642,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Dashboard sidebar on small and scaled screens:</strong> Below about 992px width (common on laptops with display scaling), the sidebar opens as a full-width slide-out drawer with full link text instead of a permanent narrow icon column. A legacy rule that could collapse the sidebar to zero width on very narrow viewports was removed. Main content gains top padding so it clears the fixed menu control, and horizontal scrolling on the page shell is reduced.
+                                <strong>Dashboard sidebar on small and scaled screens:</strong> Below about 576px width (typical phones in portrait), the sidebar opens as a full-width slide-out drawer. Wider viewports—including Surfaces and other laptops at browser zoom—keep the persistent rail; main content uses top padding in drawer mode so it clears the fixed menu control.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
@@ -1551,11 +1585,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownApr26_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownApr29_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownApr26_2026', 'true');
+            sessionStorage.setItem('updateModalShownApr29_2026', 'true');
         }, 500);
     }
 });

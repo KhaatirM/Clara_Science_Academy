@@ -440,7 +440,8 @@ def grade_assignment(assignment_id):
     # Use specialized template based on assignment type
     if assignment.assignment_type == 'discussion':
         template_name = 'management/grade_discussion_assignment.html'
-    elif assignment.assignment_type == 'quiz' and has_open_ended_questions:
+    elif assignment.assignment_type == 'quiz':
+        # Always use per-question view for quizzes (MC/TF + manual items) so totals match auto + manual.
         template_name = 'teachers/teacher_grade_quiz.html'
     else:
         template_name = 'teachers/teacher_grade_assignment.html'
@@ -481,12 +482,17 @@ def save_student_grade(assignment_id, student_id):
         return jsonify({'success': False, 'error': 'Student not in class'}), 400
 
     try:
-        score_val = request.form.get('score', request.json.get('score') if request.is_json else None)
+        # Never access request.json unless request.is_json is true.
+        # Flask will otherwise raise 415 Unsupported Media Type for non-JSON POSTs.
+        payload = request.get_json(silent=True) if request.is_json else None
+        payload = payload if isinstance(payload, dict) else {}
+
+        score_val = request.form.get('score') if request.form.get('score') is not None else payload.get('score')
         score_raw = str(score_val).strip() if score_val is not None else ''
-        comment = request.form.get('comment', request.json.get('comment', '')) or ''
-        submission_type = request.form.get('submission_type', request.json.get('submission_type', '')) or ''
-        notes_type = request.form.get('submission_notes_type', request.json.get('submission_notes_type', 'On-Time')) or 'On-Time'
-        notes_other = request.form.get('submission_notes', request.json.get('submission_notes', '')) or ''
+        comment = request.form.get('comment') if request.form.get('comment') is not None else (payload.get('comment') or '')
+        submission_type = request.form.get('submission_type') if request.form.get('submission_type') is not None else (payload.get('submission_type') or '')
+        notes_type = request.form.get('submission_notes_type') if request.form.get('submission_notes_type') is not None else (payload.get('submission_notes_type') or 'On-Time')
+        notes_other = request.form.get('submission_notes') if request.form.get('submission_notes') is not None else (payload.get('submission_notes') or '')
         submission_notes = notes_other if notes_type == 'Other' else notes_type
 
         total_points = assignment.total_points if assignment.total_points else 100.0

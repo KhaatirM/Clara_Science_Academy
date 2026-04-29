@@ -15,6 +15,7 @@ from shared_communications import (
     ensure_class_channel_exists
 )
 from communications_helpers import get_user_full_name
+from werkzeug.exceptions import HTTPException
 
 api_bp = Blueprint('communications_api', __name__)
 
@@ -123,6 +124,8 @@ def get_channel_messages(channel_id):
             },
             'participants': participants
         })
+    except HTTPException:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error getting channel messages: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -200,6 +203,8 @@ def get_direct_message_conversation(other_user_id):
             'other_user_id': other_user_id,
             'other_user_name': get_user_full_name(other_user) if other_user else 'Unknown'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error getting DM conversation: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -214,6 +219,8 @@ def get_announcements_api():
             'success': True,
             'announcements': announcements
         })
+    except HTTPException:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error getting announcements: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -223,7 +230,9 @@ def get_announcements_api():
 def send_message_api():
     """Send a message."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'JSON body is required'}), 400
         channel_id = data.get('channel_id')
         channel_type = data.get('channel_type')
         content = data.get('content', '').strip()
@@ -323,6 +332,8 @@ def send_message_api():
             'message_id': message.id,
             'other_user_id': recipient_id if channel_type == 'direct' else None
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error sending message: {e}", exc_info=True)
@@ -404,6 +415,8 @@ def create_announcement():
         db.session.commit()
         
         return jsonify({'success': True, 'announcement_id': announcement.id})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating announcement: {e}", exc_info=True)
@@ -420,8 +433,10 @@ def edit_message(message_id):
         if message.sender_id != current_user.id:
             return jsonify({'success': False, 'message': 'You can only edit your own messages'}), 403
         
-        data = request.get_json()
-        new_content = data.get('content', '').strip()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'JSON body is required'}), 400
+        new_content = (data.get('content') or '').strip()
         
         if not new_content:
             return jsonify({'success': False, 'message': 'Message content is required'}), 400
@@ -434,6 +449,8 @@ def edit_message(message_id):
         db.session.commit()
         
         return jsonify({'success': True, 'message_id': message.id})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error editing message: {e}", exc_info=True)
@@ -446,8 +463,10 @@ def react_to_message(message_id):
     try:
         message = Message.query.get_or_404(message_id)
         
-        data = request.get_json()
-        emoji = data.get('emoji', '').strip()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'JSON body is required'}), 400
+        emoji = (data.get('emoji') or '').strip()
         
         if not emoji:
             return jsonify({'success': False, 'message': 'Emoji is required'}), 400
@@ -489,6 +508,8 @@ def react_to_message(message_id):
             'action': action,
             'reactions': reaction_counts
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error reacting to message: {e}", exc_info=True)
@@ -499,14 +520,20 @@ def react_to_message(message_id):
 def reply_to_message():
     """Reply to a message (create a threaded reply)."""
     try:
-        data = request.get_json()
-        parent_message_id = data.get('parent_message_id', type=int)
-        content = data.get('content', '').strip()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'JSON body is required'}), 400
+        parent_message_id = data.get('parent_message_id')
+        content = (data.get('content') or '').strip()
         channel_id = data.get('channel_id')
         channel_type = data.get('channel_type')
         
         if not parent_message_id:
             return jsonify({'success': False, 'message': 'Parent message ID is required'}), 400
+        try:
+            parent_message_id = int(parent_message_id)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'message': 'Parent message ID must be an integer'}), 400
         
         if not content:
             return jsonify({'success': False, 'message': 'Message content is required'}), 400
@@ -568,6 +595,8 @@ def reply_to_message():
             'message_id': reply.id,
             'parent_message_id': parent_message_id
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error replying to message: {e}", exc_info=True)
@@ -595,7 +624,7 @@ def mute_student(group_id, user_id):
                     return jsonify({'success': False, 'message': 'You can only mute students in your own classes'}), 403
         
         # Get mute duration from request
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         duration_hours = data.get('duration_hours', 24)  # Default 24 hours
         
         # Calculate mute expiration
@@ -627,6 +656,8 @@ def mute_student(group_id, user_id):
             'muted_until': muted_until.isoformat(),
             'duration_hours': duration_hours
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error muting student: {e}", exc_info=True)
@@ -665,6 +696,8 @@ def unmute_student(group_id, user_id):
             db.session.commit()
         
         return jsonify({'success': True})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error unmuting student: {e}", exc_info=True)
@@ -705,6 +738,8 @@ def delete_message(message_id):
         db.session.commit()
         
         return jsonify({'success': True})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting message: {e}", exc_info=True)

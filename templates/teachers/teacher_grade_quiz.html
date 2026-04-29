@@ -5,6 +5,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_grade_assignment.css') }}">
 <style>
+.student-grade-card {
+    scroll-margin-top: 5.5rem;
+}
 .quiz-question-card {
     border-left: 4px solid #007bff;
     margin-bottom: 1rem;
@@ -42,10 +45,13 @@
                 <p class="grading-header-subtitle">{{ class_obj.name }} • {{ assignment.quarter }} • Quiz Assignment</p>
             </div>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             {% if role_prefix != 'management' %}
                 <a href="{{ url_for('teacher.grading.grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
                     <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+                </a>
+                <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-file-earmark-arrow-up me-1"></i>View Submissions
                 </a>
             {% endif %}
             <button onclick="goBack()" class="btn-grading-back">
@@ -106,9 +112,25 @@
     <form method="POST" id="quizGradingForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="grading_mode" value="per_question"/>
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Total score</strong> = auto-graded multiple choice / true-false points plus points you enter for short answer and essay questions.
+            Open <strong>View Submissions</strong> and use <strong>Grade</strong> on a row to jump straight to that student.
+        </p>
         
         <div class="student-grading-cards">
             {% for student in students %}
+                {% set auto_ns = namespace(v=0.0) %}
+                {% if quiz_questions %}
+                    {% for q in quiz_questions %}
+                        {% if q.question_type not in ['short_answer', 'essay'] %}
+                            {% set ans = quiz_answers_by_student.get(student.id, {}).get(q.id) %}
+                            {% if ans %}
+                                {% set auto_ns.v = auto_ns.v + (ans.points_earned|float) %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
                 {% set submission = submissions.get(student.id) %}
                 {% set grade_data = grades.get(student.id) %}
                 {% set student_answers = quiz_answers_by_student.get(student.id, {}) %}
@@ -133,7 +155,7 @@
                 
                 {% set performance_class = 'voided' if is_voided else ('excellent' if percentage_value >= 90 else ('good' if percentage_value >= 80 else ('warning' if percentage_value >= 70 else ('failing' if percentage_value > 0 else 'ungraded')))) %}
                 
-                <div class="student-grade-card {{ performance_class }}{% if is_voided %} voided-disabled{% endif %}" data-student-id="{{ student.id }}">
+                <div class="student-grade-card {{ performance_class }}{% if is_voided %} voided-disabled{% endif %}" id="student-card-{{ student.id }}" data-student-id="{{ student.id }}" data-auto-points="{{ '%.2f'|format(auto_ns.v) }}">
                     <div class="student-grade-header">
                         <div class="student-grade-avatar">
                             {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
@@ -349,24 +371,23 @@ function goBack() {
 }
 
 function updateStudentTotalScore(studentId) {
-    // Calculate total score from all question inputs for this student
-    const questionInputs = document.querySelectorAll(`input[name^="points_${studentId}_q"]`);
-    let totalScore = 0;
-    
+    const card = document.querySelector('.student-grade-card[data-student-id="' + studentId + '"]');
+    const autoBase = card ? (parseFloat(card.getAttribute('data-auto-points'), 10) || 0) : 0;
+    const questionInputs = document.querySelectorAll('input[name^="points_' + studentId + '_q"]');
+    let manual = 0;
     questionInputs.forEach(input => {
-        const value = parseFloat(input.value) || 0;
-        totalScore += value;
+        manual += parseFloat(input.value) || 0;
     });
-    
-    // Update display
-    const totalDisplay = document.getElementById(`studentTotalScore_${studentId}`);
-    const percentageDisplay = document.getElementById(`studentTotalPercentage_${studentId}`);
-    
+    const totalScore = autoBase + manual;
+
+    const totalDisplay = document.getElementById('studentTotalScore_' + studentId);
+    const percentageDisplay = document.getElementById('studentTotalPercentage_' + studentId);
+
     if (totalDisplay) {
         const totalPoints = {{ assignment.total_points if assignment.total_points else 100.0 }};
         totalDisplay.textContent = totalScore.toFixed(1);
-        const percentage = totalPoints > 0 ? ((totalScore / totalPoints) * 100).toFixed(1) : 0;
-        percentageDisplay.textContent = `(${percentage}%)`;
+        const percentage = totalPoints > 0 ? ((totalScore / totalPoints) * 100).toFixed(1) : '0.0';
+        percentageDisplay.textContent = '(' + percentage + '%)';
     }
 }
 

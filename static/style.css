@@ -337,8 +337,14 @@ body {
     transform: translateX(100%);
 }
 
-.main-content, .container, .container-fluid {
+/* min-width on .main-content broke the dashboard at high zoom: 320px min + ~250px sidebar > viewport */
+.container, .container-fluid {
     min-width: 320px; /* Prevents content from becoming unreadable on very small screens */
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.main-content {
     padding-left: 1rem;
     padding-right: 1rem;
 }
@@ -364,6 +370,12 @@ body {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    min-width: 0;
+}
+
+/* Hidden until ≥576px; reserves the same width as the fixed sidebar (see syncDashboardSidebarLayout). */
+.dashboard-sidebar-spacer {
+    display: none;
 }
 
 /* Dashboard sidebar specific styles */
@@ -397,7 +409,10 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 250px;
+    /* Drawer: overrides below. Desktop: width set from .dashboard-sidebar-spacer via JS. */
+    width: min(250px, 100vw);
+    max-width: 100%;
+    box-sizing: border-box;
     background-color: #212529;
     padding-top: 0;
     border-right: 1px solid #343a40;
@@ -580,6 +595,10 @@ body {
     align-items: center;
     border-left: 3px solid transparent;
     transition: all 0.2s ease-in-out;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .sidebar .nav-link.active {
@@ -597,14 +616,22 @@ body {
 .sidebar .nav-link .bi {
     margin-right: 12px;
     font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.sidebar .nav-link span {
+    min-width: 0;
 }
 
 /* Duplicate removed - using the one above */
 
 .main-content {
-    margin-left: 250px; /* Same as sidebar width */
+    /* ≥576px: spacer + flex; no margin-left. Phone drawer rules zero this. */
+    margin-left: min(250px, 100%);
     padding: 20px;
-    width: calc(100% - 250px);
+    width: calc(100% - min(250px, 100%));
+    max-width: 100%;
+    box-sizing: border-box;
     transition: margin-left 0.3s ease, width 0.3s ease;
     overflow-y: visible; /* Single page scroll - no nested scrollbar */
     overflow-x: hidden;
@@ -613,6 +640,7 @@ body {
 /* --- Collapsed Sidebar Styles --- */
 .sidebar.collapsed {
     width: 80px;
+    max-width: 80px;
     max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
@@ -665,29 +693,113 @@ body {
     width: calc(100% - 80px);
 }
 
-/* --- Compact / drawer sidebar (Bootstrap lg and below) ---
- * Laptops like Surface at scaled resolutions often fall below 992px. Use a full-width
- * off-canvas drawer with labels — not a permanent 80px icon rail — so every nav item is reachable.
+/*
+ * Desktop: sidebar stays position:fixed to the viewport while scrolling. An in-flow spacer carries
+ * the same width (layout %) so main uses flex — no sticky/overflow clipping issues.
  */
-@media (max-width: 991.98px) {
+@media (min-width: 576px) {
+    .dashboard-flex-wrapper {
+        align-items: flex-start;
+    }
+
+    .dashboard-flex-wrapper > .sidebar-overlay {
+        flex: 0 0 0;
+        width: 0 !important;
+        min-width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        border: none !important;
+        position: static !important;
+        display: block !important;
+    }
+
+    /* Width/flex-basis set in JS from wrapper.clientWidth so page zoom stays aligned with the fixed rail. */
+    .dashboard-sidebar-spacer {
+        display: block;
+        flex: 0 0 auto;
+        flex-shrink: 0;
+        min-width: 0;
+        width: min(250px, 100%);
+        max-width: min(250px, 100%);
+        box-sizing: border-box;
+        height: 1px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        pointer-events: none;
+        visibility: hidden;
+        align-self: flex-start;
+    }
+
+    .dashboard-flex-wrapper > .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        transform: none;
+    }
+
+    .dashboard-flex-wrapper > .main-content {
+        flex: 1 1 0%;
+        min-width: 0;
+        margin-left: 0 !important;
+        width: auto !important;
+        max-width: none;
+    }
+
+    .dashboard-flex-wrapper > .sidebar.collapsed + .main-content {
+        margin-left: 0 !important;
+        width: auto !important;
+    }
+}
+
+/* Bootstrap .row negative margins can paint past .container-fluid at some zoom levels; keep content in the main column. */
+.main-content > .container-fluid,
+.main-content > .container {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* --- Phone drawer (Bootstrap xs only) ---
+ * Drawer only when the viewport is phone-narrow. Tablets, Surfaces, and zoomed laptops stay on
+ * the fixed rail so zoomed laptops do not lose the nav to an off-canvas drawer.
+ */
+@media (max-width: 575.98px) {
+    .dashboard-sidebar-spacer {
+        display: none !important;
+        width: 0 !important;
+        max-width: 0 !important;
+        min-width: 0 !important;
+        flex: 0 0 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
     .sidebar {
         position: fixed;
-        left: -250px; /* Drawer hidden until opened */
-        width: 250px;
+        /* Off-canvas: slide by transform so width can be min(250px, 100vw) without mismatch. */
+        left: 0;
+        top: 0;
+        width: min(250px, 100vw);
         min-width: 0;
         max-height: 100vh;
         height: 100vh;
         height: 100dvh;
         z-index: 1050;
-        transition: left 0.3s ease;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
         overflow-y: auto !important;
         overflow-x: hidden !important;
-        max-width: min(250px, 100vw);
+        max-width: 100%;
         box-sizing: border-box;
     }
 
     .sidebar.show {
-        left: 0;
+        transform: translateX(0);
     }
 
     .main-content {
@@ -698,6 +810,11 @@ body {
         padding-top: 3.75rem; /* Clear fixed menu button */
         overflow-x: hidden;
         box-sizing: border-box;
+    }
+
+    /* Drawer open: park toggle in normal flow so it does not float over the first nav rows (worse at high zoom). */
+    #sidebar.show ~ .main-content {
+        padding-top: 15px;
     }
 
     .sidebar-toggle {
@@ -715,6 +832,20 @@ body {
         justify-content: center;
         align-items: center;
         box-sizing: border-box;
+    }
+
+    .sidebar.show .sidebar-toggle {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        z-index: 1;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 50px;
+        margin-bottom: 10px;
+        border-radius: 0;
+        border: none;
+        border-bottom: 1px solid #0d6efd;
     }
 
     .sidebar .nav {
@@ -774,6 +905,11 @@ body {
 html, body {
     overflow-x: hidden;
     max-width: 100%;
+}
+
+/* Reserve space for scrollbar so vw-based layout stays aligned with %-based layout (zoom / Windows). */
+html {
+    scrollbar-gutter: stable;
 }
 
 .table-responsive {

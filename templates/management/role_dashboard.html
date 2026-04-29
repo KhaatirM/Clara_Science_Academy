@@ -321,7 +321,6 @@
                         </h2>
                         <p class="students-admin-subtitle mb-0">
                             <i class="bi bi-mortarboard me-2"></i>Manage student records and information.
-                            <span class="text-muted">Portal accounts are created starting in <strong>4th grade</strong> (K–3 stay off the student login until then).</span>
                         </p>
                     </div>
                     <div>
@@ -334,7 +333,7 @@
 
             <!-- Statistics Cards -->
             <div class="row g-3 mb-4">
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-4">
                     <div class="students-stat-card">
                         <div class="students-stat-icon">
                             <i class="bi bi-people-fill"></i>
@@ -345,7 +344,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-4">
                     <div class="students-stat-card">
                         <div class="students-stat-icon">
                             <i class="bi bi-person-check-fill"></i>
@@ -356,7 +355,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-4">
                     <div class="students-stat-card">
                         <div class="students-stat-icon">
                             <i class="bi bi-person-x-fill"></i>
@@ -367,25 +366,29 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="students-stat-card">
-                        <div class="students-stat-icon">
-                            <i class="bi bi-trophy-fill"></i>
-                        </div>
-                        <div class="students-stat-content">
-                            <h3 class="students-stat-number">{{ high_gpa_count|default(0) }}</h3>
-                            <p class="students-stat-label">GPA ≥ 3.5</p>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Search & Filter Section -->
             <div class="students-search-card mb-4">
-                <div class="students-search-header">
+                <div class="students-search-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h5 class="mb-0">
                         <i class="bi bi-search me-2"></i>Search & Filter Students
                     </h5>
+                    <div class="students-account-legend small text-muted">
+                        <span class="me-2 fw-semibold">Account status</span>
+                        <span class="d-inline-flex align-items-center gap-1 me-2">
+                            <span class="legend-dot legend-dot-danger"></span>
+                            Removed / No account
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1 me-2">
+                            <span class="legend-dot legend-dot-warning"></span>
+                            Too young / Not yet
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="legend-dot legend-dot-success"></span>
+                            Grade 4+ Active
+                        </span>
+                    </div>
                 </div>
                 <div class="students-search-body">
                 <form method="GET" action="{{ url_for('management.students') }}" class="row g-3" id="studentsFilterForm">
@@ -634,7 +637,7 @@
                         <tbody>
                             {% for student in students %}
                                 {% set alert_level = 'none' %}
-                                {% if student.gpa %}
+                                {% if student.gpa is not none %}
                                     {% if student.gpa < 2.0 %}
                                         {% set alert_level = 'critical' %}
                                     {% elif student.gpa < 3.0 %}
@@ -661,7 +664,7 @@
                                         <code class="student-id-code">{{ student.student_id or 'N/A' }}</code>
                                     </td>
                                     <td>
-                                        {% if student.gpa %}
+                                        {% if student.gpa is not none %}
                                             <div class="gpa-display">
                                                 <span class="gpa-badge gpa-{{ alert_level }}">
                                                     {{ "%.2f"|format(student.gpa) }}
@@ -675,43 +678,53 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if student.gpa %}
+                                        {% if student.gpa is not none %}
                                             {% if student.gpa >= 3.5 %}
-                                                <span class="badge bg-success bg-opacity-20 text-success border border-success">
+                                                <span class="badge text-bg-success">
                                                     <i class="bi bi-trophy-fill me-1"></i>Honors
                                                 </span>
                                             {% elif student.gpa >= 3.0 %}
-                                                <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                                <span class="badge text-bg-primary">
                                                     <i class="bi bi-check-circle-fill me-1"></i>Good Standing
                                                 </span>
                                             {% elif student.gpa >= 2.0 %}
-                                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                <span class="badge text-bg-warning">
                                                     <i class="bi bi-exclamation-circle-fill me-1"></i>Needs Improvement
                                                 </span>
                                             {% else %}
-                                                <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">
+                                                <span class="badge text-bg-danger">
                                                     <i class="bi bi-exclamation-triangle-fill me-1"></i>At Risk
                                                 </span>
                                             {% endif %}
                                         {% else %}
-                                            <span class="badge bg-secondary bg-opacity-20">No Data</span>
+                                            <span class="badge text-bg-secondary">No Data</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if student.user %}
+                                        {% if student.is_deleted %}
+                                            <span class="badge bg-danger text-white border border-danger" style="font-weight: 500;">
+                                                <i class="bi bi-archive me-1"></i>Removed
+                                            </span>
+                                        {% elif student.user %}
                                             {% if student.grade_level is not none and student.grade_level <= 3 %}
-                                            <span class="badge text-white border account-badge-young" style="font-weight:500;background-color:#fd7e14;border-color:#e8590c!important;">
-                                                <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
-                                            </span>
+                                                <span class="badge bg-warning text-dark border border-warning" style="font-weight:500;">
+                                                    <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
+                                                </span>
                                             {% else %}
-                                            <span class="badge bg-success text-white border border-success" style="font-weight: 500;">
-                                                <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
-                                            </span>
+                                                <span class="badge bg-success text-white border border-success" style="font-weight: 500;">
+                                                    <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
+                                                </span>
                                             {% endif %}
                                         {% else %}
-                                            <span class="badge bg-warning text-dark border border-warning" style="font-weight: 500;">
-                                                <i class="bi bi-x-circle me-1"></i>No Account
-                                            </span>
+                                            {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                                <span class="badge bg-warning text-dark border border-warning" style="font-weight: 500;">
+                                                    <i class="bi bi-hourglass-split me-1"></i>No account yet
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger text-white border border-danger" style="font-weight: 500;">
+                                                    <i class="bi bi-x-circle me-1"></i>No Account
+                                                </span>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                     <td>
@@ -768,7 +781,7 @@
                                     <div class="student-card-detail">
                                         <i class="bi bi-trophy me-2"></i>
                                         <span>GPA: 
-                                            {% if student.gpa %}
+                                            {% if student.gpa is not none %}
                                                 <span class="badge {% if student.gpa >= 3.5 %}bg-success{% elif student.gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %}">
                                                     {{ "%.2f"|format(student.gpa) }}
                                                 </span>
@@ -845,7 +858,7 @@
                                 <div class="row g-3">
                                     {% for student in students_by_grade[grade]|sort(attribute='last_name') %}
                                         {% set alert_level = 'none' %}
-                                        {% if student.gpa %}
+                                        {% if student.gpa is not none %}
                                             {% if student.gpa < 2.0 %}
                                                 {% set alert_level = 'critical' %}
                                             {% elif student.gpa < 3.0 %}
@@ -872,7 +885,7 @@
                                                         </div>
                                                         <div>
                                                             <div class="grouped-stat-value">
-                                                                {% if student.gpa %}
+                                                                {% if student.gpa is not none %}
                                                                     {{ "%.2f"|format(student.gpa) }}
                                                                 {% else %}
                                                                     N/A

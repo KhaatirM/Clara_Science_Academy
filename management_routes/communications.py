@@ -566,6 +566,10 @@ def management_mark_message_read(message_id):
 @management_required
 def admin_manage_group(group_id):
     """Manage students in a specific group (Administrator access)."""
+    from werkzeug.exceptions import NotFound
+
+    group = None
+    class_obj = None
     try:
         group = StudentGroup.query.get_or_404(group_id)
         class_obj = group.class_info
@@ -707,10 +711,15 @@ def admin_manage_group(group_id):
         # Redirect GET requests to class groups page (use popup flow there, not the old standalone page)
         return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
     
+    except NotFound:
+        raise
     except Exception as e:
         print(f"Error managing group: {e}")
         flash('Error managing group. Please try again.', 'error')
-        return redirect(url_for('management.admin_class_groups', class_id=group.class_id))
+        class_id = getattr(group, 'class_id', None) if group else (getattr(class_obj, 'id', None) if class_obj else None)
+        if class_id:
+            return redirect(url_for('management.admin_class_groups', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades'))
 
 
 
@@ -725,6 +734,9 @@ def admin_manage_group(group_id):
 def admin_delete_group(group_id):
     """Delete a student group (Administrator access). Preserves existing grades and submissions by nulling group_id.
     Removes or nulls all related data (contracts, peer evaluations, etc.) before deleting the group."""
+    from werkzeug.exceptions import NotFound
+
+    class_id = None
     try:
         from models import (
             GroupGrade, GroupSubmission, GroupQuizAnswer,
@@ -776,11 +788,16 @@ def admin_delete_group(group_id):
         flash('Group deleted successfully. Existing grades for that group were kept and remain associated with each student and assignment.', 'success')
         return redirect(url_for('management.admin_class_groups', class_id=class_id))
 
+    except NotFound:
+        # Let Flask render a normal 404 instead of converting into a 500 redirect.
+        raise
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Error deleting group: %s", str(e))
         flash('Could not delete group. It may have related data (e.g. contracts, peer evaluations). Try again or contact support.', 'error')
-        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+        if class_id:
+            return redirect(url_for('management.admin_class_groups', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades'))
 
 # Additional admin group management routes
 
@@ -795,6 +812,9 @@ def admin_delete_group(group_id):
 @management_required
 def admin_create_group_contract(group_id):
     """Create a group contract (Administrator access)."""
+    from werkzeug.exceptions import NotFound
+
+    group = None
     try:
         group = StudentGroup.query.get_or_404(group_id)
         class_obj = group.class_info
@@ -808,10 +828,15 @@ def admin_create_group_contract(group_id):
                              group=group,
                              class_obj=class_obj,
                              role_prefix=True)
+    except NotFound:
+        raise
     except Exception as e:
         print(f"Error creating group contract: {e}")
         flash('Error accessing group contract creation.', 'error')
-        return redirect(url_for('management.admin_class_groups', class_id=group.class_id))
+        class_id = getattr(group, 'class_id', None) if group else None
+        if class_id:
+            return redirect(url_for('management.admin_class_groups', class_id=class_id))
+        return redirect(url_for('management.assignments_and_grades'))
 
 # def store_calendar_data(calendar_data, school_year_id, pdf_filename):
 #     """Store extracted calendar data in the database."""

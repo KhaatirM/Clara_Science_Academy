@@ -356,7 +356,8 @@ def question_banks_json():
 @teacher_required
 def save_to_bank():
     """Create a question bank from JSON body: { name, questions: [{ question_text, question_type, points, options }] }."""
-    data = request.get_json() or {}
+    # Use silent=True so non-JSON POSTs return a clean 400 instead of raising 415 and becoming a 500.
+    data = request.get_json(silent=True) or {}
     name = (data.get('name') or '').strip()
     questions = data.get('questions') or []
     if not name:

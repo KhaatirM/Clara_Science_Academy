@@ -152,6 +152,7 @@ from .calendar import (
     add_school_break as add_school_break_func,
     delete_school_break as delete_school_break_func,
     add_calendar_event as add_calendar_event_func,
+    upload_calendar_pdf as upload_calendar_pdf_func,
 )
 from .students import students as students_func, student_jobs as student_jobs_func, add_student as add_student_func, download_students_csv as download_students_csv_func, download_students_template as download_students_template_func, upload_students_csv as upload_students_csv_func, student_report_card_history as student_report_card_history_func, view_student as view_student_func, admin_create_student_group as admin_create_student_group_func, generate_report_card_for_student as generate_report_card_for_student_func, void_assignment_for_students as void_assignment_for_students_func, unvoid_assignment_for_students as unvoid_assignment_for_students_func, bulk_void_assignments as bulk_void_assignments_func
 from .teachers import (
@@ -222,6 +223,7 @@ from .assignments import (
     export_quiz_to_google_forms as export_quiz_to_google_forms_func
 )
 from .attendance import unified_attendance as unified_attendance_func, attendance_reports as attendance_reports_func, attendance_analytics as attendance_analytics_func
+from .attendance import attendance as attendance_func, school_day_attendance as school_day_attendance_func
 from .reports import report_cards as report_cards_func, generate_report_card_form as generate_report_card_form_func, report_cards_by_category as report_cards_by_category_func, view_report_card as view_report_card_func, generate_report_card_pdf as generate_report_card_pdf_func, delete_report_card as delete_report_card_func, close_school_year as close_school_year_func
 from .communications import (
     communications as communications_func,
@@ -243,6 +245,10 @@ from .administration import (
     google_connect_account as google_connect_account_func, 
     google_connect_callback as google_connect_callback_func, 
     google_disconnect_account as google_disconnect_account_func,
+    school_years as school_years_func,
+    set_active_school_year as set_active_school_year_func,
+    generate_academic_periods as generate_academic_periods_func,
+    add_academic_period as add_academic_period_func,
     edit_school_year as edit_school_year_func,
     edit_academic_period as edit_academic_period_func,
     edit_active_school_year as edit_active_school_year_func,
@@ -614,6 +620,22 @@ def attendance_reports_route():
     """Attendance reports route - delegates to attendance module"""
     return attendance_reports_func()
 
+# Add alias for attendance hub route (templates expect management.attendance)
+@management_blueprint.route('/attendance', endpoint='attendance')
+@login_required
+@management_required
+def attendance_route():
+    """Attendance hub route - delegates to attendance module"""
+    return attendance_func()
+
+# Add alias for school-day attendance route (templates expect management.school_day_attendance)
+@management_blueprint.route('/school-day-attendance', methods=['GET', 'POST'], endpoint='school_day_attendance')
+@login_required
+@management_required
+def school_day_attendance_route():
+    """School-day attendance route - delegates to attendance module"""
+    return school_day_attendance_func()
+
 # Add alias for generate report card form route
 @management_blueprint.route('/report/card/generate', methods=['GET', 'POST'], endpoint='generate_report_card_form')
 @login_required
@@ -709,6 +731,14 @@ def delete_school_break_route(break_id):
 def add_calendar_event_route():
     """Add calendar event route - delegates to calendar module"""
     return add_calendar_event_func()
+
+# Add alias for upload calendar PDF (templates expect management.upload_calendar_pdf)
+@management_blueprint.route('/upload-calendar-pdf', methods=['POST'], endpoint='upload_calendar_pdf')
+@login_required
+@management_required
+def upload_calendar_pdf_route():
+    """Upload calendar PDF route - delegates to calendar module"""
+    return upload_calendar_pdf_func()
 
 # Add alias for link existing classroom route
 @management_blueprint.route('/class/<int:class_id>/link-existing-google-classroom', methods=['GET', 'POST'], endpoint='link_existing_classroom')
@@ -1015,6 +1045,22 @@ def edit_school_year_route(year_id):
     """Edit school year route - delegates to administration module"""
     return edit_school_year_func(year_id)
 
+# School year management page (templates expect management.school_years)
+@management_blueprint.route('/school-years', methods=['GET', 'POST'], endpoint='school_years')
+@login_required
+@management_required
+def school_years_route():
+    """School years management route - delegates to administration module"""
+    return school_years_func()
+
+# Set active school year (templates expect management.set_active_school_year)
+@management_blueprint.route('/school-year/set-active/<int:year_id>', methods=['POST'], endpoint='set_active_school_year')
+@login_required
+@management_required
+def set_active_school_year_route(year_id):
+    """Set active school year route - delegates to administration module"""
+    return set_active_school_year_func(year_id)
+
 @management_blueprint.route('/school-year/edit-active', methods=['POST'], endpoint='edit_active_school_year')
 @login_required
 @management_required
@@ -1028,6 +1074,20 @@ def edit_active_school_year_route():
 def edit_academic_period_route(period_id):
     """Edit academic period route - delegates to administration module"""
     return edit_academic_period_func(period_id)
+
+@management_blueprint.route('/academic-periods/generate/<int:year_id>', methods=['POST'], endpoint='generate_academic_periods')
+@login_required
+@management_required
+def generate_academic_periods_route(year_id):
+    """Generate academic periods route - delegates to administration module"""
+    return generate_academic_periods_func(year_id)
+
+@management_blueprint.route('/academic-period/add/<int:year_id>', methods=['POST'], endpoint='add_academic_period')
+@login_required
+@management_required
+def add_academic_period_route(year_id):
+    """Add academic period route - delegates to administration module"""
+    return add_academic_period_func(year_id)
 
 # Add alias for admin manage group route
 @management_blueprint.route('/communications/groups/<int:group_id>/manage', methods=['GET', 'POST'], endpoint='admin_manage_group')

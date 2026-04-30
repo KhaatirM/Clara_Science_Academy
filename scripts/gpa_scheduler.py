@@ -1,9 +1,26 @@
 import time
 import threading
 from datetime import datetime
+import json
+import os
+import sys
+
+# Ensure imports work in production shells (e.g. Render) even when the
+# current working directory isn't the project root.
+_here = os.path.abspath(os.path.dirname(__file__))
+_candidate = os.path.dirname(_here)  # project root is typically parent of /scripts
+for _ in range(6):
+    if os.path.exists(os.path.join(_candidate, "models.py")) or os.path.exists(os.path.join(_candidate, "app.py")):
+        if _candidate not in sys.path:
+            sys.path.insert(0, _candidate)
+        break
+    _next = os.path.dirname(_candidate)
+    if _next == _candidate:
+        break
+    _candidate = _next
+
 # Lazy import to avoid circular dependency - create_app imported inside function
 from models import db, Student, Grade
-import json
 
 try:
     import schedule

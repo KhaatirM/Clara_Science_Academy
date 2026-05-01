@@ -5,7 +5,8 @@ This module provides helper functions to interact with the Google Admin SDK
 Directory API using a Service Account with domain-wide delegation.
 
 Expected config keys (Flask `current_app.config`):
-- GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE: path to service account JSON key file
+- GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON: raw service account key JSON string (preferred on PaaS e.g. Render)
+- GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE: path to service account JSON key file (fallback)
 - GOOGLE_DIRECTORY_DELEGATED_ADMIN: admin user email to impersonate (e.g., admin@clarascienceacademy.org)
 """
 
@@ -24,8 +25,12 @@ DIRECTORY_SCOPES_FULL = [
     "https://www.googleapis.com/auth/admin.directory.user",
     "https://www.googleapis.com/auth/admin.directory.group",
     "https://www.googleapis.com/auth/admin.directory.group.member",
+    # Required for orgunits.get / orgunits.insert (ensure_ou_exists, OU moves).
     "https://www.googleapis.com/auth/admin.directory.orgunit",
 ]
+
+# Use with Directory API orgunits.*; avoids threading customer id through callers.
+DIRECTORY_CUSTOMER_ID = "my_customer"
 
 DIRECTORY_SCOPES_READONLY = [
     "https://www.googleapis.com/auth/admin.directory.user.readonly",
@@ -41,15 +46,22 @@ def get_directory_service(scopes: Optional[Sequence[str]] = None):
         scopes: Optional list of OAuth scopes. If omitted, uses the full set
             required for user + OU + group management.
     """
-    key_file = current_app.config.get("GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE")
     key_json = current_app.config.get("GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON")
+    key_file = current_app.config.get("GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE")
     delegated_admin = current_app.config.get("GOOGLE_DIRECTORY_DELEGATED_ADMIN")
 
-    if (not key_file and not key_json) or not delegated_admin:
+    if key_json is not None and isinstance(key_json, str):
+        key_json = key_json.strip() or None
+
+    if not delegated_admin:
+        current_app.logger.error(
+            "Directory service not configured. Set GOOGLE_DIRECTORY_DELEGATED_ADMIN."
+        )
+        return None
+    if not key_json and not key_file:
         current_app.logger.error(
             "Directory service not configured. "
-            "Set GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON (preferred) or GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE, "
-            "and GOOGLE_DIRECTORY_DELEGATED_ADMIN."
+            "Set GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON (preferred) or GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE."
         )
         return None
 
@@ -57,7 +69,9 @@ def get_directory_service(scopes: Optional[Sequence[str]] = None):
         effective_scopes = list(scopes) if scopes else DIRECTORY_SCOPES_FULL
         if key_json:
             info = json.loads(key_json)
-            creds = service_account.Credentials.from_service_account_info(info, scopes=effective_scopes)
+            creds = service_account.Credentials.from_service_account_info(
+                info, scopes=effective_scopes
+            )
         else:
             creds = service_account.Credentials.from_service_account_file(
                 key_file, scopes=effective_scopes
@@ -116,17 +130,120 @@ def get_google_user(user_email: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _normalize_org_unit_path(path: str) -> str:
+    """Return a canonical org unit path: leading slash, no trailing slash (except root)."""
+    s = (path or "").strip().replace("\\", "/")
+    parts = [p for p in s.split("/") if p]
+    if not parts:
+        return "/"
+    return "/" + "/".join(parts)
+
+
+def get_google_ou(org_unit_path: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch an organizational unit by full path (e.g. /Students/Elementary/Class of 2035).
+    Returns None if the OU does not exist (404) or on configuration/API errors.
+    """
+    service = get_directory_service()
+    if not service:
+        return None
+    return _get_google_ou_with_service(service, org_unit_path)
+
+
+def _get_google_ou_with_service(service, org_unit_path: str) -> Optional[Dict[str, Any]]:
+    path = _normalize_org_unit_path(org_unit_path)
+    if path == "/":
+        current_app.logger.warning("get_google_ou: root path '/' is not fetched via orgunits.get")
+        return None
+    try:
+        return (
+            service.orgunits()
+            .get(customerId=DIRECTORY_CUSTOMER_ID, orgUnitPath=path)
+            .execute()
+        )
+    except HttpError as e:
+        if e.resp.status == 404:
+            return None
+        current_app.logger.error(f"Directory API error fetching OU {path}: {e}")
+        return None
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch OU {path}: {e}")
+        return None
+
+
+def ensure_ou_exists(path: str, service: Any = None) -> bool:
+    """
+    Ensure every segment of the OU path exists, creating missing units via orgunits.insert.
+
+    Returns False if a required unit could not be created (e.g. 403 Forbidden) or on
+    other insert failures. Logs a warning for 403 without raising.
+    """
+    svc = service or get_directory_service()
+    if not svc:
+        return False
+
+    norm = _normalize_org_unit_path(path)
+    if norm == "/":
+        return True
+
+    parts = [p for p in norm.split("/") if p]
+    parent_path = "/"
+    for segment in parts:
+        if parent_path == "/":
+            current_path = "/" + segment
+        else:
+            current_path = parent_path + "/" + segment
+
+        if _get_google_ou_with_service(svc, current_path):
+            parent_path = current_path
+            continue
+
+        try:
+            svc.orgunits().insert(
+                customerId=DIRECTORY_CUSTOMER_ID,
+                body={"name": segment, "parentOrgUnitPath": parent_path},
+            ).execute()
+            current_app.logger.info(f"Created organizational unit {current_path}")
+        except HttpError as e:
+            if e.resp.status == 403:
+                current_app.logger.warning(
+                    f"Could not create OU {current_path} under {parent_path!r} (403 Forbidden). "
+                    "An admin may need to create this level in the Admin console; user move may fail until then."
+                )
+                return False
+            if e.resp.status == 409 and _get_google_ou_with_service(svc, current_path):
+                parent_path = current_path
+                continue
+            current_app.logger.error(f"Failed to create OU {current_path}: {e}")
+            return False
+        except Exception as e:
+            current_app.logger.error(f"Failed to create OU {current_path}: {e}")
+            return False
+
+        parent_path = current_path
+
+    return True
+
+
 def move_user_to_ou(user_email: str, ou_path: str) -> bool:
     """
     Move an existing user to a different Organizational Unit.
+    Ensures the target path exists (creating intermediate OUs when permitted) before moving.
     """
     service = get_directory_service()
     if not service:
         return False
 
+    target = _normalize_org_unit_path(ou_path)
+    if not ensure_ou_exists(target, service=service):
+        current_app.logger.error(
+            f"Could not ensure OU exists for move: {target!r} (user {user_email})"
+        )
+        return False
+
     try:
-        service.users().update(userKey=user_email, body={"orgUnitPath": ou_path}).execute()
-        current_app.logger.info(f"Moved {user_email} to OU {ou_path}")
+        service.users().update(userKey=user_email, body={"orgUnitPath": target}).execute()
+        current_app.logger.info(f"Moved {user_email} to OU {target}")
         return True
     except HttpError as e:
         current_app.logger.error(f"Directory API error moving OU for {user_email}: {e}")

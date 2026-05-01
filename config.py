@@ -101,7 +101,8 @@ class ProductionConfig(Config):
     """Production configuration with enhanced security."""
     DEBUG = False  # Always False in production
     TESTING = False
-    
+    GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON = os.environ.get('GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON')
+
     # Additional security settings for production
     SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
     SESSION_COOKIE_HTTPONLY = True  # Prevent XSS attacks

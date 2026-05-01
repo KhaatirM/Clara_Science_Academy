@@ -13,7 +13,7 @@ Expected config keys (Flask `current_app.config`):
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from flask import current_app
 from google.oauth2 import service_account
@@ -165,6 +165,37 @@ def _normalize_org_unit_path(path: str) -> str:
     return "/" + "/".join(parts)
 
 
+def _lookup_org_unit(service, org_unit_path: str) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """
+    Resolve an OU by path for create-vs-skip decisions.
+
+    Returns:
+        ("found", resource) if the OU exists.
+        ("missing", None) if the API reports 404 (safe to attempt insert).
+        ("error", None) on any other failure — callers must NOT insert (avoids 400 conflicts).
+    """
+    path = _normalize_org_unit_path(org_unit_path)
+    if path == "/":
+        current_app.logger.warning("org unit lookup: root path '/' is not fetched via orgunits.get")
+        return ("error", None)
+    try:
+        resource = (
+            service.orgunits()
+            .get(customerId=DIRECTORY_CUSTOMER_ID, orgUnitPath=path)
+            .execute()
+        )
+        return ("found", resource)
+    except HttpError as e:
+        status = int(getattr(getattr(e, "resp", None), "status", None) or 0)
+        if status == 404:
+            return ("missing", None)
+        current_app.logger.error(f"Directory API error fetching OU {path}: {e}")
+        return ("error", None)
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch OU {path}: {e}")
+        return ("error", None)
+
+
 def get_google_ou(org_unit_path: str) -> Optional[Dict[str, Any]]:
     """
     Fetch an organizational unit by full path (e.g. /Students/Elementary/Class of 2035).
@@ -177,24 +208,10 @@ def get_google_ou(org_unit_path: str) -> Optional[Dict[str, Any]]:
 
 
 def _get_google_ou_with_service(service, org_unit_path: str) -> Optional[Dict[str, Any]]:
-    path = _normalize_org_unit_path(org_unit_path)
-    if path == "/":
-        current_app.logger.warning("get_google_ou: root path '/' is not fetched via orgunits.get")
-        return None
-    try:
-        return (
-            service.orgunits()
-            .get(customerId=DIRECTORY_CUSTOMER_ID, orgUnitPath=path)
-            .execute()
-        )
-    except HttpError as e:
-        if e.resp.status == 404:
-            return None
-        current_app.logger.error(f"Directory API error fetching OU {path}: {e}")
-        return None
-    except Exception as e:
-        current_app.logger.error(f"Failed to fetch OU {path}: {e}")
-        return None
+    status, resource = _lookup_org_unit(service, org_unit_path)
+    if status == "found":
+        return resource
+    return None
 
 
 def ensure_ou_exists(path: str, service: Any = None) -> bool:
@@ -220,26 +237,45 @@ def ensure_ou_exists(path: str, service: Any = None) -> bool:
         else:
             current_path = parent_path + "/" + segment
 
-        if _get_google_ou_with_service(svc, current_path):
+        status, _ = _lookup_org_unit(svc, current_path)
+        if status == "found":
             parent_path = current_path
             continue
+        if status == "error":
+            current_app.logger.error(
+                f"Could not verify OU {current_path!r} before create; skipping insert to avoid Invalid OU / conflict errors."
+            )
+            return False
 
+        # Top-level OUs: API expects parent under domain root as "" (not "/") to avoid 400 Invalid Ou Id.
+        parent_for_insert = "" if parent_path == "/" else parent_path
         try:
             svc.orgunits().insert(
                 customerId=DIRECTORY_CUSTOMER_ID,
-                body={"name": segment, "parentOrgUnitPath": parent_path},
+                body={"name": segment, "parentOrgUnitPath": parent_for_insert},
             ).execute()
             current_app.logger.info(f"Created organizational unit {current_path}")
         except HttpError as e:
-            if e.resp.status == 403:
+            err_status = int(getattr(getattr(e, "resp", None), "status", None) or 0)
+            if err_status == 403:
                 current_app.logger.warning(
                     f"Could not create OU {current_path} under {parent_path!r} (403 Forbidden). "
                     "An admin may need to create this level in the Admin console; user move may fail until then."
                 )
                 return False
-            if e.resp.status == 409 and _get_google_ou_with_service(svc, current_path):
-                parent_path = current_path
-                continue
+            if err_status == 400 and segment in ("Students", "Staff"):
+                retry_status, _ = _lookup_org_unit(svc, current_path)
+                if retry_status == "found":
+                    current_app.logger.info(
+                        f"OU {current_path!r} already exists (recovered after 400 on create); continuing."
+                    )
+                    parent_path = current_path
+                    continue
+            if err_status == 409:
+                retry_status, _ = _lookup_org_unit(svc, current_path)
+                if retry_status == "found":
+                    parent_path = current_path
+                    continue
             current_app.logger.error(f"Failed to create OU {current_path}: {e}")
             return False
         except Exception as e:

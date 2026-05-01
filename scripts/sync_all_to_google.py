@@ -146,6 +146,7 @@ def main() -> int:
             ws_email = (ws_email or "").strip()
             if not ws_email:
                 continue
+            print(f"[DEBUG] Processing: {ws_email}")
 
             # Compute desired OU (uses grade + grad_year + alumni/removal rules)
             decision = resolve_student_ou(
@@ -265,7 +266,10 @@ def main() -> int:
         staff_q = (
             db.session.query(TeacherStaff, User.google_workspace_email)
             .join(User, User.teacher_staff_id == TeacherStaff.id)
-            .filter(User.google_workspace_email.isnot(None))
+            .filter(
+                TeacherStaff.is_deleted == False,
+                User.google_workspace_email.isnot(None),
+            )
             .order_by(TeacherStaff.last_name, TeacherStaff.first_name)
         )
         if max_staff:
@@ -278,6 +282,7 @@ def main() -> int:
             ws_email = (ws_email or "").strip()
             if not ws_email:
                 continue
+            print(f"[DEBUG] Processing: {ws_email}")
 
             g_user = get_google_user(ws_email)
             _sleep_ms(sleep_ms)

@@ -187,12 +187,15 @@ def main() -> int:
                 current_ou = g_user.get("orgUnitPath")
                 if current_ou != decision.target_ou_path:
                     if apply_changes:
-                        if move_user_to_ou(ws_email, decision.target_ou_path):
+                        ou_res = move_user_to_ou(ws_email, decision.target_ou_path)
+                        if ou_res is True:
                             moved_ous += 1
                             print(f"[MOVE] student {ws_email}: {current_ou} -> {decision.target_ou_path}")
-                        else:
+                        elif ou_res is False:
                             errors += 1
                             print(f"[ERROR] failed OU move for student {ws_email}")
+                        else:
+                            print(f"[INFO] Skipping protected/admin user: {ws_email}")
                         _sleep_ms(sleep_ms)
                     else:
                         print(f"[DRY] would move student {ws_email}: {current_ou} -> {decision.target_ou_path}")
@@ -243,12 +246,15 @@ def main() -> int:
                             )
                             _sleep_ms(sleep_ms)
 
-                if sync_user_groups(ws_email, desired_school_groups):
+                sg_res = sync_user_groups(ws_email, desired_school_groups)
+                if sg_res is True:
                     group_adds += 1
                     print(f"[GROUP] synced school-level groups for {ws_email} -> {', '.join(desired_school_groups)}")
-                else:
+                elif sg_res is False:
                     errors += 1
                     print(f"[ERROR] failed syncing school-level groups for {ws_email}")
+                else:
+                    print(f"[INFO] Skipping protected/admin user: {ws_email}")
                 _sleep_ms(sleep_ms)
             else:
                 print(f"[DRY] would sync school-level groups for {ws_email} -> {', '.join(desired_school_groups)}")
@@ -302,12 +308,15 @@ def main() -> int:
                 current_ou = g_user.get("orgUnitPath")
                 if current_ou != "/Staff":
                     if apply_changes:
-                        if move_user_to_ou(ws_email, "/Staff"):
+                        ou_res = move_user_to_ou(ws_email, "/Staff")
+                        if ou_res is True:
                             moved_ous += 1
                             print(f"[MOVE] staff {ws_email}: {current_ou} -> /Staff")
-                        else:
+                        elif ou_res is False:
                             errors += 1
                             print(f"[ERROR] failed OU move for staff {ws_email}")
+                        else:
+                            print(f"[INFO] Skipping protected/admin user: {ws_email}")
                         _sleep_ms(sleep_ms)
                     else:
                         print(f"[DRY] would move staff {ws_email}: {current_ou} -> /Staff")

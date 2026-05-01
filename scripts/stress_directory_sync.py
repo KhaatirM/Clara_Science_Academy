@@ -141,7 +141,7 @@ def main() -> int:
             if current_ou != decision.target_ou_path:
                 stats.students_need_move += 1
                 if apply_changes:
-                    if move_user_to_ou(ws_email, decision.target_ou_path):
+                    if move_user_to_ou(ws_email, decision.target_ou_path) is True:
                         stats.students_moved += 1
                     _sleep_ms(sleep_ms)
 

@@ -300,10 +300,13 @@ def sync_directory_data():
                 db.session.rollback()
 
         if current_ou != decision.target_ou_path:
-            if move_user_to_ou(ws_email, decision.target_ou_path):
+            ou_res = move_user_to_ou(ws_email, decision.target_ou_path)
+            if ou_res is True:
                 moved += 1
-            else:
-                current_app.logger.warning(f"Failed to move {ws_email} from {current_ou} to {decision.target_ou_path}")
+            elif ou_res is False:
+                current_app.logger.warning(
+                    f"Failed to move {ws_email} from {current_ou} to {decision.target_ou_path}"
+                )
 
         if decision.should_suspend_now and not is_suspended:
             if suspend_user(ws_email):
@@ -329,9 +332,10 @@ def sync_directory_data():
 
         # Only enforce for active, non-removed students
         if bool(getattr(student, "is_active", True)) and not bool(getattr(student, "marked_for_removal", False)):
-            if sync_user_groups(ws_email, desired_groups):
+            sg_res = sync_user_groups(ws_email, desired_groups)
+            if sg_res is True:
                 group_synced_students += 1
-            else:
+            elif sg_res is False:
                 current_app.logger.warning(f"Failed to sync school-level groups for {ws_email}")
 
     current_app.logger.info(

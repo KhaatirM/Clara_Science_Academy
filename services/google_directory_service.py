@@ -21,6 +21,32 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 
+def _http_error_message_text(exc: HttpError) -> str:
+    parts = [str(exc)]
+    content = getattr(exc, "content", None)
+    if content:
+        if isinstance(content, bytes):
+            parts.append(content.decode("utf-8", errors="replace"))
+        else:
+            parts.append(str(content))
+    details = getattr(exc, "error_details", None)
+    if details:
+        parts.append(str(details))
+    return " ".join(parts)
+
+
+def _is_protected_workspace_admin_403(exc: HttpError) -> bool:
+    """Google returns 403 with 'Not Authorized' for privileged users (e.g. admins) we cannot move or re-group."""
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status != 403:
+        return False
+    return "not authorized" in _http_error_message_text(exc).lower()
+
+
+def _log_skip_protected_admin(user_email: str) -> None:
+    current_app.logger.info("[INFO] Skipping protected/admin user: %s", user_email)
+
+
 DIRECTORY_SCOPES_FULL = [
     "https://www.googleapis.com/auth/admin.directory.user",
     "https://www.googleapis.com/auth/admin.directory.group",
@@ -225,10 +251,13 @@ def ensure_ou_exists(path: str, service: Any = None) -> bool:
     return True
 
 
-def move_user_to_ou(user_email: str, ou_path: str) -> bool:
+def move_user_to_ou(user_email: str, ou_path: str) -> Optional[bool]:
     """
     Move an existing user to a different Organizational Unit.
     Ensures the target path exists (creating intermediate OUs when permitted) before moving.
+
+    Returns:
+        True if the user was moved, False on failure, None if skipped (403 Not Authorized for admin/privileged users).
     """
     service = get_directory_service()
     if not service:
@@ -246,6 +275,9 @@ def move_user_to_ou(user_email: str, ou_path: str) -> bool:
         current_app.logger.info(f"Moved {user_email} to OU {target}")
         return True
     except HttpError as e:
+        if _is_protected_workspace_admin_403(e):
+            _log_skip_protected_admin(user_email)
+            return None
         current_app.logger.error(f"Directory API error moving OU for {user_email}: {e}")
         return False
     except Exception as e:
@@ -305,13 +337,16 @@ def sync_group_members(group_email: str, member_emails: Iterable[str]) -> bool:
         return False
 
 
-def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> bool:
+def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> Optional[bool]:
     """
     Ensure user is a member of exactly the provided groups (best-effort).
 
     Notes:
     - Adds the user to any missing groups in `group_emails_list`
     - Removes the user from any current groups not in `group_emails_list`
+
+    Returns:
+        True on success, False on failure, None if skipped (403 Not Authorized for admin/privileged users).
     """
     service = get_directory_service()
     if not service:
@@ -323,7 +358,14 @@ def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> bool:
         current_groups: List[str] = []
         page_token = None
         while True:
-            resp = service.groups().list(userKey=user_email, pageToken=page_token).execute()
+            try:
+                resp = service.groups().list(userKey=user_email, pageToken=page_token).execute()
+            except HttpError as e:
+                if _is_protected_workspace_admin_403(e):
+                    _log_skip_protected_admin(user_email)
+                    return None
+                current_app.logger.error(f"Directory API error listing groups for {user_email}: {e}")
+                return False
             for g in resp.get("groups", []) or []:
                 email = (g.get("email") or "").strip().lower()
                 if email:
@@ -343,6 +385,9 @@ def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> bool:
                 ).execute()
                 current_app.logger.info(f"Added {user_email} to group {group_email}")
             except HttpError as e:
+                if _is_protected_workspace_admin_403(e):
+                    _log_skip_protected_admin(user_email)
+                    return None
                 current_app.logger.error(f"Directory API error adding {user_email} to {group_email}: {e}")
 
         # Remove extra memberships
@@ -351,12 +396,18 @@ def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> bool:
                 service.members().delete(groupKey=group_email, memberKey=user_email).execute()
                 current_app.logger.info(f"Removed {user_email} from group {group_email}")
             except HttpError as e:
+                if _is_protected_workspace_admin_403(e):
+                    _log_skip_protected_admin(user_email)
+                    return None
                 current_app.logger.error(
                     f"Directory API error removing {user_email} from {group_email}: {e}"
                 )
 
         return True
     except HttpError as e:
+        if _is_protected_workspace_admin_403(e):
+            _log_skip_protected_admin(user_email)
+            return None
         current_app.logger.error(f"Directory API error syncing groups for {user_email}: {e}")
         return False
     except Exception as e:

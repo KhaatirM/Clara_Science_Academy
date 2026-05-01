@@ -86,10 +86,17 @@ def main() -> int:
 
     try:
         from app import create_app
-        from config import DevelopmentConfig
     except Exception as e:
         print(f"[ERROR] Failed to import app bootstrap: {e}")
         return 1
+
+    config_name = (os.environ.get("FLASK_ENV", "development") or "development").lower()
+    if config_name == "production":
+        from config import ProductionConfig as ConfigClass
+    else:
+        from config import DevelopmentConfig as ConfigClass
+
+    print(f"FLASK_ENV={config_name} config={ConfigClass.__name__}")
 
     try:
         from extensions import db
@@ -108,7 +115,7 @@ def main() -> int:
         print(f"[ERROR] Failed to import required modules: {e}")
         return 1
 
-    app = create_app(config_class=DevelopmentConfig)
+    app = create_app(config_class=ConfigClass)
 
     created_users = 0
     moved_ous = 0

@@ -54,6 +54,14 @@ class Config:
         'https://www.googleapis.com/auth/userinfo.email',
         'openid'
     ]
+
+    # Google Admin SDK Directory API (Service Account + domain-wide delegation)
+    # Path to service account key JSON. Prefer a relative path in local dev (repo root).
+    GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE')
+    # Alternative: raw service account JSON (recommended for platforms like Render).
+    GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON = os.environ.get('GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON')
+    # Admin email to impersonate for domain-wide delegation (must be a Workspace admin).
+    GOOGLE_DIRECTORY_DELEGATED_ADMIN = os.environ.get('GOOGLE_DIRECTORY_DELEGATED_ADMIN')
     
     # Encryption key for storing sensitive data like refresh tokens
     # IMPORTANT: Set this environment variable in production

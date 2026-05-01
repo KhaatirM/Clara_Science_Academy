@@ -115,6 +115,7 @@ venv.bak/
 client_secret.json
 google_credentials.json
 *client_secret*.json
+google-admin-key.json
 
 # Spyder project settings
 .spyderproject

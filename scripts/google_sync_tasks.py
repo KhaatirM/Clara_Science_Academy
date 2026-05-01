@@ -11,8 +11,27 @@ using a cron job or background scheduler.
 from flask import Flask, current_app
 from extensions import db
 from models import User, Class, Assignment, Enrollment, Grade, Student, SchoolYear, AcademicPeriod
-from google_classroom_service import get_google_service, list_classroom_coursework, get_coursework_grades
 from datetime import datetime
+
+# Support running as a script (cwd=scripts) and as an import (cwd=repo root)
+try:
+    from google_classroom_service import get_google_service, list_classroom_coursework, get_coursework_grades
+except ModuleNotFoundError:
+    from scripts.google_classroom_service import get_google_service, list_classroom_coursework, get_coursework_grades
+from services.google_directory_service import (
+    get_google_user,
+    move_user_to_ou,
+    suspend_user,
+    sync_group_members,
+    sync_user_groups,
+)
+from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
+
+
+ELEMENTARY_GROUP_EMAIL = "elementary@clarascienceacademy.org"
+MIDDLE_SCHOOL_GROUP_EMAIL = "middle_school@clarascienceacademy.org"
+HIGH_SCHOOL_GROUP_EMAIL = "highschool@clarascienceacademy.org"
+STUDENT_ASSEMBLY_GROUP_EMAIL = "studentassembly@clarascienceacademy.org"
 
 # --- ACADEMIC PERIOD LOOKUP (Ensure this logic is robust in your app) ---
 def get_current_academic_period():
@@ -225,5 +244,127 @@ def sync_google_classroom_data(teacher_user_id):
                         current_app.logger.error(f"Failed to commit grades for assignment {internal_assignment.id}: {e}")
 
     current_app.logger.info(f"Google Classroom sync complete for teacher {teacher_user_id}.")
+    return True
+
+
+def sync_directory_data():
+    """
+    Sync Google Workspace Directory state from the database SSOT.
+
+    - Students: compute OU based on grade_level + grad_year (+ alumni/removal rules) and move if needed.
+      If marked for removal / inactive, suspend after ~6 months.
+    - Classes: for any Class with google_group_email, sync membership to match current roster.
+    """
+    # --- Student OU + suspension sync ---
+    students = (
+        db.session.query(Student, User.google_workspace_email)
+        .join(User, User.student_id == Student.id)
+        .filter(User.google_workspace_email.isnot(None))
+        .all()
+    )
+
+    moved = 0
+    suspended = 0
+    ou_skipped = 0
+
+    group_synced_students = 0
+    for student, ws_email in students:
+        ws_email = (ws_email or "").strip()
+        if not ws_email:
+            continue
+
+        decision = resolve_student_ou(
+            grade_level=getattr(student, "grade_level", None),
+            grad_year=getattr(student, "grad_year", None),
+            expected_grad_date=getattr(student, "expected_grad_date", None),
+            is_active=bool(getattr(student, "is_active", True)),
+            marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+            status_updated_at=getattr(student, "status_updated_at", None),
+        )
+
+        g_user = get_google_user(ws_email)
+        if not g_user:
+            current_app.logger.warning(f"Directory user not found or unreadable: {ws_email}")
+            ou_skipped += 1
+            continue
+
+        current_ou = g_user.get("orgUnitPath")
+        is_suspended = bool(g_user.get("suspended", False))
+
+        # Start the 6-month clock the first time we detect removal/inactive without a timestamp
+        if decision.reason == "marked_for_removal_or_inactive" and not getattr(student, "status_updated_at", None):
+            try:
+                student.status_updated_at = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        if current_ou != decision.target_ou_path:
+            if move_user_to_ou(ws_email, decision.target_ou_path):
+                moved += 1
+            else:
+                current_app.logger.warning(f"Failed to move {ws_email} from {current_ou} to {decision.target_ou_path}")
+
+        if decision.should_suspend_now and not is_suspended:
+            if suspend_user(ws_email):
+                suspended += 1
+            else:
+                current_app.logger.warning(f"Failed to suspend {ws_email}")
+
+        # --- School-level + student assembly group membership ---
+        # Keep exactly one of Elementary/Middle/High at a time (plus Student Assembly for all actives).
+        level_key = school_level_group_for_grade(getattr(student, "grade_level", None))
+        level_email = None
+        if level_key == "elementary":
+            level_email = ELEMENTARY_GROUP_EMAIL
+        elif level_key == "middle_school":
+            level_email = MIDDLE_SCHOOL_GROUP_EMAIL
+        elif level_key == "highschool":
+            level_email = HIGH_SCHOOL_GROUP_EMAIL
+
+        desired_groups = []
+        if level_email:
+            desired_groups.append(level_email)
+        desired_groups.append(STUDENT_ASSEMBLY_GROUP_EMAIL)
+
+        # Only enforce for active, non-removed students
+        if bool(getattr(student, "is_active", True)) and not bool(getattr(student, "marked_for_removal", False)):
+            if sync_user_groups(ws_email, desired_groups):
+                group_synced_students += 1
+            else:
+                current_app.logger.warning(f"Failed to sync school-level groups for {ws_email}")
+
+    current_app.logger.info(
+        f"Directory student sync: moved={moved}, suspended={suspended}, skipped={ou_skipped}, group_synced={group_synced_students}"
+    )
+
+    # --- Google Group roster sync ---
+    group_classes = Class.query.filter(Class.google_group_email.isnot(None)).all()
+    group_synced = 0
+    for c in group_classes:
+        group_email = (c.google_group_email or "").strip()
+        if not group_email:
+            continue
+
+        roster_rows = (
+            db.session.query(User.google_workspace_email)
+            .join(Student, Student.id == User.student_id)
+            .join(Enrollment, Enrollment.student_id == Student.id)
+            .filter(
+                Enrollment.class_id == c.id,
+                Enrollment.is_active == True,
+                Student.is_deleted == False,
+                User.google_workspace_email.isnot(None),
+            )
+            .all()
+        )
+        roster_emails = [(r[0] or "").strip() for r in roster_rows if r and r[0]]
+
+        if sync_group_members(group_email, roster_emails):
+            group_synced += 1
+        else:
+            current_app.logger.warning(f"Failed to sync group roster for {group_email} (class_id={c.id})")
+
+    current_app.logger.info(f"Directory group sync complete: groups_synced={group_synced}")
     return True
 

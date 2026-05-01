@@ -181,7 +181,7 @@ def login():
                     ):
                         flash(
                             'Student accounts are not active for your grade level yet. '
-                            'Portal access begins in 4th grade. Contact the office if you need help.',
+                            'Portal access begins in 3rd grade. Contact the office if you need help.',
                             'danger',
                         )
                         get_log_activity()(
@@ -922,7 +922,7 @@ def google_callback():
                     getattr(st, 'is_deleted', False) or not grade_may_have_login(st.grade_level)
                 ):
                     flash(
-                        'Google sign-in is not available for your grade yet. Portal access begins in 4th grade.',
+                        'Google sign-in is not available for your grade yet. Portal access begins in 3rd grade.',
                         'danger',
                     )
                     return redirect(url_for('auth.login'))

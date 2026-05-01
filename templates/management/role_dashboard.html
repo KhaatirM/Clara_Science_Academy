@@ -386,7 +386,7 @@
                         </span>
                         <span class="d-inline-flex align-items-center gap-1">
                             <span class="legend-dot legend-dot-success"></span>
-                            Grade 4+ Active
+                            Grade 3+ Active
                         </span>
                     </div>
                 </div>
@@ -519,6 +519,25 @@
                 </div>
             </div>
 
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+            <!-- Repeat Grade (Bulk) -->
+            <div class="students-csv-card mb-4">
+                <div class="students-csv-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-repeat me-2"></i>Repeat Grade (Bulk Update)
+                    </h5>
+                </div>
+                <div class="students-csv-body">
+                    <p class="text-muted small mb-2">
+                        Select students below, then mark them as repeating. This will set <code>is_repeating</code> and bump <code>grad_year</code> by 1 (when grad year is known).
+                    </p>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="submitRepeatGrade()">
+                        <i class="bi bi-arrow-repeat me-1"></i>Mark Selected as Repeating
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- CSV Import/Export Section -->
             <div class="students-csv-card mb-4">
                 <div class="students-csv-header">
@@ -622,9 +641,16 @@
                 </div>
                 <div class="students-table-body" id="tableView">
                 <div class="table-responsive">
+                    <form method="POST" action="{{ url_for('management.mark_students_repeating') }}" id="repeatGradeForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
+                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <th style="width: 38px;">
+                                    <input class="form-check-input" type="checkbox" id="selectAllStudents" onclick="toggleSelectAllStudents(this)">
+                                </th>
+                                {% endif %}
                                 <th>Name</th>
                                 <th>Grade Level</th>
                                 <th>Student ID</th>
@@ -647,6 +673,11 @@
                                     {% endif %}
                                 {% endif %}
                                 <tr class="student-row student-alert-{{ alert_level }}">
+                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                    <td>
+                                        <input class="form-check-input student-select" type="checkbox" name="student_ids" value="{{ student.id }}">
+                                    </td>
+                                    {% endif %}
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="student-avatar-mini">
@@ -743,7 +774,7 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-5">
+                                    <td colspan="{% if current_user.role in ['Director', 'School Administrator'] %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
                                         No students found.
                                     </td>
@@ -751,6 +782,7 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    </form>
                 </div>
                 </div>
 
@@ -934,6 +966,26 @@
                     </div>
                     {% endif %}
                 </div>
+
+                <script>
+                    function toggleSelectAllStudents(cb) {
+                        const boxes = document.querySelectorAll('.student-select');
+                        boxes.forEach(b => { b.checked = cb.checked; });
+                    }
+                    function submitRepeatGrade() {
+                        const form = document.getElementById('repeatGradeForm');
+                        if (!form) return;
+                        const any = !!document.querySelector('.student-select:checked');
+                        if (!any) {
+                            alert('Select at least one student first.');
+                            return;
+                        }
+                        if (!confirm('Mark selected students as repeating and bump graduation year by 1?')) {
+                            return;
+                        }
+                        form.submit();
+                    }
+                </script>
 
                 {% if pagination is defined and pagination.pages > 1 %}
                 <div class="students-table-footer border-top px-3 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 bg-light bg-opacity-50">

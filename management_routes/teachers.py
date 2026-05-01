@@ -9,6 +9,7 @@ from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay, Assignmen
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import json
+from services.google_directory_service import create_google_user
 
 
 def _parse_dt_ymd(s):
@@ -231,6 +232,36 @@ def add_teacher_staff():
             
             db.session.add(user)
             db.session.commit()
+
+            # Create Google Workspace account (non-blocking)
+            try:
+                if generated_workspace_email:
+                    created = create_google_user(
+                        {
+                            "primaryEmail": generated_workspace_email,
+                            "name": {"givenName": teacher_staff.first_name, "familyName": teacher_staff.last_name},
+                            "password": "Welcome2CSA!",
+                            "orgUnitPath": "/Staff",
+                            "changePasswordAtNextLogin": True,
+                        }
+                    )
+                    if not created:
+                        flash(
+                            f"{assigned_role} created locally, but Google account creation failed for {generated_workspace_email}. "
+                            "Please verify the account does not already exist and that Directory permissions are configured.",
+                            "warning",
+                        )
+                else:
+                    flash(
+                        f"{assigned_role} created locally, but no Google Workspace email was generated, so no Google account was created.",
+                        "warning",
+                    )
+            except Exception as e:
+                current_app.logger.error(f"Failed to auto-create Google staff account: {e}")
+                flash(
+                    f"{assigned_role} created locally, but Google account creation encountered an error. Check logs for details.",
+                    "warning",
+                )
             
             # Show success message with credentials
             success_msg = f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}.'

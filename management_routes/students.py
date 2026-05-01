@@ -24,6 +24,7 @@ import uuid
 import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
+from services.google_directory_service import create_google_user
 
 bp = Blueprint('students', __name__)
 
@@ -42,7 +43,7 @@ def _strip_student_user_account(student):
 
 def _provision_student_login_if_needed(student):
     """
-    Create a Student User for grade 4+ when missing. Caller commits.
+    Create a Student User for grade 3+ when missing. Caller commits.
     Returns True if a new user was added to the session.
     """
     if not grade_may_have_login(student.grade_level):
@@ -124,6 +125,30 @@ def _calculate_expected_grad_date(grade_level, entrance_school_year):
         return f"06/{start_year + years_to_graduation}"
     except (TypeError, ValueError):
         return None
+
+
+def _student_ou_path(grade_level: int, grad_year: int | None) -> str:
+    """
+    Map a student to the desired Google OU path.
+    Example: /Students/Elementary/Class of 2034
+    """
+    base = "/Students"
+    if grad_year is None:
+        return base
+
+    # Match your Admin Console structure: Elementary / Middle School / High School
+    if grade_level is None:
+        school_level = None
+    elif int(grade_level) <= 5:
+        school_level = "Elementary"
+    elif 6 <= int(grade_level) <= 8:
+        school_level = "Middle School"
+    else:
+        school_level = "High School"
+
+    if not school_level:
+        return base
+    return f"{base}/{school_level}/Class of {int(grad_year)}"
 
 
 # ============================================================
@@ -368,6 +393,45 @@ def add_student():
                 user.password_changed_at = None
                 db.session.add(user)
                 db.session.commit()
+
+                # Create Google Workspace account (non-blocking)
+                try:
+                    grad_year = None
+                    # Prefer new Student.grad_year when present; fallback to expected_grad_date (e.g., "06/2034")
+                    if hasattr(student, "grad_year") and getattr(student, "grad_year"):
+                        grad_year = int(getattr(student, "grad_year"))
+                    elif student.expected_grad_date and "/" in str(student.expected_grad_date):
+                        grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+
+                    ou_path = _student_ou_path(student.grade_level, grad_year)
+                    if generated_workspace_email:
+                        created = create_google_user(
+                            {
+                                "primaryEmail": generated_workspace_email,
+                                "name": {"givenName": student.first_name, "familyName": student.last_name},
+                                "password": "Welcome2CSA!",
+                                "orgUnitPath": ou_path,
+                                "changePasswordAtNextLogin": True,
+                            }
+                        )
+                        if not created:
+                            flash(
+                                f"Student created locally, but Google account creation failed for {generated_workspace_email}. "
+                                "Please verify the account does not already exist and that Directory permissions are configured.",
+                                "warning",
+                            )
+                    else:
+                        flash(
+                            "Student created locally, but no Google Workspace email was generated, so no Google account was created.",
+                            "warning",
+                        )
+                except Exception as e:
+                    current_app.logger.error(f"Failed to auto-create Google student account: {e}")
+                    flash(
+                        "Student created locally, but Google account creation encountered an error. Check logs for details.",
+                        "warning",
+                    )
+
                 success_msg = f'Student added successfully! Username: {username}, Password: {password}.'
                 if generated_workspace_email:
                     success_msg += f' Google Workspace Email: {generated_workspace_email}.'
@@ -375,9 +439,47 @@ def add_student():
                 flash(success_msg, 'success')
             else:
                 db.session.commit()
+
+                # Create Google Workspace account even when no portal login exists (non-blocking)
+                try:
+                    grad_year = None
+                    if hasattr(student, "grad_year") and getattr(student, "grad_year"):
+                        grad_year = int(getattr(student, "grad_year"))
+                    elif student.expected_grad_date and "/" in str(student.expected_grad_date):
+                        grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+
+                    ou_path = _student_ou_path(student.grade_level, grad_year)
+                    if generated_workspace_email:
+                        created = create_google_user(
+                            {
+                                "primaryEmail": generated_workspace_email,
+                                "name": {"givenName": student.first_name, "familyName": student.last_name},
+                                "password": "Welcome2CSA!",
+                                "orgUnitPath": ou_path,
+                                "changePasswordAtNextLogin": True,
+                            }
+                        )
+                        if not created:
+                            flash(
+                                f"Student created locally, but Google account creation failed for {generated_workspace_email}. "
+                                "Please verify the account does not already exist and that Directory permissions are configured.",
+                                "warning",
+                            )
+                    else:
+                        flash(
+                            "Student created locally, but no Google Workspace email was generated, so no Google account was created.",
+                            "warning",
+                        )
+                except Exception as e:
+                    current_app.logger.error(f"Failed to auto-create Google student account: {e}")
+                    flash(
+                        "Student created locally, but Google account creation encountered an error. Check logs for details.",
+                        "warning",
+                    )
+
                 flash(
-                    'Student added successfully. No portal account was created—students in 3rd grade and below '
-                    'receive login access when they reach 4th grade.',
+                    'Student added successfully. No portal account was created—students in 2nd grade and below '
+                    'receive login access when they reach 3rd grade.',
                     'success',
                 )
             return redirect(url_for('management.students'))
@@ -703,6 +805,53 @@ def students():
                          high_gpa_count=high_gpa_count,
                          section='students',
                          active_tab='students')
+
+
+@bp.route('/students/mark-repeating', methods=['POST'])
+@login_required
+@permissions_required('students:edit')
+def mark_students_repeating():
+    """
+    Bulk mark selected students as repeating and bump grad_year by 1.
+    """
+    student_ids = request.form.getlist('student_ids')
+    if not student_ids:
+        flash('No students selected.', 'warning')
+        return redirect(url_for('management.students'))
+
+    updated = 0
+    try:
+        for sid in student_ids:
+            student = Student.query.get(int(sid))
+            if not student or getattr(student, 'is_deleted', False):
+                continue
+
+            # Mark repeating
+            student.is_repeating = True
+
+            # Ensure grad_year exists; derive from expected_grad_date if needed
+            grad_year = getattr(student, 'grad_year', None)
+            if not grad_year and student.expected_grad_date and '/' in str(student.expected_grad_date):
+                try:
+                    grad_year = int(str(student.expected_grad_date).split('/', 1)[1])
+                except Exception:
+                    grad_year = None
+
+            if grad_year:
+                student.grad_year = int(grad_year) + 1
+
+            # Audit timestamp (also used by automation for time-based policies)
+            student.status_updated_at = datetime.utcnow()
+            updated += 1
+
+        db.session.commit()
+        flash(f'Marked {updated} student(s) as repeating and updated graduation year.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to mark students repeating: {e}")
+        flash('Failed to update selected students. Please try again.', 'danger')
+
+    return redirect(url_for('management.students'))
 
 
 

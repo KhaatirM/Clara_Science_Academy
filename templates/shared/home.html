@@ -511,6 +511,36 @@
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 1, 2026 - Google Workspace automation (Directory + OUs + Groups) -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Workspace Automation (SSOT) – May 1, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Admin SDK Directory integration:</strong> The platform can now create Google Workspace accounts, move users between Organizational Units (OUs), and manage Google Group memberships using a service account with domain-wide delegation.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Automatic OUs (students):</strong> Students are placed under <strong>/Students</strong> by school level (<strong>Elementary</strong>, <strong>Middle School</strong>, <strong>High School</strong>) and <strong>Class of YYYY</strong>. Alumni and removal OUs are supported for lifecycle management.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Automatic Groups (students):</strong> Each active student is kept in exactly one school-level group (<code>elementary@</code>, <code>middle_school@</code>, <code>highschool@</code>) and is included in <code>studentassembly@</code>. Class rosters can sync to per-class Google Groups so teachers can email an entire class at once.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Automatic Groups (staff):</strong> Staff accounts are placed in <strong>/Staff</strong> and ensured in <code>teachers@</code> for consistent messaging and filtering.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Maintenance + scheduling:</strong> New scripts support dry-run previews and safe enforcement via a scheduled job (cron) so Google stays aligned with the website as the single source of truth.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Accounts, OUs, and group membership can be automatically enforced from the website, removing manual Google Admin work and ensuring students/staff are always organized correctly for email, filtering, and access controls.</p>
+                        </div>
+                    </div>
+
                     <!-- April 29, 2026 - Dashboard zoom, quiz UX, admin tables -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-layout-sidebar-inset-reverse me-2"></i>Dashboard Zoom, Quiz Grading &amp; Admin Tables – April 29, 2026</h6>

@@ -1,7 +1,7 @@
-"""When student portal accounts are allowed (grade 4+; K–3 are record-only until 4th grade)."""
+"""When student portal accounts are allowed (grade 3+; K–2 are record-only until 3rd grade)."""
 
 # grade_level uses Kindergarten = 0, 1st = 1, …, 12th = 12
-MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN = 4
+MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN = 3
 
 
 def parse_grade_level_for_policy(value):

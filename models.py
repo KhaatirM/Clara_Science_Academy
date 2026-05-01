@@ -93,6 +93,12 @@ class Student(db.Model):
     entrance_date = db.Column(db.String(9), nullable=True)
     # Stored as month/year string for report cards (e.g., "06/2030")
     expected_grad_date = db.Column(db.String(7), nullable=True)
+    # Authoritative graduation year for OU placement (e.g., 2034)
+    grad_year = db.Column(db.Integer, nullable=True)
+    # Enrollment status: active students are managed in Students OUs
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    # Admin flag: student is repeating (affects grad_year / OU placement policy)
+    is_repeating = db.Column(db.Boolean, default=False, nullable=False)
     address = db.Column(db.Text, nullable=True)
     photo_filename = db.Column(db.String(255), nullable=True)
     transcript_filename = db.Column(db.String(255), nullable=True)
@@ -205,13 +211,30 @@ class Student(db.Model):
             else:
                 return None
             
-            # Format: first name + last initial + month + year
-            first_name_clean = self.first_name.lower().replace(' ', '')
-            last_initial = self.last_name[0].lower()
+            # Format (exact casing): (Firstname)(LastInitial)(mm)(yy)@clarascienceacademy.org
+            # Example: MuaciA0313@clarascienceacademy.org
+            first_raw = (self.first_name or '').strip().replace(' ', '').replace('-', '')
+            last_raw = (self.last_name or '').strip().replace(' ', '').replace('-', '')
+            if not first_raw or not last_raw:
+                return None
+
+            first_name_clean = f"{first_raw[:1].upper()}{first_raw[1:].lower()}"
+            last_initial = last_raw[:1].upper()
             month = str(dt.month).zfill(2)
             year = str(dt.year)[-2:]
             
-            email = f"{first_name_clean}{last_initial}{month}{year}@clarascienceacademy.org"
+            base_local_part = f"{first_name_clean}{last_initial}{month}{year}"
+            email = f"{base_local_part}@clarascienceacademy.org"
+
+            # Collision handling: if taken, append 2, 3, ... (e.g., MuaciA03132@...)
+            existing_user = User.query.filter_by(google_workspace_email=email).first()
+            if existing_user:
+                counter = 2
+                while existing_user:
+                    email = f"{base_local_part}{counter}@clarascienceacademy.org"
+                    existing_user = User.query.filter_by(google_workspace_email=email).first()
+                    counter += 1
+
             return email
             
         except Exception as e:
@@ -467,6 +490,8 @@ class Class(db.Model):
     # Google Classroom integration
     # ACTION: Removed 'unique=True' constraint to enable linking one GC to multiple internal classes
     google_classroom_id = db.Column(db.String(100), nullable=True)
+    # Google Group used for roster email (e.g., physics101@clarascienceacademy.org)
+    google_group_email = db.Column(db.String(120), nullable=True)
 
     # Relationships
     teacher = db.relationship('TeacherStaff', backref='primary_classes', lazy=True, foreign_keys=[teacher_id])

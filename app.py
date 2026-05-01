@@ -244,6 +244,9 @@ def create_app(config_class=None):
             ('gender', 'VARCHAR(30)', 'TEXT'),
             ('entrance_date', 'VARCHAR(9)', 'TEXT'),
             ('expected_grad_date', 'VARCHAR(7)', 'TEXT'),
+            ('grad_year', 'INTEGER', 'INTEGER'),
+            ('is_active', 'BOOLEAN NOT NULL DEFAULT true', 'INTEGER NOT NULL DEFAULT 1'),
+            ('is_repeating', 'BOOLEAN NOT NULL DEFAULT false', 'INTEGER NOT NULL DEFAULT 0'),
         ]
         try:
             with db.engine.connect() as conn:
@@ -271,6 +274,30 @@ def create_app(config_class=None):
                             print(f"Added student.{col_name} column.")
         except Exception as e:
             print(f"Note: student profile columns check failed (may already exist): {e}")
+
+        # Add class.google_group_email if missing (Directory group sync)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                col_name = 'google_group_email'
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(class)"))
+                    columns = [row[1] for row in r]
+                    if col_name not in columns:
+                        conn.execute(text("ALTER TABLE class ADD COLUMN google_group_email TEXT"))
+                        conn.commit()
+                        print("Added class.google_group_email column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'class' AND column_name = :col"
+                    ), {"col": col_name})
+                    if r.fetchone() is None:
+                        conn.execute(text('ALTER TABLE "class" ADD COLUMN google_group_email VARCHAR(120)'))
+                        conn.commit()
+                        print("Added class.google_group_email column.")
+        except Exception as e:
+            print(f"Note: class google_group_email column check failed (may already exist): {e}")
 
         # Add assignment advanced grading columns if missing
         _assignment_cols = [

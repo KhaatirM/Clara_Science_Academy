@@ -641,7 +641,7 @@
                 </div>
                 <div class="students-table-body" id="tableView">
                 <div class="table-responsive">
-                    <form method="POST" action="{{ url_for('management.mark_students_repeating') }}" id="repeatGradeForm">
+                    <form method="POST" action="{{ url_for('management.students.mark_students_repeating') }}" id="repeatGradeForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <table class="table table-hover align-middle">
                         <thead>

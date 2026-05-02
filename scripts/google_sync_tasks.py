@@ -24,6 +24,7 @@ from services.google_directory_service import (
     suspend_user,
     sync_group_members,
     sync_user_groups,
+    sync_user_suspension_with_db_is_active,
 )
 from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
 
@@ -273,6 +274,8 @@ def sync_directory_data():
         if not ws_email:
             continue
 
+        sync_user_suspension_with_db_is_active(ws_email, bool(getattr(student, "is_active", True)))
+
         decision = resolve_student_ou(
             grade_level=getattr(student, "grade_level", None),
             grad_year=getattr(student, "grad_year", None),
@@ -286,6 +289,10 @@ def sync_directory_data():
         if not g_user:
             current_app.logger.warning(f"Directory user not found or unreadable: {ws_email}")
             ou_skipped += 1
+            continue
+
+        if not bool(getattr(student, "is_active", True)):
+            # DB inactive: suspension already aligned above; skip OU / policy / group churn.
             continue
 
         current_ou = g_user.get("orgUnitPath")

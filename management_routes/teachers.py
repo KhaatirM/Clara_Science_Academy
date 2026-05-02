@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import json
 from services.google_directory_service import create_google_user
+from services.google_sync_tasks import sync_single_user_to_google
 
 
 def _parse_dt_ymd(s):
@@ -232,6 +233,13 @@ def add_teacher_staff():
             
             db.session.add(user)
             db.session.commit()
+            # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+            try:
+                sync_single_user_to_google(user.id)
+            except Exception as e:
+                current_app.logger.warning(
+                    "Google Directory sync after save failed for user %s: %s", user.id, e
+                )
 
             # Create Google Workspace account (non-blocking)
             try:
@@ -421,6 +429,17 @@ def edit_teacher_staff(staff_id):
                 user.permissions = permissions_json
             
             db.session.commit()
+            # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+            sync_user = User.query.filter_by(teacher_staff_id=staff_id).first()
+            if sync_user and sync_user.google_workspace_email:
+                try:
+                    sync_single_user_to_google(sync_user.id)
+                except Exception as e:
+                    current_app.logger.warning(
+                        "Google Directory sync after staff edit failed for user %s: %s",
+                        sync_user.id,
+                        e,
+                    )
             
             if is_ajax:
                 return jsonify({'success': True, 'message': f'{assigned_role} updated successfully!'})
@@ -1416,6 +1435,16 @@ def edit_teacher(teacher_id):
                 teacher.user.google_workspace_email = None
         
         db.session.commit()
+        # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+        if getattr(teacher, "user", None) and teacher.user.google_workspace_email:
+            try:
+                sync_single_user_to_google(teacher.user.id)
+            except Exception as e:
+                current_app.logger.warning(
+                    "Google Directory sync after teacher edit failed for user %s: %s",
+                    teacher.user.id,
+                    e,
+                )
         return jsonify({'success': True, 'message': 'Teacher/Staff updated successfully.'})
     except Exception as e:
         db.session.rollback()

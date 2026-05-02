@@ -25,6 +25,7 @@ import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
 from services.google_directory_service import create_google_user
+from services.google_sync_tasks import sync_single_user_to_google
 
 bp = Blueprint('students', __name__)
 
@@ -393,6 +394,13 @@ def add_student():
                 user.password_changed_at = None
                 db.session.add(user)
                 db.session.commit()
+                # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+                try:
+                    sync_single_user_to_google(user.id)
+                except Exception as e:
+                    current_app.logger.warning(
+                        "Google Directory sync after save failed for user %s: %s", user.id, e
+                    )
 
                 # Create Google Workspace account (non-blocking)
                 try:
@@ -2066,6 +2074,16 @@ def edit_student(student_id):
             _provision_student_login_if_needed(student)
 
         db.session.commit()
+        # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+        if getattr(student, "user", None) and student.user.google_workspace_email:
+            try:
+                sync_single_user_to_google(student.user.id)
+            except Exception as e:
+                current_app.logger.warning(
+                    "Google Directory sync after student edit failed for user %s: %s",
+                    student.user.id,
+                    e,
+                )
         return jsonify({'success': True, 'message': 'Student updated successfully.'})
     except Exception as e:
         db.session.rollback()

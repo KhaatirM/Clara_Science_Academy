@@ -578,24 +578,72 @@ def create_google_group(group_email: str, name: str, description: str = "") -> O
         return None
 
 
-def suspend_user(user_email: str) -> bool:
+def set_user_suspended(user_email: str, suspended: bool) -> Optional[bool]:
     """
-    Suspend (disable login for) an existing Google Workspace user.
+    Set Google Workspace account suspended flag (blocks login when True).
+
+    Returns:
+        True if updated or already in desired state, False on failure,
+        None if skipped (403 Not Authorized for admin/privileged users).
     """
     service = get_directory_service()
     if not service:
         return False
 
     try:
-        service.users().update(userKey=user_email, body={"suspended": True}).execute()
-        current_app.logger.info(f"Suspended Google user {user_email}")
+        service.users().update(userKey=user_email, body={"suspended": suspended}).execute()
+        current_app.logger.info(
+            f"Set Google user {user_email} suspended={suspended}"
+        )
         return True
     except HttpError as e:
-        current_app.logger.error(f"Directory API error suspending {user_email}: {e}")
+        if _is_protected_workspace_admin_403(e):
+            _log_skip_protected_admin(user_email)
+            return None
+        current_app.logger.error(
+            f"Directory API error setting suspended={suspended} for {user_email}: {e}"
+        )
         return False
     except Exception as e:
-        current_app.logger.error(f"Failed to suspend {user_email}: {e}")
+        current_app.logger.error(f"Failed to set suspended={suspended} for {user_email}: {e}")
         return False
+
+
+def sync_user_suspension_with_db_is_active(user_email: str, db_is_active: bool) -> Optional[bool]:
+    """
+    Align Google ``suspended`` with the database ``is_active`` flag (master for school-wide access).
+
+    - DB ``is_active`` False → Google ``suspended`` True
+    - DB ``is_active`` True → Google ``suspended`` False
+
+    If the Google account does not exist and the user should be inactive, returns True (nothing to do).
+    If the Google account does not exist and the user should be active, returns None (caller may create).
+
+    Returns True if aligned or no change needed, False on failure, None on skip (protected admin) or missing user when active.
+    """
+    email = (user_email or "").strip()
+    if not email:
+        return False
+
+    desired_suspended = not bool(db_is_active)
+    g_user = get_google_user(email)
+    if not g_user:
+        if desired_suspended:
+            return True
+        return None
+
+    current = bool(g_user.get("suspended", False))
+    if current == desired_suspended:
+        return True
+    return set_user_suspended(email, desired_suspended)
+
+
+def suspend_user(user_email: str) -> bool:
+    """
+    Suspend (disable login for) an existing Google Workspace user.
+    """
+    r = set_user_suspended(user_email, True)
+    return r is True
 
 
 def delete_google_user(user_email: str) -> bool:

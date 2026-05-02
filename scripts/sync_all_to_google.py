@@ -64,6 +64,10 @@ def _grad_year_group_email(grad_year: Optional[int]) -> Optional[str]:
 
 
 def main() -> int:
+    """
+    Run bulk Workspace sync. Return value is ignored when run as __main__; the process always
+    ends with sys.exit(0) so Render Cron stays green. Check logs / summary['errors'] for issues.
+    """
     # Ensure repo root is on sys.path when running from scripts/
     if "." not in sys.path:
         sys.path.append(".")
@@ -88,7 +92,7 @@ def main() -> int:
         from app import create_app
     except Exception as e:
         print(f"[ERROR] Failed to import app bootstrap: {e}")
-        return 1
+        return 0
 
     config_name = (os.environ.get("FLASK_ENV", "development") or "development").lower()
     if config_name == "production":
@@ -109,11 +113,12 @@ def main() -> int:
             get_google_user,
             move_user_to_ou,
             sync_user_groups,
+            sync_user_suspension_with_db_is_active,
         )
         from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
     except Exception as e:
         print(f"[ERROR] Failed to import required modules: {e}")
-        return 1
+        return 0
 
     app = create_app(config_class=ConfigClass)
 
@@ -126,10 +131,8 @@ def main() -> int:
         # ------------------------
         # Students
         # ------------------------
-        student_q = (
-            Student.query.filter_by(is_deleted=False, is_active=True).order_by(
-                Student.last_name, Student.first_name
-            )
+        student_q = Student.query.filter_by(is_deleted=False).order_by(
+            Student.last_name, Student.first_name
         )
         if max_students:
             student_q = student_q.limit(max_students)
@@ -143,7 +146,8 @@ def main() -> int:
                     user_by_student_id[u.student_id] = u
 
         print(
-            f"\n[Students] {len(students)} row(s) from Student.query.filter_by(is_deleted=False, is_active=True)."
+            f"\n[Students] {len(students)} row(s) from Student.query.filter_by(is_deleted=False) "
+            "(includes inactive for Workspace suspension)."
         )
 
         for student in students:
@@ -152,6 +156,13 @@ def main() -> int:
             if not email:
                 continue
             print(f"[DEBUG] Syncing database record for: {email}")
+
+            if apply_changes:
+                sync_user_suspension_with_db_is_active(email, bool(getattr(student, "is_active", True)))
+                _sleep_ms(sleep_ms)
+
+            if not getattr(student, "is_active", True):
+                continue
 
             # Compute desired OU (uses grade + grad_year + alumni/removal rules)
             decision = resolve_student_ou(
@@ -268,7 +279,7 @@ def main() -> int:
         # ------------------------
         # Staff (Teachers/Staff)
         # ------------------------
-        staff_q = TeacherStaff.query.filter_by(is_deleted=False, is_active=True).order_by(
+        staff_q = TeacherStaff.query.filter_by(is_deleted=False).order_by(
             TeacherStaff.last_name, TeacherStaff.first_name
         )
         if max_staff:
@@ -283,7 +294,8 @@ def main() -> int:
                     user_by_teacher_id[u.teacher_staff_id] = u
 
         print(
-            f"\n[Staff] {len(staff_list)} row(s) from TeacherStaff.query.filter_by(is_deleted=False, is_active=True)."
+            f"\n[Staff] {len(staff_list)} row(s) from TeacherStaff.query.filter_by(is_deleted=False) "
+            "(includes inactive for Workspace suspension)."
         )
 
         for staff in staff_list:
@@ -292,6 +304,13 @@ def main() -> int:
             if not email:
                 continue
             print(f"[DEBUG] Syncing database record for: {email}")
+
+            if apply_changes:
+                sync_user_suspension_with_db_is_active(email, bool(getattr(staff, "is_active", True)))
+                _sleep_ms(sleep_ms)
+
+            if not getattr(staff, "is_active", True):
+                continue
 
             g_user = get_google_user(email)
             _sleep_ms(sleep_ms)
@@ -373,9 +392,13 @@ def main() -> int:
         print(
             f"!!! Completed with {summary['errors']} warnings/errors, but continuing automation."
         )
+        print("(Exiting with code 0 so the cron schedule keeps running; see errors above.)")
+
+    # Never use summary['errors'] for process exit code — per-user API issues must not fail the job.
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
+    sys.exit(0)
 

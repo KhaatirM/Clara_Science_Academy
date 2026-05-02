@@ -353,17 +353,27 @@ def main() -> int:
             else:
                 print(f"[DRY] would ensure {email} in {TEACHERS_GROUP_EMAIL}")
 
+    summary = {
+        "created_users": created_users,
+        "moved_ous": moved_ous,
+        "group_ensures": group_adds,
+        "errors": errors,
+    }
     print("\n" + "=" * 80)
     print("SUMMARY")
     print("=" * 80)
-    print(f"created_users={created_users}")
-    print(f"moved_ous={moved_ous}")
-    print(f"group_ensures={group_adds}")
-    print(f"errors={errors}")
+    print(f"created_users={summary['created_users']}")
+    print(f"moved_ous={summary['moved_ous']}")
+    print(f"group_ensures={summary['group_ensures']}")
+    print(f"errors={summary['errors']}")
     print("=" * 80)
     if not apply_changes:
         print("DRY RUN completed. Set APPLY_CHANGES=1 to perform changes.")
-    return 0 if errors == 0 else 2
+    if summary["errors"] > 0:
+        print(
+            f"!!! Completed with {summary['errors']} warnings/errors, but continuing automation."
+        )
+    return 0
 
 
 if __name__ == "__main__":

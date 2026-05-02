@@ -35,6 +35,27 @@ def _http_error_message_text(exc: HttpError) -> str:
     return " ".join(parts)
 
 
+def _http_error_suggests_ou_insert_duplicate_or_exists(exc: HttpError) -> bool:
+    """
+    True when orgunits.insert returned 400 and the message indicates the OU already exists
+    (including cases Google labels Invalid orgUnit / Invalid OU id).
+    """
+    if int(getattr(getattr(exc, "resp", None), "status", None) or 0) != 400:
+        return False
+    t = _http_error_message_text(exc).lower()
+    if "entity already exists" in t:
+        return True
+    for phrase in (
+        "invalid orgunit",
+        "invalid org unit",
+        "invalid ou id",
+        "invalid ou",
+    ):
+        if phrase in t:
+            return True
+    return False
+
+
 def _is_protected_workspace_admin_403(exc: HttpError) -> bool:
     """Google returns 403 with 'Not Authorized' for privileged users (e.g. admins) we cannot move or re-group."""
     status = getattr(getattr(exc, "resp", None), "status", None)
@@ -230,10 +251,14 @@ def _get_google_ou_with_service(service, org_unit_path: str) -> Optional[Dict[st
 
 def ensure_ou_exists(path: str, service: Any = None) -> bool:
     """
-    Ensure every segment of the OU path exists, creating missing units via orgunits.insert.
+    Walk the OU path segment by segment (e.g. /Students/Elementary/Class of 2032), verify each
+    full path with orgunits.get, and create missing levels with orgunits.insert.
+
+    For each insert, parentOrgUnitPath is the parent's full path: ``/`` for top-level
+    (e.g. /Students), ``/Students`` for /Students/Elementary, etc.
 
     Returns False if a required unit could not be created (e.g. 403 Forbidden) or on
-    other insert failures. Logs a warning for 403 without raising.
+    unrecoverable insert failures. Logs a warning for 403 without raising.
     """
     svc = service or get_directory_service()
     if not svc:
@@ -243,26 +268,28 @@ def ensure_ou_exists(path: str, service: Any = None) -> bool:
     if norm == "/":
         return True
 
-    parts = [p for p in norm.split("/") if p]
-    parent_path = "/"
-    for segment in parts:
-        if parent_path == "/":
+    segments = [p for p in norm.split("/") if p]
+    # Parent path for the next segment: domain root is "/".
+    parent_full_path = "/"
+
+    for segment in segments:
+        if parent_full_path == "/":
             current_path = "/" + segment
         else:
-            current_path = parent_path + "/" + segment
+            current_path = parent_full_path + "/" + segment
 
         status, _ = _lookup_org_unit(svc, current_path)
         if status == "found":
-            parent_path = current_path
+            parent_full_path = current_path
             continue
         if status == "error":
             current_app.logger.error(
-                f"Could not verify OU {current_path!r} before create; skipping insert to avoid Invalid OU / conflict errors."
+                f"Could not verify OU {current_path!r} before create; aborting ensure_ou_exists."
             )
             return False
 
-        # Top-level OUs under domain root: parentOrgUnitPath must be exactly "/".
-        parent_for_insert = "/" if parent_path == "/" else parent_path
+        parent_for_insert = parent_full_path
+
         try:
             svc.orgunits().insert(
                 customerId=DIRECTORY_CUSTOMER_ID,
@@ -273,30 +300,34 @@ def ensure_ou_exists(path: str, service: Any = None) -> bool:
             err_status = int(getattr(getattr(e, "resp", None), "status", None) or 0)
             if err_status == 403:
                 current_app.logger.warning(
-                    f"Could not create OU {current_path} under {parent_path!r} (403 Forbidden). "
+                    f"Could not create OU {current_path} under parent {parent_for_insert!r} (403 Forbidden). "
                     "An admin may need to create this level in the Admin console; user move may fail until then."
                 )
                 return False
-            if err_status == 400 and segment in ("Students", "Staff"):
+
+            if err_status in (400, 409):
                 retry_status, _ = _lookup_org_unit(svc, current_path)
                 if retry_status == "found":
                     current_app.logger.info(
-                        f"OU {current_path!r} already exists (recovered after 400 on create); continuing."
+                        f"OU {current_path!r} exists after HTTP {err_status} on insert; continuing."
                     )
-                    parent_path = current_path
+                    parent_full_path = current_path
                     continue
-            if err_status == 409:
-                retry_status, _ = _lookup_org_unit(svc, current_path)
-                if retry_status == "found":
-                    parent_path = current_path
+                if err_status == 400 and _http_error_suggests_ou_insert_duplicate_or_exists(e):
+                    current_app.logger.info(
+                        f"Treating HTTP 400 on insert for {current_path!r} as existing OU "
+                        f"(duplicate or invalid OU id message); continuing."
+                    )
+                    parent_full_path = current_path
                     continue
+
             current_app.logger.error(f"Failed to create OU {current_path}: {e}")
             return False
         except Exception as e:
             current_app.logger.error(f"Failed to create OU {current_path}: {e}")
             return False
 
-        parent_path = current_path
+        parent_full_path = current_path
 
     return True
 

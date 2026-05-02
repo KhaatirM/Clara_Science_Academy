@@ -126,25 +126,29 @@ def main() -> int:
         # ------------------------
         # Students
         # ------------------------
-        # Active, non-deleted students only (excludes ghosts / inactive enrollments)
         student_q = (
-            db.session.query(Student, User.google_workspace_email)
-            .join(User, User.student_id == Student.id)
-            .filter(
-                Student.is_active == True,
-                Student.is_deleted == False,
-                User.google_workspace_email.isnot(None),
+            Student.query.filter_by(is_deleted=False, is_active=True).order_by(
+                Student.last_name, Student.first_name
             )
-            .order_by(Student.last_name, Student.first_name)
         )
         if max_students:
             student_q = student_q.limit(max_students)
-        student_rows = student_q.all()
+        students = student_q.all()
 
-        print(f"\n[Students] Found {len(student_rows)} active student(s) with Workspace emails.")
+        user_by_student_id: dict = {}
+        if students:
+            sids = [s.id for s in students]
+            for u in User.query.filter(User.student_id.in_(sids)).all():
+                if u.student_id is not None:
+                    user_by_student_id[u.student_id] = u
 
-        for student, row_email in student_rows:
-            email = (row_email or "").strip()
+        print(
+            f"\n[Students] {len(students)} row(s) from Student.query.filter_by(is_deleted=False, is_active=True)."
+        )
+
+        for student in students:
+            u = user_by_student_id.get(student.id)
+            email = (u.google_workspace_email or "").strip() if u else ""
             if not email:
                 continue
             print(f"[DEBUG] Syncing database record for: {email}")
@@ -264,25 +268,27 @@ def main() -> int:
         # ------------------------
         # Staff (Teachers/Staff)
         # ------------------------
-        # Same rows as TeacherStaff.query.filter_by(is_deleted=False, is_active=True), plus Workspace email join
-        staff_q = (
-            db.session.query(TeacherStaff, User.google_workspace_email)
-            .join(User, User.teacher_staff_id == TeacherStaff.id)
-            .filter(
-                TeacherStaff.is_deleted == False,
-                TeacherStaff.is_active == True,
-                User.google_workspace_email.isnot(None),
-            )
-            .order_by(TeacherStaff.last_name, TeacherStaff.first_name)
+        staff_q = TeacherStaff.query.filter_by(is_deleted=False, is_active=True).order_by(
+            TeacherStaff.last_name, TeacherStaff.first_name
         )
         if max_staff:
             staff_q = staff_q.limit(max_staff)
-        staff_rows = staff_q.all()
+        staff_list = staff_q.all()
 
-        print(f"\n[Staff] Found {len(staff_rows)} staff member(s) with Workspace emails.")
+        user_by_teacher_id: dict = {}
+        if staff_list:
+            tids = [t.id for t in staff_list]
+            for u in User.query.filter(User.teacher_staff_id.in_(tids)).all():
+                if u.teacher_staff_id is not None:
+                    user_by_teacher_id[u.teacher_staff_id] = u
 
-        for staff, row_email in staff_rows:
-            email = (row_email or "").strip()
+        print(
+            f"\n[Staff] {len(staff_list)} row(s) from TeacherStaff.query.filter_by(is_deleted=False, is_active=True)."
+        )
+
+        for staff in staff_list:
+            u = user_by_teacher_id.get(staff.id)
+            email = (u.google_workspace_email or "").strip() if u else ""
             if not email:
                 continue
             print(f"[DEBUG] Syncing database record for: {email}")

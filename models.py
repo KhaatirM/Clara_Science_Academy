@@ -275,6 +275,7 @@ class TeacherStaff(db.Model):
     # Deletion tracking
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete flag - marks teacher as deleted while preserving data
     deleted_at = db.Column(db.DateTime, nullable=True)  # When the teacher was deleted
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # False = inactive (excluded from sync / similar to Student.is_active)
 
     # Employment status tracking (for staff who no longer work here)
     employment_status = db.Column(db.String(30), default='Active', nullable=False)  # Active, Inactive, On Leave

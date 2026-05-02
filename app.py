@@ -213,6 +213,10 @@ def create_app(config_class=None):
                         conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN status_updated_at DATETIME"))
                         conn.commit()
                         print("Added teacher_staff.status_updated_at column.")
+                    if 'is_active' not in columns:
+                        conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"))
+                        conn.commit()
+                        print("Added teacher_staff.is_active column.")
                 elif dialect == 'postgresql':
                     def _pg_has(col):
                         r = conn.execute(text(
@@ -236,6 +240,12 @@ def create_app(config_class=None):
                         conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN status_updated_at TIMESTAMP"))
                         conn.commit()
                         print("Added teacher_staff.status_updated_at column.")
+                    if not _pg_has('is_active'):
+                        conn.execute(text(
+                            "ALTER TABLE teacher_staff ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true"
+                        ))
+                        conn.commit()
+                        print("Added teacher_staff.is_active column.")
         except Exception as e:
             print(f"Note: teacher_staff status columns check failed (may already exist): {e}")
 

@@ -126,12 +126,13 @@ def main() -> int:
         # ------------------------
         # Students
         # ------------------------
+        # Active, non-deleted students only (excludes ghosts / inactive enrollments)
         student_q = (
             db.session.query(Student, User.google_workspace_email)
             .join(User, User.student_id == Student.id)
             .filter(
-                Student.is_deleted == False,
                 Student.is_active == True,
+                Student.is_deleted == False,
                 User.google_workspace_email.isnot(None),
             )
             .order_by(Student.last_name, Student.first_name)
@@ -142,11 +143,11 @@ def main() -> int:
 
         print(f"\n[Students] Found {len(student_rows)} active student(s) with Workspace emails.")
 
-        for student, ws_email in student_rows:
-            ws_email = (ws_email or "").strip()
-            if not ws_email:
+        for student, row_email in student_rows:
+            email = (row_email or "").strip()
+            if not email:
                 continue
-            print(f"[DEBUG] Processing: {ws_email}")
+            print(f"[DEBUG] Syncing database record for: {email}")
 
             # Compute desired OU (uses grade + grad_year + alumni/removal rules)
             decision = resolve_student_ou(
@@ -158,7 +159,7 @@ def main() -> int:
                 status_updated_at=getattr(student, "status_updated_at", None),
             )
 
-            g_user = get_google_user(ws_email)
+            g_user = get_google_user(email)
             _sleep_ms(sleep_ms)
 
             if not g_user:
@@ -166,7 +167,7 @@ def main() -> int:
                 if apply_changes:
                     created = create_google_user(
                         {
-                            "primaryEmail": ws_email,
+                            "primaryEmail": email,
                             "name": {"givenName": student.first_name, "familyName": student.last_name},
                             "password": DEFAULT_TEMP_PASSWORD,
                             "orgUnitPath": decision.target_ou_path,
@@ -176,30 +177,30 @@ def main() -> int:
                     _sleep_ms(sleep_ms)
                     if created:
                         created_users += 1
-                        print(f"[CREATE] student {ws_email} in OU {decision.target_ou_path}")
+                        print(f"[CREATE] student {email} in OU {decision.target_ou_path}")
                     else:
                         errors += 1
-                        print(f"[ERROR] failed to create student {ws_email}")
+                        print(f"[ERROR] failed to create student {email}")
                         continue
                 else:
-                    print(f"[DRY] would create student {ws_email} in OU {decision.target_ou_path}")
+                    print(f"[DRY] would create student {email} in OU {decision.target_ou_path}")
                     continue
             else:
                 current_ou = g_user.get("orgUnitPath")
                 if current_ou != decision.target_ou_path:
                     if apply_changes:
-                        ou_res = move_user_to_ou(ws_email, decision.target_ou_path)
+                        ou_res = move_user_to_ou(email, decision.target_ou_path)
                         if ou_res is True:
                             moved_ous += 1
-                            print(f"[MOVE] student {ws_email}: {current_ou} -> {decision.target_ou_path}")
+                            print(f"[MOVE] student {email}: {current_ou} -> {decision.target_ou_path}")
                         elif ou_res is False:
                             errors += 1
-                            print(f"[ERROR] failed OU move for student {ws_email}")
+                            print(f"[ERROR] failed OU move for student {email}")
                         else:
-                            print(f"[INFO] Skipping protected/admin user: {ws_email}")
+                            print(f"[INFO] Skipping protected/admin user: {email}")
                         _sleep_ms(sleep_ms)
                     else:
-                        print(f"[DRY] would move student {ws_email}: {current_ou} -> {decision.target_ou_path}")
+                        print(f"[DRY] would move student {email}: {current_ou} -> {decision.target_ou_path}")
 
             # Graduation-year group membership (add-only)
             grad_group = _grad_year_group_email(getattr(student, "grad_year", None))
@@ -212,15 +213,15 @@ def main() -> int:
                             description="Auto-created by CSA sync to support filtering/group email.",
                         )
                         _sleep_ms(sleep_ms)
-                    if ensure_user_in_group(ws_email, grad_group):
+                    if ensure_user_in_group(email, grad_group):
                         group_adds += 1
-                        print(f"[GROUP] ensured {ws_email} in {grad_group}")
+                        print(f"[GROUP] ensured {email} in {grad_group}")
                     else:
                         errors += 1
-                        print(f"[ERROR] failed ensuring {ws_email} in {grad_group}")
+                        print(f"[ERROR] failed ensuring {email} in {grad_group}")
                     _sleep_ms(sleep_ms)
                 else:
-                    print(f"[DRY] would ensure {ws_email} in {grad_group}")
+                    print(f"[DRY] would ensure {email} in {grad_group}")
 
             # School-level groups: exactly one of Elementary/Middle/High + Student Assembly for all active students
             level_key = school_level_group_for_grade(getattr(student, "grade_level", None))
@@ -247,27 +248,29 @@ def main() -> int:
                             )
                             _sleep_ms(sleep_ms)
 
-                sg_res = sync_user_groups(ws_email, desired_school_groups)
+                sg_res = sync_user_groups(email, desired_school_groups)
                 if sg_res is True:
                     group_adds += 1
-                    print(f"[GROUP] synced school-level groups for {ws_email} -> {', '.join(desired_school_groups)}")
+                    print(f"[GROUP] synced school-level groups for {email} -> {', '.join(desired_school_groups)}")
                 elif sg_res is False:
                     errors += 1
-                    print(f"[ERROR] failed syncing school-level groups for {ws_email}")
+                    print(f"[ERROR] failed syncing school-level groups for {email}")
                 else:
-                    print(f"[INFO] Skipping protected/admin user: {ws_email}")
+                    print(f"[INFO] Skipping protected/admin user: {email}")
                 _sleep_ms(sleep_ms)
             else:
-                print(f"[DRY] would sync school-level groups for {ws_email} -> {', '.join(desired_school_groups)}")
+                print(f"[DRY] would sync school-level groups for {email} -> {', '.join(desired_school_groups)}")
 
         # ------------------------
         # Staff (Teachers/Staff)
         # ------------------------
+        # Same rows as TeacherStaff.query.filter_by(is_deleted=False, is_active=True), plus Workspace email join
         staff_q = (
             db.session.query(TeacherStaff, User.google_workspace_email)
             .join(User, User.teacher_staff_id == TeacherStaff.id)
             .filter(
                 TeacherStaff.is_deleted == False,
+                TeacherStaff.is_active == True,
                 User.google_workspace_email.isnot(None),
             )
             .order_by(TeacherStaff.last_name, TeacherStaff.first_name)
@@ -278,20 +281,20 @@ def main() -> int:
 
         print(f"\n[Staff] Found {len(staff_rows)} staff member(s) with Workspace emails.")
 
-        for staff, ws_email in staff_rows:
-            ws_email = (ws_email or "").strip()
-            if not ws_email:
+        for staff, row_email in staff_rows:
+            email = (row_email or "").strip()
+            if not email:
                 continue
-            print(f"[DEBUG] Processing: {ws_email}")
+            print(f"[DEBUG] Syncing database record for: {email}")
 
-            g_user = get_google_user(ws_email)
+            g_user = get_google_user(email)
             _sleep_ms(sleep_ms)
 
             if not g_user:
                 if apply_changes:
                     created = create_google_user(
                         {
-                            "primaryEmail": ws_email,
+                            "primaryEmail": email,
                             "name": {"givenName": staff.first_name, "familyName": staff.last_name},
                             "password": DEFAULT_TEMP_PASSWORD,
                             "orgUnitPath": "/Staff",
@@ -301,30 +304,30 @@ def main() -> int:
                     _sleep_ms(sleep_ms)
                     if created:
                         created_users += 1
-                        print(f"[CREATE] staff {ws_email} in OU /Staff")
+                        print(f"[CREATE] staff {email} in OU /Staff")
                     else:
                         errors += 1
-                        print(f"[ERROR] failed to create staff {ws_email}")
+                        print(f"[ERROR] failed to create staff {email}")
                         continue
                 else:
-                    print(f"[DRY] would create staff {ws_email} in OU /Staff")
+                    print(f"[DRY] would create staff {email} in OU /Staff")
                     continue
             else:
                 current_ou = g_user.get("orgUnitPath")
                 if current_ou != "/Staff":
                     if apply_changes:
-                        ou_res = move_user_to_ou(ws_email, "/Staff")
+                        ou_res = move_user_to_ou(email, "/Staff")
                         if ou_res is True:
                             moved_ous += 1
-                            print(f"[MOVE] staff {ws_email}: {current_ou} -> /Staff")
+                            print(f"[MOVE] staff {email}: {current_ou} -> /Staff")
                         elif ou_res is False:
                             errors += 1
-                            print(f"[ERROR] failed OU move for staff {ws_email}")
+                            print(f"[ERROR] failed OU move for staff {email}")
                         else:
-                            print(f"[INFO] Skipping protected/admin user: {ws_email}")
+                            print(f"[INFO] Skipping protected/admin user: {email}")
                         _sleep_ms(sleep_ms)
                     else:
-                        print(f"[DRY] would move staff {ws_email}: {current_ou} -> /Staff")
+                        print(f"[DRY] would move staff {email}: {current_ou} -> /Staff")
 
             if apply_changes:
                 if create_missing_groups and not get_google_group(TEACHERS_GROUP_EMAIL):
@@ -334,15 +337,15 @@ def main() -> int:
                         description="Auto-created by CSA sync.",
                     )
                     _sleep_ms(sleep_ms)
-                if ensure_user_in_group(ws_email, TEACHERS_GROUP_EMAIL):
+                if ensure_user_in_group(email, TEACHERS_GROUP_EMAIL):
                     group_adds += 1
-                    print(f"[GROUP] ensured {ws_email} in {TEACHERS_GROUP_EMAIL}")
+                    print(f"[GROUP] ensured {email} in {TEACHERS_GROUP_EMAIL}")
                 else:
                     errors += 1
-                    print(f"[ERROR] failed ensuring {ws_email} in {TEACHERS_GROUP_EMAIL}")
+                    print(f"[ERROR] failed ensuring {email} in {TEACHERS_GROUP_EMAIL}")
                 _sleep_ms(sleep_ms)
             else:
-                print(f"[DRY] would ensure {ws_email} in {TEACHERS_GROUP_EMAIL}")
+                print(f"[DRY] would ensure {email} in {TEACHERS_GROUP_EMAIL}")
 
     print("\n" + "=" * 80)
     print("SUMMARY")

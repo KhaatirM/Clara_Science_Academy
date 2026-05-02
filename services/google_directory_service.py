@@ -58,6 +58,17 @@ DIRECTORY_SCOPES_FULL = [
 # Use with Directory API orgunits.*; avoids threading customer id through callers.
 DIRECTORY_CUSTOMER_ID = "my_customer"
 
+# Synthetic OU returned for path "/" so callers never treat the domain root as missing.
+_GOOGLE_OU_ROOT_MOCK: Dict[str, Any] = {
+    "orgUnitPath": "/",
+    "name": "",
+}
+
+
+def _root_ou_resource() -> Dict[str, Any]:
+    """Copy so callers cannot mutate the module-level template."""
+    return dict(_GOOGLE_OU_ROOT_MOCK)
+
 DIRECTORY_SCOPES_READONLY = [
     "https://www.googleapis.com/auth/admin.directory.user.readonly",
 ]
@@ -157,8 +168,10 @@ def get_google_user(user_email: str) -> Optional[Dict[str, Any]]:
 
 
 def _normalize_org_unit_path(path: str) -> str:
-    """Return a canonical org unit path: leading slash, no trailing slash (except root)."""
+    """Return a canonical org unit path: leading slash, collapse accidental double slashes."""
     s = (path or "").strip().replace("\\", "/")
+    while "//" in s:
+        s = s.replace("//", "/")
     parts = [p for p in s.split("/") if p]
     if not parts:
         return "/"
@@ -176,8 +189,8 @@ def _lookup_org_unit(service, org_unit_path: str) -> Tuple[str, Optional[Dict[st
     """
     path = _normalize_org_unit_path(org_unit_path)
     if path == "/":
-        current_app.logger.warning("org unit lookup: root path '/' is not fetched via orgunits.get")
-        return ("error", None)
+        # Root cannot be fetched via orgunits.get; treat as present so nothing tries to create it.
+        return ("found", _root_ou_resource())
     try:
         resource = (
             service.orgunits()
@@ -199,6 +212,7 @@ def _lookup_org_unit(service, org_unit_path: str) -> Tuple[str, Optional[Dict[st
 def get_google_ou(org_unit_path: str) -> Optional[Dict[str, Any]]:
     """
     Fetch an organizational unit by full path (e.g. /Students/Elementary/Class of 2035).
+    For path "/", returns a synthetic root OU object (API has no separate root resource).
     Returns None if the OU does not exist (404) or on configuration/API errors.
     """
     service = get_directory_service()
@@ -247,8 +261,8 @@ def ensure_ou_exists(path: str, service: Any = None) -> bool:
             )
             return False
 
-        # Top-level OUs: API expects parent under domain root as "" (not "/") to avoid 400 Invalid Ou Id.
-        parent_for_insert = "" if parent_path == "/" else parent_path
+        # Top-level OUs under domain root: parentOrgUnitPath must be exactly "/".
+        parent_for_insert = "/" if parent_path == "/" else parent_path
         try:
             svc.orgunits().insert(
                 customerId=DIRECTORY_CUSTOMER_ID,

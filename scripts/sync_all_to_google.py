@@ -3,8 +3,9 @@
 Maintenance script: sync all records to Google Workspace Directory.
 
 Behavior:
-- Students:
-  - Ensure Google account exists for User.google_workspace_email (create if missing)
+- Students (grade 3+ only; K–2 are skipped — no Directory sync):
+  - Only rows where User.google_workspace_email is already set in the database
+  - Ensure Google account exists for that email (create if missing)
   - Ensure OU matches policy derived from grade_level + expected_graduation_year / grad_year (and removal/alumni rules)
   - Ensure membership in grad-year group (e.g., 2030@clarascienceacademy.org)
 - Staff:
@@ -32,6 +33,9 @@ ELEMENTARY_GROUP_EMAIL = f"elementary@{DOMAIN}"
 MIDDLE_SCHOOL_GROUP_EMAIL = f"middle_school@{DOMAIN}"
 HIGH_SCHOOL_GROUP_EMAIL = f"highschool@{DOMAIN}"
 STUDENT_ASSEMBLY_GROUP_EMAIL = f"studentassembly@{DOMAIN}"
+
+# Google Workspace Directory sync only for students at or above this grade (0=K, 1, 2 skipped).
+MIN_STUDENT_GRADE_FOR_GOOGLE_SYNC = 3
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -133,32 +137,42 @@ def main() -> int:
 
     with app.app_context():
         # ------------------------
-        # Students
+        # Students: must have User row with non-empty google_workspace_email (no guessed emails)
         # ------------------------
-        student_q = Student.query.filter_by(is_deleted=False).order_by(
-            Student.last_name, Student.first_name
+        student_q = (
+            db.session.query(Student, User)
+            .join(User, User.student_id == Student.id)
+            .filter(Student.is_deleted.is_(False))
+            .filter(User.google_workspace_email.isnot(None))
+            .filter(User.google_workspace_email != "")
+            .order_by(Student.last_name, Student.first_name)
         )
         if max_students:
             student_q = student_q.limit(max_students)
-        students = student_q.all()
-
-        user_by_student_id: dict = {}
-        if students:
-            sids = [s.id for s in students]
-            for u in User.query.filter(User.student_id.in_(sids)).all():
-                if u.student_id is not None:
-                    user_by_student_id[u.student_id] = u
+        student_rows = student_q.all()
 
         print(
-            f"\n[Students] {len(students)} row(s) from Student.query.filter_by(is_deleted=False) "
-            "(includes inactive for Workspace suspension)."
+            f"\n[Students] {len(student_rows)} row(s): not deleted, with User.google_workspace_email set "
+            "(inactive still included for suspension sync when grade ≥ 3)."
         )
 
-        for student in students:
-            u = user_by_student_id.get(student.id)
-            email = (u.google_workspace_email or "").strip() if u else ""
+        for student, u in student_rows:
+            email = (u.google_workspace_email or "").strip()
             if not email:
                 continue
+
+            grade_level = getattr(student, "grade_level", None)
+            if grade_level is not None:
+                try:
+                    g = int(grade_level)
+                except (TypeError, ValueError):
+                    g = None
+                if g is not None and g < MIN_STUDENT_GRADE_FOR_GOOGLE_SYNC:
+                    print(
+                        f"[INFO] Skipping student {email} (Grade {g}) - Below Grade 3 requirement."
+                    )
+                    continue
+
             print(f"[DEBUG] Syncing database record for: {email}")
 
             if apply_changes:

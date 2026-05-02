@@ -56,16 +56,9 @@ def _provision_student_login_if_needed(student):
     if not first_name or not last_name:
         return False
 
-    first = first_name.lower().replace(' ', '').replace('-', '')
-    last = last_name.lower().replace(' ', '').replace('-', '')
-    generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
-    existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
-    if existing_user:
-        counter = 2
-        while existing_user:
-            generated_workspace_email = f"{first}.{last}{counter}@clarascienceacademy.org"
-            existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
-            counter += 1
+    generated_workspace_email = student.generate_email()
+    if not generated_workspace_email:
+        return False
 
     if not student.email:
         student.email = generated_workspace_email
@@ -360,28 +353,15 @@ def add_student():
             db.session.add(student)
             db.session.flush()  # Get the student ID
             
-            # Auto-generate Google Workspace email for student
-            # Format: firstname.lastname@clarascienceacademy.org
+            # Workspace email (3rd grade+ only): Student.generate_email() → FirstnameLastinitialmmyy@...
             generated_workspace_email = None
-            if first_name and last_name:
-                first = first_name.lower().replace(' ', '').replace('-', '')
-                last = last_name.lower().replace(' ', '').replace('-', '')
-                generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
-                
-                # Check if this email is already in use
-                existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
-                if existing_user:
-                    # Add a number suffix if duplicate
-                    counter = 2
-                    while existing_user:
-                        generated_workspace_email = f"{first}.{last}{counter}@clarascienceacademy.org"
-                        existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
-                        counter += 1
-            
-            # If no email was provided in the form, use the generated workspace email
+            if grade_may_have_login(grade_level):
+                generated_workspace_email = student.generate_email()
+
+            # If no personal email was provided in the form, use the generated workspace address (grade 3+)
             if not email and generated_workspace_email:
                 student.email = generated_workspace_email
-            
+
             if grade_may_have_login(grade_level):
                 user = User()
                 user.username = username
@@ -448,46 +428,9 @@ def add_student():
             else:
                 db.session.commit()
 
-                # Create Google Workspace account even when no portal login exists (non-blocking)
-                try:
-                    grad_year = None
-                    if hasattr(student, "grad_year") and getattr(student, "grad_year"):
-                        grad_year = int(getattr(student, "grad_year"))
-                    elif student.expected_grad_date and "/" in str(student.expected_grad_date):
-                        grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
-
-                    ou_path = _student_ou_path(student.grade_level, grad_year)
-                    if generated_workspace_email:
-                        created = create_google_user(
-                            {
-                                "primaryEmail": generated_workspace_email,
-                                "name": {"givenName": student.first_name, "familyName": student.last_name},
-                                "password": "Welcome2CSA!",
-                                "orgUnitPath": ou_path,
-                                "changePasswordAtNextLogin": True,
-                            }
-                        )
-                        if not created:
-                            flash(
-                                f"Student created locally, but Google account creation failed for {generated_workspace_email}. "
-                                "Please verify the account does not already exist and that Directory permissions are configured.",
-                                "warning",
-                            )
-                    else:
-                        flash(
-                            "Student created locally, but no Google Workspace email was generated, so no Google account was created.",
-                            "warning",
-                        )
-                except Exception as e:
-                    current_app.logger.error(f"Failed to auto-create Google student account: {e}")
-                    flash(
-                        "Student created locally, but Google account creation encountered an error. Check logs for details.",
-                        "warning",
-                    )
-
                 flash(
-                    'Student added successfully. No portal account was created—students in 2nd grade and below '
-                    'receive login access when they reach 3rd grade.',
+                    'Student added successfully. No Google Workspace account or school email is created for '
+                    'Kindergarten through 2nd grade; students receive access when they reach 3rd grade.',
                     'success',
                 )
             return redirect(url_for('management.students'))

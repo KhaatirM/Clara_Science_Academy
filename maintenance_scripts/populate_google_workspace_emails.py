@@ -5,13 +5,14 @@ This script helps you set up Google Workspace emails for your staff and students
 
 from app import app, db
 from models import User, Student, TeacherStaff
+from utils.student_login_policy import grade_may_have_login
 
 def populate_google_workspace_emails():
     """
     Populate google_workspace_email for all users based on their role.
     
     Format:
-    - Students: firstname.lastname@clarascienceacademy.org
+    - Students (grade 3+): Student.generate_email() → FirstnameLastinitialmmyy@clarascienceacademy.org
     - Teachers/Staff: firstname.lastname@clarascienceacademy.org
     - Directors: firstname.lastname@clarascienceacademy.org
     """
@@ -41,13 +42,9 @@ def populate_google_workspace_emails():
                 workspace_email = None
                 
                 if user.role == 'Student' and user.student_id:
-                    # Get student details
                     student = Student.query.get(user.student_id)
-                    if student and student.first_name and student.last_name:
-                        # Format: firstname.lastname@clarascienceacademy.org
-                        first = student.first_name.lower().replace(' ', '')
-                        last = student.last_name.lower().replace(' ', '')
-                        workspace_email = f"{first}.{last}@clarascienceacademy.org"
+                    if student and grade_may_have_login(student.grade_level):
+                        workspace_email = student.generate_email()
                 
                 elif user.role in ['Teacher', 'Director', 'School Administrator', 'Tech', 'IT Support'] and user.teacher_staff_id:
                     # Get teacher/staff details

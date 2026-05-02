@@ -1,4 +1,4 @@
-"""When student portal accounts are allowed (grade 3+; K–2 are record-only until 3rd grade)."""
+"""Grade 3+ may have portal login and Google Workspace email; K–2 are records-only (no school email until 3rd)."""
 
 # grade_level uses Kindergarten = 0, 1st = 1, …, 12th = 12
 MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN = 3

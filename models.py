@@ -95,6 +95,8 @@ class Student(db.Model):
     expected_grad_date = db.Column(db.String(7), nullable=True)
     # Authoritative graduation year for OU placement (e.g., 2034)
     grad_year = db.Column(db.Integer, nullable=True)
+    # Preferred SSOT for Directory OU / Class of folder when set (overrides inference from grade)
+    expected_graduation_year = db.Column(db.Integer, nullable=True)
     # Enrollment status: active students are managed in Students OUs
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     # Admin flag: student is repeating (affects grad_year / OU placement policy)

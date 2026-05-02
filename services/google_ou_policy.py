@@ -23,11 +23,22 @@ def _sanitize_ou_path(path: str) -> str:
     return out if out else "/"
 
 
-def _derive_grad_year(grad_year: Optional[int], expected_grad_date: Optional[str]) -> Optional[int]:
+def _derive_grad_year(
+    expected_graduation_year: Optional[int],
+    grad_year: Optional[int],
+    expected_grad_date: Optional[str],
+) -> Optional[int]:
     """
-    Prefer DB grad_year (expected graduation year) when set; otherwise parse expected_grad_date like "06/2034".
-    Use `is not None` so a stored year of 0 is not treated as missing.
+    Graduation year priority for OU paths:
+    1. expected_graduation_year (must drive /Class of [Year] when set)
+    2. grad_year
+    3. expected_grad_date like "06/2034"
     """
+    if expected_graduation_year is not None:
+        try:
+            return int(expected_graduation_year)
+        except Exception:
+            pass
     if grad_year is not None:
         try:
             return int(grad_year)
@@ -63,15 +74,29 @@ def _infer_grad_year_from_grade(grade_level: Optional[int], reference_year: int)
 
 def _effective_grad_year(
     grade_level: Optional[int],
+    expected_graduation_year: Optional[int],
     grad_year: Optional[int],
     expected_grad_date: Optional[str],
     reference_year: int,
 ) -> Optional[int]:
-    """Strict: use DB expected graduation (grad_year / expected_grad_date) first; else infer from grade."""
-    y = _derive_grad_year(grad_year, expected_grad_date)
+    """Use DB graduation fields first (expected_graduation_year has priority); else infer from grade."""
+    y = _derive_grad_year(expected_graduation_year, grad_year, expected_grad_date)
     if y is not None:
         return int(y)
     return _infer_grad_year_from_grade(grade_level, reference_year)
+
+
+def effective_graduation_year(
+    *,
+    grade_level: Optional[int],
+    expected_graduation_year: Optional[int],
+    grad_year: Optional[int],
+    expected_grad_date: Optional[str],
+    reference_year: Optional[int] = None,
+) -> Optional[int]:
+    """Public helper for sync scripts (groups, reporting): same calendar year source as OU policy."""
+    ref = reference_year if reference_year is not None else date.today().year
+    return _effective_grad_year(grade_level, expected_graduation_year, grad_year, expected_grad_date, ref)
 
 
 def _school_level_from_grade(grade_level: Optional[int]) -> Optional[str]:
@@ -111,6 +136,7 @@ def _after_alumni_cutoff(today: date, grad_year: int) -> bool:
 def _compute_ou_path_and_reason(
     *,
     grade_level: Optional[int],
+    expected_graduation_year: Optional[int],
     grad_year: Optional[int],
     expected_grad_date: Optional[str],
     is_active: bool,
@@ -118,7 +144,9 @@ def _compute_ou_path_and_reason(
     today: date,
 ) -> Tuple[str, str]:
     reference_year = today.year
-    effective = _effective_grad_year(grade_level, grad_year, expected_grad_date, reference_year)
+    effective = _effective_grad_year(
+        grade_level, expected_graduation_year, grad_year, expected_grad_date, reference_year
+    )
 
     grade_display = grade_level if grade_level is not None else "unknown"
 
@@ -135,7 +163,7 @@ def _compute_ou_path_and_reason(
         print(f"[DEBUG] Calculated OU for {grade_display} grade student: {path}")
         return path, "after_grad_year_cutoff"
 
-    # Active students: always use Class of [Year] when we have any graduation year (DB or inferred)
+    # Active students: /Students/[SchoolLevel]/Class of [Year] when we have a year (DB or inferred)
     school_level = _school_level_from_grade(grade_level) or "Students"
     if effective is not None:
         path = _sanitize_ou_path(f"/Students/{school_level}/Class of {int(effective)}")
@@ -155,18 +183,20 @@ def get_student_ou_path(
     expected_grad_date: Optional[str],
     is_active: bool,
     marked_for_removal: bool,
+    expected_graduation_year: Optional[int] = None,
     today: Optional[date] = None,
 ) -> str:
     """
     Compute the Google Workspace orgUnitPath for a student.
 
-    - If ``grad_year`` (expected graduation year) or ``expected_grad_date`` is set, the path always
-      includes ``/Class of [Year]`` under the appropriate school-level OU.
-    - Otherwise graduation year is inferred from ``grade_level`` and the current calendar year.
+    - ``expected_graduation_year`` (when set) is the primary graduation year for ``/Class of [Year]``.
+    - Then ``grad_year``, then ``expected_grad_date``; otherwise the year may be inferred from grade.
+    - School level: K–5 Elementary, 6–8 Middle School, 9–12 High School.
     - Paths are normalized (no trailing slash).
     """
     path, _ = _compute_ou_path_and_reason(
         grade_level=grade_level,
+        expected_graduation_year=expected_graduation_year,
         grad_year=grad_year,
         expected_grad_date=expected_grad_date,
         is_active=is_active,
@@ -184,6 +214,7 @@ def resolve_student_ou(
     is_active: bool,
     marked_for_removal: bool,
     status_updated_at: Optional[datetime],
+    expected_graduation_year: Optional[int] = None,
     today: Optional[date] = None,
 ) -> StudentOuDecision:
     """
@@ -199,6 +230,7 @@ def resolve_student_ou(
     today = today or date.today()
     target_ou_path, reason = _compute_ou_path_and_reason(
         grade_level=grade_level,
+        expected_graduation_year=expected_graduation_year,
         grad_year=grad_year,
         expected_grad_date=expected_grad_date,
         is_active=is_active,

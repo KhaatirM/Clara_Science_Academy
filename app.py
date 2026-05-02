@@ -255,6 +255,7 @@ def create_app(config_class=None):
             ('entrance_date', 'VARCHAR(9)', 'TEXT'),
             ('expected_grad_date', 'VARCHAR(7)', 'TEXT'),
             ('grad_year', 'INTEGER', 'INTEGER'),
+            ('expected_graduation_year', 'INTEGER', 'INTEGER'),
             ('is_active', 'BOOLEAN NOT NULL DEFAULT true', 'INTEGER NOT NULL DEFAULT 1'),
             ('is_repeating', 'BOOLEAN NOT NULL DEFAULT false', 'INTEGER NOT NULL DEFAULT 0'),
         ]

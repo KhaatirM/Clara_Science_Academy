@@ -5,7 +5,7 @@ Maintenance script: sync all records to Google Workspace Directory.
 Behavior:
 - Students:
   - Ensure Google account exists for User.google_workspace_email (create if missing)
-  - Ensure OU matches policy derived from grade_level + grad_year (and removal/alumni rules)
+  - Ensure OU matches policy derived from grade_level + expected_graduation_year / grad_year (and removal/alumni rules)
   - Ensure membership in grad-year group (e.g., 2030@clarascienceacademy.org)
 - Staff:
   - Ensure Google account exists for User.google_workspace_email (create if missing)
@@ -54,7 +54,7 @@ def _sleep_ms(ms: int) -> None:
 
 
 def _grad_year_group_email(grad_year: Optional[int]) -> Optional[str]:
-    if not grad_year:
+    if grad_year is None:
         return None
     try:
         y = int(grad_year)
@@ -115,7 +115,11 @@ def main() -> int:
             sync_user_groups,
             sync_user_suspension_with_db_is_active,
         )
-        from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
+        from services.google_ou_policy import (
+            effective_graduation_year,
+            resolve_student_ou,
+            school_level_group_for_grade,
+        )
     except Exception as e:
         print(f"[ERROR] Failed to import required modules: {e}")
         return 0
@@ -164,7 +168,7 @@ def main() -> int:
             if not getattr(student, "is_active", True):
                 continue
 
-            # Compute desired OU (uses grade + grad_year + alumni/removal rules)
+            # Compute desired OU (expected_graduation_year > grad_year > expected_grad_date > infer from grade)
             decision = resolve_student_ou(
                 grade_level=getattr(student, "grade_level", None),
                 grad_year=getattr(student, "grad_year", None),
@@ -172,6 +176,7 @@ def main() -> int:
                 is_active=bool(getattr(student, "is_active", True)),
                 marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
                 status_updated_at=getattr(student, "status_updated_at", None),
+                expected_graduation_year=getattr(student, "expected_graduation_year", None),
             )
 
             g_user = get_google_user(email)
@@ -217,14 +222,20 @@ def main() -> int:
                     else:
                         print(f"[DRY] would move student {email}: {current_ou} -> {decision.target_ou_path}")
 
-            # Graduation-year group membership (add-only)
-            grad_group = _grad_year_group_email(getattr(student, "grad_year", None))
+            # Graduation-year group membership (add-only) — same year priority as OU policy
+            eff_grad = effective_graduation_year(
+                grade_level=getattr(student, "grade_level", None),
+                expected_graduation_year=getattr(student, "expected_graduation_year", None),
+                grad_year=getattr(student, "grad_year", None),
+                expected_grad_date=getattr(student, "expected_grad_date", None),
+            )
+            grad_group = _grad_year_group_email(eff_grad)
             if grad_group:
                 if apply_changes:
                     if create_missing_groups and not get_google_group(grad_group):
                         create_google_group(
                             grad_group,
-                            name=f"Class of {getattr(student, 'grad_year', '')}".strip() or grad_group,
+                            name=f"Class of {eff_grad}".strip() or grad_group,
                             description="Auto-created by CSA sync to support filtering/group email.",
                         )
                         _sleep_ms(sleep_ms)

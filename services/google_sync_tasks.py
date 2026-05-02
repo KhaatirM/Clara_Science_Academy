@@ -23,7 +23,11 @@ from services.google_directory_service import (
     sync_user_groups,
     sync_user_suspension_with_db_is_active,
 )
-from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
+from services.google_ou_policy import (
+    effective_graduation_year,
+    resolve_student_ou,
+    school_level_group_for_grade,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +68,7 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
         is_active=bool(getattr(student, "is_active", True)),
         marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
         status_updated_at=getattr(student, "status_updated_at", None),
+        expected_graduation_year=getattr(student, "expected_graduation_year", None),
     )
 
     g_user = get_google_user(email)
@@ -86,12 +91,18 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
         if current_ou != decision.target_ou_path:
             move_user_to_ou(email, decision.target_ou_path)
 
-    grad_group = _grad_year_group_email(getattr(student, "grad_year", None))
+    eff_y = effective_graduation_year(
+        grade_level=getattr(student, "grade_level", None),
+        expected_graduation_year=getattr(student, "expected_graduation_year", None),
+        grad_year=getattr(student, "grad_year", None),
+        expected_grad_date=getattr(student, "expected_grad_date", None),
+    )
+    grad_group = _grad_year_group_email(eff_y)
     if grad_group:
         if create_missing_groups and not get_google_group(grad_group):
             create_google_group(
                 grad_group,
-                name=f"Class of {getattr(student, 'grad_year', '')}".strip() or grad_group,
+                name=f"Class of {eff_y}" if eff_y is not None else grad_group,
                 description="Auto-created by CSA sync to support filtering/group email.",
             )
         ensure_user_in_group(email, grad_group)

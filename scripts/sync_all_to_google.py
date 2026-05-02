@@ -34,9 +34,6 @@ MIDDLE_SCHOOL_GROUP_EMAIL = f"middle_school@{DOMAIN}"
 HIGH_SCHOOL_GROUP_EMAIL = f"highschool@{DOMAIN}"
 STUDENT_ASSEMBLY_GROUP_EMAIL = f"studentassembly@{DOMAIN}"
 
-# Google Workspace Directory sync only for students at or above this grade (0=K, 1, 2 skipped).
-MIN_STUDENT_GRADE_FOR_GOOGLE_SYNC = 3
-
 
 def _env_bool(name: str, default: bool = False) -> bool:
     raw = (os.environ.get(name, "") or "").strip().lower()
@@ -109,6 +106,10 @@ def main() -> int:
     try:
         from extensions import db
         from models import Student, TeacherStaff, User
+        from utils.student_login_policy import (
+            google_workspace_sync_should_skip_student,
+            parse_grade_level_for_policy,
+        )
         from services.google_directory_service import (
             create_google_group,
             create_google_user,
@@ -161,17 +162,13 @@ def main() -> int:
             if not email:
                 continue
 
-            grade_level = getattr(student, "grade_level", None)
-            if grade_level is not None:
-                try:
-                    g = int(grade_level)
-                except (TypeError, ValueError):
-                    g = None
-                if g is not None and g < MIN_STUDENT_GRADE_FOR_GOOGLE_SYNC:
-                    print(
-                        f"[INFO] Skipping student {email} (Grade {g}) - Below Grade 3 requirement."
-                    )
-                    continue
+            if google_workspace_sync_should_skip_student(getattr(student, "grade_level", None)):
+                gl = parse_grade_level_for_policy(getattr(student, "grade_level", None))
+                print(
+                    f"[INFO] Grade Gate: Skipping {(student.first_name or '').strip()} "
+                    f"{(student.last_name or '').strip()} (Grade {gl})."
+                )
+                continue
 
             print(f"[DEBUG] Syncing database record for: {email}")
 

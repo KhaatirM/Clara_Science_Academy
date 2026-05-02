@@ -27,6 +27,10 @@ from services.google_directory_service import (
     sync_user_suspension_with_db_is_active,
 )
 from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
+from utils.student_login_policy import (
+    google_workspace_sync_should_skip_student,
+    parse_grade_level_for_policy,
+)
 
 
 ELEMENTARY_GROUP_EMAIL = "elementary@clarascienceacademy.org"
@@ -272,6 +276,16 @@ def sync_directory_data():
     for student, ws_email in students:
         ws_email = (ws_email or "").strip()
         if not ws_email:
+            continue
+
+        if google_workspace_sync_should_skip_student(getattr(student, "grade_level", None)):
+            gl = parse_grade_level_for_policy(getattr(student, "grade_level", None))
+            current_app.logger.info(
+                "[INFO] Grade Gate: Skipping %s %s (Grade %s).",
+                (getattr(student, "first_name", None) or "").strip(),
+                (getattr(student, "last_name", None) or "").strip(),
+                gl if gl is not None else "?",
+            )
             continue
 
         sync_user_suspension_with_db_is_active(ws_email, bool(getattr(student, "is_active", True)))

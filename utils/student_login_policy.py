@@ -31,3 +31,14 @@ def grade_may_have_login(grade_level):
     if gl is None:
         return False
     return gl >= MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN
+
+
+def google_workspace_sync_should_skip_student(grade_level) -> bool:
+    """
+    K–2 (grades 0, 1, 2): skip all Google Directory API calls in bulk/real-time sync.
+    If grade cannot be parsed, do not skip (legacy rows with missing grade still sync).
+    """
+    gl = parse_grade_level_for_policy(grade_level)
+    if gl is None:
+        return False
+    return gl < MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN

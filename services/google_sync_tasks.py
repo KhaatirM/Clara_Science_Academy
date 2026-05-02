@@ -28,6 +28,10 @@ from services.google_ou_policy import (
     resolve_student_ou,
     school_level_group_for_grade,
 )
+from utils.student_login_policy import (
+    google_workspace_sync_should_skip_student,
+    parse_grade_level_for_policy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +58,16 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
     """Apply Directory OU + groups for a student (same rules as bulk sync script)."""
     email = (workspace_email or "").strip()
     if not email:
+        return
+
+    if google_workspace_sync_should_skip_student(getattr(student, "grade_level", None)):
+        gl = parse_grade_level_for_policy(getattr(student, "grade_level", None))
+        logger.info(
+            "[INFO] Grade Gate: Skipping %s %s (Grade %s).",
+            (getattr(student, "first_name", None) or "").strip(),
+            (getattr(student, "last_name", None) or "").strip(),
+            gl if gl is not None else "?",
+        )
         return
 
     db_active = bool(getattr(student, "is_active", True))

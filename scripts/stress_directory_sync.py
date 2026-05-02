@@ -84,6 +84,10 @@ def main() -> int:
             sync_group_members,
         )
         from services.google_ou_policy import resolve_student_ou
+        from utils.student_login_policy import (
+            google_workspace_sync_should_skip_student,
+            parse_grade_level_for_policy,
+        )
     except Exception as e:
         print(f"[ERROR] Failed to import app modules: {e}")
         return 1
@@ -117,6 +121,14 @@ def main() -> int:
             stats.students_scanned += 1
             ws_email = (ws_email or "").strip()
             if not ws_email:
+                continue
+
+            if google_workspace_sync_should_skip_student(getattr(student, "grade_level", None)):
+                gl = parse_grade_level_for_policy(getattr(student, "grade_level", None))
+                print(
+                    f"[INFO] Grade Gate: Skipping {(student.first_name or '').strip()} "
+                    f"{(student.last_name or '').strip()} (Grade {gl})."
+                )
                 continue
 
             decision = resolve_student_ou(

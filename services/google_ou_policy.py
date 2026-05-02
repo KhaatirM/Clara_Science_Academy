@@ -23,22 +23,11 @@ def _sanitize_ou_path(path: str) -> str:
     return out if out else "/"
 
 
-def _derive_grad_year(
-    expected_graduation_year: Optional[int],
+def _legacy_stored_grad_year(
     grad_year: Optional[int],
     expected_grad_date: Optional[str],
 ) -> Optional[int]:
-    """
-    Graduation year priority for OU paths:
-    1. expected_graduation_year (must drive /Class of [Year] when set)
-    2. grad_year
-    3. expected_grad_date like "06/2034"
-    """
-    if expected_graduation_year is not None:
-        try:
-            return int(expected_graduation_year)
-        except Exception:
-            pass
+    """Older DB fields only (not expected_graduation_year). Used after formula inference."""
     if grad_year is not None:
         try:
             return int(grad_year)
@@ -54,8 +43,9 @@ def _derive_grad_year(
 
 def _infer_grad_year_from_grade(grade_level: Optional[int], reference_year: int) -> Optional[int]:
     """
-    Fallback when grad_year / expected_grad_date are absent: assume grade 0–12 (K–12),
-    graduation calendar year = reference_year + (12 - grade). E.g. grade 5 in 2026 -> 2033.
+    Graduation calendar year when only grade is reliable:
+    Graduation Year = reference_year + (12 - grade). K=0 … 12th=12.
+    Example: reference_year 2026, grade 5 -> 2026 + (12 - 5) = 2033; grade 4 -> 2034.
     """
     if grade_level is None:
         return None
@@ -79,11 +69,24 @@ def _effective_grad_year(
     expected_grad_date: Optional[str],
     reference_year: int,
 ) -> Optional[int]:
-    """Use DB graduation fields first (expected_graduation_year has priority); else infer from grade."""
-    y = _derive_grad_year(expected_graduation_year, grad_year, expected_grad_date)
-    if y is not None:
-        return int(y)
-    return _infer_grad_year_from_grade(grade_level, reference_year)
+    """
+    Resolution order (OU + groups):
+    1. expected_graduation_year (authoritative when set)
+    2. Calculated: reference_year + (12 - grade) when grade is known
+    3. Legacy: grad_year, then expected_grad_date (e.g. missing grade on old records)
+    """
+    if expected_graduation_year is not None:
+        try:
+            return int(expected_graduation_year)
+        except Exception:
+            pass
+    inferred = _infer_grad_year_from_grade(grade_level, reference_year)
+    if inferred is not None:
+        return int(inferred)
+    legacy = _legacy_stored_grad_year(grad_year, expected_grad_date)
+    if legacy is not None:
+        return int(legacy)
+    return None
 
 
 def effective_graduation_year(

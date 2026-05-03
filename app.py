@@ -818,15 +818,35 @@ def create_app(config_class=None):
 
     @app.context_processor
     def inject_role_canonical():
-        """Canonical role label for sidebar/nav (handles lowercase DB values like admin, teacher)."""
+        """Primary role (alerts, etc.); ``sidebar_role_canonical`` follows tech/management switch for dual staff."""
         if not current_user.is_authenticated:
-            return {"role_canonical": ""}
+            return {"role_canonical": "", "sidebar_role_canonical": ""}
         try:
-            from utils.user_roles import canonical_role_label
+            from utils.user_roles import (
+                canonical_role_label,
+                staff_must_choose_dashboard,
+                pick_tech_sidebar_canonical,
+                pick_management_sidebar_canonical,
+            )
 
-            return {"role_canonical": canonical_role_label(current_user.role)}
+            base = canonical_role_label(current_user.role)
+            sidebar = base
+            if staff_must_choose_dashboard(current_user):
+                target = session.get("staff_dashboard_target")
+                if target == "tech":
+                    sidebar = pick_tech_sidebar_canonical(current_user)
+                elif target == "management":
+                    sidebar = pick_management_sidebar_canonical(current_user)
+                else:
+                    bp = getattr(request, "blueprint", None) or ""
+                    if bp == "tech":
+                        sidebar = pick_tech_sidebar_canonical(current_user)
+                    elif bp == "management":
+                        sidebar = pick_management_sidebar_canonical(current_user)
+            return {"role_canonical": base, "sidebar_role_canonical": sidebar}
         except Exception:
-            return {"role_canonical": (getattr(current_user, "role", None) or "")}
+            r = getattr(current_user, "role", None) or ""
+            return {"role_canonical": r, "sidebar_role_canonical": r}
 
     @app.context_processor
     def inject_role_display():

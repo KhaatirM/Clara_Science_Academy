@@ -97,3 +97,23 @@ def staff_must_choose_dashboard(user) -> bool:
         return False
     r = all_role_strings(user)
     return bool(r & _TECH_PICK_ROLES) and bool(r & _MGMT_PICK_ROLES)
+
+
+def pick_tech_sidebar_canonical(user) -> str:
+    """Label for IT sidebar when dual-role user is in the tech area."""
+    r = all_role_strings(user) & _TECH_PICK_ROLES
+    if "Tech" in r:
+        return "Tech"
+    if "IT Support" in r:
+        return "IT Support"
+    return "IT Support"
+
+
+def pick_management_sidebar_canonical(user) -> str:
+    """Label for school management sidebar when dual-role user is in the management area."""
+    r = all_role_strings(user) & _MGMT_PICK_ROLES
+    if "Director" in r:
+        return "Director"
+    if "School Administrator" in r:
+        return "School Administrator"
+    return canonical_role_label(getattr(user, "role", None)) or "School Administrator"

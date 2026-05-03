@@ -36,7 +36,7 @@
         <div class="dashboard-sidebar-spacer" aria-hidden="true"></div>
         <div class="sidebar" id="sidebar">
             <h3 class="sidebar-heading text-center">
-                {{ dashboard_title or ('Staff' if role_canonical == 'Other Staff' else (role_canonical or current_user.role)) }}
+                {{ dashboard_title or ('Staff' if sidebar_role_canonical == 'Other Staff' else (sidebar_role_canonical or current_user.role)) }}
             </h3>
             {% if current_user.is_authenticated and school_timezone_display %}
             <p class="sidebar-school-tz text-center small text-muted mb-2 px-2" title="Assignment due dates, open/close windows, and school-time labels use this timezone for everyone.">
@@ -65,7 +65,7 @@
                 {% endif %}
 
                 {# --- DIRECTOR TABS --- #}
-                {% if role_canonical == 'Director' %}
+                {% if sidebar_role_canonical == 'Director' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.students' %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff</span></a></li>
@@ -80,7 +80,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.settings' %}active{% endif %}" href="{{ url_for('management.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- SCHOOL ADMINISTRATOR TABS --- #}
-                {% elif role_canonical == 'School Administrator' %}
+                {% elif sidebar_role_canonical == 'School Administrator' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.students' %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Staff</span></a></li>
@@ -94,7 +94,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.settings' %}active{% endif %}" href="{{ url_for('management.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- PERMISSION-BASED ADMINISTRATION STAFF TABS --- #}
-                {% elif role_canonical not in ['Director', 'School Administrator'] and (has_perm('students:view') or has_perm('students:edit') or has_perm('report_cards:view') or has_perm('report_cards:generate') or has_perm('classes:manage') or has_perm('teachers_staff:manage') or has_perm('attendance:manage') or has_perm('assignments_grades:manage')) %}
+                {% elif sidebar_role_canonical not in ['Director', 'School Administrator'] and (has_perm('students:view') or has_perm('students:edit') or has_perm('report_cards:view') or has_perm('report_cards:generate') or has_perm('classes:manage') or has_perm('teachers_staff:manage') or has_perm('attendance:manage') or has_perm('assignments_grades:manage')) %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     {% if has_perm('students:view') or has_perm('students:edit') %}
                         <li class="nav-item"><a class="nav-link {% if request.endpoint in ['management.students','management.view_student','management.add_student','management.edit_student'] %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
@@ -122,7 +122,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.settings' %}active{% endif %}" href="{{ url_for('management.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- TEACHER TABS --- #}
-                {% elif (role_canonical in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and role_canonical not in ['Director', 'School Administrator'] %}
+                {% elif (sidebar_role_canonical in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and sidebar_role_canonical not in ['Director', 'School Administrator'] %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.dashboard.teacher_dashboard' %}active{% endif %}" href="{{ url_for('teacher.dashboard.teacher_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.dashboard.my_classes' %}active{% endif %}" href="{{ url_for('teacher.dashboard.my_classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint in ['teacher.dashboard.my_assignments','teacher.assignments.view_assignment_submissions','teacher.assignments.view_assignment','teacher.assignments.add_assignment','teacher.assignments.edit_assignment','teacher.assignments.remove_assignment'] %}active{% endif %}" href="{{ url_for('teacher.dashboard.my_assignments') }}"><i class="bi bi-file-earmark-text-fill"></i><span> Assignments</span></a></li>
@@ -134,7 +134,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.settings' %}active{% endif %}" href="{{ url_for('teacher.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
                     
                 {# --- STUDENT TABS --- #}
-                {% elif role_canonical == 'Student' %}
+                {% elif sidebar_role_canonical == 'Student' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_dashboard' %}active{% endif %}" href="{{ url_for('student.student_dashboard') }}"><i class="bi bi-house-door-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_assignments' %}active{% endif %}" href="{{ url_for('student.student_assignments') }}"><i class="bi bi-file-earmark-text-fill"></i><span> Assignments</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_classes' %}active{% endif %}" href="{{ url_for('student.student_classes') }}"><i class="bi bi-journal-bookmark-fill"></i><span> Classes</span></a></li>
@@ -147,7 +147,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_settings' %}active{% endif %}" href="{{ url_for('student.student_settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- IT TABS --- #}
-                {% elif role_canonical in ['Tech', 'IT Support'] %}
+                {% elif sidebar_role_canonical in ['Tech', 'IT Support'] %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.tech_dashboard' %}active{% endif %}" href="{{ url_for('tech.tech_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint in ['tech.devices', 'tech.device_new', 'tech.device_edit', 'tech.devices_csv_template'] %}active{% endif %}" href="{{ url_for('tech.devices') }}"><i class="bi bi-laptop"></i><span> Devices</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.activity_log' %}active{% endif %}" href="{{ url_for('tech.activity_log') }}"><i class="bi bi-list-check"></i><span> Activity Log</span></a></li>

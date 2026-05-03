@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
+
+if TYPE_CHECKING:
+    from models import TeacherStaff as TeacherStaffModel
+    from models import User as UserModel
 
 
 REMOVAL_SUSPEND_AFTER_DAYS = 183  # ~6 months
@@ -253,3 +257,75 @@ def resolve_student_ou(
         should_suspend_now=should_suspend,
         reason=reason,
     )
+
+
+# --- Staff OU hierarchy under /Staff ---
+STAFF_OU_BASE = "/Staff"
+STAFF_OU_TERMINATED_REMOVED = "Terminated & Removed"
+STAFF_OU_ADMINISTRATOR = "Administrator"
+STAFF_OU_DIRECTOR_BOARD = "Director & Board"
+STAFF_OU_FACULTY = "Faculty"
+STAFF_OU_SUBSTITUTES = "Substitutes"
+STAFF_OU_TEACHERS = "Teachers"
+
+# Normalized role tokens (compare via _staff_field_lower on User.role / assigned_role).
+_STAFF_ADMIN_ROLES = frozenset({"admin", "tech", "administrator"})
+
+
+def _staff_field_lower(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
+def get_staff_ou_path(
+    staff: "TeacherStaffModel",
+    user: Optional["UserModel"] = None,
+) -> str:
+    """
+    Final 6-tier staff OU under ``/Staff``. **Strict priority** — first match wins.
+    All checks use case-insensitive strings (``.lower()`` on roles; substring checks on lowered
+    ``position`` / ``department``).
+
+    1. **Terminated & Removed** — ``is_deleted``, ``not is_active``, or ``marked_for_removal``.
+    2. **Administrator** — ``User.role`` or ``assigned_role`` in ``admin`` / ``tech`` / ``administrator``,
+       OR ``position`` contains ``administrator``.
+    3. **Director & Board** — ``User.role`` or ``assigned_role`` is ``director``, OR ``position`` /
+       ``department`` contains ``director`` or ``board``.
+    4. **Substitutes** — ``User.role`` or ``assigned_role`` is ``substitute``, OR ``position``
+       contains ``substitute``.
+    5. **Teachers** — ``User.role`` or ``assigned_role`` is ``teacher``, OR ``position`` contains
+       ``teacher``.
+    6. **Faculty** — default.
+
+    Pass the linked ``User`` when present; use ``None`` if there is no website login.
+    """
+    if (
+        bool(getattr(staff, "is_deleted", False))
+        or not bool(getattr(staff, "is_active", True))
+        or bool(getattr(staff, "marked_for_removal", False))
+    ):
+        return _sanitize_ou_path(f"{STAFF_OU_BASE}/{STAFF_OU_TERMINATED_REMOVED}")
+
+    position = _staff_field_lower(getattr(staff, "position", None))
+    department = _staff_field_lower(getattr(staff, "department", None))
+    assigned = _staff_field_lower(getattr(staff, "assigned_role", None))
+    ur = _staff_field_lower(getattr(user, "role", None)) if user else ""
+
+    if ur in _STAFF_ADMIN_ROLES or assigned in _STAFF_ADMIN_ROLES or "administrator" in position:
+        sub = STAFF_OU_ADMINISTRATOR
+    elif (
+        ur == "director"
+        or assigned == "director"
+        or "director" in position
+        or "director" in department
+        or "board" in position
+        or "board" in department
+    ):
+        sub = STAFF_OU_DIRECTOR_BOARD
+    elif ur == "substitute" or assigned == "substitute" or "substitute" in position:
+        sub = STAFF_OU_SUBSTITUTES
+    elif ur == "teacher" or assigned == "teacher" or "teacher" in position:
+        sub = STAFF_OU_TEACHERS
+    else:
+        sub = STAFF_OU_FACULTY
+
+    return _sanitize_ou_path(f"{STAFF_OU_BASE}/{sub}")

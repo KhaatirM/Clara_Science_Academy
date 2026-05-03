@@ -10,7 +10,8 @@ Behavior:
   - Ensure membership in grad-year group (e.g., 2030@clarascienceacademy.org)
 - Staff:
   - Ensure Google account exists for User.google_workspace_email (create if missing)
-  - Ensure OU is /Staff
+  - Ensure OU under ``/Staff/<…>`` subfolders including Terminated & Removed, Administrator, … (see get_staff_ou_path)
+  - Ensure missing OUs exist (ensure_ou_exists) before create/move
   - Ensure membership in teachers@clarascienceacademy.org
 
 Dry run:
@@ -113,6 +114,7 @@ def main() -> int:
         from services.google_directory_service import (
             create_google_group,
             create_google_user,
+            ensure_ou_exists,
             ensure_user_in_group,
             get_google_group,
             get_google_user,
@@ -121,7 +123,9 @@ def main() -> int:
             sync_user_suspension_with_db_is_active,
         )
         from services.google_ou_policy import (
+            STAFF_OU_TERMINATED_REMOVED,
             effective_graduation_year,
+            get_staff_ou_path,
             resolve_student_ou,
             school_level_group_for_grade,
         )
@@ -301,9 +305,8 @@ def main() -> int:
         # ------------------------
         # Staff (Teachers/Staff)
         # ------------------------
-        staff_q = TeacherStaff.query.filter_by(is_deleted=False).order_by(
-            TeacherStaff.last_name, TeacherStaff.first_name
-        )
+        # Include soft-deleted / inactive rows so Directory OU can be moved to Terminated & Removed.
+        staff_q = TeacherStaff.query.order_by(TeacherStaff.last_name, TeacherStaff.first_name)
         if max_staff:
             staff_q = staff_q.limit(max_staff)
         staff_list = staff_q.all()
@@ -316,8 +319,7 @@ def main() -> int:
                     user_by_teacher_id[u.teacher_staff_id] = u
 
         print(
-            f"\n[Staff] {len(staff_list)} row(s) from TeacherStaff.query.filter_by(is_deleted=False) "
-            "(includes inactive for Workspace suspension)."
+            f"\n[Staff] {len(staff_list)} row(s) from TeacherStaff (all retention states; Directory OU from get_staff_ou_path)."
         )
 
         for staff in staff_list:
@@ -325,48 +327,53 @@ def main() -> int:
             email = (u.google_workspace_email or "").strip() if u else ""
             if not email:
                 continue
-            print(f"[DEBUG] Syncing database record for: {email}")
+
+            # Staff OU tiers require TeacherStaff + linked User (u may be None if no login row).
+            target_staff_ou = get_staff_ou_path(staff, u)
+
+            print(f"[DEBUG] Syncing database record for: {email} (staff OU -> {target_staff_ou})")
 
             if apply_changes:
                 sync_user_suspension_with_db_is_active(email, bool(getattr(staff, "is_active", True)))
                 _sleep_ms(sleep_ms)
-
-            if not getattr(staff, "is_active", True):
-                continue
 
             g_user = get_google_user(email)
             _sleep_ms(sleep_ms)
 
             if not g_user:
                 if apply_changes:
+                    if not ensure_ou_exists(target_staff_ou):
+                        errors += 1
+                        print(f"[ERROR] could not ensure OU exists for staff {email}: {target_staff_ou}")
+                        continue
                     created = create_google_user(
                         {
                             "primaryEmail": email,
                             "name": {"givenName": staff.first_name, "familyName": staff.last_name},
                             "password": DEFAULT_TEMP_PASSWORD,
-                            "orgUnitPath": "/Staff",
+                            "orgUnitPath": target_staff_ou,
                             "changePasswordAtNextLogin": True,
                         }
                     )
                     _sleep_ms(sleep_ms)
                     if created:
                         created_users += 1
-                        print(f"[CREATE] staff {email} in OU /Staff")
+                        print(f"[CREATE] staff {email} in OU {target_staff_ou}")
                     else:
                         errors += 1
                         print(f"[ERROR] failed to create staff {email}")
                         continue
                 else:
-                    print(f"[DRY] would create staff {email} in OU /Staff")
+                    print(f"[DRY] would ensure OU {target_staff_ou} then create staff {email}")
                     continue
             else:
                 current_ou = g_user.get("orgUnitPath")
-                if current_ou != "/Staff":
+                if current_ou != target_staff_ou:
                     if apply_changes:
-                        ou_res = move_user_to_ou(email, "/Staff")
+                        ou_res = move_user_to_ou(email, target_staff_ou)
                         if ou_res is True:
                             moved_ous += 1
-                            print(f"[MOVE] staff {email}: {current_ou} -> /Staff")
+                            print(f"[MOVE] staff {email}: {current_ou} -> {target_staff_ou}")
                         elif ou_res is False:
                             errors += 1
                             print(f"[ERROR] failed OU move for staff {email}")
@@ -374,25 +381,29 @@ def main() -> int:
                             print(f"[INFO] Skipping protected/admin user: {email}")
                         _sleep_ms(sleep_ms)
                     else:
-                        print(f"[DRY] would move staff {email}: {current_ou} -> /Staff")
+                        print(f"[DRY] would move staff {email}: {current_ou} -> {target_staff_ou}")
 
-            if apply_changes:
-                if create_missing_groups and not get_google_group(TEACHERS_GROUP_EMAIL):
-                    create_google_group(
-                        TEACHERS_GROUP_EMAIL,
-                        name="Teachers",
-                        description="Auto-created by CSA sync.",
-                    )
+            # Teachers Google Group: not for accounts parked under Terminated & Removed.
+            if STAFF_OU_TERMINATED_REMOVED not in target_staff_ou:
+                if apply_changes:
+                    if create_missing_groups and not get_google_group(TEACHERS_GROUP_EMAIL):
+                        create_google_group(
+                            TEACHERS_GROUP_EMAIL,
+                            name="Teachers",
+                            description="Auto-created by CSA sync.",
+                        )
+                        _sleep_ms(sleep_ms)
+                    if ensure_user_in_group(email, TEACHERS_GROUP_EMAIL):
+                        group_adds += 1
+                        print(f"[GROUP] ensured {email} in {TEACHERS_GROUP_EMAIL}")
+                    else:
+                        errors += 1
+                        print(f"[ERROR] failed ensuring {email} in {TEACHERS_GROUP_EMAIL}")
                     _sleep_ms(sleep_ms)
-                if ensure_user_in_group(email, TEACHERS_GROUP_EMAIL):
-                    group_adds += 1
-                    print(f"[GROUP] ensured {email} in {TEACHERS_GROUP_EMAIL}")
                 else:
-                    errors += 1
-                    print(f"[ERROR] failed ensuring {email} in {TEACHERS_GROUP_EMAIL}")
-                _sleep_ms(sleep_ms)
+                    print(f"[DRY] would ensure {email} in {TEACHERS_GROUP_EMAIL}")
             else:
-                print(f"[DRY] would ensure {email} in {TEACHERS_GROUP_EMAIL}")
+                print(f"[INFO] Skipping {TEACHERS_GROUP_EMAIL} for {email} (OU {target_staff_ou})")
 
     summary = {
         "created_users": created_users,

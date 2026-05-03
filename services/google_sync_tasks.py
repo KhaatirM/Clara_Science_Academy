@@ -16,6 +16,7 @@ from models import Student, TeacherStaff, User
 from services.google_directory_service import (
     create_google_group,
     create_google_user,
+    ensure_ou_exists,
     ensure_user_in_group,
     get_google_group,
     get_google_user,
@@ -24,7 +25,9 @@ from services.google_directory_service import (
     sync_user_suspension_with_db_is_active,
 )
 from services.google_ou_policy import (
+    STAFF_OU_TERMINATED_REMOVED,
     effective_graduation_year,
+    get_staff_ou_path,
     resolve_student_ou,
     school_level_group_for_grade,
 )
@@ -148,25 +151,39 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
         sync_user_groups(email, desired_school_groups)
 
 
-def _sync_staff_workspace(staff: TeacherStaff, workspace_email: str, *, create_missing_groups: bool) -> None:
+def _sync_staff_workspace(
+    staff: TeacherStaff,
+    workspace_email: str,
+    *,
+    create_missing_groups: bool,
+    user: Optional[User] = None,
+) -> None:
     """Apply Directory OU + teachers group for staff (same rules as bulk sync script)."""
     email = (workspace_email or "").strip()
     if not email:
         return
 
+    linked_user = user or db.session.query(User).filter_by(teacher_staff_id=staff.id).first()
+    target_ou = get_staff_ou_path(staff, linked_user)
+
     db_active = bool(getattr(staff, "is_active", True))
     sync_user_suspension_with_db_is_active(email, db_active)
-    if not db_active:
-        return
 
     g_user = get_google_user(email)
     if not g_user:
+        if not ensure_ou_exists(target_ou):
+            logger.warning(
+                "sync_single_user_to_google: ensure_ou_exists failed for staff OU %s (%s); skip create",
+                target_ou,
+                email,
+            )
+            return
         created = create_google_user(
             {
                 "primaryEmail": email,
                 "name": {"givenName": staff.first_name, "familyName": staff.last_name},
                 "password": DEFAULT_TEMP_PASSWORD,
-                "orgUnitPath": "/Staff",
+                "orgUnitPath": target_ou,
                 "changePasswordAtNextLogin": True,
             }
         )
@@ -174,16 +191,17 @@ def _sync_staff_workspace(staff: TeacherStaff, workspace_email: str, *, create_m
             logger.warning("sync_single_user_to_google: create_google_user failed for staff %s", email)
     else:
         current_ou = g_user.get("orgUnitPath")
-        if current_ou != "/Staff":
-            move_user_to_ou(email, "/Staff")
+        if current_ou != target_ou:
+            move_user_to_ou(email, target_ou)
 
-    if create_missing_groups and not get_google_group(TEACHERS_GROUP_EMAIL):
-        create_google_group(
-            TEACHERS_GROUP_EMAIL,
-            name="Teachers",
-            description="Auto-created by CSA sync.",
-        )
-    ensure_user_in_group(email, TEACHERS_GROUP_EMAIL)
+    if STAFF_OU_TERMINATED_REMOVED not in target_ou:
+        if create_missing_groups and not get_google_group(TEACHERS_GROUP_EMAIL):
+            create_google_group(
+                TEACHERS_GROUP_EMAIL,
+                name="Teachers",
+                description="Auto-created by CSA sync.",
+            )
+        ensure_user_in_group(email, TEACHERS_GROUP_EMAIL)
 
 
 def sync_single_user_to_google(user_id: int, *, create_missing_groups: bool = True) -> bool:
@@ -221,7 +239,7 @@ def sync_single_user_to_google(user_id: int, *, create_missing_groups: bool = Tr
                 user_id,
             )
             return False
-        _sync_staff_workspace(staff, email, create_missing_groups=create_missing_groups)
+        _sync_staff_workspace(staff, email, create_missing_groups=create_missing_groups, user=user)
         return True
 
     logger.debug("sync_single_user_to_google: user %s is not a student or staff link; skip", user_id)

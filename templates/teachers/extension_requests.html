@@ -104,7 +104,7 @@
             <p class="mb-0">Review and manage student extension requests for assignments</p>
         </div>
         <div class="mt-3 mt-md-0">
-            <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.assignments_and_grades') }}{% else %}{{ url_for('teacher.dashboard.assignments_and_grades') }}{% endif %}" class="btn btn-outline-light">
+            <a href="{% if can_assignments_admin_ui %}{{ url_for('management.assignments_and_grades') }}{% else %}{{ url_for('teacher.dashboard.assignments_and_grades') }}{% endif %}" class="btn btn-outline-light">
                 <i class="bi bi-arrow-left me-1"></i>Back to Assignments
             </a>
         </div>
@@ -403,7 +403,7 @@
 </div>
 
 <script>
-const REVIEW_EXTENSION_URL = "{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.review_extension_request', request_id=0) }}{% else %}{{ url_for('teacher.review_extension_request', request_id=0) }}{% endif %}".replace('/0/review', '');
+const REVIEW_EXTENSION_URL = "{% if can_assignments_admin_ui %}{{ url_for('management.review_extension_request', request_id=0) }}{% else %}{{ url_for('teacher.review_extension_request', request_id=0) }}{% endif %}".replace('/0/review', '');
 
 let currentReviewRequestId = null;
 let currentReviewAction = null;

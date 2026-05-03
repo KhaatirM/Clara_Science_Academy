@@ -339,8 +339,15 @@
     {% endif %}
     
     <!-- Academic Concerns toast & modal (all teacher/admin tabs) -->
-    {% if not disable_academic_alert_popup and (role_canonical in ['Director', 'School Administrator'] or role_canonical in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and at_risk_alerts %}
+    {% if not disable_academic_alert_popup and (has_mgmt_role_access or role_canonical in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and at_risk_alerts %}
         {% include 'shared/academic_concerns_partial.html' %}
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+    {% include 'shared/credential_modal.html' %}
+    {% if credential_modal %}
+    <script type="application/json" id="credentialModalSeed">{{ credential_modal | tojson }}</script>
+    {% endif %}
     {% endif %}
     
     {% block modals %}{% endblock %}

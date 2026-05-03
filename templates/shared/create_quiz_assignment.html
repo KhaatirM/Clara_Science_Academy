@@ -19,7 +19,7 @@
                                 <a href="{{ back_url }}" class="btn btn-light btn-sm">
                                     <i class="bi bi-arrow-left me-1"></i>Back to assistant workspace
                                 </a>
-                            {% elif current_user.role in ['Director', 'School Administrator'] %}
+                            {% elif can_assignments_admin_ui %}
                                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-light btn-sm">
                                     <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
                                 </a>
@@ -400,7 +400,7 @@
                             <button type="submit" class="btn btn-lg fw-bold shadow-sm" id="createQuizBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
                                 <i class="bi bi-check-circle me-2"></i>{{ 'Update Quiz Assignment' if assignment else 'Create Quiz Assignment' }}
                             </button>
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if can_assignments_admin_ui %}
                                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle me-1"></i>Cancel
                                 </a>

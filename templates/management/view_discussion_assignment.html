@@ -180,7 +180,7 @@
         <div class="card-body p-4">
             <h5 class="mb-3"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
             <div class="compact-action-grid">
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                 <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
                    class="btn btn-compact btn-compact-edit">
                     <i class="bi bi-pencil-square"></i>
@@ -194,7 +194,7 @@
                     <span>Grade</span>
                 </a>
                 
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                 <a href="{{ url_for('management.admin_grant_extensions', assignment_id=assignment.id) }}" 
                    class="btn btn-compact btn-compact-extension">
                     <i class="bi bi-clock-history"></i>
@@ -418,7 +418,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.students.void_assignment_for_students', assignment_id=0) }}{% else %}{{ url_for('teacher.assignments.void_assignment', assignment_id=0) }}{% endif %}" id="voidForm">
+            <form method="POST" action="{% if can_assignments_admin_ui %}{{ url_for('management.students.void_assignment_for_students', assignment_id=0) }}{% else %}{{ url_for('teacher.assignments.void_assignment', assignment_id=0) }}{% endif %}" id="voidForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -500,7 +500,7 @@
 
 <script>
 function goBack() {
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if can_assignments_admin_ui %}
     window.location.href = "{{ url_for('management.assignments_and_grades', class_id=assignment.class_id) }}";
     {% else %}
     window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades', class_id=assignment.class_id) }}";
@@ -508,7 +508,7 @@ function goBack() {
 }
 
 function viewThread(threadId) {
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if can_assignments_admin_ui %}
     window.location.href = "{{ url_for('management.assignments.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
     {% else %}
     window.location.href = "{{ url_for('teacher.assignments.view_discussion_thread', thread_id=0) }}".replace('0', threadId);

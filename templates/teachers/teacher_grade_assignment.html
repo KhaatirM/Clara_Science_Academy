@@ -1014,7 +1014,7 @@ function generatePrintableGradebook() {
 
 // Back navigation: always go to intended page (no history.back)
 function goBack() {
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if can_assignments_admin_ui %}
         window.location.href = "{{ url_for('management.view_assignment', assignment_id=assignment.id) }}";
     {% else %}
         window.location.href = "{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}";

@@ -16,7 +16,7 @@
                 <p class="mb-0">Choose the type of assignment you want to create</p>
             </div>
             <div>
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                     <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-light btn-sm">
                         <i class="bi bi-arrow-left me-1"></i>Back to Assignments
                     </a>
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'quiz':
                 // Redirect to quiz creation page
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                 window.location.href = "{{ url_for('management.create_quiz_assignment') }}";
                 {% else %}
                 window.location.href = "{{ url_for('teacher.create_quiz_assignment') }}";
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'discussion':
                 // Redirect to discussion creation page
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                 window.location.href = "{{ url_for('management.create_discussion_assignment') }}";
                 {% else %}
                 window.location.href = "{{ url_for('teacher.create_discussion_assignment') }}";
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show assignment context modal (In-Class vs Homework)
                     showAssignmentContextModal();
                 } else if (target === 'group') {
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    {% if can_assignments_admin_ui %}
                         {% if preselected_class_id %}
                         window.location.href = "{{ url_for('management.admin_group_assignment_type_selector', class_id=preselected_class_id) }}";
                         {% else %}
@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.hide();
                 
                 // Redirect based on context selection
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                     window.location.href = `{{ url_for('management.add_assignment') }}?context=${context}`;
                 {% else %}
                     window.location.href = `{{ url_for('teacher.assignments.add_assignment') }}?context=${context}`;

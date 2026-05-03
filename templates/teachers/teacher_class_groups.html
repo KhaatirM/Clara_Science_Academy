@@ -309,7 +309,7 @@
                 <h5 class="modal-title">Create New Group</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_create_student_group', class_id=class_obj.id) }}{% else %}{{ url_for('teacher.groups.create_group', class_id=class_obj.id) }}{% endif %}">
+            <form method="POST" action="{% if can_calendar_admin_ui %}{{ url_for('management.admin_create_student_group', class_id=class_obj.id) }}{% else %}{{ url_for('teacher.groups.create_group', class_id=class_obj.id) }}{% endif %}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="name" class="form-label">Group Name <span class="text-danger">*</span></label>

@@ -22,7 +22,7 @@
                     <div class="header-text">
                         <nav aria-label="breadcrumb" class="mb-2">
                             <ol class="breadcrumb breadcrumb-light mb-0">
-                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                {% if can_assignments_admin_ui %}
                                 <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
                                 <li class="breadcrumb-item"><a href="{{ url_for('management.assignments_and_grades', class_id=class_obj.id) }}">Assignments & Grades</a></li>
                                 {% else %}
@@ -42,7 +42,7 @@
                         <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#groupAssignmentInfoModalEdit" title="Scenarios and how group assignments behave">
                             <i class="bi bi-info-circle me-1"></i>What you should know
                         </button>
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if can_assignments_admin_ui %}
                         <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-light btn-sm">
                             <i class="bi bi-arrow-left me-1"></i>Back
                         </a>
@@ -406,7 +406,7 @@
                             <span class="text-muted">Review your changes before saving</span>
                         </div>
                         <div class="submit-actions">
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if can_assignments_admin_ui %}
                             <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>

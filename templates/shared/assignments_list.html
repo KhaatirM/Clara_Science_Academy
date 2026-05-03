@@ -18,7 +18,7 @@
             {% endif %}
         </h3>
         <div class="d-flex gap-2">
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_assignments_admin_ui %}
                 <a href="{{ url_for('management.assignments.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
                     <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
                 </a>
@@ -27,7 +27,7 @@
                     <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
                 </a>
             {% endif %}
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_assignments_admin_ui %}
                 <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
                     <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
                 </a>
@@ -57,7 +57,7 @@
                     </select>
                 </div>
                 {% endif %}
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if can_assignments_admin_ui %}
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="status_filter" class="form-label fw-bold">Filter by Status</label>
                     <select class="form-select" id="status_filter" name="status" onchange="this.form.submit()">
@@ -126,7 +126,7 @@
                             {% endif %}
                         </th>
                         {% endif %}
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if can_assignments_admin_ui %}
                         <th>Status</th>
                         {% endif %}
                         <th>Actions</th>
@@ -168,7 +168,7 @@
                             {% if classes %}
                             <td data-label="Class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</td>
                             {% endif %}
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if can_assignments_admin_ui %}
                             <td data-label="Status">
                                 {% set _st = assignment|effective_assignment_status %}
                                 {% if _st == 'Active' %}
@@ -188,7 +188,7 @@
                                 <div class="assignment-actions">
                                     <!-- Primary Actions Row -->
                                     <div class="d-flex gap-1 mb-1">
-                                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                                        {% if can_assignments_admin_ui %}
                                             <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm" title="View Assignment Details">
                                                 <i class="bi bi-eye"></i>
                                             </a>
@@ -206,7 +206,7 @@
                                     </div>
                                     
                                     <!-- Management Actions for Directors and School Administrators -->
-                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                    {% if can_assignments_admin_ui %}
                                         <div class="d-flex gap-1 mb-1">
                                             <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm" title="Grade Assignment">
                                                 <i class="bi bi-pencil"></i>
@@ -248,7 +248,7 @@
                     <div class="row g-2">
                         {% for class in classes %}
                             <div class="col-12 col-sm-6 col-md-4">
-                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                {% if can_assignments_admin_ui %}
                                     <a href="{{ url_for('management.assignments.add_assignment', class_id=class.id) }}" class="btn btn-outline-primary btn-sm w-100">
                                         <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
                                     </a>
@@ -354,7 +354,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if can_assignments_admin_ui %}
     // Extension functionality
     const extensionModal = new bootstrap.Modal(document.getElementById('extensionModal'));
     const extensionsBtns = document.querySelectorAll('.manage-extensions-btn');

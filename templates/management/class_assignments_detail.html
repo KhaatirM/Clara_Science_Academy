@@ -220,7 +220,7 @@
                                                    class="btn btn-outline-primary btn-sm" title="View Assignment">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                {% if current_user.role in ['Director', 'School Administrator'] or (current_user.role == 'Teacher' and teacher_staff_id == assignment.class.teacher_id) %}
+                                                {% if can_assignments_admin_ui or (current_user.role == 'Teacher' and teacher_staff_id == assignment.class.teacher_id) %}
                                                 <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
                                                    class="btn btn-outline-success btn-sm" title="Edit Assignment">
                                                     <i class="fas fa-edit"></i>

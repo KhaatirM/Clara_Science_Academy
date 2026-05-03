@@ -20,7 +20,7 @@
                     <span class="text-white">Connect with colleagues and staff members</span>
                 </p>
       </div>
-          {% if current_user.role in ['Director', 'School Administrator'] %}
+          {% if can_staff_admin_ui %}
             <a href="{{ url_for('management.add_teacher_staff') }}" class="btn-add-staff">
                 <i class="bi bi-person-plus-fill"></i>Add Teacher/Staff
             </a>
@@ -234,7 +234,7 @@
                     <button class="btn-staff-action btn-staff-view" onclick="alert('View profile coming soon!')">
                         <i class="bi bi-eye"></i><span>View</span>
                     </button>
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    {% if can_staff_admin_ui %}
                     <a href="{{ url_for('management.edit_teacher_staff', staff_id=staff.id) }}" class="btn-staff-action btn-staff-edit">
                         <i class="bi bi-pencil-square"></i><span>Edit</span>
                     </a>
@@ -277,7 +277,7 @@
             {% set pagination_params = {'section': 'teachers_staff'} %}
             {% if search_query %}{% set _ = pagination_params.update({'search_query': search_query}) %}{% endif %}
             
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_staff_admin_ui %}
                 <li class="page-item {% if page <= 1 %}disabled{% endif %}">
                     <a class="page-link rounded-start" href="{{ url_for('management.teachers', page=page-1, **pagination_params) }}">
                         <i class="bi bi-chevron-left"></i> Previous
@@ -353,7 +353,7 @@
             const form = document.createElement('form');
             form.method = 'POST';
             
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_staff_admin_ui %}
               form.action = `{{ url_for('management.remove_teacher_staff', staff_id=0) }}`.replace('0', staffId);
             {% endif %}
             

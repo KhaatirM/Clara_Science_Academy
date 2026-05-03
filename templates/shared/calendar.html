@@ -17,7 +17,7 @@
                         </h1>
                         <p class="mb-0" style="opacity: 0.95; font-size: 1.1rem;">
                             <i class="bi bi-info-circle me-2"></i>
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if can_calendar_admin_ui %}
                                 Manage and view school calendar events
                             {% elif 'Teacher' in current_user.role %}
                                 View school calendar and important dates
@@ -63,7 +63,7 @@
                         </div>
                         
                         <!-- Management-only buttons -->
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if can_calendar_admin_ui %}
                             <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#addEventModal" style="border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);">
                                 <i class="bi bi-plus-circle me-2"></i>Add Event
                             </button>
@@ -270,7 +270,7 @@
 </div>
 
 <!-- Add Event Modal (Management only) -->
-{% if current_user.role in ['Director', 'School Administrator'] %}
+{% if can_calendar_admin_ui %}
 <div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">

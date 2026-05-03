@@ -64,7 +64,7 @@
                     {% endif %}
                 </a>
                 {% endif %}
-                {% if selected_class and (use_management_assignments_urls or 'Teacher' in (current_user.role or '') or role_canonical in ['Director', 'School Administrator']) %}
+                {% if selected_class and (use_management_assignments_urls or 'Teacher' in (current_user.role or '') or can_assignments_admin_ui) %}
                 <button type="button" class="btn btn-bulk-void" data-bs-toggle="modal" data-bs-target="#bulkVoidModal" title="Void multiple assignments at once">
                     <i class="bi bi-slash-circle me-2"></i>Bulk Void
                 </button>

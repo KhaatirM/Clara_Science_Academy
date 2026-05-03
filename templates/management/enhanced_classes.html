@@ -20,7 +20,7 @@
                 </p>
             </div>
             <div>
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if has_mgmt_role_access %}
                 <button class="btn btn-classes-add" data-bs-toggle="modal" data-bs-target="#createClassModal">
                     <i class="bi bi-plus-circle me-2"></i>Create New Class
                 </button>
@@ -249,7 +249,7 @@
                             </div>
                         {% endif %}
                         
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if has_mgmt_role_access %}
                         <div class="col-12 mt-2">
                             <button class="btn btn-sm btn-class-action-delete w-100" onclick="removeClass({{ class.id }}, '{{ class.name }}')">
                                 <i class="bi bi-trash me-1"></i>Remove Class
@@ -266,7 +266,7 @@
                 <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
                 <h5 class="text-muted">No Classes Found</h5>
                 <p class="text-muted mb-3">Get started by creating your first class</p>
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if has_mgmt_role_access %}
                 <button class="btn btn-classes-add" data-bs-toggle="modal" data-bs-target="#createClassModal">
                     <i class="bi bi-plus-circle me-2"></i>Create New Class
                 </button>

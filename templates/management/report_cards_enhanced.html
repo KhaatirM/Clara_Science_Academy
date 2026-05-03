@@ -17,7 +17,7 @@
           <p class="rc-subtitle mb-0">Generate and manage student report cards by grade category</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-          {% if current_user.role in ['Director', 'School Administrator'] %}
+          {% if has_mgmt_role_access %}
           <a href="{{ url_for('management.close_school_year') }}" class="btn btn-outline-danger">
             <i class="bi bi-archive me-1"></i>Close school year
           </a>

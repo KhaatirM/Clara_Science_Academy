@@ -27,7 +27,7 @@
                 <h2><i class="bi bi-mortarboard-fill me-3"></i>My Classes</h2>
                 <p class="mb-0 opacity-90">Manage your classes and Google Classroom integration</p>
             </div>
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if has_mgmt_role_access %}
                 <a href="{{ url_for('management.classes', open='create') }}" class="add-class-btn">
                     <i class="bi bi-plus-circle-fill me-2"></i>Add New Class
                 </a>
@@ -109,7 +109,7 @@
                     
                     <!-- Action Buttons -->
                     <div class="d-grid gap-2">
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if has_mgmt_role_access %}
                             <div class="d-flex gap-2 mb-2 class-action-buttons">
                                 <a href="{{ url_for('management.manage_class_roster', class_id=class.id) }}" class="action-btn btn-manage flex-fill">
                                     <i class="bi bi-people-fill action-btn-icon"></i><span class="action-btn-text">Manage Roster</span>
@@ -148,7 +148,7 @@
                                     </a>
                                 </div>
                             {% endif %}
-                        {% elif 'Teacher' in current_user.role and current_user.role not in ['Director', 'School Administrator'] %}
+                        {% elif 'Teacher' in current_user.role and not has_mgmt_role_access %}
                             <div class="d-flex gap-2 mb-2 class-action-buttons">
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="action-btn btn-view flex-fill">
                                     <i class="bi bi-eye-fill action-btn-icon"></i><span class="action-btn-text">View Class</span>
@@ -192,7 +192,7 @@
                             {% endif %}
                         {% endif %}
                         
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if has_mgmt_role_access %}
                             <button type="button" class="action-btn btn-remove remove-class-btn" 
                                     data-class-id="{{ class.id }}" data-class-name="{{ class.name }}">
                                 <i class="bi bi-trash-fill me-2"></i>Remove Class
@@ -208,7 +208,7 @@
                 <i class="bi bi-inbox" style="font-size: 4rem; color: #667eea;"></i>
                 <h5>No Classes Found</h5>
                 <p class="mb-4">There are currently no classes in the system.</p>
-                {% if current_user.role in ['Director', 'School Administrator'] %}
+                {% if has_mgmt_role_access %}
                     <a href="{{ url_for('management.add_class') }}" class="add-class-btn">
                         <i class="bi bi-plus-circle-fill me-2"></i>Add First Class
                     </a>

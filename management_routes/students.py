@@ -2,7 +2,7 @@
 Students routes for management users.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify, session
 from flask_login import login_required, current_user
 from decorators import management_required, teacher_required, permissions_required
 from models import (
@@ -24,8 +24,9 @@ import uuid
 import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
+from utils.credential_modal import student_grade3_plus_modal_payload, student_k2_modal_payload
 from services.google_directory_service import create_google_user
-from services.google_sync_tasks import sync_single_user_to_google
+from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
 
 bp = Blueprint('students', __name__)
 
@@ -45,20 +46,23 @@ def _strip_student_user_account(student):
 def _provision_student_login_if_needed(student):
     """
     Create a Student User for grade 3+ when missing. Caller commits.
-    Returns True if a new user was added to the session.
+
+    Returns:
+        None if no new account was created.
+        Dict with portal + Workspace fields when a new User row was added (for UI / email).
     """
     if not grade_may_have_login(student.grade_level):
-        return False
+        return None
     if getattr(student, 'is_deleted', False) or student.user:
-        return False
+        return None
     first_name = (student.first_name or '').strip()
     last_name = (student.last_name or '').strip()
     if not first_name or not last_name:
-        return False
+        return None
 
     generated_workspace_email = student.generate_email()
     if not generated_workspace_email:
-        return False
+        return None
 
     if not student.email:
         student.email = generated_workspace_email
@@ -84,7 +88,14 @@ def _provision_student_login_if_needed(student):
     user.is_temporary_password = True
     user.password_changed_at = None
     db.session.add(user)
-    return True
+    from services.google_sync_tasks import DEFAULT_TEMP_PASSWORD
+
+    return {
+        "username": username,
+        "portal_password": password,
+        "school_email": generated_workspace_email,
+        "google_initial_password": DEFAULT_TEMP_PASSWORD,
+    }
 
 
 def _build_entrance_school_year_options(start_year=2020):
@@ -374,18 +385,22 @@ def add_student():
                 user.password_changed_at = None
                 db.session.add(user)
                 db.session.commit()
-                # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+
+                google_warning = None
+                google_user_created = False
+
                 try:
                     sync_single_user_to_google(user.id)
                 except Exception as e:
                     current_app.logger.warning(
                         "Google Directory sync after save failed for user %s: %s", user.id, e
                     )
+                    google_warning = (
+                        "Google Directory sync failed after save; the account may update on the next sync run."
+                    )
 
-                # Create Google Workspace account (non-blocking)
                 try:
                     grad_year = None
-                    # Prefer new Student.grad_year when present; fallback to expected_grad_date (e.g., "06/2034")
                     if hasattr(student, "grad_year") and getattr(student, "grad_year"):
                         grad_year = int(getattr(student, "grad_year"))
                     elif student.expected_grad_date and "/" in str(student.expected_grad_date):
@@ -397,42 +412,49 @@ def add_student():
                             {
                                 "primaryEmail": generated_workspace_email,
                                 "name": {"givenName": student.first_name, "familyName": student.last_name},
-                                "password": "Welcome2CSA!",
+                                "password": DEFAULT_TEMP_PASSWORD,
                                 "orgUnitPath": ou_path,
                                 "changePasswordAtNextLogin": True,
                             }
                         )
+                        google_user_created = bool(created)
                         if not created:
-                            flash(
-                                f"Student created locally, but Google account creation failed for {generated_workspace_email}. "
-                                "Please verify the account does not already exist and that Directory permissions are configured.",
-                                "warning",
+                            google_warning = (
+                                f"Google account creation failed for {generated_workspace_email}. "
+                                "Verify the account does not already exist and that Directory permissions are configured."
                             )
                     else:
-                        flash(
-                            "Student created locally, but no Google Workspace email was generated, so no Google account was created.",
-                            "warning",
+                        google_warning = (
+                            "No Google Workspace email was generated, so no Google user was created."
                         )
                 except Exception as e:
                     current_app.logger.error(f"Failed to auto-create Google student account: {e}")
-                    flash(
-                        "Student created locally, but Google account creation encountered an error. Check logs for details.",
-                        "warning",
+                    google_warning = (
+                        "Google account creation encountered an error. Check server logs for details."
                     )
 
-                success_msg = f'Student added successfully! Username: {username}, Password: {password}.'
-                if generated_workspace_email:
-                    success_msg += f' Google Workspace Email: {generated_workspace_email}.'
-                success_msg += ' Student will be required to change password on first login.'
-                flash(success_msg, 'success')
+                session["credential_modal"] = student_grade3_plus_modal_payload(
+                    first_name=first_name,
+                    last_name=last_name,
+                    student_id=student.student_id or "",
+                    username=username,
+                    portal_password=password,
+                    school_email=generated_workspace_email,
+                    google_initial_password=DEFAULT_TEMP_PASSWORD,
+                    google_user_created=google_user_created,
+                    google_warning=google_warning,
+                )
+                flash("Student saved. Use the credential summary popup to copy login details.", "success")
             else:
                 db.session.commit()
-
-                flash(
-                    'Student added successfully. No Google Workspace account or school email is created for '
-                    'Kindergarten through 2nd grade; students receive access when they reach 3rd grade.',
-                    'success',
+                session["credential_modal"] = student_k2_modal_payload(
+                    first_name=first_name,
+                    last_name=last_name,
+                    student_id=student.student_id or "",
+                    grade_level=grade_level,
+                    entrance_school_year=entrance_school_year,
                 )
+                flash("Student saved. Review the K–2 policy summary in the popup.", "success")
             return redirect(url_for('management.students'))
             
         except Exception as e:
@@ -1928,6 +1950,7 @@ def edit_student(student_id):
     """Edit student information via AJAX modal"""
     student = Student.query.get_or_404(student_id)
     try:
+        prev_grade = student.grade_level
         # Get phone numbers for validation
         parent1_phone = request.form.get('parent1_phone', student.parent1_phone)
         parent2_phone = request.form.get('parent2_phone', student.parent2_phone)
@@ -2011,10 +2034,11 @@ def edit_student(student_id):
                 # Clear the Google Workspace email if field is empty
                 student.user.google_workspace_email = None
 
+        new_creds = None
         if not grade_may_have_login(student.grade_level):
             _strip_student_user_account(student)
         else:
-            _provision_student_login_if_needed(student)
+            new_creds = _provision_student_login_if_needed(student)
 
         db.session.commit()
         # Google Directory sync immediately after commit (Save → Workspace updated in one step)
@@ -2027,7 +2051,54 @@ def edit_student(student_id):
                     student.user.id,
                     e,
                 )
-        return jsonify({'success': True, 'message': 'Student updated successfully.'})
+
+        response = {"success": True, "message": "Student updated successfully."}
+        if new_creds:
+            promoted = (prev_grade is not None and not grade_may_have_login(prev_grade)) and grade_may_have_login(
+                student.grade_level
+            )
+            try:
+                from services.email_service import notify_school_admins_new_student_login
+
+                notify_school_admins_new_student_login(
+                    student_name=f"{student.first_name} {student.last_name}".strip(),
+                    student_id=student.student_id or "",
+                    username=new_creds["username"],
+                    portal_password=new_creds["portal_password"],
+                    school_email=new_creds.get("school_email"),
+                    google_initial_password=new_creds.get("google_initial_password", DEFAULT_TEMP_PASSWORD),
+                    context_note=(
+                        "Grade was updated to 3rd+ and a new portal account was created."
+                        if promoted
+                        else "A portal account was created for this student (was missing)."
+                    ),
+                )
+            except Exception as e:
+                current_app.logger.warning("Admin notification email for new student login failed: %s", e)
+
+            response["credential_modal"] = student_grade3_plus_modal_payload(
+                first_name=student.first_name or "",
+                last_name=student.last_name or "",
+                student_id=student.student_id or "",
+                username=new_creds["username"],
+                portal_password=new_creds["portal_password"],
+                school_email=new_creds.get("school_email"),
+                google_initial_password=new_creds.get("google_initial_password", DEFAULT_TEMP_PASSWORD),
+                google_user_created=None,
+                google_warning=None,
+            )
+            response["credential_modal"].setdefault("notes", []).append(
+                "After this save, the app attempted Google Directory sync. If Google sign-in still fails, "
+                "open Google Admin or run your usual Directory sync job."
+            )
+            if promoted:
+                response["message"] = (
+                    "Student updated. A new login was created; School Administrators were emailed a copy."
+                )
+            else:
+                response["message"] = "Student updated. A new login was created — see the credential summary."
+
+        return jsonify(response)
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500

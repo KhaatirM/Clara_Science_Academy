@@ -446,7 +446,7 @@
                             <option value="">All Students</option>
                             <option value="has_account" {% if status_filter == 'has_account' %}selected{% endif %}>Has Account</option>
                             <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if can_student_admin_ui %}
                             <option value="former" {% if status_filter == 'former' %}selected{% endif %}>Former (Removed)</option>
                             <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All (Current + Former)</option>
                             {% endif %}
@@ -519,7 +519,7 @@
                 </div>
             </div>
 
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_student_admin_ui %}
             <!-- Repeat Grade (Bulk) -->
             <div class="students-csv-card mb-4">
                 <div class="students-csv-header">
@@ -646,7 +646,7 @@
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
-                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                {% if can_student_admin_ui %}
                                 <th style="width: 38px;">
                                     <input class="form-check-input" type="checkbox" id="selectAllStudents" onclick="toggleSelectAllStudents(this)">
                                 </th>
@@ -673,7 +673,7 @@
                                     {% endif %}
                                 {% endif %}
                                 <tr class="student-row student-alert-{{ alert_level }}">
-                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                    {% if can_student_admin_ui %}
                                     <td>
                                         <input class="form-check-input student-select" type="checkbox" name="student_ids" value="{{ student.id }}">
                                     </td>
@@ -774,7 +774,7 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="{% if current_user.role in ['Director', 'School Administrator'] %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
+                                    <td colspan="{% if can_student_admin_ui %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
                                         <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
                                         No students found.
                                     </td>
@@ -1283,7 +1283,7 @@
                             <i class="bi bi-person-badge-fill me-2"></i>Teachers &amp; Staff
                         </h2>
                         <p class="teachers-admin-subtitle mb-0">
-                            {% if teachers_mode == 'directory' and current_user.role in ['Director', 'School Administrator'] %}
+                            {% if teachers_mode == 'directory' and can_staff_admin_ui %}
                             <i class="bi bi-archive me-2"></i>Browse everyone on payroll plus inactive or removed records. To edit someone who is still active, switch to <strong>Manage</strong>.
                             {% else %}
                             <i class="bi bi-briefcase me-2"></i>Search, add, and maintain active staff records and accounts.
@@ -1291,7 +1291,7 @@
                         </p>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end">
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        {% if can_staff_admin_ui %}
                         <ul class="nav nav-pills flex-wrap gap-1 mb-0">
                             <li class="nav-item">
                                 <a class="nav-link py-2 px-3 {% if teachers_mode != 'directory' %}active{% endif %}" href="{{ url_for('management.teachers') }}">
@@ -2012,9 +2012,8 @@
                                                     <i class="bi bi-paperclip me-1"></i>Attachment
                                                 </a>
                                             {% endif %}
-                                            {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                                            {% if can_home_assignment_actions %}
                                                 <div class="assignment-actions">
-                                                    <!-- Primary Actions Row -->
                                                     <div class="d-flex gap-1 mb-1">
                                                         <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary" title="View Assignment">
                                                             <i class="bi bi-eye"></i>
@@ -2023,62 +2022,30 @@
                                                             <i class="bi bi-people"></i>
                                                         </a>
                                                     </div>
-                                                    
-                                                    <!-- Management Actions for Directors and School Administrators -->
-                                                    {% if current_user.role in ['Director', 'School Administrator'] %}
-                                                        <div class="d-flex gap-1 mb-1">
-                                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
-                                                                <i class="bi bi-pencil"></i>
-                                                            </a>
-                                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
-                                                                <i class="bi bi-pencil-square"></i>
-                                                            </a>
-                                                        </div>
-                                                        
-                                                        <div class="d-flex gap-1">
-                                                            <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
-                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
-                                                                    data-current-status="{{ assignment.status }}">
-                                                                <i class="bi bi-gear"></i>
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
-                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
-                                                                    data-class-id="{{ assignment.class_id }}">
-                                                                <i class="bi bi-clock-history"></i>
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
-                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
-                                                                <i class="bi bi-trash"></i>
-                                                            </button>
-                                                        </div>
-                                                        
-                                                    {% elif current_user.role == 'Teacher' %}
-                                                        <div class="d-flex gap-1 mb-1">
-                                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
-                                                                <i class="bi bi-pencil"></i>
-                                                            </a>
-                                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
-                                                                <i class="bi bi-pencil-square"></i>
-                                                            </a>
-                                                        </div>
-                                                        
-                                                        <div class="d-flex gap-1">
-                                                            <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
-                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
-                                                                    data-current-status="{{ assignment.status }}">
-                                                                <i class="bi bi-gear"></i>
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
-                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
-                                                                    data-class-id="{{ assignment.class_id }}">
-                                                                <i class="bi bi-clock-history"></i>
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
-                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
-                                                                <i class="bi bi-trash"></i>
-                                                            </button>
-                                                        </div>
-                                                    {% endif %}
+                                                    <div class="d-flex gap-1 mb-1">
+                                                        <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                        </a>
+                                                    </div>
+                                                    <div class="d-flex gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                data-current-status="{{ assignment.status }}">
+                                                            <i class="bi bi-gear"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                data-class-id="{{ assignment.class_id }}">
+                                                            <i class="bi bi-clock-history"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             {% elif current_user.role == 'Student' %}
                                                 <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
@@ -3865,7 +3832,13 @@
                   .then(response => response.json())
                   .then(result => {
                     if (result.success) {
-                      location.reload();
+                      if (result.credential_modal && window.CredentialModal) {
+                        window.CredentialModal.showFromPayload(result.credential_modal, function () {
+                          location.reload();
+                        });
+                      } else {
+                        location.reload();
+                      }
                     } else {
                       showToast(result.message || 'Could not update student.', 'danger');
                     }
@@ -4502,16 +4475,10 @@
                     .then(response => response.json())
                     .then(result => {
                         if (result.success) {
-                            if (result.credentials) {
-                                var c = result.credentials;
-                                var se = c.school_email || c.google_workspace_email;
-                                var emailed = result.welcome_email_sent ? ' Details were emailed to their personal address.' : '';
-                                showToast(
-                                    'Website login created. Username: ' + c.username + ', Password: ' + c.password +
-                                    (se ? ', School email: ' + se : '') + emailed,
-                                    'success'
-                                );
-                                setTimeout(function () { location.reload(); }, 1200);
+                            if (result.credential_modal && window.CredentialModal) {
+                                window.CredentialModal.showFromPayload(result.credential_modal, function () {
+                                    location.reload();
+                                });
                             } else {
                                 location.reload();
                             }

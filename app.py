@@ -857,6 +857,18 @@ def create_app(config_class=None):
             return {"dual_dashboard_staff": False}
 
     @app.context_processor
+    def inject_credential_modal():
+        """One-shot payload for the credential summary modal after adding students/staff."""
+        if not current_user.is_authenticated:
+            return {"credential_modal": None}
+        try:
+            data = session.pop("credential_modal", None)
+            return {"credential_modal": data}
+        except Exception as e:
+            current_app.logger.warning("inject_credential_modal failed: %s", e)
+            return {"credential_modal": None}
+
+    @app.context_processor
     def inject_role_canonical():
         """Primary role (alerts, etc.); ``sidebar_role_canonical`` follows tech/management switch for dual staff."""
         if not current_user.is_authenticated:
@@ -887,6 +899,61 @@ def create_app(config_class=None):
         except Exception:
             r = getattr(current_user, "role", None) or ""
             return {"role_canonical": r, "sidebar_role_canonical": r}
+
+    @app.context_processor
+    def inject_management_capability_flags():
+        """
+        UI flags for merged accounts (e.g. Tech + School Administrator): primary ``role`` may be Tech
+        while Director/School Admin lives in ``secondary_roles``. Templates must not rely on
+        ``current_user.role in ['Director', 'School Administrator']`` alone.
+        """
+        if not current_user.is_authenticated:
+            return {
+                "has_mgmt_role_access": False,
+                "can_student_admin_ui": False,
+                "can_staff_admin_ui": False,
+                "can_calendar_admin_ui": False,
+                "can_assignments_admin_ui": False,
+                "can_home_assignment_actions": False,
+            }
+        try:
+            from utils.user_roles import user_has_management_entry_access
+            from decorators import has_permission, has_any_permission, is_teacher_role
+
+            _cal_perms = (
+                "students:view",
+                "students:edit",
+                "teachers_staff:manage",
+                "classes:manage",
+                "assignments_grades:manage",
+                "attendance:manage",
+                "report_cards:view",
+                "report_cards:generate",
+            )
+            h = user_has_management_entry_access(current_user)
+            stu = h or has_permission(current_user, "students:edit")
+            stf = h or has_permission(current_user, "teachers_staff:manage")
+            cal = h or has_any_permission(current_user, _cal_perms)
+            asn = h or has_permission(current_user, "assignments_grades:manage")
+            home_asn = h or asn or is_teacher_role(getattr(current_user, "role", None))
+            return {
+                "has_mgmt_role_access": h,
+                "can_student_admin_ui": stu,
+                "can_staff_admin_ui": stf,
+                "can_calendar_admin_ui": cal,
+                "can_assignments_admin_ui": asn,
+                "can_home_assignment_actions": home_asn,
+            }
+        except Exception as e:
+            current_app.logger.warning("inject_management_capability_flags failed: %s", e)
+            return {
+                "has_mgmt_role_access": False,
+                "can_student_admin_ui": False,
+                "can_staff_admin_ui": False,
+                "can_calendar_admin_ui": False,
+                "can_assignments_admin_ui": False,
+                "can_home_assignment_actions": False,
+            }
 
     @app.context_processor
     def inject_role_display():

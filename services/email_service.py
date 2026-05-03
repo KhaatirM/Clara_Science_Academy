@@ -146,3 +146,82 @@ Store this information securely.
 """
 
     return send_email(personal_email.strip(), subject, body_text, body_html=body_html)
+
+
+def _school_admin_recipient_emails():
+    """Personal or Workspace addresses for Directors and School Administrators."""
+    from models import User
+    from utils.user_roles import canonical_role_label
+
+    seen = set()
+    out = []
+    for u in User.query.all():
+        if canonical_role_label(getattr(u, "role", None)) not in ("Director", "School Administrator"):
+            continue
+        raw = (getattr(u, "email", None) or getattr(u, "google_workspace_email", None) or "").strip()
+        if not raw or "@" not in raw:
+            continue
+        key = raw.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(raw)
+    return out
+
+
+def notify_school_admins_new_student_login(
+    *,
+    student_name: str,
+    student_id: str,
+    username: str,
+    portal_password: str,
+    school_email: str | None,
+    google_initial_password: str,
+    context_note: str | None = None,
+) -> int:
+    """
+    Email Directors / School Administrators when a student account is first provisioned
+    (e.g. promoted to 3rd grade). Returns count of successfully queued sends.
+    """
+    recipients = _school_admin_recipient_emails()
+    if not recipients:
+        current_app.logger.warning("notify_school_admins_new_student_login: no admin emails found")
+        return 0
+
+    esc = html.escape
+    subject = f"Student portal ready: {student_name.strip()}"
+    note_block = f"\n\nNote: {context_note}" if context_note else ""
+    body_text = f"""A student website login and school email were just created in the Clara Science Academy app.
+
+Student: {student_name}
+State / internal student ID: {student_id or '—'}
+Website username: {username}
+Website temporary password: {portal_password}
+School email (Google): {school_email or '—'}
+First Google sign-in password: {google_initial_password}
+
+Share these with the family through a secure channel. The website password and Google password are different.{note_block}
+
+— Automated message from Clara Science Academy
+"""
+
+    se = school_email or "—"
+    body_html = f"""<p>A student website login and school email were just created.</p>
+<ul>
+<li><strong>Student:</strong> {esc(student_name)}</li>
+<li><strong>Student ID:</strong> {esc(student_id or '—')}</li>
+<li><strong>Website username:</strong> {esc(username)}</li>
+<li><strong>Website temporary password:</strong> {esc(portal_password)}</li>
+<li><strong>School email:</strong> {esc(se)}</li>
+<li><strong>First Google password:</strong> {esc(google_initial_password)}</li>
+</ul>
+<p>Share with the family securely. Portal and Google passwords are <strong>different</strong>.</p>
+{f"<p><em>{esc(context_note)}</em></p>" if context_note else ""}
+<p style="color:#666;font-size:0.9em;">— Clara Science Academy</p>
+"""
+
+    sent = 0
+    for to in recipients:
+        if send_email(to, subject, body_text, body_html=body_html):
+            sent += 1
+    return sent

@@ -12,7 +12,7 @@
                 <div class="mb-2">
                     <p class="mb-1 small text-muted">This quiz is linked to a Google Form</p>
                     <div class="d-flex gap-2">
-                        <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.sync_google_forms_submissions', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.sync_google_forms_submissions', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
+                        <form method="POST" action="{% if can_assignments_admin_ui %}{{ url_for('management.sync_google_forms_submissions', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.sync_google_forms_submissions', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="btn btn-sm btn-info">
                                 <i class="bi bi-arrow-repeat me-1"></i>Sync Submissions
@@ -26,7 +26,7 @@
             {% else %}
                 <div class="mb-2">
                     <p class="mb-1 small text-muted">Export this quiz to Google Forms</p>
-                    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
+                    <form method="POST" action="{% if can_assignments_admin_ui %}{{ url_for('management.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-success">
                             <i class="bi bi-upload me-1"></i>Export to Google Forms
@@ -38,7 +38,7 @@
         {% endif %}
 
         <div class="compact-action-grid">
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_assignments_admin_ui %}
                 {% if assignment.assignment_type == 'quiz' %}
                 <a href="{{ url_for('management.create_quiz_assignment') }}?edit={{ assignment.id }}" class="btn btn-compact btn-compact-edit">
                     <i class="bi bi-pencil-square"></i>

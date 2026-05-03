@@ -15,7 +15,7 @@
                 <h2><i class="bi bi-people-fill me-3"></i>Students Directory</h2>
                 <p class="mb-0 opacity-90">View and manage all your students</p>
             </div>
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if can_student_admin_ui %}
                 <a href="{{ url_for('management.add_student') }}" class="add-student-btn">
                     <i class="bi bi-plus-circle-fill me-2"></i>Add New Student
                 </a>
@@ -93,7 +93,7 @@
                     <a href="{{ url_for('teacher.dashboard.student_attendance_report', student_id=student.id) }}" class="btn-student-action btn-student-attendance">
                         <i class="bi bi-calendar-check"></i><span>Attendance</span>
                     </a>
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    {% if can_student_admin_ui %}
                     <a href="{{ url_for('management.edit_student', student_id=student.id) }}" class="btn-student-action btn-student-edit">
                         <i class="bi bi-pencil-square"></i><span>Edit</span>
                     </a>

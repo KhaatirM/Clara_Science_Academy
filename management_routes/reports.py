@@ -1096,12 +1096,64 @@ def delete_report_card(report_card_id):
 # (Registered on management blueprint in management_routes/__init__.py)
 # ============================================================
 
+def _apply_grade_promotion_after_year_close(enrolled_student_ids):
+    """
+    For each student ID that had an active enrollment in the closed year:
+    - If is_repeating: clear the flag; do not change grade_level.
+    - Else if grade_level is None: skip.
+    - Else if grade_level >= 12: skip (no auto-promotion past 12th).
+    - Else: increment grade_level by 1.
+
+    Then provision new 3rd+ portal accounts where missing.
+
+    Returns a stats dict.
+    """
+    from datetime import datetime
+    from .students import _provision_student_login_if_needed
+
+    stats = {
+        "promoted": 0,
+        "repeating_cleared": 0,
+        "skipped": 0,
+        "provisioned_accounts": 0,
+    }
+    for sid in enrolled_student_ids:
+        student = Student.query.get(sid)
+        if not student or getattr(student, "is_deleted", False):
+            continue
+        gl = student.grade_level
+        if gl is None:
+            stats["skipped"] += 1
+            continue
+        if student.is_repeating:
+            student.is_repeating = False
+            stats["repeating_cleared"] += 1
+            continue
+        if int(gl) >= 12:
+            stats["skipped"] += 1
+            continue
+        student.grade_level = int(gl) + 1
+        student.status_updated_at = datetime.utcnow()
+        stats["promoted"] += 1
+
+    for sid in enrolled_student_ids:
+        student = Student.query.get(sid)
+        if not student or getattr(student, "is_deleted", False):
+            continue
+        if _provision_student_login_if_needed(student):
+            stats["provisioned_accounts"] += 1
+
+    return stats
+
+
 def close_school_year():
     """
     For a selected school year: generate official Q1–Q4 report cards for all current
     students with active enrollments in that year, then deactivate those enrollments,
     mark classes inactive, set individual and group assignments to Inactive (preserving
-    Voided), and mark the school year inactive. Historical grades and report card rows
+    Voided), promote enrolled students one grade (except those marked repeating; repeating
+    students keep their grade and the flag is cleared), provision new 3rd-grade logins if
+    needed, and mark the school year inactive. Historical grades and report card rows
     remain in the database.
     """
     from models import Assignment, GroupAssignment
@@ -1136,6 +1188,7 @@ def close_school_year():
     skip_n = 0
     err_n = 0
     errors_sample = []
+    enrolled_student_ids = set()
 
     quarters_full = ['Q1', 'Q2', 'Q3', 'Q4']
     for student in students:
@@ -1151,6 +1204,7 @@ def close_school_year():
         if not enrs:
             skip_n += 1
             continue
+        enrolled_student_ids.add(student.id)
         cid_list = list({e.class_id for e in enrs})
         res = persist_report_card_record(
             student_id_int=student.id,
@@ -1190,6 +1244,15 @@ def close_school_year():
             synchronize_session=False,
         )
 
+    promo_stats = None
+    promo_failed = False
+    if enrolled_student_ids:
+        try:
+            promo_stats = _apply_grade_promotion_after_year_close(enrolled_student_ids)
+        except Exception:
+            current_app.logger.exception("Grade promotion after school year close failed")
+            promo_failed = True
+
     sy.is_active = False
     db.session.commit()
 
@@ -1197,7 +1260,19 @@ def close_school_year():
         f"School year {sy.name} closed. "
         f"Report cards saved: {ok_n}. Skipped (no active enrollment in this year): {skip_n}. Errors: {err_n}."
     )
-    flash(msg, 'success' if err_n == 0 else 'warning')
+    if promo_stats:
+        msg += (
+            f" Grade promotion: {promo_stats['promoted']} moved up; "
+            f"{promo_stats['repeating_cleared']} repeating (grade unchanged, flag cleared); "
+            f"{promo_stats['skipped']} unchanged (e.g. no grade or already 12th); "
+            f"{promo_stats['provisioned_accounts']} new portal accounts for eligible grades."
+        )
+    if promo_failed:
+        msg += " Grade promotion failed — review logs and update grades or accounts manually."
+    flash_level = "success" if err_n == 0 and not promo_failed else "warning"
+    if promo_failed:
+        flash_level = "danger"
+    flash(msg, flash_level)
     if errors_sample:
         flash('Examples: ' + '; '.join(errors_sample), 'warning')
 

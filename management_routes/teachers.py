@@ -2,7 +2,7 @@
 Teachers routes for management users.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify, session
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay, Assignment, Attendance, Submission, GroupGrade, Class, Student
@@ -10,8 +10,9 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import json
 from services.google_directory_service import create_google_user
-from services.google_sync_tasks import sync_single_user_to_google
+from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
 from services.email_service import send_staff_welcome_email
+from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
 
 
 def _parse_dt_ymd(s):
@@ -385,11 +386,13 @@ def add_teacher_staff():
 
             if not portal_login:
                 db.session.commit()
-                flash(
-                    f'{assigned_role_display} added for directory only (no website login). '
-                    f'Staff ID: {teacher_staff.staff_id}. Personal email on file: {email}.',
-                    'success',
+                session["credential_modal"] = staff_directory_only_modal_payload(
+                    display_name=f"{first_name} {last_name}".strip(),
+                    staff_id=teacher_staff.staff_id or "",
+                    role_label=assigned_role_display,
+                    personal_email=email,
                 )
+                flash("Staff saved. Review the directory-only summary in the popup.", "success")
                 return redirect(url_for('management.teachers'))
 
             username = _unique_username_for_staff(first_name, last_name)
@@ -420,21 +423,24 @@ def add_teacher_staff():
             )
 
             is_temporary = teacher_staff.is_temporary
-            success_msg = f'{assigned_role_display} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}.'
-            if generated_workspace_email:
-                success_msg += f' School email: {generated_workspace_email}.'
-            success_msg += ' User will be required to change password on first login.'
-            if welcome_sent:
-                success_msg += f' Sign-in details were emailed to {email}.'
-            else:
-                success_msg += (
-                    ' Sign-in email was not sent (configure MAIL_PASSWORD or check logs); '
-                    'share credentials securely another way.'
-                )
+            expires_str = None
             if is_temporary and teacher_staff.access_expires_at:
-                expires_str = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p')
-                success_msg += f' TEMPORARY ACCESS: Access will expire on {expires_str}.'
-            flash(success_msg, 'success')
+                expires_str = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p UTC')
+
+            session["credential_modal"] = staff_full_modal_payload(
+                display_name=f"{first_name} {last_name}".strip(),
+                staff_id=teacher_staff.staff_id or "",
+                role_label=assigned_role_display,
+                username=username,
+                portal_password=password,
+                school_email=generated_workspace_email,
+                google_initial_password=DEFAULT_TEMP_PASSWORD,
+                personal_email=email,
+                welcome_email_sent=welcome_sent,
+                is_temporary=is_temporary,
+                access_expires_at=expires_str,
+            )
+            flash("Staff saved. Use the credential summary popup to copy login details.", "success")
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
@@ -683,20 +689,43 @@ def edit_teacher_staff(staff_id):
                         "school_email": gwe_n,
                     }
                     payload["welcome_email_sent"] = bool(welcome_sent_edit)
+                    exp_edit = None
+                    if teacher_staff.is_temporary and teacher_staff.access_expires_at:
+                        exp_edit = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p UTC')
+                    payload["credential_modal"] = staff_full_modal_payload(
+                        display_name=f"{first_name} {last_name}".strip(),
+                        staff_id=teacher_staff.staff_id or "",
+                        role_label=assigned_role_display,
+                        username=u_n,
+                        portal_password=p_w,
+                        school_email=gwe_n,
+                        google_initial_password=DEFAULT_TEMP_PASSWORD,
+                        personal_email=email,
+                        welcome_email_sent=bool(welcome_sent_edit),
+                        is_temporary=bool(teacher_staff.is_temporary),
+                        access_expires_at=exp_edit,
+                    )
                 return jsonify(payload)
 
             if newly_provisioned:
                 u_n, p_w, gwe_n = newly_provisioned
-                extra_welcome = (
-                    f" Sign-in details were also emailed to {email}."
-                    if welcome_sent_edit
-                    else " Sign-in email was not sent (configure MAIL_PASSWORD or check logs)."
+                exp_edit = None
+                if teacher_staff.is_temporary and teacher_staff.access_expires_at:
+                    exp_edit = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p UTC')
+                session["credential_modal"] = staff_full_modal_payload(
+                    display_name=f"{first_name} {last_name}".strip(),
+                    staff_id=teacher_staff.staff_id or "",
+                    role_label=assigned_role_display,
+                    username=u_n,
+                    portal_password=p_w,
+                    school_email=gwe_n,
+                    google_initial_password=DEFAULT_TEMP_PASSWORD,
+                    personal_email=email,
+                    welcome_email_sent=bool(welcome_sent_edit),
+                    is_temporary=bool(teacher_staff.is_temporary),
+                    access_expires_at=exp_edit,
                 )
-                flash(
-                    f"{assigned_role_display} updated. New website login — Username: {u_n}, Password: {p_w}. "
-                    f"School email: {gwe_n or '(none)'}.{extra_welcome}",
-                    "success",
-                )
+                flash("Staff updated. Use the credential summary popup to copy new login details.", "success")
             else:
                 flash(f'{assigned_role_display} updated successfully!', 'success')
             return redirect(url_for('management.teachers'))

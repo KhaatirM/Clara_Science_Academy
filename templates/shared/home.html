@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated April 29, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 1, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,40 +515,56 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – April 29, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 1, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>April 29</strong> improves <strong>dashboard layout at browser zoom</strong>, <strong>quiz grading and student quiz rules</strong>, and <strong>admin Student &amp; Staff tables</strong> (centering, clearer badges, and fairer GPA display). <strong>April 26</strong> and earlier releases below still describe grading safeguards, roster tools, report cards, and the rest of the changelog.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 1</strong> focuses on <strong>Google Workspace Directory automation</strong> (OUs, school-wide and per-class Groups), <strong>staff portal and welcome-email</strong> options, and <strong>clearer “school email”</strong> wording across the app. <strong>April 29</strong> still covers <strong>dashboard zoom</strong>, <strong>quiz grading</strong>, and <strong>admin Student &amp; Staff tables</strong>; older sections below document grading safeguards, rosters, report cards, and the full changelog.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- May 1, 2026 - Google Workspace automation (Directory + OUs + Groups) -->
+                    <!-- May 1, 2026 - Google Directory, class groups, staff portal & welcome mail -->
                     <div class="update-section mb-4">
-                        <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Workspace Automation (SSOT) – May 1, 2026</h6>
+                        <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Workspace, Staff Portal &amp; Class Email Lists – May 1, 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Admin SDK Directory integration:</strong> The platform can now create Google Workspace accounts, move users between Organizational Units (OUs), and manage Google Group memberships using a service account with domain-wide delegation.
+                                <strong>Directory as single source of truth:</strong> A service account with domain-wide delegation can create Workspace users, move them between OUs, and sync Google Group membership from the database—so Admin Console stays aligned with the website roster.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Automatic OUs (students):</strong> Students are placed under <strong>/Students</strong> by school level (<strong>Elementary</strong>, <strong>Middle School</strong>, <strong>High School</strong>) and <strong>Class of YYYY</strong>. Alumni and removal OUs are supported for lifecycle management.
+                                <strong>Student OUs (including cohorts):</strong> Active students are organized under <strong>/Students</strong> by school level and <strong>Class of YYYY</strong> as an <strong>organizational unit path</strong>. Alumni and removal paths are supported for lifecycle and suspension rules. <strong>Graduation cohorts are not maintained as Google Groups mailing lists</strong> (<code>Class of YYYY@</code>); use school-level lists, <code>studentassembly@</code>, or per-class groups for mail. Legacy cohort groups in Admin may need a one-time cleanup.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Automatic Groups (students):</strong> Each active student is kept in exactly one school-level group (<code>elementary@</code>, <code>middle_school@</code>, <code>highschool@</code>) and is included in <code>studentassembly@</code>. Class rosters can sync to per-class Google Groups so teachers can email an entire class at once.
+                                <strong>School-wide student groups:</strong> Each eligible active student is kept in exactly one level group (<code>elementary@</code>, <code>middle_school@</code>, or <code>highschool@</code>) plus <code>studentassembly@</code>. Grade K–2 records follow the existing policy (no Workspace email until third grade).
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Automatic Groups (staff):</strong> Staff accounts are placed in <strong>/Staff</strong> and ensured in <code>teachers@</code> for consistent messaging and filtering.
+                                <strong>Per-class Google Groups:</strong> Each class can have a stable list address such as <code>class-12-2526@clarascienceacademy.org</code> (internal class id plus a four-digit school-year key from the active year) and a human-readable group name matching the class title. Membership includes enrolled students (with school email) plus primary, additional, and substitute teachers. The <strong>current primary teacher</strong> is the group <strong>owner</strong>; when the primary changes, sync <strong>promotes the new primary before demoting</strong> the former one so someone always has owner rights.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Maintenance + scheduling:</strong> New scripts support dry-run previews and safe enforcement via a scheduled job (cron) so Google stays aligned with the website as the single source of truth.
+                                <strong>Staff OUs and <code>teachers@</code>:</strong> Staff accounts are placed under <strong>/Staff</strong> (including paths for inactive or removed staff where policy applies). While a staff member is in an active OU, sync keeps them in <code>teachers@</code> so faculty-wide email lists stay accurate.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Portal login vs directory-only:</strong> When adding or editing staff, leadership can turn <strong>website portal login</strong> on or off. If portal login is off, the person can still get a Google account and appear in the directory for email and Classroom, but they do not sign in to this website. The role dashboard reflects that distinction.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Welcome email to personal address:</strong> New staff can receive credentials at their <strong>personal email</strong> (no-reply sender). The message clearly separates <strong>website username and temporary portal password</strong> from <strong>Google / school email sign-in</strong> and labels the Workspace address as official <strong>school email</strong> (not generic “Workspace” jargon).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Multiple staff roles:</strong> Accounts can have a primary role plus additional roles stored on the user record. After sign-in, staff with more than one dashboard destination may use the <strong>Choose dashboard</strong> flow to pick where they land (and switch later from the sidebar).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Operations:</strong> Directory and class-group sync can be run on a schedule (cron). Ensure mail settings (for example <code>MAIL_PASSWORD</code> and public site URL) are configured if you rely on welcome messages. A one-time backfill script can create missing class groups where needed.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Accounts, OUs, and group membership can be automatically enforced from the website, removing manual Google Admin work and ensuring students/staff are always organized correctly for email, filtering, and access controls.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Google accounts, OUs, and group membership stay consistent with the website; teachers get reliable class mailing lists with correct ownership; staff understand portal vs Google sign-in; and cohort organization stays clear (OU-based, not duplicate cohort Groups).</p>
                         </div>
                     </div>
 

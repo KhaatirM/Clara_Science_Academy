@@ -6,8 +6,8 @@ Behavior:
 - Students (grade 3+ only; K–2 are skipped — no Directory sync):
   - Only rows where User.google_workspace_email is already set in the database
   - Ensure Google account exists for that email (create if missing)
-  - Ensure OU matches policy derived from grade_level + expected_graduation_year / grad_year (and removal/alumni rules)
-  - Ensure membership in grad-year group (e.g., 2030@clarascienceacademy.org)
+  - Ensure OU matches policy derived from grade_level + expected_graduation_year / grad_year (and removal/alumni rules).
+    Cohort folders are Org Units only (e.g. ``/Students/High School/Class of 2030``), not Google Groups named ``2030@…``.
 - Staff:
   - Ensure Google account exists for User.google_workspace_email (create if missing)
   - Ensure OU under ``/Staff/<…>`` subfolders including Terminated & Removed, Administrator, … (see get_staff_ou_path)
@@ -24,8 +24,6 @@ import os
 import sys
 import time
 from datetime import datetime
-from typing import Optional, Tuple
-
 
 DEFAULT_TEMP_PASSWORD = "Welcome2CSA!"
 DOMAIN = "clarascienceacademy.org"
@@ -53,16 +51,6 @@ def _env_int(name: str, default: int) -> int:
 def _sleep_ms(ms: int) -> None:
     if ms and ms > 0:
         time.sleep(ms / 1000.0)
-
-
-def _grad_year_group_email(grad_year: Optional[int]) -> Optional[str]:
-    if grad_year is None:
-        return None
-    try:
-        y = int(grad_year)
-    except Exception:
-        return None
-    return f"{y}@{DOMAIN}"
 
 
 def main() -> int:
@@ -124,7 +112,6 @@ def main() -> int:
         )
         from services.google_ou_policy import (
             STAFF_OU_TERMINATED_REMOVED,
-            effective_graduation_year,
             get_staff_ou_path,
             resolve_student_ou,
             school_level_group_for_grade,
@@ -236,33 +223,6 @@ def main() -> int:
                         _sleep_ms(sleep_ms)
                     else:
                         print(f"[DRY] would move student {email}: {current_ou} -> {decision.target_ou_path}")
-
-            # Graduation-year group membership (add-only) — same year priority as OU policy
-            eff_grad = effective_graduation_year(
-                grade_level=getattr(student, "grade_level", None),
-                expected_graduation_year=getattr(student, "expected_graduation_year", None),
-                grad_year=getattr(student, "grad_year", None),
-                expected_grad_date=getattr(student, "expected_grad_date", None),
-            )
-            grad_group = _grad_year_group_email(eff_grad)
-            if grad_group:
-                if apply_changes:
-                    if create_missing_groups and not get_google_group(grad_group):
-                        create_google_group(
-                            grad_group,
-                            name=f"Class of {eff_grad}".strip() or grad_group,
-                            description="Auto-created by CSA sync to support filtering/group email.",
-                        )
-                        _sleep_ms(sleep_ms)
-                    if ensure_user_in_group(email, grad_group):
-                        group_adds += 1
-                        print(f"[GROUP] ensured {email} in {grad_group}")
-                    else:
-                        errors += 1
-                        print(f"[ERROR] failed ensuring {email} in {grad_group}")
-                    _sleep_ms(sleep_ms)
-                else:
-                    print(f"[DRY] would ensure {email} in {grad_group}")
 
             # School-level groups: exactly one of Elementary/Middle/High + Student Assembly for all active students
             level_key = school_level_group_for_grade(getattr(student, "grade_level", None))

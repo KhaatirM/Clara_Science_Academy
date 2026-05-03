@@ -41,6 +41,7 @@ from datetime import datetime
 import json
 from utils.grade_helpers import get_points_earned
 from .utils import allowed_file
+from services.class_google_group import try_provision_class_google_group
 
 
 bp = Blueprint('classes', __name__)
@@ -300,6 +301,8 @@ def add_class():
             # --- END OF NEW LOGIC ---
             
             db.session.commit()
+
+            try_provision_class_google_group(new_class.id)
             
             # Provide appropriate success message based on whether Google Classroom was created
             if google_classroom_created:
@@ -547,6 +550,7 @@ def edit_class(class_id):
                     ))
             
             db.session.commit()
+            try_provision_class_google_group(class_id)
             flash(f'Class "{class_obj.name}" updated successfully!', 'success')
             return redirect(url_for('management.classes'))
             
@@ -623,6 +627,7 @@ def class_roster(class_id):
                     
                     if added_count > 0:
                         db.session.commit()
+                        try_provision_class_google_group(class_id)
                         # Automatically void assignments for late-enrolling students
                         from management_routes.late_enrollment_utils import void_assignments_for_late_enrollment
                         for student_id in student_ids:
@@ -646,6 +651,7 @@ def class_roster(class_id):
                     if enrollment:
                         enrollment.is_active = False
                         db.session.commit()
+                        try_provision_class_google_group(class_id)
                         flash('Student removed from class successfully!', 'success')
                     else:
                         flash('Student not found in this class.', 'warning')
@@ -2129,6 +2135,7 @@ def manage_class_roster(class_id):
                 if added_count > 0:
                     try:
                         db.session.commit()
+                        try_provision_class_google_group(class_id)
                         # Automatically void assignments for late-enrolling students
                         from management_routes.late_enrollment_utils import void_assignments_for_late_enrollment
                         for student_id in student_ids:
@@ -2161,6 +2168,7 @@ def manage_class_roster(class_id):
                     enrollment.dropped_at = datetime.utcnow()
                     try:
                         db.session.commit()
+                        try_provision_class_google_group(class_id)
                         flash('Student removed from class successfully.', 'success')
                     except Exception as e:
                         db.session.rollback()

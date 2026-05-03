@@ -22,10 +22,10 @@ from services.google_directory_service import (
     get_google_user,
     move_user_to_ou,
     suspend_user,
-    sync_group_members,
     sync_user_groups,
     sync_user_suspension_with_db_is_active,
 )
+from services.class_google_group import provision_and_sync_class_google_group
 from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
 from utils.student_login_policy import (
     google_workspace_sync_should_skip_student,
@@ -258,7 +258,8 @@ def sync_directory_data():
 
     - Students: compute OU based on grade_level + grad_year (+ alumni/removal rules) and move if needed.
       If marked for removal / inactive, suspend after ~6 months.
-    - Classes: for any Class with google_group_email, sync membership to match current roster.
+    - Classes: ensure each class has a Google Group (class-{id}-{YYYY}@domain), create if missing,
+      and sync membership to enrolled students + primary/additional/substitute teachers.
     """
     # --- Student OU + suspension sync ---
     students = (
@@ -364,33 +365,12 @@ def sync_directory_data():
         f"Directory student sync: moved={moved}, suspended={suspended}, skipped={ou_skipped}, group_synced={group_synced_students}"
     )
 
-    # --- Google Group roster sync ---
-    group_classes = Class.query.filter(Class.google_group_email.isnot(None)).all()
+    # --- Google Group per class: create if missing, sync students + teachers ---
     group_synced = 0
-    for c in group_classes:
-        group_email = (c.google_group_email or "").strip()
-        if not group_email:
-            continue
-
-        roster_rows = (
-            db.session.query(User.google_workspace_email)
-            .join(Student, Student.id == User.student_id)
-            .join(Enrollment, Enrollment.student_id == Student.id)
-            .filter(
-                Enrollment.class_id == c.id,
-                Enrollment.is_active == True,
-                Student.is_deleted == False,
-                User.google_workspace_email.isnot(None),
-            )
-            .all()
-        )
-        roster_emails = [(r[0] or "").strip() for r in roster_rows if r and r[0]]
-
-        if sync_group_members(group_email, roster_emails):
+    for c in Class.query.order_by(Class.id).all():
+        if provision_and_sync_class_google_group(c.id):
             group_synced += 1
-        else:
-            current_app.logger.warning(f"Failed to sync group roster for {group_email} (class_id={c.id})")
 
-    current_app.logger.info(f"Directory group sync complete: groups_synced={group_synced}")
+    current_app.logger.info(f"Directory class group sync complete: classes_ok={group_synced}")
     return True
 

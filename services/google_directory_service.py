@@ -366,48 +366,141 @@ def move_user_to_ou(user_email: str, ou_path: str) -> Optional[bool]:
         return False
 
 
-def sync_group_members(group_email: str, member_emails: Iterable[str]) -> bool:
+def sync_group_members(
+    group_email: str,
+    member_emails: Iterable[str],
+    *,
+    owner_emails: Optional[Iterable[str]] = None,
+) -> bool:
     """
     Ensure a Google Group contains exactly the desired member emails (best-effort).
+
+    If ``owner_emails`` is set, those addresses (must also appear in ``member_emails``)
+    are assigned role OWNER; everyone else MEMBER. Promotions run before demotions so
+    a new primary teacher gains OWNER before a former primary is demoted when the
+    roster changes.
     """
     service = get_directory_service()
     if not service:
         return False
 
-    desired = {m.strip().lower() for m in (member_emails or []) if m and str(m).strip()}
+    group_email = (group_email or "").strip()
+    if not group_email:
+        return False
+
+    canon: Dict[str, str] = {}
+    for raw in member_emails or []:
+        r = (raw or "").strip()
+        if not r:
+            continue
+        canon[r.lower()] = r
+
+    desired = set(canon.keys())
+    owner_lower = {
+        (e or "").strip().lower()
+        for e in (owner_emails or [])
+        if e and str(e).strip()
+    }
+    owner_lower &= desired
+
+    def want_role(email_l: str) -> str:
+        return "OWNER" if email_l in owner_lower else "MEMBER"
+
     try:
-        current_members: List[str] = []
+        current_roles: Dict[str, str] = {}
+        # lower -> memberKey casing returned by API (needed for update/delete)
+        member_key_by_lower: Dict[str, str] = {}
         page_token = None
         while True:
             resp = service.members().list(groupKey=group_email, pageToken=page_token).execute()
             for m in resp.get("members", []) or []:
-                email = (m.get("email") or "").strip().lower()
-                if email:
-                    current_members.append(email)
+                raw_em = (m.get("email") or "").strip()
+                em = raw_em.lower()
+                if not em:
+                    continue
+                role = (m.get("role") or "MEMBER").upper()
+                if role not in ("OWNER", "MANAGER", "MEMBER"):
+                    role = "MEMBER"
+                current_roles[em] = role
+                if raw_em:
+                    member_key_by_lower[em] = raw_em
             page_token = resp.get("nextPageToken")
             if not page_token:
                 break
 
-        current = set(current_members)
+        def member_key(email_l: str) -> str:
+            return canon.get(email_l) or member_key_by_lower.get(email_l, email_l)
+
+        current = set(current_roles.keys())
 
         # Add missing
-        for email in sorted(desired - current):
+        for email_l in sorted(desired - current):
+            role = want_role(email_l)
+            email_body = canon[email_l]
             try:
                 service.members().insert(
                     groupKey=group_email,
-                    body={"email": email, "role": "MEMBER"},
+                    body={"email": email_body, "role": role},
                 ).execute()
-                current_app.logger.info(f"Added {email} to group {group_email}")
+                current_app.logger.info("Added %s to group %s as %s", email_l, group_email, role)
+                current_roles[email_l] = role
+                member_key_by_lower[email_l] = email_body
             except HttpError as e:
-                current_app.logger.error(f"Directory API error adding {email} to {group_email}: {e}")
+                current_app.logger.error(
+                    "Directory API error adding %s to %s: %s", email_l, group_email, e
+                )
+
+        # Promote to OWNER before demoting former primary (safe when primary changes)
+        for email_l in sorted(desired & set(current_roles.keys())):
+            if want_role(email_l) != "OWNER":
+                continue
+            if current_roles.get(email_l) == "OWNER":
+                continue
+            try:
+                service.members().update(
+                    groupKey=group_email,
+                    memberKey=member_key(email_l),
+                    body={"role": "OWNER"},
+                ).execute()
+                current_app.logger.info("Promoted %s to OWNER in %s", email_l, group_email)
+                current_roles[email_l] = "OWNER"
+            except HttpError as e:
+                current_app.logger.error(
+                    "Directory API error promoting %s in %s: %s", email_l, group_email, e
+                )
+
+        # Demote to MEMBER (former primary still co-teaching, or MANAGER cleanup)
+        for email_l in sorted(desired & set(current_roles.keys())):
+            if want_role(email_l) != "MEMBER":
+                continue
+            cr = current_roles.get(email_l)
+            if cr not in ("OWNER", "MANAGER"):
+                continue
+            try:
+                service.members().update(
+                    groupKey=group_email,
+                    memberKey=member_key(email_l),
+                    body={"role": "MEMBER"},
+                ).execute()
+                current_app.logger.info("Demoted %s to MEMBER in %s", email_l, group_email)
+                current_roles[email_l] = "MEMBER"
+            except HttpError as e:
+                current_app.logger.error(
+                    "Directory API error demoting %s in %s: %s", email_l, group_email, e
+                )
 
         # Remove extras
-        for email in sorted(current - desired):
+        for email_l in sorted(set(current_roles.keys()) - desired):
             try:
-                service.members().delete(groupKey=group_email, memberKey=email).execute()
-                current_app.logger.info(f"Removed {email} from group {group_email}")
+                service.members().delete(
+                    groupKey=group_email, memberKey=member_key(email_l)
+                ).execute()
+                current_app.logger.info("Removed %s from group %s", email_l, group_email)
+                current_roles.pop(email_l, None)
             except HttpError as e:
-                current_app.logger.error(f"Directory API error removing {email} from {group_email}: {e}")
+                current_app.logger.error(
+                    "Directory API error removing %s from %s: %s", email_l, group_email, e
+                )
 
         return True
     except HttpError as e:

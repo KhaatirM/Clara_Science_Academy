@@ -2,8 +2,10 @@
 Google Workspace Directory sync for a single user (e.g. after save in management UI).
 
 Mirrors scripts/sync_all_to_google.py for one linked Student or TeacherStaff user:
-ensure OU via policy, graduation-year group membership, school-level groups (students),
-or /Staff + teachers group (staff).
+ensure OU via policy (including ``/Class of YYYY`` org units — not Google Groups),
+school-level groups (students), or /Staff + teachers group (staff).
+
+Graduation cohorts are represented only in the Directory OU tree, not as ``YYYY@`` Groups.
 """
 
 from __future__ import annotations
@@ -26,7 +28,6 @@ from services.google_directory_service import (
 )
 from services.google_ou_policy import (
     STAFF_OU_TERMINATED_REMOVED,
-    effective_graduation_year,
     get_staff_ou_path,
     resolve_student_ou,
     school_level_group_for_grade,
@@ -45,16 +46,6 @@ MIDDLE_SCHOOL_GROUP_EMAIL = f"middle_school@{DOMAIN}"
 HIGH_SCHOOL_GROUP_EMAIL = f"highschool@{DOMAIN}"
 STUDENT_ASSEMBLY_GROUP_EMAIL = f"studentassembly@{DOMAIN}"
 DEFAULT_TEMP_PASSWORD = "Welcome2CSA!"
-
-
-def _grad_year_group_email(grad_year: Optional[int]) -> Optional[str]:
-    if grad_year is None:
-        return None
-    try:
-        y = int(grad_year)
-    except (TypeError, ValueError):
-        return None
-    return f"{y}@{DOMAIN}"
 
 
 def _sync_student_workspace(student: Student, workspace_email: str, *, create_missing_groups: bool) -> None:
@@ -107,22 +98,6 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
         current_ou = g_user.get("orgUnitPath")
         if current_ou != decision.target_ou_path:
             move_user_to_ou(email, decision.target_ou_path)
-
-    eff_y = effective_graduation_year(
-        grade_level=getattr(student, "grade_level", None),
-        expected_graduation_year=getattr(student, "expected_graduation_year", None),
-        grad_year=getattr(student, "grad_year", None),
-        expected_grad_date=getattr(student, "expected_grad_date", None),
-    )
-    grad_group = _grad_year_group_email(eff_y)
-    if grad_group:
-        if create_missing_groups and not get_google_group(grad_group):
-            create_google_group(
-                grad_group,
-                name=f"Class of {eff_y}" if eff_y is not None else grad_group,
-                description="Auto-created by CSA sync to support filtering/group email.",
-            )
-        ensure_user_in_group(email, grad_group)
 
     level_key = school_level_group_for_grade(getattr(student, "grade_level", None))
     level_email = None

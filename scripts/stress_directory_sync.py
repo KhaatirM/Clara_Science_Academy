@@ -76,13 +76,13 @@ def main() -> int:
 
     try:
         from extensions import db
-        from models import Class, Enrollment, Student, User
+        from models import Class, Student, User
         from services.google_directory_service import (
             get_google_user,
             move_user_to_ou,
             suspend_user,
-            sync_group_members,
         )
+        from services.class_google_group import provision_and_sync_class_google_group
         from services.google_ou_policy import resolve_student_ou
         from utils.student_login_policy import (
             google_workspace_sync_should_skip_student,
@@ -172,42 +172,19 @@ def main() -> int:
                     f"suspend_needed={stats.students_suspend_needed} suspended={stats.students_suspended}"
                 )
 
-        # ---- Classes / Groups ----
-        class_rows: List[Class] = (
-            Class.query.filter(Class.google_group_email.isnot(None))
-            .limit(max_classes)
-            .all()
-        )
+        # ---- Classes / Groups (provision + roster + teachers) ----
+        class_rows: List[Class] = Class.query.order_by(Class.id).limit(max_classes).all()
 
         for c in class_rows:
             stats.classes_scanned += 1
-            group_email = (c.google_group_email or "").strip()
-            if not group_email:
-                continue
-
-            roster_rows = (
-                db.session.query(User.google_workspace_email)
-                .join(Student, Student.id == User.student_id)
-                .join(Enrollment, Enrollment.student_id == Student.id)
-                .filter(
-                    Enrollment.class_id == c.id,
-                    Enrollment.is_active == True,
-                    Student.is_deleted == False,
-                    User.google_workspace_email.isnot(None),
-                )
-                .all()
-            )
-            roster_emails = [(r[0] or "").strip() for r in roster_rows if r and r[0]]
-
             if apply_changes:
-                ok = sync_group_members(group_email, roster_emails)
+                ok = provision_and_sync_class_google_group(c.id)
                 _sleep_ms(sleep_ms)
                 if ok:
                     stats.groups_synced += 1
                 else:
                     stats.groups_failed += 1
             else:
-                # dry run: just count as scanned
                 stats.groups_synced += 1
 
             if stats.classes_scanned % 25 == 0:

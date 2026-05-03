@@ -212,6 +212,14 @@ def run(keep_id: int, merge_id: int, new_username: str | None, plain_password: s
     pwd = plain_password if plain_password else secrets.token_urlsafe(16)
     keep.password_hash = generate_password_hash(pwd)
 
+    # Retire duplicate TeacherStaff row (same person had two profiles / two logins)
+    kt = keep.teacher_staff_id
+    mt = merge.teacher_staff_id
+    if kt and mt and mt != kt:
+        from utils.merge_teacher_staff_cleanup import consolidate_duplicate_teacher_staff_rows
+
+        consolidate_duplicate_teacher_staff_rows(mt, kt)
+
     db.session.delete(merge)
     db.session.commit()
 

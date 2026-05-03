@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import json
 from services.google_directory_service import create_google_user
 from services.google_sync_tasks import sync_single_user_to_google
+from services.email_service import send_staff_welcome_email
 
 
 def _parse_dt_ymd(s):
@@ -39,6 +40,79 @@ STAFF_FORM_ROLE_OPTIONS = [
     "Substitute",
     "Other Staff",
 ]
+
+
+def _unique_username_for_staff(first_name: str, last_name: str) -> str:
+    base_username = f"{(first_name or 's')[0].lower()}{(last_name or 'taff').lower()}"
+    username = base_username
+    counter = 1
+    while User.query.filter_by(username=username).first():
+        username = f"{base_username}{counter}"
+        counter += 1
+    return username
+
+
+def _initial_password_staff(first_name: str) -> str:
+    import random
+
+    year = str(random.randint(2000, 2010))
+    return f"{(first_name or 'staff').lower()}{year[-4:]}"
+
+
+def _allocate_workspace_email(first_name: str, last_name: str):
+    if not first_name or not last_name:
+        return None
+    first = first_name.lower().replace(" ", "").replace("-", "")
+    last = last_name.lower().replace(" ", "").replace("-", "")
+    generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
+    existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+    if not existing_user:
+        return generated_workspace_email
+    counter = 2
+    while True:
+        candidate = f"{first}.{last}{counter}@clarascienceacademy.org"
+        if not User.query.filter_by(google_workspace_email=candidate).first():
+            return candidate
+        counter += 1
+
+
+def _post_commit_staff_google_pipeline(user, teacher_staff, assigned_role_display: str):
+    """Directory sync + Admin SDK user create (same as Add Staff). Call after commit."""
+    try:
+        sync_single_user_to_google(user.id)
+    except Exception as e:
+        current_app.logger.warning(
+            "Google Directory sync after save failed for user %s: %s", user.id, e
+        )
+    try:
+        gwe = getattr(user, "google_workspace_email", None)
+        if gwe:
+            created = create_google_user(
+                {
+                    "primaryEmail": gwe,
+                    "name": {"givenName": teacher_staff.first_name, "familyName": teacher_staff.last_name},
+                    "password": "Welcome2CSA!",
+                    "orgUnitPath": "/Staff",
+                    "changePasswordAtNextLogin": True,
+                }
+            )
+            if not created:
+                flash(
+                    f"{assigned_role_display} saved locally, but Google account creation failed for {gwe}. "
+                    "Please verify the account does not already exist and that Directory permissions are configured.",
+                    "warning",
+                )
+        else:
+            flash(
+                f"{assigned_role_display} saved locally, but no school email was set, so no Google account was created.",
+                "warning",
+            )
+    except Exception as e:
+        current_app.logger.error(f"Failed to auto-create Google staff account: {e}")
+        flash(
+            f"{assigned_role_display} saved locally, but Google account creation encountered an error. Check logs for details.",
+            "warning",
+        )
 
 
 def _dict_for_staff_form(teacher_staff):
@@ -85,6 +159,7 @@ def _dict_for_staff_form(teacher_staff):
         "resume_filename": teacher_staff.resume_filename,
         "other_document_filename": teacher_staff.other_document_filename,
         "grade_taught": grades,
+        "portal_login": bool(getattr(teacher_staff, "portal_login", True)),
     }
 
 
@@ -199,7 +274,8 @@ def add_teacher_staff():
             permissions_json = None
         
         primary_role, secondary_roles, assigned_role_display = _roles_from_add_edit_form(is_tech_actor)
-        
+        portal_login = request.form.get("portal_login") == "on"
+
         # Address fields
         street = request.form.get('street_address', '').strip()
         apt_unit = request.form.get('apt_unit_suite', '').strip()
@@ -239,22 +315,7 @@ def add_teacher_staff():
         if TeacherStaff.query.filter_by(email=email).first():
             flash('A teacher/staff member with this email already exists.', 'danger')
             return redirect(request.url)
-        
-        # Generate username (first initial + last name + random number)
-        import random
-        base_username = f"{first_name[0].lower()}{last_name.lower()}"
-        username = base_username
-        counter = 1
-        
-        # Ensure unique username
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-        
-        # Generate password (first name + last 4 digits of year)
-        year = str(random.randint(2000, 2010))
-        password = f"{first_name.lower()}{year[-4:]}"
-        
+
         try:
             # Create teacher/staff record
             teacher_staff = TeacherStaff()
@@ -274,29 +335,33 @@ def add_teacher_staff():
             teacher_staff.subject = subject
             teacher_staff.employment_type = employment_type
             teacher_staff.grades_taught = grades_taught_json
-            
-            # Temporary access fields
-            is_temporary = request.form.get('is_temporary') == 'on'
-            teacher_staff.is_temporary = is_temporary
-            
-            if is_temporary:
-                access_expires_str = request.form.get('access_expires_at', '').strip()
-                if access_expires_str:
-                    try:
-                        from datetime import datetime, timezone
-                        # Parse the datetime string (naive datetime from form)
-                        access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
-                        # Make it timezone-aware (UTC) for consistent storage
-                        access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
-                        teacher_staff.access_expires_at = access_expires_at
-                    except ValueError:
-                        flash('Invalid expiration date format. Please use the date picker.', 'warning')
+            teacher_staff.portal_login = portal_login
+
+            # Temporary access only applies when the staff member has a portal login.
+            if not portal_login:
+                teacher_staff.is_temporary = False
+                teacher_staff.access_expires_at = None
+            else:
+                is_temporary = request.form.get('is_temporary') == 'on'
+                teacher_staff.is_temporary = is_temporary
+
+                if is_temporary:
+                    access_expires_str = request.form.get('access_expires_at', '').strip()
+                    if access_expires_str:
+                        try:
+                            from datetime import datetime, timezone
+
+                            access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
+                            access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
+                            teacher_staff.access_expires_at = access_expires_at
+                        except ValueError:
+                            flash('Invalid expiration date format. Please use the date picker.', 'warning')
+                            return redirect(request.url)
+                    else:
+                        flash('Expiration date is required for temporary staff.', 'danger')
                         return redirect(request.url)
                 else:
-                    flash('Expiration date is required for temporary staff.', 'danger')
-                    return redirect(request.url)
-            else:
-                teacher_staff.access_expires_at = None
+                    teacher_staff.access_expires_at = None
             
             # Address fields
             teacher_staff.street = street
@@ -317,84 +382,56 @@ def add_teacher_staff():
             
             # Generate staff ID
             teacher_staff.staff_id = teacher_staff.generate_staff_id()
-            
-            # Auto-generate Google Workspace email for teacher/staff
-            # Format: firstname.lastname@clarascienceacademy.org
-            generated_workspace_email = None
-            if first_name and last_name:
-                first = first_name.lower().replace(' ', '').replace('-', '')
-                last = last_name.lower().replace(' ', '').replace('-', '')
-                generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
-                
-                # Check if this email is already in use
-                existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
-                if existing_user:
-                    # Add a number suffix if duplicate
-                    counter = 2
-                    while existing_user:
-                        generated_workspace_email = f"{first}.{last}{counter}@clarascienceacademy.org"
-                        existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
-                        counter += 1
-            
-            # Create user account
+
+            if not portal_login:
+                db.session.commit()
+                flash(
+                    f'{assigned_role_display} added for directory only (no website login). '
+                    f'Staff ID: {teacher_staff.staff_id}. Personal email on file: {email}.',
+                    'success',
+                )
+                return redirect(url_for('management.teachers'))
+
+            username = _unique_username_for_staff(first_name, last_name)
+            password = _initial_password_staff(first_name)
+            generated_workspace_email = _allocate_workspace_email(first_name, last_name)
+
             user = User()
             user.username = username
             user.password_hash = generate_password_hash(password)
             user.teacher_staff_id = teacher_staff.id
-            user.email = email  # Set personal email from form
-            user.google_workspace_email = generated_workspace_email  # Set generated workspace email
-            user.is_temporary_password = True  # New users must change password
+            user.email = email
+            user.google_workspace_email = generated_workspace_email
+            user.is_temporary_password = True
             user.password_changed_at = None
             user.permissions = permissions_json
             _apply_user_roles(user, primary_role, secondary_roles)
-            
+
             db.session.add(user)
             db.session.commit()
-            # Google Directory sync immediately after commit (Save → Workspace updated in one step)
-            try:
-                sync_single_user_to_google(user.id)
-            except Exception as e:
-                current_app.logger.warning(
-                    "Google Directory sync after save failed for user %s: %s", user.id, e
-                )
+            _post_commit_staff_google_pipeline(user, teacher_staff, assigned_role_display)
 
-            # Create Google Workspace account (non-blocking)
-            try:
-                if generated_workspace_email:
-                    created = create_google_user(
-                        {
-                            "primaryEmail": generated_workspace_email,
-                            "name": {"givenName": teacher_staff.first_name, "familyName": teacher_staff.last_name},
-                            "password": "Welcome2CSA!",
-                            "orgUnitPath": "/Staff",
-                            "changePasswordAtNextLogin": True,
-                        }
-                    )
-                    if not created:
-                        flash(
-                            f"{assigned_role_display} created locally, but Google account creation failed for {generated_workspace_email}. "
-                            "Please verify the account does not already exist and that Directory permissions are configured.",
-                            "warning",
-                        )
-                else:
-                    flash(
-                        f"{assigned_role_display} created locally, but no Google Workspace email was generated, so no Google account was created.",
-                        "warning",
-                    )
-            except Exception as e:
-                current_app.logger.error(f"Failed to auto-create Google staff account: {e}")
-                flash(
-                    f"{assigned_role_display} created locally, but Google account creation encountered an error. Check logs for details.",
-                    "warning",
-                )
-            
-            # Show success message with credentials
+            welcome_sent = send_staff_welcome_email(
+                email,
+                f"{first_name} {last_name}".strip(),
+                username=username,
+                temporary_password=password,
+                school_email=generated_workspace_email,
+            )
+
+            is_temporary = teacher_staff.is_temporary
             success_msg = f'{assigned_role_display} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}.'
             if generated_workspace_email:
-                success_msg += f' Google Workspace Email: {generated_workspace_email}.'
+                success_msg += f' School email: {generated_workspace_email}.'
             success_msg += ' User will be required to change password on first login.'
+            if welcome_sent:
+                success_msg += f' Sign-in details were emailed to {email}.'
+            else:
+                success_msg += (
+                    ' Sign-in email was not sent (configure MAIL_PASSWORD or check logs); '
+                    'share credentials securely another way.'
+                )
             if is_temporary and teacher_staff.access_expires_at:
-                from datetime import datetime
                 expires_str = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p')
                 success_msg += f' TEMPORARY ACCESS: Access will expire on {expires_str}.'
             flash(success_msg, 'success')
@@ -463,7 +500,8 @@ def edit_teacher_staff(staff_id):
         if is_tech_actor:
             permissions_json = None
         primary_role, secondary_roles, assigned_role_display = _roles_from_add_edit_form(is_tech_actor)
-        
+        portal_login = request.form.get("portal_login") == "on"
+
         # Validate required fields
         if not all([first_name, last_name, email]):
             if is_ajax:
@@ -487,6 +525,8 @@ def edit_teacher_staff(staff_id):
             return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
         
         try:
+            newly_provisioned = None
+
             # Update teacher/staff record
             teacher_staff.first_name = first_name
             teacher_staff.middle_initial = middle_initial
@@ -508,31 +548,36 @@ def edit_teacher_staff(staff_id):
             teacher_staff.subject = subject
             teacher_staff.employment_type = employment_type
             teacher_staff.grades_taught = grades_taught_json
-            
-            # Temporary access fields
-            is_temporary = request.form.get('is_temporary') == 'on'
-            teacher_staff.is_temporary = is_temporary
-            
-            if is_temporary:
-                access_expires_str = request.form.get('access_expires_at', '').strip()
-                if access_expires_str:
-                    try:
-                        from datetime import timezone
-                        access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
-                        access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
-                        teacher_staff.access_expires_at = access_expires_at
-                    except ValueError:
+            teacher_staff.portal_login = portal_login
+
+            if not portal_login:
+                teacher_staff.is_temporary = False
+                teacher_staff.access_expires_at = None
+            else:
+                is_temporary = request.form.get('is_temporary') == 'on'
+                teacher_staff.is_temporary = is_temporary
+
+                if is_temporary:
+                    access_expires_str = request.form.get('access_expires_at', '').strip()
+                    if access_expires_str:
+                        try:
+                            from datetime import timezone
+
+                            access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
+                            access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
+                            teacher_staff.access_expires_at = access_expires_at
+                        except ValueError:
+                            if is_ajax:
+                                return jsonify({'success': False, 'message': 'Invalid expiration date format. Please use the date picker.'})
+                            flash('Invalid expiration date format. Please use the date picker.', 'warning')
+                            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
+                    else:
                         if is_ajax:
-                            return jsonify({'success': False, 'message': 'Invalid expiration date format. Please use the date picker.'})
-                        flash('Invalid expiration date format. Please use the date picker.', 'warning')
+                            return jsonify({'success': False, 'message': 'Expiration date is required for temporary staff.'})
+                        flash('Expiration date is required for temporary staff.', 'danger')
                         return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
                 else:
-                    if is_ajax:
-                        return jsonify({'success': False, 'message': 'Expiration date is required for temporary staff.'})
-                    flash('Expiration date is required for temporary staff.', 'danger')
-                    return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
-            else:
-                teacher_staff.access_expires_at = None
+                    teacher_staff.access_expires_at = None
             
             # Address fields
             teacher_staff.street = request.form.get('street_address', '').strip()
@@ -548,48 +593,112 @@ def edit_teacher_staff(staff_id):
             teacher_staff.emergency_phone = request.form.get('emergency_contact_phone', '').strip()
             teacher_staff.emergency_relationship = request.form.get('emergency_contact_relationship', '').strip()
             
-            # Update user account if it exists
             user = User.query.filter_by(teacher_staff_id=staff_id).first()
-            if user:
-                user.email = email
-                _apply_user_roles(user, primary_role, secondary_roles)
-                user.permissions = permissions_json
-                gwe = (request.form.get("google_workspace_email") or "").strip()
-                if gwe:
-                    existing_gwe = User.query.filter_by(google_workspace_email=gwe).first()
-                    if existing_gwe and existing_gwe.id != user.id:
-                        if is_ajax:
-                            return jsonify(
-                                {
-                                    "success": False,
-                                    "message": f"Google Workspace email {gwe} is already in use by another user.",
-                                }
-                            ), 400
-                        flash(f"Google Workspace email {gwe} is already in use.", "danger")
-                        return render_template(
-                            "management/add_teacher_staff.html", **_edit_staff_form_context(teacher_staff)
-                        )
-                    user.google_workspace_email = gwe
+
+            if portal_login:
+                if user:
+                    user.email = email
+                    _apply_user_roles(user, primary_role, secondary_roles)
+                    user.permissions = permissions_json
+                    gwe = (request.form.get("google_workspace_email") or "").strip()
+                    if gwe:
+                        existing_gwe = User.query.filter_by(google_workspace_email=gwe).first()
+                        if existing_gwe and existing_gwe.id != user.id:
+                            if is_ajax:
+                                return jsonify(
+                                    {
+                                        "success": False,
+                                        "message": f"School email {gwe} is already in use by another user.",
+                                    }
+                                ), 400
+                            flash(f"School email {gwe} is already in use.", "danger")
+                            return render_template(
+                                "management/add_teacher_staff.html", **_edit_staff_form_context(teacher_staff)
+                            )
+                        user.google_workspace_email = gwe
+                    else:
+                        user.google_workspace_email = None
                 else:
-                    user.google_workspace_email = None
+                    username = _unique_username_for_staff(first_name, last_name)
+                    password_plain = _initial_password_staff(first_name)
+                    generated_workspace_email = _allocate_workspace_email(first_name, last_name)
+                    new_user = User()
+                    new_user.username = username
+                    new_user.password_hash = generate_password_hash(password_plain)
+                    new_user.teacher_staff_id = staff_id
+                    new_user.email = email
+                    new_user.google_workspace_email = generated_workspace_email
+                    new_user.is_temporary_password = True
+                    new_user.password_changed_at = None
+                    new_user.permissions = permissions_json
+                    _apply_user_roles(new_user, primary_role, secondary_roles)
+                    db.session.add(new_user)
+                    newly_provisioned = (username, password_plain, generated_workspace_email)
+            else:
+                if user:
+                    fallback_uid = _actor_user_id_for_staff_removal([user.id])
+                    if not fallback_uid:
+                        raise ValueError(
+                            "No user account is available to reassign messaging and audit references. "
+                            "Cannot remove this staff login safely."
+                        )
+                    _detach_user_references_before_delete(user.id, fallback_uid)
+                    db.session.delete(user)
             
             db.session.commit()
-            # Google Directory sync immediately after commit (Save → Workspace updated in one step)
+
             sync_user = User.query.filter_by(teacher_staff_id=staff_id).first()
-            if sync_user and sync_user.google_workspace_email:
-                try:
-                    sync_single_user_to_google(sync_user.id)
-                except Exception as e:
-                    current_app.logger.warning(
-                        "Google Directory sync after staff edit failed for user %s: %s",
-                        sync_user.id,
-                        e,
+            welcome_sent_edit = False
+            if portal_login and sync_user:
+                if newly_provisioned:
+                    _post_commit_staff_google_pipeline(sync_user, teacher_staff, assigned_role_display)
+                    welcome_sent_edit = send_staff_welcome_email(
+                        email,
+                        f"{first_name} {last_name}".strip(),
+                        username=newly_provisioned[0],
+                        temporary_password=newly_provisioned[1],
+                        school_email=newly_provisioned[2],
                     )
+                elif sync_user.google_workspace_email:
+                    try:
+                        sync_single_user_to_google(sync_user.id)
+                    except Exception as e:
+                        current_app.logger.warning(
+                            "Google Directory sync after staff edit failed for user %s: %s",
+                            sync_user.id,
+                            e,
+                        )
             
             if is_ajax:
-                return jsonify({'success': True, 'message': f'{assigned_role_display} updated successfully!'})
-            
-            flash(f'{assigned_role_display} updated successfully!', 'success')
+                payload = {
+                    "success": True,
+                    "message": f"{assigned_role_display} updated successfully!",
+                }
+                if newly_provisioned:
+                    u_n, p_w, gwe_n = newly_provisioned
+                    payload["credentials"] = {
+                        "username": u_n,
+                        "password": p_w,
+                        "google_workspace_email": gwe_n,
+                        "school_email": gwe_n,
+                    }
+                    payload["welcome_email_sent"] = bool(welcome_sent_edit)
+                return jsonify(payload)
+
+            if newly_provisioned:
+                u_n, p_w, gwe_n = newly_provisioned
+                extra_welcome = (
+                    f" Sign-in details were also emailed to {email}."
+                    if welcome_sent_edit
+                    else " Sign-in email was not sent (configure MAIL_PASSWORD or check logs)."
+                )
+                flash(
+                    f"{assigned_role_display} updated. New website login — Username: {u_n}, Password: {p_w}. "
+                    f"School email: {gwe_n or '(none)'}.{extra_welcome}",
+                    "success",
+                )
+            else:
+                flash(f'{assigned_role_display} updated successfully!', 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
@@ -1341,6 +1450,11 @@ def view_teacher(teacher_id):
         access_expires_iso = None
 
     try:
+        _school_mail = (
+            teacher.user.google_workspace_email
+            if teacher.user and hasattr(teacher.user, "google_workspace_email")
+            else None
+        )
         return jsonify({
             'id': teacher.id,
             'first_name': teacher.first_name,
@@ -1357,11 +1471,13 @@ def view_teacher(teacher_id):
             'assigned_role': getattr(teacher, 'assigned_role', None),
             'employment_type': getattr(teacher, 'employment_type', None),
             'employment_status': getattr(teacher, 'employment_status', 'Active'),
+            'portal_login': bool(getattr(teacher, 'portal_login', True)),
             'marked_for_removal': bool(getattr(teacher, 'marked_for_removal', False)),
             'removal_note': getattr(teacher, 'removal_note', None),
             'subject': getattr(teacher, 'subject', None),
             'email': teacher.email,
-            'google_workspace_email': teacher.user.google_workspace_email if teacher.user and hasattr(teacher.user, 'google_workspace_email') else None,
+            'google_workspace_email': _school_mail,
+            'school_email': _school_mail,
             'username': teacher.user.username if teacher.user and hasattr(teacher.user, 'username') else None,
             'department': teacher.department,
             'department_list': department_list,
@@ -1607,17 +1723,20 @@ def edit_teacher(teacher_id):
                 perms = request.form.getlist('permissions')
                 teacher.user.permissions = json.dumps(perms) if perms else None
             
-            # Update Google Workspace email
+            # Update school email (stored as google_workspace_email)
             google_workspace_email = request.form.get('google_workspace_email', '').strip()
             if google_workspace_email:
-                # Check if this email is already used by another user
                 existing_user = User.query.filter_by(google_workspace_email=google_workspace_email).first()
                 if existing_user and existing_user.id != teacher.user.id:
-                    return jsonify({'success': False, 'message': f'Google Workspace email {google_workspace_email} is already in use by another user.'}), 400
-                
+                    return jsonify(
+                        {
+                            'success': False,
+                            'message': f'School email {google_workspace_email} is already in use by another user.',
+                        }
+                    ), 400
+
                 teacher.user.google_workspace_email = google_workspace_email
             else:
-                # Clear the Google Workspace email if field is empty
                 teacher.user.google_workspace_email = None
         
         db.session.commit()

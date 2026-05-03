@@ -335,12 +335,6 @@
                         <button class="btn btn-primary w-100" onclick="alert('Edit user - functionality to be implemented')">
                             <i class="bi bi-pencil"></i> Edit User
                         </button>
-                        <form method="POST" action="{{ url_for('tech.delete_user', user_id=user.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Delete user {{ user.username }}? This action cannot be undone.')">
-                                <i class="bi bi-trash"></i> Delete User
-                            </button>
-                        </form>
                         {% else %}
                         <div class="alert alert-secondary mb-0">
                             <small>No portal user account is linked to this student.</small>

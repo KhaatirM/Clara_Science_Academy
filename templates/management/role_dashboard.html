@@ -3967,6 +3967,21 @@
                             </div>
                         </div>
 
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden; border-left: 6px solid #4f46e5 !important;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-person-lock me-2"></i>Website access
+                                </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="portal_login" id="portal_login_edit_modal" value="on" ${data.portal_login === false ? '' : 'checked'}>
+                                    <label class="form-check-label fw-semibold" for="portal_login_edit_modal">Allow website (portal) login</label>
+                                </div>
+                                <small class="text-muted d-block"><i class="bi bi-info-circle me-1"></i>Uncheck for directory-only staff (no website login). School email is only created when website access is enabled.</small>
+                            </div>
+                        </div>
+
                         <!-- Basic Information Card -->
                         <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
                             <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
@@ -4017,12 +4032,12 @@
                                         <input type="email" class="form-control" name="email" value="${data.email || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                         <small class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem; display: block;"><i class="bi bi-info-circle me-1"></i>For personal communications</small>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6" id="staffGweModalWrap">
                                         <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
-                                            <i class="bi bi-google me-1" style="color: #4285f4;"></i>Google Workspace Email
+                                            <i class="bi bi-envelope-at me-1 text-primary"></i>School email
                                         </label>
-                                        <input type="email" class="form-control" name="google_workspace_email" value="${data.google_workspace_email || ''}" placeholder="teacher@clarascienceacademy.org" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
-                                        <small class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem; display: block;"><i class="bi bi-info-circle me-1"></i>For Google Sign-In authentication</small>
+                                        <input type="email" class="form-control" name="google_workspace_email" value="${data.school_email || data.google_workspace_email || ''}" placeholder="teacher@clarascienceacademy.org" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                        <small class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem; display: block;"><i class="bi bi-info-circle me-1"></i>Official @clarascienceacademy.org address (Google). Issued whenever website access is enabled; welcome email goes to personal email.</small>
                                     </div>
                                 </div>
                             </div>
@@ -4416,7 +4431,7 @@
                         </div>
 
                         <!-- Temporary Access Management Card -->
-                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107;">
+                        <div class="card border-0 shadow-sm mb-4" id="staffTemporaryAccessModalWrap" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107;">
                             <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
                                 <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
                                     <i class="bi bi-clock-history me-2"></i>Temporary Access Management
@@ -4487,7 +4502,19 @@
                     .then(response => response.json())
                     .then(result => {
                         if (result.success) {
-                            location.reload();
+                            if (result.credentials) {
+                                var c = result.credentials;
+                                var se = c.school_email || c.google_workspace_email;
+                                var emailed = result.welcome_email_sent ? ' Details were emailed to their personal address.' : '';
+                                showToast(
+                                    'Website login created. Username: ' + c.username + ', Password: ' + c.password +
+                                    (se ? ', School email: ' + se : '') + emailed,
+                                    'success'
+                                );
+                                setTimeout(function () { location.reload(); }, 1200);
+                            } else {
+                                location.reload();
+                            }
                         } else {
                             showToast(result.message || 'Could not update teacher/staff.', 'danger');
                         }
@@ -4496,6 +4523,23 @@
                 };
                 var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
                 modal.show();
+
+                setTimeout(function () {
+                    function toggleStaffPortalModal() {
+                        var cb = document.getElementById('portal_login_edit_modal');
+                        var gwe = document.getElementById('staffGweModalWrap');
+                        var tempCard = document.getElementById('staffTemporaryAccessModalWrap');
+                        if (!cb) return;
+                        var on = cb.checked;
+                        if (gwe) gwe.style.display = on ? '' : 'none';
+                        if (tempCard) tempCard.style.display = on ? '' : 'none';
+                    }
+                    var plCb = document.getElementById('portal_login_edit_modal');
+                    if (plCb) {
+                        plCb.addEventListener('change', toggleStaffPortalModal);
+                        toggleStaffPortalModal();
+                    }
+                }, 50);
                 
                 // Add click handlers for grade checkbox boxes
                 setTimeout(() => {

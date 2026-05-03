@@ -212,6 +212,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Website / portal login -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm staff-card" style="border-radius: 0.85rem; overflow: hidden; border-left: 4px solid #4f46e5;">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0 fw-semibold"><i class="bi bi-person-lock me-2 text-primary"></i>Website access</h5>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="portal_login" id="portal_login_add" value="on"
+                                   {% if not editing or (staff_data and staff_data.portal_login) %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="portal_login_add">Allow website (portal) login for this person</label>
+                        </div>
+                        <p class="small text-muted mb-0" id="portal_login_hint_on">When enabled: the system creates a <strong>website</strong> username and password. It also assigns your official <strong>school email</strong> (@clarascienceacademy.org) for Google sign-in and email — that address is always generated and sent to the personal email on file. Google Directory sync runs as for other staff.</p>
+                        <p class="small text-muted mb-0" id="portal_login_hint_off" style="display: none;">Directory-only: contact info and role appear on the roster. No website login, school email, or password is created from this page.</p>
+                    </div>
+                </div>
+            </div>
             
             <!-- Emergency Contact Card -->
             <div class="col-12">
@@ -425,7 +443,7 @@
             </div>
             
             <!-- Temporary Access Section -->
-            <div class="col-12">
+            <div class="col-12" id="staffPortalTemporaryWrap">
                 <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107 !important;">
                     <div class="card-header bg-white border-bottom">
                         <h5 class="mb-0 fw-semibold">Temporary Access Settings</h5>
@@ -658,6 +676,23 @@
         }
 
         updateTeachingFields();
+
+        function toggleStaffPortalLoginAdd() {
+            const cb = document.getElementById('portal_login_add');
+            const tempWrap = document.getElementById('staffPortalTemporaryWrap');
+            const hintOn = document.getElementById('portal_login_hint_on');
+            const hintOff = document.getElementById('portal_login_hint_off');
+            if (!cb) return;
+            const on = cb.checked;
+            if (tempWrap) tempWrap.style.display = on ? '' : 'none';
+            if (hintOn) hintOn.style.display = on ? '' : 'none';
+            if (hintOff) hintOff.style.display = on ? 'none' : '';
+        }
+        const portalAddCb = document.getElementById('portal_login_add');
+        if (portalAddCb) {
+            portalAddCb.addEventListener('change', toggleStaffPortalLoginAdd);
+            toggleStaffPortalLoginAdd();
+        }
 
         // Disabled fields are not submitted; re-enable right before submit (Tech flow locks role/departments).
         const staffForm = document.querySelector('form.needs-validation');

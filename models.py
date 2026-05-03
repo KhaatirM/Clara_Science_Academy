@@ -288,6 +288,9 @@ class TeacherStaff(db.Model):
     marked_for_removal = db.Column(db.Boolean, default=False, nullable=False)  # flagged for removal / cleanup
     removal_note = db.Column(db.Text, nullable=True)  # optional reason / context
     status_updated_at = db.Column(db.DateTime, nullable=True)
+
+    # When False: directory/HR only — no User row, no generated website login or Workspace email.
+    portal_login = db.Column(db.Boolean, default=True, nullable=False)
     
     # File uploads
     resume_filename = db.Column(db.String(255), nullable=True)

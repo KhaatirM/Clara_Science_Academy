@@ -1186,51 +1186,10 @@ def update_system_config():
     
     return redirect(url_for('tech.system'))
 
-@tech_blueprint.route('/user/management', methods=['GET', 'POST'])
+@tech_blueprint.route('/user/management', methods=['GET'])
 @login_required
 @tech_required
 def user_management():
-    if request.method == 'POST':
-        user_id = request.form.get('user_id')
-        username = request.form.get('username')
-        role = request.form.get('role')
-        password = request.form.get('password')
-
-        # Validate required fields
-        if not all([username, role]):
-            flash('Username and role are required.', 'danger')
-            return redirect(url_for('tech.user_management'))
-
-        # Get existing user or create new one
-        if user_id:
-            user = User.query.get(user_id)
-            if not user:
-                flash('User not found.', 'danger')
-                return redirect(url_for('tech.user_management'))
-        else:
-            user = User()
-        
-        # Prevent username collision
-        existing_user = User.query.filter(User.username == username, User.id != user.id).first()
-        if existing_user:
-            flash('Username already exists.', 'danger')
-            return redirect(url_for('tech.user_management'))
-
-        # Update user attributes
-        user.username = username
-        user.role = role
-        if password:
-            user.password_hash = generate_password_hash(password)
-        
-        if not user_id:
-            db.session.add(user)
-            flash('User created successfully.', 'success')
-        else:
-            flash('User updated successfully.', 'success')
-            
-        db.session.commit()
-        return redirect(url_for('tech.user_management'))
-
     users = (
         User.query.options(
             joinedload(User.student_profile),
@@ -1239,80 +1198,13 @@ def user_management():
         .order_by(User.username.asc())
         .all()
     )
-    from utils.tech_user_management import partition_users_for_tech_management, user_may_hard_delete_site_accounts
+    from utils.tech_user_management import partition_users_for_tech_management
 
     parts = partition_users_for_tech_management(users)
     return render_template(
         'management/user_management.html',
-        allow_hard_delete=user_may_hard_delete_site_accounts(current_user),
         **parts,
     )
-
-@tech_blueprint.route('/user/delete/<int:user_id>', methods=['POST'])
-@login_required
-@tech_required
-def delete_user(user_id):
-    # Prevent users from deleting themselves
-    if user_id == current_user.id:
-        flash("You cannot delete your own account.", "danger")
-        return redirect(url_for('tech.user_management'))
-
-    from utils.tech_user_management import user_may_hard_delete_site_accounts
-    from utils.tech_user_purge import purge_linked_teacher_staff, purge_user_dependencies
-    from utils.user_roles import canonical_role_label
-
-    if not user_may_hard_delete_site_accounts(current_user):
-        flash(
-            "Only Tech or IT Support may permanently delete login accounts from User Management.",
-            "danger",
-        )
-        return redirect(url_for('tech.user_management'))
-
-    user = User.query.get_or_404(user_id)
-    if canonical_role_label(user.role) == "Student":
-        flash(
-            "Student accounts cannot be hard-deleted here. Use student removal or enrollment workflows.",
-            "warning",
-        )
-        return redirect(url_for('tech.user_management'))
-
-    ts_id = getattr(user, "teacher_staff_id", None)
-
-    try:
-        purge_user_dependencies(user.id)
-        db.session.delete(user)
-        db.session.commit()
-        flash(
-            "User login was permanently removed together with all database records tied to that login.",
-            "success",
-        )
-    except IntegrityError as e:
-        db.session.rollback()
-        flash(
-            "Could not remove this account: another database record still references it. "
-            f"Details: {e}",
-            "danger",
-        )
-        return redirect(url_for("tech.user_management"))
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error deleting user: {e}", "danger")
-        return redirect(url_for("tech.user_management"))
-
-    if ts_id:
-        try:
-            purge_linked_teacher_staff(ts_id)
-            db.session.commit()
-            flash("Linked staff directory profile was also removed.", "success")
-        except IntegrityError:
-            db.session.rollback()
-            flash(
-                "Login was deleted. The staff directory profile still exists because classes or other "
-                "records reference it — reassign those records if you also need the profile removed.",
-                "warning",
-            )
-
-    return redirect(url_for('tech.user_management'))
 
 @tech_blueprint.route('/maintenance')
 @login_required

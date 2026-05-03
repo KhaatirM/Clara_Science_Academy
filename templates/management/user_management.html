@@ -4,11 +4,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
 {% endblock %}
 
-{% macro user_row(user, show_hard_delete) %}
+{% macro user_row(user) %}
 <tr>
-    <td>{{ user.id }}</td>
-    <td>{{ user.username }}</td>
-    <td>
+    <td class="text-center">{{ user.id }}</td>
+    <td class="text-center">{{ user.username }}</td>
+    <td class="text-center">
         {% if user.student_profile and user.student_profile.student_id %}
             <code class="bg-light p-1 rounded">{{ user.student_profile.student_id }}</code>
         {% elif user.teacher_staff_profile and user.teacher_staff_profile.staff_id %}
@@ -17,7 +17,7 @@
             <span class="text-muted">N/A</span>
         {% endif %}
     </td>
-    <td>
+    <td class="text-center">
         <span class="badge
             {% if user.role == 'Director' %}bg-danger
             {% elif user.role == 'School Administrator' %}bg-warning
@@ -28,15 +28,21 @@
             {{ user.role }}
         </span>
     </td>
-    <td>
-        {% if user|user_lifecycle == 'current' %}
-            <span class="badge bg-success">Current</span>
+    <td class="text-center">
+        {% set pst = user|portal_account_status %}
+        {% if pst == 'Active' %}
+            <span class="badge bg-success">Active</span>
+        {% elif pst == 'Disabled' %}
+            <span class="badge bg-warning text-dark">Disabled</span>
         {% else %}
-            <span class="badge bg-secondary">Former</span>
+            <span class="badge bg-secondary">No account</span>
         {% endif %}
     </td>
-    <td>
-        <div class="btn-group btn-group-sm flex-wrap">
+    <td class="text-center">
+        {% if user.id == current_user.id %}
+        <span class="text-muted small" title="Actions are hidden for the account you are logged in with">—</span>
+        {% else %}
+        <div class="btn-group btn-group-sm flex-wrap justify-content-center">
             <a href="{{ url_for('tech.view_user_details', user_id=user.id) }}"
                class="btn btn-outline-info" title="View Details">
                 <i class="bi bi-eye"></i>
@@ -46,64 +52,48 @@
                     title="Edit User">
                 <i class="bi bi-pencil"></i>
             </button>
-            {% if user.id != current_user.id %}
             <a href="{{ url_for('tech.impersonate_user', user_id=user.id) }}"
                class="btn btn-outline-primary" title="Impersonate User"
                onclick="return confirm('Impersonate {{ user.username|e }}? This will log you in as this user.')">
                 <i class="bi bi-person-check"></i>
             </a>
-            {% else %}
-            <span class="text-muted small">Current user</span>
-            {% endif %}
-
-            {% if show_hard_delete and user.id != current_user.id %}
-            <form method="POST" action="{{ url_for('tech.delete_user', user_id=user.id) }}"
-                  class="d-inline"
-                  onsubmit="return confirm('Permanently DELETE login {{ user.username|e }}? This cannot be undone.')">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="btn btn-outline-danger" title="Hard delete account">
-                    <i class="bi bi-trash-fill"></i>
-                </button>
-            </form>
-            {% elif not show_hard_delete %}
-            <span class="text-muted small" title="Student accounts are not hard-deleted here">—</span>
-            {% endif %}
         </div>
+        {% endif %}
     </td>
 </tr>
 {% endmacro %}
 
-{% macro user_section(title, subtitle, rows, show_hard_delete) %}
+{% macro user_section(title, subtitle, rows) %}
 <div class="col-12 mb-4">
     <div class="tech-quick-actions">
-        <div class="tech-quick-actions-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="mb-0"><i class="bi bi-people me-2"></i>{{ title }}</h5>
-            <span class="badge bg-dark">{{ rows|length }}</span>
+        <div class="tech-quick-actions-header d-flex justify-content-center align-items-center flex-wrap gap-2 position-relative px-2">
+            <h5 class="mb-0 text-center"><i class="bi bi-people me-2"></i>{{ title }}</h5>
+            <span class="badge bg-dark position-absolute end-0 top-50 translate-middle-y me-2">{{ rows|length }}</span>
         </div>
-        <p class="text-muted small px-3 pt-2 mb-0">{{ subtitle }}</p>
+        <p class="text-muted small px-3 pt-2 mb-0 text-center">{{ subtitle }}</p>
         <div class="tech-quick-actions-body">
             {% if rows %}
             <div class="table-responsive">
-                <table class="table table-hover table-sm align-middle mb-0">
+                <table class="table table-hover table-sm align-middle mb-0 text-center">
                     <thead>
                         <tr>
-                            <th>User ID</th>
-                            <th>Username</th>
-                            <th>Login ID</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th class="text-center">User ID</th>
+                            <th class="text-center">Username</th>
+                            <th class="text-center">Login ID</th>
+                            <th class="text-center">Role</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in rows %}
-                            {{ user_row(user, show_hard_delete) }}
+                            {{ user_row(user) }}
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
             {% else %}
-            <p class="text-muted mb-0 px-3 py-3">No accounts in this section.</p>
+            <p class="text-muted mb-0 px-3 py-3 text-center">No accounts in this section.</p>
             {% endif %}
         </div>
     </div>
@@ -120,15 +110,9 @@
                 </h2>
                 <p class="tech-dashboard-subtitle mb-0">
                     <i class="bi bi-person-gear me-2"></i>
-                    Accounts grouped by role and enrollment/employment status.
-                    {% if allow_hard_delete %}
-                    <strong>Hard delete</strong> is available for <strong>non-student</strong> logins only (Tech / IT Support).
-                    {% endif %}
+                    View-only directory of logins. New accounts and removals are handled in Students, Staff, or other admin workflows—not here.
                 </p>
             </div>
-            <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                <i class="bi bi-person-plus me-1"></i>Add New User
-            </button>
         </div>
     </div>
 
@@ -150,72 +134,28 @@
             <div class="row g-3 g-md-4">
                 {{ user_section(
                     'Students — current',
-                    'Active enrollment (student record not inactive / removed). Hard delete is not available for student logins.',
-                    students_current,
-                    false
+                    'Active enrollment (student record not inactive / removed).',
+                    students_current
                 ) }}
                 {{ user_section(
                     'Students — former',
                     'Inactive, marked for removal, or soft-deleted student records.',
-                    students_former,
-                    false
+                    students_former
                 ) }}
             </div>
         </div>
         <div class="tab-pane fade" id="pane-staff" role="tabpanel">
             <div class="row g-3 g-md-4">
                 {{ user_section(
-                    'Staff &amp; other — current',
+                    'Staff & other — current',
                     'Director, admin, teacher, tech, and logins with an active staff profile.',
-                    staff_current,
-                    allow_hard_delete
+                    staff_current
                 ) }}
                 {{ user_section(
-                    'Staff &amp; other — former',
+                    'Staff & other — former',
                     'Inactive or removed staff / orphaned logins without an active staff row.',
-                    staff_former,
-                    allow_hard_delete
+                    staff_former
                 ) }}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add User Modal -->
-<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addUserForm">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" autocomplete="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" autocomplete="new-password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="role" class="form-label">Role</label>
-                        <select class="form-select" id="role" name="role" required>
-                            <option value="">Select Role</option>
-                            <option value="Director">Director</option>
-                            <option value="School Administrator">School Administrator</option>
-                            <option value="Teacher">Teacher</option>
-                            <option value="Student">Student</option>
-                            <option value="Tech">Tech</option>
-                            <option value="IT Support">IT Support</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveUser()">Save User</button>
             </div>
         </div>
     </div>
@@ -224,12 +164,6 @@
 <script>
 function editUser(userId, username, role) {
     alert('Edit user ' + userId + ' — use View Details or follow-up workflow.');
-}
-
-function saveUser() {
-    alert('Add user — submit via POST to user management when wired to save.');
-    var el = document.getElementById('addUserModal');
-    if (el && window.bootstrap) bootstrap.Modal.getInstance(el)?.hide();
 }
 </script>
 {% endblock %}

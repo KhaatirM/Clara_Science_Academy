@@ -240,6 +240,12 @@ def create_app(config_class=None):
                         conn.execute(text("ALTER TABLE teacher_staff ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"))
                         conn.commit()
                         print("Added teacher_staff.is_active column.")
+                    if 'portal_login' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE teacher_staff ADD COLUMN portal_login INTEGER NOT NULL DEFAULT 1"
+                        ))
+                        conn.commit()
+                        print("Added teacher_staff.portal_login column.")
                 elif dialect == 'postgresql':
                     def _pg_has(col):
                         r = conn.execute(text(
@@ -269,6 +275,12 @@ def create_app(config_class=None):
                         ))
                         conn.commit()
                         print("Added teacher_staff.is_active column.")
+                    if not _pg_has('portal_login'):
+                        conn.execute(text(
+                            "ALTER TABLE teacher_staff ADD COLUMN portal_login BOOLEAN NOT NULL DEFAULT true"
+                        ))
+                        conn.commit()
+                        print("Added teacher_staff.portal_login column.")
         except Exception as e:
             print(f"Note: teacher_staff status columns check failed (may already exist): {e}")
 
@@ -608,6 +620,13 @@ def create_app(config_class=None):
         from utils.tech_user_management import user_lifecycle_bucket
 
         return user_lifecycle_bucket(user)
+
+    @app.template_filter("portal_account_status")
+    def portal_account_status_filter(user):
+        """Active / Disabled / No account for Tech User Management status column."""
+        from utils.tech_user_management import user_portal_status_label
+
+        return user_portal_status_label(user)
 
     @app.template_filter('schooltime')
     def schooltime_filter(value, fmt='%m/%d/%Y %I:%M %p'):

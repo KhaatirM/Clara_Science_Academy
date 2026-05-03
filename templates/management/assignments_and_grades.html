@@ -9,6 +9,7 @@
 {% block title %}Assignments & Grades Management{% endblock %}
 
 {% block dashboard_content %}
+{% set use_management_assignments_urls = (request.blueprint == 'management') %}
 <div class="container-fluid px-2 px-md-4">
     <!-- Modern Assignments Header -->
     <div class="assignments-admin-header mb-4">
@@ -33,7 +34,7 @@
             </div>
             <div class="d-flex gap-2">
                 {% if not show_class_selection %}
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    {% if use_management_assignments_urls %}
                         <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-assignments-back">
                             <i class="bi bi-arrow-left me-2"></i>Back
                         </a>
@@ -43,13 +44,13 @@
                         </a>
                     {% endif %}
                 {% endif %}
-                <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.redo_dashboard') }}{% else %}{{ url_for('teacher.redo_dashboard') }}{% endif %}" class="btn btn-redo-dashboard">
+                <a href="{% if use_management_assignments_urls %}{{ url_for('management.redo_dashboard') }}{% else %}{{ url_for('teacher.redo_dashboard') }}{% endif %}" class="btn btn-redo-dashboard">
                     <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
                     {% if redo_request_count and redo_request_count > 0 %}
                     <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 50%; min-width: 1.5rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">{{ redo_request_count }}</span>
                     {% endif %}
                 </a>
-                <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_extension_requests') }}{% else %}{{ url_for('teacher.view_extension_requests') }}{% endif %}" class="btn btn-extension-requests">
+                <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_extension_requests') }}{% else %}{{ url_for('teacher.view_extension_requests') }}{% endif %}" class="btn btn-extension-requests">
                     <i class="bi bi-clock-history me-2"></i>Extension Requests
                     {% if extension_request_count and extension_request_count > 0 %}
                     <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 50%; min-width: 1.5rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">{{ extension_request_count }}</span>
@@ -63,7 +64,7 @@
                     {% endif %}
                 </a>
                 {% endif %}
-                {% if selected_class and current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                {% if selected_class and (use_management_assignments_urls or 'Teacher' in (current_user.role or '') or role_canonical in ['Director', 'School Administrator']) %}
                 <button type="button" class="btn btn-bulk-void" data-bs-toggle="modal" data-bs-target="#bulkVoidModal" title="Void multiple assignments at once">
                     <i class="bi bi-slash-circle me-2"></i>Bulk Void
                 </button>
@@ -493,7 +494,7 @@
                                     <button class="btn btn-primary" onclick="viewAssignment({{ assignment.id }})">
                                         <i class="fas fa-eye me-2"></i>View Assignment
                                     </button>
-                                    <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-outline-primary">
+                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-outline-primary">
                                         <i class="fas fa-users me-2"></i>View Class
                                     </a>
                                 </div>
@@ -631,15 +632,15 @@
                                 </div>
                                 <div class="card-footer bg-light">
                                     <div class="d-grid gap-2">
-                                        <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-primary btn-sm">
+                                        <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-eye me-2"></i>View Assignment
                                         </a>
-                                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                                        {% if use_management_assignments_urls %}
                                         <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
                                             <i class="fas fa-edit me-2"></i>Grade
                                         </a>
                                         {% endif %}
-                                        <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_class', class_id=group_assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=group_assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm">
+                                        <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=group_assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=group_assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-users me-2"></i>View Class
                                         </a>
                                     </div>
@@ -865,16 +866,16 @@
                                                         <i class="fas fa-edit me-1"></i>Grade
                                                     </button>
                                                     {% else %}
-                                                    <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=assignment.id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Group Assignment Details">
+                                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=assignment.id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Group Assignment Details">
                                                         <i class="fas fa-eye me-1"></i>View Assignment
                                                     </a>
-                                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                                    {% if use_management_assignments_urls %}
                                                     <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-success btn-sm" title="Grade Group Submissions">
                                                         <i class="fas fa-edit me-1"></i>Grade
                                                     </a>
                                                     {% endif %}
                                                     {% endif %}
-                                                    <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Class">
+                                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Class">
                                                         <i class="fas fa-users me-1"></i>View Class
                                                     </a>
                                                 </div>
@@ -903,7 +904,7 @@
                             <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
                             <h5 class="text-muted">No Class Selected</h5>
                             <p class="text-muted">Please select a class to view its assignments and grades.</p>
-                            <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.assignments_and_grades') }}{% else %}{{ url_for('teacher.dashboard.assignments_and_grades') }}{% endif %}" class="btn btn-primary">
+                            <a href="{% if use_management_assignments_urls %}{{ url_for('management.assignments_and_grades') }}{% else %}{{ url_for('teacher.dashboard.assignments_and_grades') }}{% endif %}" class="btn btn-primary">
                                 <i class="fas fa-arrow-left me-2"></i>Back to Classes
                             </a>
                         </div>
@@ -920,7 +921,7 @@
 function viewClassAssignmentsAndGrades(classId) {
     // Redirect to assignments and grades page with selected class, defaulting to assignments view
     // Use the correct route based on user role
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if use_management_assignments_urls %}
     window.location.href = `{{ url_for('management.assignments_and_grades') }}?class_id=${classId}&view=assignments`;
     {% else %}
     window.location.href = `{{ url_for('teacher.dashboard.assignments_and_grades') }}?class_id=${classId}&view=assignments`;
@@ -948,7 +949,7 @@ function toggleView(view) {
     params.append('view', view);
     
     // Redirect to update the view
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if use_management_assignments_urls %}
     window.location.href = `{{ url_for('management.assignments_and_grades') }}?${params.toString()}`;
     {% else %}
     window.location.href = `{{ url_for('teacher.dashboard.assignments_and_grades') }}?${params.toString()}`;
@@ -959,7 +960,7 @@ function viewAssignment(assignmentId) {
     // View assignment details
     // Use the correct route based on user role
     if (assignmentId && assignmentId !== '') {
-        {% if current_user.role in ['Director', 'School Administrator'] %}
+        {% if use_management_assignments_urls %}
         window.location.href = `{{ url_for('management.view_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
         {% else %}
         window.location.href = `{{ url_for('teacher.assignments.view_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
@@ -972,7 +973,7 @@ function viewAssignment(assignmentId) {
 function gradeAssignment(assignmentId) {
     // Open grading interface - use correct route based on user role
     if (assignmentId && assignmentId !== '') {
-        {% if current_user.role in ['Director', 'School Administrator'] %}
+        {% if use_management_assignments_urls %}
         window.location.href = `{{ url_for('management.grade_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
         {% else %}
         window.location.href = `{{ url_for('teacher.grading.grade_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
@@ -1088,7 +1089,7 @@ function grantExtensions(assignmentId) {
     if (assignmentId && assignmentId !== '') {
         // This would open a modal or redirect to extension page
         // For now, we'll redirect to the assignment view where extensions can be managed
-        {% if current_user.role in ['Director', 'School Administrator'] %}
+        {% if use_management_assignments_urls %}
         window.location.href = `{{ url_for('management.view_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
         {% else %}
         window.location.href = `{{ url_for('teacher.assignments.view_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
@@ -1100,7 +1101,7 @@ function grantExtensions(assignmentId) {
 
 function createAssignment() {
     // Redirect to assignment creation; pass class_id when viewing a specific class
-    {% if current_user.role in ['Director', 'School Administrator'] %}
+    {% if use_management_assignments_urls %}
     window.location.href = "{{ url_for('management.assignment_type_selector') }}{% if selected_class %}?class_id={{ selected_class.id }}{% endif %}";
     {% else %}
     window.location.href = "{{ url_for('teacher.assignments.assignment_type_selector') }}{% if selected_class %}?class_id={{ selected_class.id }}{% endif %}";

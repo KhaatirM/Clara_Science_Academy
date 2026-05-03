@@ -824,16 +824,9 @@ def assignments_and_grades():
             flash('Invalid user session. Please log in again.', 'error')
             return redirect(url_for('auth.login'))
         
-        # Determine which classes the user can access
-        if user_role == 'Director':
-            # Directors can see all classes
-            accessible_classes = all_classes
-        elif user_role == 'School Administrator':
-            # School Administrators can see all classes for assignment management
-            accessible_classes = all_classes
-        else:
-            # Fallback - should not happen due to @management_required decorator
-            accessible_classes = []
+        # All users who pass @management_required may view assignments here (Director, School
+        # Administrator, aliases like "admin", or Administration staff with assignments_grades:manage).
+        accessible_classes = all_classes
         
         # Get filter and sort parameters with safe defaults
         class_filter = request.args.get('class_id', '') or ''
@@ -1535,37 +1528,12 @@ def assignments_legacy():
     # Get current user's role and permissions
     user_role = current_user.role
     user_id = current_user.id
-    
-    # Determine which classes the user can access
-    if user_role == 'Director':
-        # Directors can see all classes
-        accessible_classes = all_classes
-        assignments_query = Assignment.query
-    elif user_role == 'School Administrator':
-        # School Administrators can see classes they teach + all assignments for viewing
-        # First, find the TeacherStaff record for this user
-        teacher_staff = None
-        if current_user.teacher_staff_id:
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        
-        if teacher_staff:
-            teacher_classes = Class.query.filter_by(teacher_id=teacher_staff.id).all()
-            # If no classes assigned, assign them to the first available class for testing
-            if not teacher_classes and all_classes:
-                first_class = all_classes[0]
-                first_class.teacher_id = teacher_staff.id
-                db.session.commit()
-                teacher_classes = [first_class]
-        else:
-            teacher_classes = []
-        accessible_classes = teacher_classes
-        
-        # For assignments, they can see all assignments but only edit their own class assignments
-        assignments_query = Assignment.query
-    else:
-        # Fallback - should not happen due to @management_required decorator
-        accessible_classes = []
-        assignments_query = Assignment.query.none()
+    from utils.user_roles import canonical_role_label
+
+    role_canon = canonical_role_label(user_role)
+    # Anyone passing @management_required may use this page (same scope as main assignments hub).
+    accessible_classes = all_classes
+    assignments_query = Assignment.query
     
     # Get filter parameters
     selected_class_id = request.args.get('class_id', '')
@@ -1614,7 +1582,7 @@ def assignments_legacy():
     
     # Get teacher_staff_id for template use
     teacher_staff_id = None
-    if user_role == 'School Administrator':
+    if role_canon == "School Administrator":
         if current_user.teacher_staff_id:
             teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
             if teacher_staff:

@@ -31,19 +31,25 @@
             <span class="home-hero-feature"><i class="bi bi-graph-up-arrow"></i> Data-Driven Results</span>
         </div>
         {% if current_user.is_authenticated %}
-            {% set role_name = current_user.role|lower|replace(' ', '_') %}
-            {% if role_name == 'school_administrator' %}
-                {% set dashboard_url = url_for('management.management_dashboard') %}
-            {% elif role_name == 'director' %}
-                {% set dashboard_url = url_for('management.management_dashboard') %}
-            {% elif role_name == 'teacher' %}
-                {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
-            {% elif role_name == 'student' %}
-                {% set dashboard_url = url_for('student.student_dashboard') %}
-            {% elif role_name == 'tech' %}
-                {% set dashboard_url = url_for('tech.tech_dashboard') %}
-            {% else %}
+            {% if dual_dashboard_staff %}
                 {% set dashboard_url = url_for('auth.dashboard') %}
+            {% else %}
+                {% set role_name = current_user.role|lower|replace(' ', '_') %}
+                {% if role_name == 'school_administrator' %}
+                    {% set dashboard_url = url_for('management.management_dashboard') %}
+                {% elif role_name == 'director' %}
+                    {% set dashboard_url = url_for('management.management_dashboard') %}
+                {% elif role_name == 'teacher' %}
+                    {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
+                {% elif role_name == 'student' %}
+                    {% set dashboard_url = url_for('student.student_dashboard') %}
+                {% elif role_name == 'tech' %}
+                    {% set dashboard_url = url_for('tech.tech_dashboard') %}
+                {% elif role_name == 'it_support' %}
+                    {% set dashboard_url = url_for('tech.tech_dashboard') %}
+                {% else %}
+                    {% set dashboard_url = url_for('auth.dashboard') %}
+                {% endif %}
             {% endif %}
             <div class="home-hero-actions">
                 <p>Welcome back, {{ current_user.username }}! ({{ current_user.role }})</p>
@@ -51,6 +57,11 @@
                     <a class="home-hero-btn home-hero-btn-primary" href="{{ dashboard_url }}" role="button">
                         <i class="bi bi-speedometer2"></i> Go to Your Dashboard
                     </a>
+                    {% if dual_dashboard_staff %}
+                    <a class="home-hero-btn home-hero-btn-outline" href="{{ url_for('auth.switch_staff_dashboard') }}" role="button">
+                        <i class="bi bi-shuffle"></i> Switch dashboard
+                    </a>
+                    {% endif %}
                     <a class="home-hero-btn home-hero-btn-outline" href="{{ url_for('auth.logout') }}" role="button">
                         <i class="bi bi-box-arrow-right"></i> Logout
                     </a>

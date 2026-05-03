@@ -1,0 +1,58 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Choose dashboard — Clara Science Academy{% endblock %}
+
+{% block main_classes %}choose-dashboard-main{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/choose_staff_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="choose-dashboard-shell">
+  <div class="choose-dashboard-card">
+    <p class="choose-dashboard-eyebrow">Signed in</p>
+    <h1 class="choose-dashboard-title">Which dashboard do you need?</h1>
+    <p class="choose-dashboard-lead">
+      Your account has both technical and school administration access. Pick where you want to work now.
+      Use <strong>Switch dashboard</strong> on the <strong>Home</strong> tab or in the top bar anytime to change without signing out.
+    </p>
+
+    <p class="choose-dashboard-actions-intro">Choose one:</p>
+
+    <form method="POST" action="{{ url_for('auth.choose_staff_dashboard') }}" id="chooseStaffDashboardForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="choose-dashboard-grid">
+        <button type="submit" name="target" value="tech" class="choose-dashboard-option choose-dashboard-option-tech">
+          <span class="choose-dashboard-option-inner">
+            <span class="choose-dashboard-icon-wrap choose-dashboard-icon-tech" aria-hidden="true">
+              <i class="bi bi-cpu-fill"></i>
+            </span>
+            <span>
+              <span class="choose-dashboard-option-title">Tech</span>
+              <span class="choose-dashboard-option-desc">IT tools, devices, directory, and technical administration.</span>
+            </span>
+          </span>
+        </button>
+        <button type="submit" name="target" value="management" class="choose-dashboard-option choose-dashboard-option-mgmt">
+          <span class="choose-dashboard-option-inner">
+            <span class="choose-dashboard-icon-wrap choose-dashboard-icon-mgmt" aria-hidden="true">
+              <i class="bi bi-building-fill-gear"></i>
+            </span>
+            <span>
+              <span class="choose-dashboard-option-title">School management</span>
+              <span class="choose-dashboard-option-desc">Students, staff, classes, attendance, and school operations.</span>
+            </span>
+          </span>
+        </button>
+      </div>
+    </form>
+
+    <div class="choose-dashboard-footer-note">
+      <i class="bi bi-house-door me-1"></i>
+      Return to the public site anytime from <a href="{{ url_for('auth.home') }}">Home</a>, or
+      <a href="{{ url_for('auth.switch_staff_dashboard') }}">switch dashboard</a> after you’ve entered one of the areas above.
+    </div>
+  </div>
+</div>
+{% endblock %}

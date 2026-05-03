@@ -1,7 +1,9 @@
 from functools import wraps
-from flask import abort, request
+from flask import abort, request, flash, redirect, url_for
 from flask_login import current_user
 import json
+
+from utils.user_roles import user_has_tech_route_access, user_has_management_entry_access
 
 TEACHER_ROLES = [
     'History Teacher',
@@ -74,7 +76,7 @@ def permissions_required(*perms, require_all=False, allow_admin=True):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 abort(401)
-            if allow_admin and current_user.role in ['School Administrator', 'Director']:
+            if allow_admin and user_has_management_entry_access(current_user):
                 return f(*args, **kwargs)
             if not perms:
                 abort(403)
@@ -105,7 +107,7 @@ def tech_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        if current_user.role not in ['Tech', 'IT Support', 'Director']:
+        if not user_has_tech_route_access(current_user):
             abort(403)  # Forbidden - wrong role
         return f(*args, **kwargs)
     return decorated_function
@@ -116,7 +118,7 @@ def management_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        if current_user.role in ['School Administrator', 'Director']:
+        if user_has_management_entry_access(current_user):
             return f(*args, **kwargs)
 
         # Permission-based access for non-admin staff in Administration department
@@ -263,6 +265,11 @@ def student_required(f):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
         if current_user.role != 'Student':
-            abort(403)  # Forbidden - wrong role
+            flash(
+                'The student portal is only for student accounts. '
+                'Staff should sign in from the main login page and open your staff dashboard.',
+                'warning',
+            )
+            return redirect(url_for('auth.dashboard'))
         return f(*args, **kwargs)
     return decorated_function

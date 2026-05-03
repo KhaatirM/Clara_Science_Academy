@@ -153,6 +153,29 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: permissions column check failed (may already exist): {e}")
 
+        # Add user.secondary_roles (JSON list) for multi-dashboard staff logins
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(user)"))
+                    columns = [row[1] for row in r]
+                    if 'secondary_roles' not in columns:
+                        conn.execute(text("ALTER TABLE user ADD COLUMN secondary_roles TEXT"))
+                        conn.commit()
+                        print("Added user.secondary_roles column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'user' AND column_name = 'secondary_roles'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text('ALTER TABLE "user" ADD COLUMN secondary_roles TEXT'))
+                        conn.commit()
+                        print("Added user.secondary_roles column.")
+        except Exception as e:
+            print(f"Note: secondary_roles column check failed (may already exist): {e}")
+
         # Add message.is_edited / parent_message_id if missing (ORM expects them; older DBs may lack them)
         try:
             with db.engine.connect() as conn:
@@ -779,6 +802,18 @@ def create_app(config_class=None):
             return {"has_perm": has_perm, "current_user_permissions": perms()}
         except Exception:
             return {"has_perm": lambda _p: False, "current_user_permissions": []}
+
+    @app.context_processor
+    def inject_dual_dashboard():
+        """Staff who may open Tech or Management dashboard (merged / multi-role accounts)."""
+        if not current_user.is_authenticated:
+            return {"dual_dashboard_staff": False}
+        try:
+            from utils.user_roles import staff_must_choose_dashboard
+
+            return {"dual_dashboard_staff": staff_must_choose_dashboard(current_user)}
+        except Exception:
+            return {"dual_dashboard_staff": False}
 
     @app.context_processor
     def inject_role_display():

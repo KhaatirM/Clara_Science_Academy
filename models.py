@@ -40,6 +40,10 @@ class User(db.Model, UserMixin):
     # Fine-grained permissions (JSON list), primarily for non-admin staff in Administration department.
     # Example: '["students:view","report_cards:generate"]'
     permissions = db.Column(db.Text, nullable=True)
+
+    # Additional role labels when one login spans multiple dashboards (e.g. Tech + School Administrator).
+    # JSON list of strings, e.g. '["Tech"]' alongside primary ``role`` == 'School Administrator'.
+    secondary_roles = db.Column(db.Text, nullable=True)
     
     # Google OAuth tokens (encrypted)
     _google_refresh_token = db.Column(db.String(512), nullable=True)

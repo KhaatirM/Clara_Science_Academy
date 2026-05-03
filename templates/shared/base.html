@@ -40,22 +40,38 @@
                             </span>
                         </li>
                         <li class="nav-item">
-                            {% set role_name = current_user.role|lower|replace(' ', '_') %}
-                            {% if role_name == 'school_administrator' %}
-                                {% set dashboard_url = url_for('management.management_dashboard') %}
-                            {% elif role_name == 'director' %}
-                                {% set dashboard_url = url_for('management.management_dashboard') %}
-                            {% elif role_name == 'teacher' %}
-                                {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
-                            {% elif role_name == 'student' %}
-                                {% set dashboard_url = url_for('student.student_dashboard') %}
-                            {% elif role_name == 'tech' %}
-                                {% set dashboard_url = url_for('tech.tech_dashboard') %}
-                            {% else %}
+                            <a class="nav-link" href="{{ url_for('auth.home') }}"><i class="fas fa-home me-1"></i>Home</a>
+                        </li>
+                        <li class="nav-item">
+                            {% if dual_dashboard_staff %}
                                 {% set dashboard_url = url_for('auth.dashboard') %}
+                            {% else %}
+                                {% set role_name = current_user.role|lower|replace(' ', '_') %}
+                                {% if role_name == 'school_administrator' %}
+                                    {% set dashboard_url = url_for('management.management_dashboard') %}
+                                {% elif role_name == 'director' %}
+                                    {% set dashboard_url = url_for('management.management_dashboard') %}
+                                {% elif role_name == 'teacher' %}
+                                    {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
+                                {% elif role_name == 'student' %}
+                                    {% set dashboard_url = url_for('student.student_dashboard') %}
+                                {% elif role_name == 'tech' %}
+                                    {% set dashboard_url = url_for('tech.tech_dashboard') %}
+                                {% elif role_name == 'it_support' %}
+                                    {% set dashboard_url = url_for('tech.tech_dashboard') %}
+                                {% else %}
+                                    {% set dashboard_url = url_for('auth.dashboard') %}
+                                {% endif %}
                             {% endif %}
                             <a class="nav-link" href="{{ dashboard_url }}">Dashboard</a>
                         </li>
+                        {% if dual_dashboard_staff %}
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-switch-dashboard" href="{{ url_for('auth.switch_staff_dashboard') }}" title="Pick Tech or School management">
+                                <i class="fas fa-exchange-alt me-1"></i>Switch dashboard
+                            </a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
                         </li>
@@ -125,7 +141,7 @@
         </div>
     </nav>
 
-    <main class="container mt-4">
+    <main class="{% block main_classes %}container mt-4{% endblock %}">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}

@@ -53,7 +53,17 @@
                 <div class="collapse-text" id="collapse-text">Collapse</div>
             </div>
             <ul class="nav flex-column sidebar-nav">
-                
+                {% if dual_dashboard_staff %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint in ('auth.choose_staff_dashboard', 'auth.switch_staff_dashboard') %}active{% endif %}" href="{{ url_for('auth.switch_staff_dashboard') }}">
+                        <i class="bi bi-arrow-left-right"></i><span> Switch dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item px-3 py-1" aria-hidden="true">
+                    <hr class="my-1 opacity-25">
+                </li>
+                {% endif %}
+
                 {# --- DIRECTOR TABS --- #}
                 {% if current_user.role == 'Director' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>

@@ -73,8 +73,17 @@ def login():
                 user = User.query.filter_by(username=username).first()
                 if user and password and check_password_hash(user.password_hash, password):
                     # Tech users and administrators can access during maintenance
-                    if user.role in ['Tech', 'IT Support', 'Director', 'School Administrator'] and maintenance.allow_tech_access:
+                    from utils.user_roles import user_has_tech_route_access, user_has_management_entry_access
+                    can_break_glass = (
+                        maintenance.allow_tech_access
+                        and (
+                            user_has_tech_route_access(user)
+                            or user_has_management_entry_access(user)
+                        )
+                    )
+                    if can_break_glass:
                         login_user(user)
+                        session.pop('staff_dashboard_target', None)
                         # Log successful tech login during maintenance
                         get_log_activity()(
                             user_id=user.id,
@@ -198,6 +207,8 @@ def login():
                 # Convert remember to boolean
                 remember = bool(request.form.get('remember'))
                 login_user(user, remember=remember)
+                # Fresh staff dashboard choice every sign-in (Tech vs management)
+                session.pop('staff_dashboard_target', None)
                 
                 # Increment login count
                 user.login_count += 1
@@ -258,6 +269,7 @@ def logout():
         user_agent=request.headers.get('User-Agent')
     )
     
+    session.pop('staff_dashboard_target', None)
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
@@ -271,14 +283,68 @@ def home():
         return redirect(url_for('auth.home'))
     return render_template('shared/home.html')
 
+@auth_blueprint.route('/choose-staff-dashboard', methods=['GET', 'POST'])
+@login_required
+def choose_staff_dashboard():
+    """When one login has both tech-style and management-style roles, pick which dashboard to open."""
+    from utils.user_roles import (
+        staff_must_choose_dashboard,
+        user_has_tech_route_access,
+        user_has_management_entry_access,
+    )
+
+    if current_user.role == 'Student':
+        return redirect(url_for('auth.dashboard'))
+    if not staff_must_choose_dashboard(current_user):
+        return redirect(url_for('auth.dashboard'))
+
+    if request.method == 'POST':
+        choice = (request.form.get('target') or '').strip()
+        if choice == 'tech' and user_has_tech_route_access(current_user):
+            session['staff_dashboard_target'] = 'tech'
+            return redirect(url_for('auth.dashboard'))
+        if choice == 'management' and user_has_management_entry_access(current_user):
+            session['staff_dashboard_target'] = 'management'
+            return redirect(url_for('auth.dashboard'))
+        flash('Please choose a valid dashboard.', 'warning')
+
+    return render_template('shared/choose_staff_dashboard.html')
+
+
+@auth_blueprint.route('/switch-staff-dashboard')
+@login_required
+def switch_staff_dashboard():
+    """Clear saved staff dashboard choice so dual-role users can pick again."""
+    from utils.user_roles import staff_must_choose_dashboard
+
+    session.pop('staff_dashboard_target', None)
+    if staff_must_choose_dashboard(current_user):
+        return redirect(url_for('auth.choose_staff_dashboard'))
+    return redirect(url_for('auth.dashboard'))
+
+
 @auth_blueprint.route('/dashboard')
 @login_required
 def dashboard():
     """Redirects user to the appropriate dashboard based on their role."""
-    flash(f"Redirecting user with role: {current_user.role}", "info")
+    from utils.user_roles import (
+        staff_must_choose_dashboard,
+        user_has_tech_route_access,
+        user_has_management_entry_access,
+    )
+
     if current_user.role == 'Student':
         return redirect(url_for('student.student_dashboard'))
-    elif is_teacher_role(current_user.role):
+
+    if staff_must_choose_dashboard(current_user):
+        target = session.get('staff_dashboard_target')
+        if target == 'tech' and user_has_tech_route_access(current_user):
+            return redirect(url_for('tech.tech_dashboard'))
+        if target == 'management' and user_has_management_entry_access(current_user):
+            return redirect(url_for('management.management_dashboard'))
+        return redirect(url_for('auth.choose_staff_dashboard'))
+
+    if is_teacher_role(current_user.role):
         return redirect(url_for('teacher.dashboard.teacher_dashboard'))
     elif current_user.role in ['School Administrator', 'Director']:
         return redirect(url_for('management.management_dashboard'))
@@ -928,6 +994,7 @@ def google_callback():
                     return redirect(url_for('auth.login'))
             # User exists - log them in
             login_user(user, remember=True)
+            session.pop('staff_dashboard_target', None)
             
             # Increment login count
             user.login_count += 1

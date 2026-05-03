@@ -389,3 +389,40 @@
     }
 }
 
+/* Logged-in top bar: Home / Dashboard / Switch dashboard (reads on green gradient) */
+.navbar-modern .navbar-nav > .nav-item > .nav-link {
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 8px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.navbar-modern .navbar-nav > .nav-item > .nav-link:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff !important;
+}
+
+.navbar-modern .navbar-text {
+    color: rgba(255, 255, 255, 0.92) !important;
+    font-size: 0.9rem;
+    max-width: min(100%, 14rem);
+    white-space: normal;
+    line-height: 1.3;
+}
+
+@media (min-width: 992px) {
+    .navbar-modern .navbar-text {
+        max-width: 20rem;
+    }
+}
+
+.navbar-modern .nav-link-switch-dashboard {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.navbar-modern .nav-link-switch-dashboard:hover {
+    background: rgba(255, 255, 255, 0.24) !important;
+}
+

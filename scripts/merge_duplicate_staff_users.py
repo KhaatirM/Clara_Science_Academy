@@ -30,6 +30,7 @@ from werkzeug.security import generate_password_hash
 
 from app import create_app
 from extensions import db
+from utils.user_roles import canonical_role_label, parse_secondary_roles
 from models import (
     ActivityLog,
     AdminAuditLog,
@@ -69,20 +70,6 @@ def _parse_perm_list(raw):
         return []
 
 
-def _parse_secondary(raw):
-    if not raw:
-        return []
-    try:
-        if isinstance(raw, (list, tuple)):
-            return [str(x).strip() for x in raw if x and str(x).strip()]
-        data = json.loads(raw)
-        if isinstance(data, list):
-            return [str(x).strip() for x in data if x and str(x).strip()]
-    except Exception:
-        pass
-    return []
-
-
 def _union_permissions(a: User, b: User) -> str | None:
     u = set(_parse_perm_list(a.permissions))
     u.update(_parse_perm_list(b.permissions))
@@ -92,17 +79,21 @@ def _union_permissions(a: User, b: User) -> str | None:
 
 
 def _merge_secondary_roles(keep: User, merge: User) -> str | None:
-    primary = (keep.role or '').strip()
+    """Union secondary roles using canonical labels so Tech vs School Admin detection matches the web app."""
+    primary_canon = canonical_role_label(keep.role)
     extra: set[str] = set()
-    for s in _parse_secondary(keep.secondary_roles):
-        if s != primary:
-            extra.add(s)
-    for s in _parse_secondary(merge.secondary_roles):
-        if s != primary:
-            extra.add(s)
-    mr = (merge.role or '').strip()
-    if mr and mr != primary:
+    for s in parse_secondary_roles(keep.secondary_roles):
+        c = canonical_role_label(s)
+        if c and c != primary_canon:
+            extra.add(c)
+    for s in parse_secondary_roles(merge.secondary_roles):
+        c = canonical_role_label(s)
+        if c and c != primary_canon:
+            extra.add(c)
+    mr = canonical_role_label(merge.role)
+    if mr and mr != primary_canon:
         extra.add(mr)
+    extra.discard(primary_canon)
     if not extra:
         return None
     return json.dumps(sorted(extra))
@@ -228,6 +219,15 @@ def run(keep_id: int, merge_id: int, new_username: str | None, plain_password: s
     print(f'Consolidated user id: {keep.id}')
     print(f'Username: {keep.username}')
     print(f'Password: {pwd}')
+    print(f'Primary role (column ``role``): {keep.role!r}')
+    print(f'secondary_roles (JSON): {keep.secondary_roles!r}')
+    from utils.user_roles import staff_must_choose_dashboard
+
+    print(
+        'Dashboard picker / Switch dashboard expected:',
+        staff_must_choose_dashboard(keep),
+        '(needs Tech or IT Support plus School Administrator or Director)',
+    )
     print('Store this password securely; it will not be shown again.')
 
 

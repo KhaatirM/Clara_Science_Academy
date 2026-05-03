@@ -812,7 +812,8 @@ def create_app(config_class=None):
             from utils.user_roles import staff_must_choose_dashboard
 
             return {"dual_dashboard_staff": staff_must_choose_dashboard(current_user)}
-        except Exception:
+        except Exception as e:
+            current_app.logger.warning("inject_dual_dashboard failed: %s", e)
             return {"dual_dashboard_staff": False}
 
     @app.context_processor

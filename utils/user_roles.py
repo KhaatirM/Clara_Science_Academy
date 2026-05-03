@@ -38,18 +38,28 @@ def canonical_role_label(role: Any) -> str:
     return _ROLE_CANON_ALIASES.get(key, s)
 
 
-def _parse_secondary_roles(raw: Any) -> List[str]:
+def parse_secondary_roles(raw: Any) -> List[str]:
+    """Parse ``secondary_roles`` JSON list; tolerate legacy single-string or comma-separated values."""
     if not raw:
         return []
     if isinstance(raw, (list, tuple)):
         return [str(x).strip() for x in raw if x and str(x).strip()]
     if isinstance(raw, str):
-        try:
-            data = json.loads(raw)
-        except Exception:
+        s = raw.strip()
+        if not s:
             return []
-        if isinstance(data, list):
-            return [str(x).strip() for x in data if x and str(x).strip()]
+        if s.startswith("["):
+            try:
+                data = json.loads(s)
+            except Exception:
+                return []
+            if isinstance(data, list):
+                return [str(x).strip() for x in data if x and str(x).strip()]
+            return []
+        # Legacy: one role stored as plain text, or "Role A, Role B"
+        if "," in s:
+            return [p.strip() for p in s.split(",") if p.strip()]
+        return [s]
     return []
 
 
@@ -61,7 +71,7 @@ def all_role_strings(user) -> Set[str]:
     pr = getattr(user, "role", None)
     if pr:
         roles.add(canonical_role_label(pr))
-    for s in _parse_secondary_roles(getattr(user, "secondary_roles", None)):
+    for s in parse_secondary_roles(getattr(user, "secondary_roles", None)):
         roles.add(canonical_role_label(s))
     return {r for r in roles if r}
 

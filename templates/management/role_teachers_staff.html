@@ -41,7 +41,8 @@
                         <div class="fs-4 fw-bold">
                             {% set teacher_count = namespace(value=0) %}
                             {% for staff in teachers_staff %}
-                                {% if (staff.assigned_role and 'Teacher' in staff.assigned_role) or (staff.user and staff.user.role and 'Teacher' in staff.user.role) %}
+                                {% set joined_roles = staff|staff_role_labels|join('|') %}
+                                {% if 'Teacher' in joined_roles or 'Substitute' in joined_roles or 'Counselor' in joined_roles %}
                                     {% set teacher_count.value = teacher_count.value + 1 %}
                                 {% endif %}
                             {% endfor %}
@@ -62,8 +63,8 @@
                         <div class="fs-4 fw-bold">
                             {% set admin_count = namespace(value=0) %}
                             {% for staff in teachers_staff %}
-                                {% set role = staff.assigned_role if staff.assigned_role else (staff.user.role if staff.user else '') %}
-                                {% if 'Administrator' in role or 'Director' in role %}
+                                {% set joined_roles = staff|staff_role_labels|join('|') %}
+                                {% if 'School Administrator' in joined_roles or 'Director' in joined_roles %}
                                     {% set admin_count.value = admin_count.value + 1 %}
                                 {% endif %}
                             {% endfor %}
@@ -84,8 +85,8 @@
                         <div class="fs-4 fw-bold">
                             {% set support_count = namespace(value=0) %}
                             {% for staff in teachers_staff %}
-                                {% set role = staff.assigned_role if staff.assigned_role else (staff.user.role if staff.user else '') %}
-                                {% if 'Support' in role or 'IT' in role %}
+                                {% set padded = '|' ~ (staff|staff_role_labels|join('|')) ~ '|' %}
+                                {% if '|IT Support|' in padded or '|Tech|' in padded %}
                                     {% set support_count.value = support_count.value + 1 %}
                                 {% endif %}
                             {% endfor %}
@@ -140,7 +141,6 @@
     <!-- Staff Cards Grid -->
     <div class="row g-4">
         {% for staff in teachers_staff %}
-        {% set staff_role = staff.assigned_role if staff.assigned_role else (staff.user.role if staff.user else 'Staff Member') %}
         {% set staff_id = staff.staff_id if staff.staff_id else 'N/A' %}
         {% set staff_username = staff.user.username if staff.user else 'N/A' %}
         {% set staff_department = staff.department if staff.department else 'N/A' %}
@@ -170,18 +170,10 @@
                         </div>
                         <div class="staff-info-content">
                             <div class="staff-info-label">Role</div>
-                            <div class="staff-info-value">
-                                {% if 'Director' in staff_role %}
-                                    <span class="badge-role director">{{ staff_role }}</span>
-                                {% elif 'Administrator' in staff_role %}
-                                    <span class="badge-role admin">{{ staff_role }}</span>
-                                {% elif 'Teacher' in staff_role %}
-                                    <span class="badge-role teacher">{{ staff_role }}</span>
-                                {% elif 'Support' in staff_role or 'IT' in staff_role %}
-                                    <span class="badge-role support">{{ staff_role }}</span>
-                                {% else %}
-                                    <span class="badge-role default">{{ staff_role }}</span>
-                                {% endif %}
+                            <div class="staff-info-value d-flex flex-wrap gap-1">
+                                {% for r in staff|staff_role_labels %}
+                                    <span class="badge {{ r|role_badge_class }}">{{ r }}</span>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>

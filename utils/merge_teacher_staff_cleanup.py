@@ -14,6 +14,56 @@ from sqlalchemy import text
 from extensions import db
 
 
+def _csv_parts(s: str | None) -> list[str]:
+    if not s or not str(s).strip():
+        return []
+    out: list[str] = []
+    for chunk in str(s).split(","):
+        p = chunk.strip()
+        if p:
+            out.append(p)
+    return out
+
+
+def _merge_truncated_csv(
+    keep_val: str | None, merge_val: str | None, max_len: int = 100
+) -> str | None:
+    """Union comma-separated labels (order: keep first, then merge-only), truncate for VARCHAR(max_len)."""
+    combined: list[str] = []
+    seen: set[str] = set()
+    for part in _csv_parts(keep_val) + _csv_parts(merge_val):
+        if part not in seen:
+            seen.add(part)
+            combined.append(part)
+    if not combined:
+        return None
+    s = ", ".join(combined)
+    if len(s) > max_len:
+        s = s[: max_len - 3].rstrip(", ") + "..."
+    return s
+
+
+def merge_teacher_staff_profile_lists(merge_staff_id: int, keep_staff_id: int) -> None:
+    """
+    Copy union of department and assigned_role from merge profile onto keep profile
+    so directory / HR fields show everything on the surviving TeacherStaff row.
+    """
+    from models import TeacherStaff
+
+    keep = db.session.get(TeacherStaff, keep_staff_id)
+    merge = db.session.get(TeacherStaff, merge_staff_id)
+    if not keep or not merge or merge_staff_id == keep_staff_id:
+        return
+
+    dept = _merge_truncated_csv(keep.department, merge.department, max_len=100)
+    if dept is not None:
+        keep.department = dept
+
+    roles = _merge_truncated_csv(keep.assigned_role, merge.assigned_role, max_len=100)
+    if roles is not None:
+        keep.assigned_role = roles
+
+
 def _association_delete_duplicates(table_name: str, merge_id: int, keep_id: int) -> None:
     """Remove merge rows that would duplicate (class_id, keep_id) after UPDATE."""
     db.session.execute(
@@ -102,5 +152,6 @@ def consolidate_duplicate_teacher_staff_rows(merge_staff_id: int | None, keep_st
     """
     if not merge_staff_id or not keep_staff_id or merge_staff_id == keep_staff_id:
         return
+    merge_teacher_staff_profile_lists(merge_staff_id, keep_staff_id)
     reassign_teacher_staff_foreign_keys(merge_staff_id, keep_staff_id)
     soft_delete_merged_teacher_staff_profile(merge_staff_id, keep_staff_id)

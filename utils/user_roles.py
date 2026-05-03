@@ -117,3 +117,71 @@ def pick_management_sidebar_canonical(user) -> str:
     if "School Administrator" in r:
         return "School Administrator"
     return canonical_role_label(getattr(user, "role", None)) or "School Administrator"
+
+
+def ordered_role_labels_for_teacher_staff(teacher_staff) -> List[str]:
+    """
+    Ordered unique canonical roles for directory UI: login primary, then secondary_roles,
+    then any extra segments from TeacherStaff.assigned_role (legacy / merged display).
+    Without a User row, uses assigned_role only or ``No Account``.
+    """
+    ts = teacher_staff
+    if ts is None:
+        return []
+    u = getattr(ts, "user", None)
+    if u:
+        seen: Set[str] = set()
+        out: List[str] = []
+        pr = canonical_role_label(getattr(u, "role", None))
+        if pr:
+            seen.add(pr)
+            out.append(pr)
+        for s in parse_secondary_roles(getattr(u, "secondary_roles", None)):
+            c = canonical_role_label(s)
+            if c and c not in seen:
+                seen.add(c)
+                out.append(c)
+        ar = (getattr(ts, "assigned_role", None) or "").strip()
+        for part in [p.strip() for p in ar.split(",") if p.strip()]:
+            c = canonical_role_label(part)
+            if c and c not in seen:
+                seen.add(c)
+                out.append(c)
+        return out
+    ar = (getattr(ts, "assigned_role", None) or "").strip()
+    if ar:
+        seen: Set[str] = set()
+        out: List[str] = []
+        for part in [p.strip() for p in ar.split(",") if p.strip()]:
+            c = canonical_role_label(part)
+            if c and c not in seen:
+                seen.add(c)
+                out.append(c)
+        return out if out else ["No Account"]
+    return ["No Account"]
+
+
+def role_badge_bootstrap_class(role_label: str) -> str:
+    """Bootstrap badge classes used on staff directory Role column."""
+    r = (role_label or "").strip()
+    if r == "Director":
+        return "bg-danger"
+    if r == "School Administrator":
+        return "bg-warning"
+    if r in ("Tech", "IT Support"):
+        return "bg-secondary"
+    if "Teacher" in r or r in (
+        "Substitute",
+        "Counselor",
+        "Substitute Teacher",
+        "School Counselor",
+        "Math Teacher",
+        "Science Teacher",
+        "History Teacher",
+        "Physics Teacher",
+        "English Language Arts Teacher",
+    ):
+        return "bg-info"
+    if r == "No Account":
+        return "bg-warning"
+    return "bg-light text-dark"

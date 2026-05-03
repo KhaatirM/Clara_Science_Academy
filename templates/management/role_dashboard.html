@@ -1579,20 +1579,10 @@
                                         </div>
                                     </td>
                                     <td>
-                                        {% if teacher.user %}
-                                            {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
-                                            <span class="badge {{ badge_class }} mb-1 d-block">
-                                                {{ teacher.user.role }}
-                                            </span>
-                                            {% if teacher.assigned_role and teacher.assigned_role != teacher.user.role %}
-                                                <small class="text-muted d-block">{{ teacher.assigned_role }}</small>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="badge bg-warning mb-1 d-block">No Account</span>
-                                            {% if teacher.assigned_role %}
-                                                <small class="text-muted d-block">{{ teacher.assigned_role }}</small>
-                                            {% endif %}
-                                        {% endif %}
+                                        {% set role_labels = teacher|staff_role_labels %}
+                                        {% for r in role_labels %}
+                                            <span class="badge {{ r|role_badge_class }} mb-1 d-block text-wrap" style="max-width: 160px; white-space: normal; line-height: 1.2;">{{ r }}</span>
+                                        {% endfor %}
                                     </td>
                                     <td>
                                         {% if teacher.department %}
@@ -1679,13 +1669,10 @@
                                 <div class="teacher-card-body">
                                     <div class="teacher-card-detail">
                                         <i class="bi bi-person-badge me-2"></i>
-                                        <span>Role: 
-                                            {% if teacher.user %}
-                                                {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
-                                                <span class="badge {{ badge_class }}">{{ teacher.user.role }}</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">No Account</span>
-                                            {% endif %}
+                                        <span class="d-inline-flex flex-wrap gap-1 align-items-center">Role:
+                                            {% for r in teacher|staff_role_labels %}
+                                                <span class="badge {{ r|role_badge_class }}">{{ r }}</span>
+                                            {% endfor %}
                                         </span>
                                     </div>
                                     <div class="teacher-card-detail">
@@ -3900,6 +3887,42 @@
                     return;
                 }
                 const removalNoteSafe = String(data.removal_note || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const ROLE_OPTS = data.staff_role_options || ['Teacher', 'School Administrator', 'Director', 'IT Support', 'Counselor', 'Substitute', 'Other Staff'];
+                const primaryRole = (data.primary_role || '').trim();
+                const secondaryRoles = data.secondary_roles || [];
+                const deptList = data.department_list || [];
+                const gtList = data.grades_taught_list || [];
+                const permList = data.permissions || [];
+                function escAttr(s) {
+                    return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                }
+                const roleSelectOpts = '<option value="">Choose role...</option>' + ROLE_OPTS.map(function (opt) {
+                    return '<option value="' + escAttr(opt) + '"' + (primaryRole === opt ? ' selected' : '') + '>' + escAttr(opt) + '</option>';
+                }).join('');
+                const additionalRolesBlocks = ROLE_OPTS.map(function (opt) {
+                    var id = 'addrole_edit_' + opt.replace(/[^a-zA-Z0-9]+/g, '_');
+                    var chk = secondaryRoles.indexOf(opt) >= 0 ? ' checked' : '';
+                    return '<div class="col-12 col-md-6 col-lg-4"><input class="btn-check" type="checkbox" name="additional_roles" value="' + escAttr(opt) + '" id="' + id + '"' + chk + '><label class="btn btn-outline-secondary w-100 text-start p-2" for="' + id + '">' + escAttr(opt) + '</label></div>';
+                }).join('');
+                const ADMIN_PERMS_MODAL = [
+                    ['students:view', 'View students'],
+                    ['students:edit', 'Edit student information'],
+                    ['report_cards:view', 'View report cards'],
+                    ['report_cards:generate', 'Generate report cards'],
+                    ['classes:manage', 'Manage classes'],
+                    ['teachers_staff:manage', 'Manage teachers & staff'],
+                    ['attendance:manage', 'Manage attendance'],
+                    ['assignments_grades:manage', 'Manage assignments & grades'],
+                    ['communications:manage', 'Manage communications'],
+                    ['billing:manage', 'Manage billing & financials'],
+                    ['classes:assignable', 'Allow this staff member to be assigned to classes']
+                ];
+                const permissionsBlocks = ADMIN_PERMS_MODAL.map(function (pair) {
+                    var key = pair[0], label = pair[1];
+                    var id = 'perm_edit_' + key.replace(/:/g, '_');
+                    var chk = permList.indexOf(key) >= 0 ? ' checked' : '';
+                    return '<div class="col-12 col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="permissions" value="' + escAttr(key) + '" id="' + id + '"' + chk + '><label class="form-check-label" for="' + id + '">' + escAttr(label) + '</label></div></div>';
+                }).join('');
                 // Populate the edit modal form fields
                 document.getElementById('profileEditModalLabel').innerText = 'Edit Teacher/Staff';
                 let form = document.getElementById('profileEditForm');
@@ -4016,22 +4039,24 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
-                                            <i class="bi bi-person-badge me-1 text-primary"></i>Assigned Role <span class="text-danger">*</span>
+                                            <i class="bi bi-person-badge me-1 text-primary"></i>Primary role (login) <span class="text-danger">*</span>
                                         </label>
-                                        <select class="form-select" name="assigned_role" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
-                                            <option value="">Choose role...</option>
-                                            <option value="Director" ${(data.assigned_role || '') === 'Director' ? 'selected' : ''}>Director</option>
-                                            <option value="School Administrator" ${(data.assigned_role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
-                                            <option value="Math Teacher" ${(data.assigned_role || '') === 'Math Teacher' ? 'selected' : ''}>Math Teacher</option>
-                                            <option value="Physics Teacher" ${(data.assigned_role || '') === 'Physics Teacher' ? 'selected' : ''}>Physics Teacher</option>
-                                            <option value="English Language Arts Teacher" ${(data.assigned_role || '') === 'English Language Arts Teacher' ? 'selected' : ''}>English Language Arts Teacher</option>
-                                            <option value="History Teacher" ${(data.assigned_role || '') === 'History Teacher' ? 'selected' : ''}>History Teacher</option>
-                                            <option value="Science Teacher" ${(data.assigned_role || '') === 'Science Teacher' ? 'selected' : ''}>Science Teacher</option>
-                                            <option value="Substitute Teacher" ${(data.assigned_role || '') === 'Substitute Teacher' ? 'selected' : ''}>Substitute Teacher</option>
-                                            <option value="School Counselor" ${(data.assigned_role || '') === 'School Counselor' ? 'selected' : ''}>School Counselor</option>
-                                            <option value="IT Support" ${(data.assigned_role || '') === 'IT Support' ? 'selected' : ''}>IT Support</option>
-                                            <option value="Other Staff" ${(data.assigned_role || '') === 'Other Staff' ? 'selected' : ''}>Other Staff</option>
+                                        <select class="form-select" id="assigned_role_edit_modal" name="assigned_role" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                            ${roleSelectOpts}
                                         </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-calendar-event me-1 text-primary"></i>Hire Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control" name="hire_date" value="${data.hire_date || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold d-block mb-2" style="color: #495057;">
+                                            <i class="bi bi-diagram-3 me-1 text-primary"></i>Additional roles <span class="text-muted fw-normal">(optional)</span>
+                                        </label>
+                                        <p class="form-text small text-muted mb-2">Same as Add Staff: extra roles for one login (e.g. IT Support plus School Administrator).</p>
+                                        <div class="row g-2">${additionalRolesBlocks}</div>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
@@ -4040,77 +4065,84 @@
                                         <div class="row g-3 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Mathematics" id="dept_math_edit" ${(data.department || '').includes('Mathematics') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Mathematics" id="dept_math_edit" ${deptList.includes('Mathematics') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_math_edit" style="cursor: pointer; font-weight: 500;">Mathematics</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Science" id="dept_science_edit" ${(data.department || '').includes('Science') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Science" id="dept_science_edit" ${deptList.includes('Science') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_science_edit" style="cursor: pointer; font-weight: 500;">Science</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="English" id="dept_english_edit" ${(data.department || '').includes('English') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="English" id="dept_english_edit" ${deptList.includes('English') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_english_edit" style="cursor: pointer; font-weight: 500;">English</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="History & Social Studies" id="dept_history_edit" ${(data.department || '').includes('History & Social Studies') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="History & Social Studies" id="dept_history_edit" ${deptList.includes('History & Social Studies') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_history_edit" style="cursor: pointer; font-weight: 500;">History & Social Studies</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Physical Education & Health" id="dept_pe_edit" ${(data.department || '').includes('Physical Education & Health') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Physical Education & Health" id="dept_pe_edit" ${deptList.includes('Physical Education & Health') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_pe_edit" style="cursor: pointer; font-weight: 500;">Physical Education & Health</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Music & Arts" id="dept_arts_edit" ${(data.department || '').includes('Music & Arts') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Music & Arts" id="dept_arts_edit" ${deptList.includes('Music & Arts') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_arts_edit" style="cursor: pointer; font-weight: 500;">Music & Arts</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Computer Science & Technology" id="dept_tech_edit" ${(data.department || '').includes('Computer Science & Technology') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Computer Science & Technology" id="dept_tech_edit" ${deptList.includes('Computer Science & Technology') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_tech_edit" style="cursor: pointer; font-weight: 500;">Computer Science & Technology</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Administration" id="dept_admin_edit" ${(data.department || '').includes('Administration') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Administration" id="dept_admin_edit" ${deptList.includes('Administration') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_admin_edit" style="cursor: pointer; font-weight: 500;">Administration</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Counseling" id="dept_counsel_edit" ${(data.department || '').includes('Counseling') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Counseling" id="dept_counsel_edit" ${deptList.includes('Counseling') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_counsel_edit" style="cursor: pointer; font-weight: 500;">Counseling</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Special Education" id="dept_sped_edit" ${(data.department || '').includes('Special Education') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Special Education" id="dept_sped_edit" ${deptList.includes('Special Education') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_sped_edit" style="cursor: pointer; font-weight: 500;">Special Education</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Foreign Language" id="dept_lang_edit" ${(data.department || '').includes('Foreign Language') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Foreign Language" id="dept_lang_edit" ${deptList.includes('Foreign Language') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_lang_edit" style="cursor: pointer; font-weight: 500;">Foreign Language</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Business" id="dept_business_edit" ${(data.department || '').includes('Business') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Business" id="dept_business_edit" ${deptList.includes('Business') ? 'checked' : ''} style="cursor: pointer;">
                                                     <label class="form-check-label" for="dept_business_edit" style="cursor: pointer; font-weight: 500;">Business</label>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div class="col-12" id="permissionsSectionEditModal" style="display: none;">
+                                        <label class="form-label fw-bold d-block mb-2" style="color: #495057;">
+                                            <i class="bi bi-shield-lock me-1 text-primary"></i>Administration Permissions
+                                        </label>
+                                        <div class="alert alert-info py-2 small mb-2">Same rules as Add Staff: required when <strong>Administration</strong> is selected and the account is not a full School Administrator.</div>
+                                        <div class="row g-2">${permissionsBlocks}</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
@@ -4124,21 +4156,18 @@
                                         </label>
                                         <input type="text" class="form-control" name="subject" value="${data.subject || ''}" placeholder="e.g., Algebra I, Chemistry" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
-                                            <i class="bi bi-clock me-1 text-primary"></i>Employment Type
-                                        </label>
-                                        <select class="form-select" name="employment_type" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
-                                            <option value="">Choose...</option>
-                                            <option value="Full Time" ${(data.employment_type || '') === 'Full Time' ? 'selected' : ''}>Full Time</option>
-                                            <option value="Part Time" ${(data.employment_type || '') === 'Part Time' ? 'selected' : ''}>Part Time</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
-                                            <i class="bi bi-calendar-event me-1 text-primary"></i>Hire Date
-                                        </label>
-                                        <input type="date" class="form-control" name="hire_date" value="${data.hire_date || ''}" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label d-block">Employment Type <span class="text-danger">*</span></label>
+                                        <div class="row g-2" role="group">
+                                            <div class="col-12">
+                                                <input class="btn-check" type="radio" name="employment_type" id="emp_ft_edit" value="Full Time" ${(data.employment_type || '') === 'Full Time' ? 'checked' : ''}>
+                                                <label class="btn btn-outline-primary w-100 text-start p-2" for="emp_ft_edit">Full Time</label>
+                                            </div>
+                                            <div class="col-12">
+                                                <input class="btn-check" type="radio" name="employment_type" id="emp_pt_edit" value="Part Time" ${(data.employment_type || '') === 'Part Time' ? 'checked' : ''}>
+                                                <label class="btn btn-outline-primary w-100 text-start p-2" for="emp_pt_edit">Part Time</label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -4146,90 +4175,90 @@
                                 <div class="row mt-4">
                                     <div class="col-12">
                                         <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
-                                            <i class="bi bi-mortarboard me-1 text-primary"></i>Grades Taught
+                                            <i class="bi bi-mortarboard me-1 text-primary"></i>Grade(s) Taught/Overseeing
                                         </label>
                                         <div class="row g-2 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="Kindergarten" style="background: ${(data.grades_taught || '').includes('Kindergarten') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('Kindergarten') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('Kindergarten') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="Kindergarten" id="grade_k_edit" ${(data.grades_taught || '').includes('Kindergarten') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="Kindergarten" style="background: ${gtList.includes('Kindergarten') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('Kindergarten') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('Kindergarten') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="Kindergarten" id="grade_k_edit" ${gtList.includes('Kindergarten') ? 'checked' : ''} style="display: none;">
                                                     <span>Kindergarten</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="1st" style="background: ${(data.grades_taught || '').includes('1st') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('1st') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('1st') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="1st" id="grade_1_edit" ${(data.grades_taught || '').includes('1st') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="1st" style="background: ${gtList.includes('1st') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('1st') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('1st') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="1st" id="grade_1_edit" ${gtList.includes('1st') ? 'checked' : ''} style="display: none;">
                                                     <span>1st</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="2nd" style="background: ${(data.grades_taught || '').includes('2nd') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('2nd') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('2nd') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="2nd" id="grade_2_edit" ${(data.grades_taught || '').includes('2nd') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="2nd" style="background: ${gtList.includes('2nd') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('2nd') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('2nd') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="2nd" id="grade_2_edit" ${gtList.includes('2nd') ? 'checked' : ''} style="display: none;">
                                                     <span>2nd</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="3rd" style="background: ${(data.grades_taught || '').includes('3rd') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('3rd') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('3rd') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="3rd" id="grade_3_edit" ${(data.grades_taught || '').includes('3rd') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="3rd" style="background: ${gtList.includes('3rd') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('3rd') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('3rd') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="3rd" id="grade_3_edit" ${gtList.includes('3rd') ? 'checked' : ''} style="display: none;">
                                                     <span>3rd</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="4th" style="background: ${(data.grades_taught || '').includes('4th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('4th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('4th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="4th" id="grade_4_edit" ${(data.grades_taught || '').includes('4th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="4th" style="background: ${gtList.includes('4th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('4th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('4th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="4th" id="grade_4_edit" ${gtList.includes('4th') ? 'checked' : ''} style="display: none;">
                                                     <span>4th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="5th" style="background: ${(data.grades_taught || '').includes('5th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('5th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('5th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="5th" id="grade_5_edit" ${(data.grades_taught || '').includes('5th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="5th" style="background: ${gtList.includes('5th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('5th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('5th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="5th" id="grade_5_edit" ${gtList.includes('5th') ? 'checked' : ''} style="display: none;">
                                                     <span>5th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="6th" style="background: ${(data.grades_taught || '').includes('6th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('6th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('6th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="6th" id="grade_6_edit" ${(data.grades_taught || '').includes('6th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="6th" style="background: ${gtList.includes('6th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('6th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('6th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="6th" id="grade_6_edit" ${gtList.includes('6th') ? 'checked' : ''} style="display: none;">
                                                     <span>6th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="7th" style="background: ${(data.grades_taught || '').includes('7th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('7th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('7th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="7th" id="grade_7_edit" ${(data.grades_taught || '').includes('7th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="7th" style="background: ${gtList.includes('7th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('7th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('7th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="7th" id="grade_7_edit" ${gtList.includes('7th') ? 'checked' : ''} style="display: none;">
                                                     <span>7th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="8th" style="background: ${(data.grades_taught || '').includes('8th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('8th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('8th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="8th" id="grade_8_edit" ${(data.grades_taught || '').includes('8th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="8th" style="background: ${gtList.includes('8th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('8th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('8th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="8th" id="grade_8_edit" ${gtList.includes('8th') ? 'checked' : ''} style="display: none;">
                                                     <span>8th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="9th" style="background: ${(data.grades_taught || '').includes('9th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('9th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('9th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="9th" id="grade_9_edit" ${(data.grades_taught || '').includes('9th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="9th" style="background: ${gtList.includes('9th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('9th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('9th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="9th" id="grade_9_edit" ${gtList.includes('9th') ? 'checked' : ''} style="display: none;">
                                                     <span>9th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="10th" style="background: ${(data.grades_taught || '').includes('10th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('10th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('10th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="10th" id="grade_10_edit" ${(data.grades_taught || '').includes('10th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="10th" style="background: ${gtList.includes('10th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('10th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('10th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="10th" id="grade_10_edit" ${gtList.includes('10th') ? 'checked' : ''} style="display: none;">
                                                     <span>10th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="11th" style="background: ${(data.grades_taught || '').includes('11th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('11th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('11th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="11th" id="grade_11_edit" ${(data.grades_taught || '').includes('11th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="11th" style="background: ${gtList.includes('11th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('11th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('11th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="11th" id="grade_11_edit" ${gtList.includes('11th') ? 'checked' : ''} style="display: none;">
                                                     <span>11th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="12th" style="background: ${(data.grades_taught || '').includes('12th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('12th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('12th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="12th" id="grade_12_edit" ${(data.grades_taught || '').includes('12th') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="12th" style="background: ${gtList.includes('12th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('12th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('12th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="12th" id="grade_12_edit" ${gtList.includes('12th') ? 'checked' : ''} style="display: none;">
                                                     <span>12th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="grade-checkbox-box p-2" data-grade="N/A - Staff" style="background: ${(data.grades_taught || '').includes('N/A - Staff') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('N/A - Staff') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('N/A - Staff') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
-                                                    <input type="checkbox" name="grades_taught" value="N/A - Staff" id="grade_na_edit" ${(data.grades_taught || '').includes('N/A - Staff') ? 'checked' : ''} style="display: none;">
+                                                <div class="grade-checkbox-box p-2" data-grade="N/A - Staff" style="background: ${gtList.includes('N/A - Staff') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${gtList.includes('N/A - Staff') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${gtList.includes('N/A - Staff') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="N/A - Staff" id="grade_na_edit" ${gtList.includes('N/A - Staff') ? 'checked' : ''} style="display: none;">
                                                     <span>N/A - Staff</span>
                                                 </div>
                                             </div>
@@ -4443,9 +4472,14 @@
                 form.onsubmit = function(e) {
                     e.preventDefault();
                     let formData = new FormData(form);
+                    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfMeta && csrfMeta.content) {
+                        formData.append('csrf_token', csrfMeta.content);
+                    }
                     fetch(`/management/edit-teacher-staff/${teacherId}`, {
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            ...(csrfMeta && csrfMeta.content ? { 'X-CSRFToken': csrfMeta.content } : {})
                         },
                         method: 'POST',
                         body: formData
@@ -4482,6 +4516,56 @@
                         });
                     });
                 }, 100);
+
+                setTimeout(function () {
+                    function selectedDepartmentsModal() {
+                        var boxes = document.querySelectorAll('#profileEditModalBody input[name="department"]:checked');
+                        return Array.prototype.map.call(boxes, function (b) { return b.value; });
+                    }
+                    function roleSetModal() {
+                        var sel = document.getElementById('assigned_role_edit_modal');
+                        var primary = sel ? (sel.value || '') : '';
+                        var extras = Array.prototype.map.call(
+                            document.querySelectorAll('#profileEditModalBody input[name="additional_roles"]:checked'),
+                            function (el) { return el.value; }
+                        );
+                        var s = {};
+                        if (primary) s[primary] = true;
+                        extras.forEach(function (r) { s[r] = true; });
+                        return { has: function (role) { return !!s[role]; } };
+                    }
+                    function syncAdditionalRolesModal() {
+                        var sel = document.getElementById('assigned_role_edit_modal');
+                        var primary = sel ? (sel.value || '') : '';
+                        document.querySelectorAll('#profileEditModalBody input[name="additional_roles"]').forEach(function (cb) {
+                            if (cb.value === primary) {
+                                cb.checked = false;
+                                cb.disabled = true;
+                            } else {
+                                cb.disabled = false;
+                            }
+                        });
+                    }
+                    function updatePermissionsSectionModal() {
+                        var hasAdmin = selectedDepartmentsModal().indexOf('Administration') >= 0;
+                        var hasSchoolAdmin = roleSetModal().has('School Administrator');
+                        var sec = document.getElementById('permissionsSectionEditModal');
+                        if (sec) sec.style.display = (hasAdmin && !hasSchoolAdmin) ? 'block' : 'none';
+                    }
+                    function wireStaffEditModal() {
+                        syncAdditionalRolesModal();
+                        updatePermissionsSectionModal();
+                    }
+                    var arSel = document.getElementById('assigned_role_edit_modal');
+                    if (arSel) arSel.addEventListener('change', wireStaffEditModal);
+                    document.querySelectorAll('#profileEditModalBody input[name="department"]').forEach(function (cb) {
+                        cb.addEventListener('change', updatePermissionsSectionModal);
+                    });
+                    document.querySelectorAll('#profileEditModalBody input[name="additional_roles"]').forEach(function (cb) {
+                        cb.addEventListener('change', wireStaffEditModal);
+                    });
+                    wireStaffEditModal();
+                }, 150);
                 
                 // Temporary access management functions
                 window.toggleTemporaryAccessEdit = function() {

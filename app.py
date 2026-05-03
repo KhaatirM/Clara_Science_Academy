@@ -588,6 +588,27 @@ def create_app(config_class=None):
         html = str(value).replace('\r\n', '<br>\n').replace('\n', '<br>\n').replace('\r', '<br>\n')
         return Markup(html)
 
+    @app.template_filter("staff_role_labels")
+    def staff_role_labels_filter(teacher_staff):
+        """Canonical role labels for staff directory (primary + secondary + directory field)."""
+        from utils.user_roles import ordered_role_labels_for_teacher_staff
+
+        return ordered_role_labels_for_teacher_staff(teacher_staff)
+
+    @app.template_filter("role_badge_class")
+    def role_badge_class_filter(role_label):
+        """Bootstrap badge CSS classes for a role label in staff lists."""
+        from utils.user_roles import role_badge_bootstrap_class
+
+        return role_badge_bootstrap_class(role_label or "")
+
+    @app.template_filter("user_lifecycle")
+    def user_lifecycle_filter(user):
+        """Current vs former for Tech user management (student / staff profile flags)."""
+        from utils.tech_user_management import user_lifecycle_bucket
+
+        return user_lifecycle_bucket(user)
+
     @app.template_filter('schooltime')
     def schooltime_filter(value, fmt='%m/%d/%Y %I:%M %p'):
         """

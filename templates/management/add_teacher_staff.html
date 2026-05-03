@@ -56,13 +56,13 @@
     <div class="mb-4">
         <div class="p-3 p-md-4 rounded-3 staff-form-hero">
             <h2 class="mb-1 fw-bold">
-                {% if edit_mode %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}
+                {% if editing %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}
             </h2>
-            <p class="mb-0 text-muted">{% if edit_mode %}Update existing staff member details{% else %}Complete the form below to add a new staff member to the system{% endif %}</p>
+            <p class="mb-0 text-muted">{% if editing %}Update existing staff member details{% else %}Complete the form below to add a new staff member to the system{% endif %}</p>
         </div>
     </div>
 
-    <form method="POST" action="{{ url_for('management.add_teacher_staff') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
+    <form method="POST" action="{% if editing %}{{ url_for('management.edit_teacher_staff', staff_id=teacher_staff.id) }}{% else %}{{ url_for('management.add_teacher_staff') }}{% endif %}" enctype="multipart/form-data" class="needs-validation" novalidate>
         <div class="row g-4">
             <!-- 1 | 2 Layout -->
             <div class="col-12 col-lg-6 d-flex">
@@ -272,10 +272,10 @@
                                         Upload a profile image for staff directories and class views.
                                     </div>
                                     <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*">
-                                    {% if edit_mode and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
+                                    {% if editing and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
                                         <div class="form-text mt-2">Current image: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
                                         <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2 w-100" style="max-height: 220px; object-fit: cover;">
-                                    {% elif edit_mode and staff_data and staff_data.image %}
+                                    {% elif editing and staff_data and staff_data.image %}
                                         <div class="form-text mt-2">Currently using: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
                                         <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2 w-100" style="max-height: 220px; object-fit: cover;">
                                     {% else %}
@@ -295,16 +295,30 @@
                         <h5 class="mb-0 fw-semibold">Professional Information</h5>
                     </div>
                     <div class="card-body" style="padding: 1.5rem;">
+            {% set role_choices = staff_role_options if staff_role_options is defined else ["Teacher", "School Administrator", "Director", "IT Support", "Counselor", "Substitute", "Other Staff"] %}
             <div class="col-12 col-md-6">
-                <label for="assigned_role" class="form-label">Assigned Role <span class="text-danger">*</span></label>
+                <label for="assigned_role" class="form-label">Primary role (login) <span class="text-danger">*</span></label>
                 <select class="form-select" id="assigned_role" name="assigned_role" required>
                     <option value="">Choose role...</option>
-                    {% set roles = ["Teacher", "School Administrator", "IT Support", "Counselor", "Substitute", "Other Staff"] %}
-                    {% for role_option in roles %}
+                    {% for role_option in role_choices %}
                     <option value="{{ role_option }}" {% if staff_data and staff_data.assigned_role == role_option %}selected{% endif %}>{{ role_option }}</option>
                     {% endfor %}
                 </select>
-                <div class="invalid-feedback">Please select an assigned role.</div>
+                <div class="invalid-feedback">Please select a primary role.</div>
+            </div>
+            <div class="col-12" id="additionalRolesSection">
+                <label class="form-label">Additional roles <span class="text-muted fw-normal">(optional)</span></label>
+                <p class="form-text small text-muted mb-2">When one account should match more than one role (for example School Administrator and IT Support), check the extra roles here. The user can switch dashboards after login.</p>
+                <div class="row g-2">
+                    {% for role_option in role_choices %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <input class="btn-check" type="checkbox" name="additional_roles" value="{{ role_option }}"
+                               id="addrole_{{ role_option|replace(' ', '_')|replace('&', 'and') }}"
+                               {% if additional_roles_selected is defined and role_option in additional_roles_selected %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary w-100 text-start p-2 tile-soft" for="addrole_{{ role_option|replace(' ', '_')|replace('&', 'and') }}">{{ role_option }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             <div class="col-12 col-md-6">
                 <label for="hire_date" class="form-label">Hire Date <span class="text-danger">*</span></label>
@@ -454,7 +468,7 @@
             <div class="col-12 col-md-6">
                 <label for="resume" class="form-label">Resume (PDF, DOC, DOCX)</label>
                 <input class="form-control" type="file" id="resume" name="resume" accept=".pdf,.doc,.docx">
-                {% if edit_mode and staff_data and staff_data.resume_filename %}
+                {% if editing and staff_data and staff_data.resume_filename %}
                     <div class="form-text mt-1">Current resume: <a href="{{ url_for('static', filename='uploads/' + staff_data.resume_filename) }}" target="_blank">{{ staff_data.resume_filename }}</a>. Upload new to replace.</div>
                 {% endif %}
             </div>
@@ -485,7 +499,7 @@
             <div class="col-12 mt-3">
                 <label for="other_document" class="form-label">Other Relevant Documents</label>
                 <input class="form-control" type="file" id="other_document" name="other_document" accept=".pdf,.doc,.docx,image/*">
-                {% if edit_mode and staff_data and staff_data.other_document_filename %}
+                {% if editing and staff_data and staff_data.other_document_filename %}
                     <div class="form-text mt-1">Current document: <a href="{{ url_for('static', filename='uploads/' + staff_data.other_document_filename) }}" target="_blank">{{ staff_data.other_document_filename }}</a>. Upload new to replace.</div>
                 {% endif %}
                 <div class="form-text">E.g., Certifications, Portfolio. Combine multiple into one PDF/ZIP if needed.</div>
@@ -494,10 +508,10 @@
 
         <div class="d-flex flex-column flex-md-row gap-2 mt-4">
             <button class="btn btn-primary btn-lg" type="submit">
-                <i class="bi bi-check-circle me-2"></i>{% if edit_mode %}Update{% else %}Add Teacher/Staff{% endif %}
+                <i class="bi bi-check-circle me-2"></i>{% if editing %}Update{% else %}Add Teacher/Staff{% endif %}
             </button>
             <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary btn-lg">
-                <i class="bi bi-x-circle me-2"></i>{% if edit_mode %}Cancel{% else %}Discard{% endif %}
+                <i class="bi bi-x-circle me-2"></i>{% if editing %}Cancel{% else %}Discard{% endif %}
             </a>
         </div>
     </form>
@@ -542,12 +556,37 @@
             return Array.from(boxes).map(b => b.value);
         }
 
-        function updatePermissionsVisibility() {
+        function currentRoleSet() {
             const roleSelect = document.getElementById('assigned_role');
-            const roleVal = roleSelect ? (roleSelect.value || '') : '';
+            const primary = roleSelect ? (roleSelect.value || '') : '';
+            const extras = Array.from(document.querySelectorAll('#additionalRolesSection input[name="additional_roles"]:checked')).map(function (el) { return el.value; });
+            const s = new Set();
+            if (primary) s.add(primary);
+            extras.forEach(function (r) { s.add(r); });
+            return s;
+        }
+        function hasSchoolAdministratorRole() {
+            return currentRoleSet().has('School Administrator');
+        }
+        function hasTeachingStyleRole() {
+            return ['Teacher', 'Substitute', 'Counselor'].some(function (r) { return currentRoleSet().has(r); });
+        }
+        function syncAdditionalWithPrimary() {
+            const roleSelect = document.getElementById('assigned_role');
+            const primary = roleSelect ? (roleSelect.value || '') : '';
+            document.querySelectorAll('#additionalRolesSection input[name="additional_roles"]').forEach(function (cb) {
+                if (cb.value === primary) {
+                    cb.checked = false;
+                    cb.disabled = true;
+                } else {
+                    cb.disabled = false;
+                }
+            });
+        }
+        function updatePermissionsVisibility() {
             const depts = selectedDepartments();
             const hasAdminDept = depts.includes('Administration');
-            const shouldShow = hasAdminDept && roleVal && roleVal !== 'School Administrator';
+            const shouldShow = hasAdminDept && !hasSchoolAdministratorRole();
             const section = document.getElementById('permissionsSection');
             if (section) section.style.display = shouldShow ? 'block' : 'none';
         }
@@ -580,6 +619,9 @@
                 checkbox.disabled = true;
                 checkbox.style.backgroundColor = '#f8f9fa';
             });
+
+            const addRolesSec = document.getElementById('additionalRolesSection');
+            if (addRolesSec) addRolesSec.style.display = 'none';
             
             // Show info message
             const roleLabel = document.querySelector('label[for="assigned_role"]');
@@ -593,23 +635,40 @@
 
         // Permissions visibility wiring
         const roleSelect = document.getElementById('assigned_role');
-        if (roleSelect) roleSelect.addEventListener('change', updatePermissionsVisibility);
+        function onPrimaryOrAdditionalRolesChange() {
+            syncAdditionalWithPrimary();
+            updatePermissionsVisibility();
+            updateTeachingFields();
+        }
+        if (roleSelect) roleSelect.addEventListener('change', onPrimaryOrAdditionalRolesChange);
         const deptBoxes = document.querySelectorAll('input[name="department"]');
         deptBoxes.forEach(cb => cb.addEventListener('change', updatePermissionsVisibility));
+        document.querySelectorAll('#additionalRolesSection input[name="additional_roles"]').forEach(function (cb) {
+            cb.addEventListener('change', onPrimaryOrAdditionalRolesChange);
+        });
+        syncAdditionalWithPrimary();
         updatePermissionsVisibility();
 
         function updateTeachingFields() {
-            const roleSelect = document.getElementById('assigned_role');
-            const roleVal = roleSelect ? (roleSelect.value || '') : '';
-            const isTeachingRole = (roleVal === 'Teacher' || roleVal === 'Substitute' || roleVal === 'Counselor');
+            const isTeachingRole = hasTeachingStyleRole();
             const subjectWrap = document.getElementById('teachingFieldsSubject');
             const gradesWrap = document.getElementById('teachingFieldsGrades');
             if (subjectWrap) subjectWrap.style.display = isTeachingRole ? '' : 'none';
             if (gradesWrap) gradesWrap.style.display = isTeachingRole ? '' : 'none';
         }
 
-        if (roleSelect) roleSelect.addEventListener('change', updateTeachingFields);
         updateTeachingFields();
+
+        // Disabled fields are not submitted; re-enable right before submit (Tech flow locks role/departments).
+        const staffForm = document.querySelector('form.needs-validation');
+        if (staffForm && isTechUser) {
+            staffForm.addEventListener('submit', function () {
+                if (roleSelect) roleSelect.disabled = false;
+                document.querySelectorAll('input[name="department"]').forEach(function (el) {
+                    el.disabled = false;
+                });
+            });
+        }
     });
     </script>
 </div>

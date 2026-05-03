@@ -268,12 +268,68 @@ STAFF_OU_FACULTY = "Faculty"
 STAFF_OU_SUBSTITUTES = "Substitutes"
 STAFF_OU_TEACHERS = "Teachers"
 
-# Normalized role tokens (compare via _staff_field_lower on User.role / assigned_role).
-_STAFF_ADMIN_ROLES = frozenset({"admin", "tech", "administrator"})
+# Higher number wins when a person matches multiple tiers (primary + secondary_roles + assigned_role).
+_STAFF_OU_RANK = {
+    STAFF_OU_FACULTY: 10,
+    STAFF_OU_TEACHERS: 40,
+    STAFF_OU_SUBSTITUTES: 45,
+    STAFF_OU_ADMINISTRATOR: 80,
+    STAFF_OU_DIRECTOR_BOARD: 90,
+}
 
 
 def _staff_field_lower(value: Optional[str]) -> str:
     return (value or "").strip().lower()
+
+
+def _staff_role_labels_for_ou(staff: "TeacherStaffModel", user: Optional["UserModel"]) -> set[str]:
+    """Canonical labels from login (primary + secondary) plus comma-split ``assigned_role``."""
+    from utils.user_roles import all_role_strings, canonical_role_label
+
+    labels: set[str] = set()
+    if user:
+        labels.update(all_role_strings(user))
+    ar = getattr(staff, "assigned_role", None) or ""
+    for part in [p.strip() for p in str(ar).split(",") if p.strip()]:
+        c = canonical_role_label(part)
+        if c:
+            labels.add(c)
+    return labels
+
+
+def _canonical_label_to_staff_ou_sub(label: str) -> Optional[str]:
+    """
+    Map one canonical role label to a ``/Staff/<Subfolder>`` name, or None if it does not imply a tier.
+    Substitute-style titles are checked before generic *teacher* substring matches.
+    """
+    if not label or label == "Student":
+        return None
+    sl = label.strip().lower()
+    if sl == "director":
+        return STAFF_OU_DIRECTOR_BOARD
+    if sl in ("school administrator", "tech", "it support"):
+        return STAFF_OU_ADMINISTRATOR
+    if "substitute" in sl:
+        return STAFF_OU_SUBSTITUTES
+    if "teacher" in sl or sl.endswith(" teacher"):
+        return STAFF_OU_TEACHERS
+    if sl in ("counselor", "school counselor", "other staff"):
+        return STAFF_OU_FACULTY
+    return None
+
+
+def _position_department_staff_ou_subs(position: str, department: str) -> list[str]:
+    """Legacy substring rules; each match adds a candidate tier."""
+    subs: list[str] = []
+    if "administrator" in position:
+        subs.append(STAFF_OU_ADMINISTRATOR)
+    if "director" in position or "director" in department or "board" in position or "board" in department:
+        subs.append(STAFF_OU_DIRECTOR_BOARD)
+    if "substitute" in position:
+        subs.append(STAFF_OU_SUBSTITUTES)
+    if "teacher" in position:
+        subs.append(STAFF_OU_TEACHERS)
+    return subs
 
 
 def get_staff_ou_path(
@@ -281,20 +337,18 @@ def get_staff_ou_path(
     user: Optional["UserModel"] = None,
 ) -> str:
     """
-    Final 6-tier staff OU under ``/Staff``. **Strict priority** — first match wins.
-    All checks use case-insensitive strings (``.lower()`` on roles; substring checks on lowered
-    ``position`` / ``department``).
+    Final 6-tier staff OU under ``/Staff``. When multiple roles apply (primary, ``secondary_roles``,
+    and comma-separated ``assigned_role``), the tier with the **highest** precedence rank wins.
 
-    1. **Terminated & Removed** — ``is_deleted``, ``not is_active``, or ``marked_for_removal``.
-    2. **Administrator** — ``User.role`` or ``assigned_role`` in ``admin`` / ``tech`` / ``administrator``,
-       OR ``position`` contains ``administrator``.
-    3. **Director & Board** — ``User.role`` or ``assigned_role`` is ``director``, OR ``position`` /
-       ``department`` contains ``director`` or ``board``.
-    4. **Substitutes** — ``User.role`` or ``assigned_role`` is ``substitute``, OR ``position``
-       contains ``substitute``.
-    5. **Teachers** — ``User.role`` or ``assigned_role`` is ``teacher``, OR ``position`` contains
-       ``teacher``.
-    6. **Faculty** — default.
+    Rank order (high → low): Director & Board > Administrator > Substitutes > Teachers > Faculty.
+
+    1. **Terminated & Removed** — ``is_deleted``, ``not is_active``, or ``marked_for_removal`` (always wins).
+    2. **Administrator** — canonical Tech / IT Support / School Administrator, or ``position`` contains
+       ``administrator``.
+    3. **Director & Board** — canonical Director, or ``position`` / ``department`` hints for director/board.
+    4. **Substitutes** — canonical substitute titles, or ``position`` contains ``substitute``.
+    5. **Teachers** — canonical teacher titles, or ``position`` contains ``teacher``.
+    6. **Faculty** — default when no other tier matches.
 
     Pass the linked ``User`` when present; use ``None`` if there is no website login.
     """
@@ -307,25 +361,17 @@ def get_staff_ou_path(
 
     position = _staff_field_lower(getattr(staff, "position", None))
     department = _staff_field_lower(getattr(staff, "department", None))
-    assigned = _staff_field_lower(getattr(staff, "assigned_role", None))
-    ur = _staff_field_lower(getattr(user, "role", None)) if user else ""
 
-    if ur in _STAFF_ADMIN_ROLES or assigned in _STAFF_ADMIN_ROLES or "administrator" in position:
-        sub = STAFF_OU_ADMINISTRATOR
-    elif (
-        ur == "director"
-        or assigned == "director"
-        or "director" in position
-        or "director" in department
-        or "board" in position
-        or "board" in department
-    ):
-        sub = STAFF_OU_DIRECTOR_BOARD
-    elif ur == "substitute" or assigned == "substitute" or "substitute" in position:
-        sub = STAFF_OU_SUBSTITUTES
-    elif ur == "teacher" or assigned == "teacher" or "teacher" in position:
-        sub = STAFF_OU_TEACHERS
-    else:
+    candidates: list[str] = []
+    for label in _staff_role_labels_for_ou(staff, user):
+        sub = _canonical_label_to_staff_ou_sub(label)
+        if sub:
+            candidates.append(sub)
+    candidates.extend(_position_department_staff_ou_subs(position, department))
+
+    if not candidates:
         sub = STAFF_OU_FACULTY
+    else:
+        sub = max(candidates, key=lambda s: _STAFF_OU_RANK.get(s, 0))
 
     return _sanitize_ou_path(f"{STAFF_OU_BASE}/{sub}")

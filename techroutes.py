@@ -13,6 +13,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 # Database and model imports
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, SystemConfig, StudentDevice, AdminAuditLog
 from scripts.gpa_scheduler import calculate_student_gpa
@@ -1230,8 +1231,22 @@ def user_management():
         db.session.commit()
         return redirect(url_for('tech.user_management'))
 
-    users = User.query.all()
-    return render_template('management/user_management.html', users=users)
+    users = (
+        User.query.options(
+            joinedload(User.student_profile),
+            joinedload(User.teacher_staff_profile),
+        )
+        .order_by(User.username.asc())
+        .all()
+    )
+    from utils.tech_user_management import partition_users_for_tech_management, user_may_hard_delete_site_accounts
+
+    parts = partition_users_for_tech_management(users)
+    return render_template(
+        'management/user_management.html',
+        allow_hard_delete=user_may_hard_delete_site_accounts(current_user),
+        **parts,
+    )
 
 @tech_blueprint.route('/user/delete/<int:user_id>', methods=['POST'])
 @login_required
@@ -1242,17 +1257,61 @@ def delete_user(user_id):
         flash("You cannot delete your own account.", "danger")
         return redirect(url_for('tech.user_management'))
 
+    from utils.tech_user_management import user_may_hard_delete_site_accounts
+    from utils.tech_user_purge import purge_linked_teacher_staff, purge_user_dependencies
+    from utils.user_roles import canonical_role_label
+
+    if not user_may_hard_delete_site_accounts(current_user):
+        flash(
+            "Only Tech or IT Support may permanently delete login accounts from User Management.",
+            "danger",
+        )
+        return redirect(url_for('tech.user_management'))
+
     user = User.query.get_or_404(user_id)
-    # Add logic here to handle re-assigning or deleting related records (students, teachers)
-    # For now, we will just delete the user, which might fail if there are foreign key constraints.
+    if canonical_role_label(user.role) == "Student":
+        flash(
+            "Student accounts cannot be hard-deleted here. Use student removal or enrollment workflows.",
+            "warning",
+        )
+        return redirect(url_for('tech.user_management'))
+
+    ts_id = getattr(user, "teacher_staff_id", None)
+
     try:
+        purge_user_dependencies(user.id)
         db.session.delete(user)
         db.session.commit()
-        flash('User deleted successfully.', 'success')
+        flash(
+            "User login was permanently removed together with all database records tied to that login.",
+            "success",
+        )
+    except IntegrityError as e:
+        db.session.rollback()
+        flash(
+            "Could not remove this account: another database record still references it. "
+            f"Details: {e}",
+            "danger",
+        )
+        return redirect(url_for("tech.user_management"))
     except Exception as e:
         db.session.rollback()
-        flash(f'Error deleting user. They may have associated records (e.g., a student profile) that must be removed first. Error: {e}', 'danger')
-        
+        flash(f"Error deleting user: {e}", "danger")
+        return redirect(url_for("tech.user_management"))
+
+    if ts_id:
+        try:
+            purge_linked_teacher_staff(ts_id)
+            db.session.commit()
+            flash("Linked staff directory profile was also removed.", "success")
+        except IntegrityError:
+            db.session.rollback()
+            flash(
+                "Login was deleted. The staff directory profile still exists because classes or other "
+                "records reference it — reassign those records if you also need the profile removed.",
+                "warning",
+            )
+
     return redirect(url_for('tech.user_management'))
 
 @tech_blueprint.route('/maintenance')

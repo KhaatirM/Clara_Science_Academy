@@ -34,6 +34,7 @@ from utils.user_roles import canonical_role_label, parse_secondary_roles
 from models import (
     ActivityLog,
     AdminAuditLog,
+    TeacherStaff,
     Announcement,
     AnnouncementReadReceipt,
     Assignment,
@@ -155,8 +156,9 @@ def run(keep_id: int, merge_id: int, new_username: str | None, plain_password: s
 
     if keep.teacher_staff_id and merge.teacher_staff_id and keep.teacher_staff_id != merge.teacher_staff_id:
         print(
-            '\n*** WARNING: both users reference different teacher_staff rows. '
-            'Keeping keep-id teacher_staff_id. Review TeacherStaff records manually if needed.\n'
+            '\n*** Note: both users reference different teacher_staff rows. '
+            'The kept profile (keep-id) will receive the union of department and assigned_role from both; '
+            'the other profile is soft-deleted after FKs are moved.\n'
         )
     elif not keep.teacher_staff_id and merge.teacher_staff_id:
         keep.teacher_staff_id = merge.teacher_staff_id
@@ -219,6 +221,12 @@ def run(keep_id: int, merge_id: int, new_username: str | None, plain_password: s
         from utils.merge_teacher_staff_cleanup import consolidate_duplicate_teacher_staff_rows
 
         consolidate_duplicate_teacher_staff_rows(mt, kt)
+        kts = db.session.get(TeacherStaff, kt)
+        if kts:
+            print(
+                f'Merged TeacherStaff directory fields on kept profile id={kt}: '
+                f'department={kts.department!r} assigned_role={kts.assigned_role!r}'
+            )
 
     db.session.delete(merge)
     db.session.commit()

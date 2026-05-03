@@ -30,6 +30,122 @@ def _filter_by_date_range(qry, col, start_dt, end_dt):
     return qry
 
 
+STAFF_FORM_ROLE_OPTIONS = [
+    "Teacher",
+    "School Administrator",
+    "Director",
+    "IT Support",
+    "Counselor",
+    "Substitute",
+    "Other Staff",
+]
+
+
+def _dict_for_staff_form(teacher_staff):
+    """Map TeacherStaff + linked User to ``staff_data`` keys expected by the template."""
+    u = User.query.filter_by(teacher_staff_id=teacher_staff.id).first()
+    from utils.user_roles import canonical_role_label
+
+    role_display = canonical_role_label(u.role) if u and u.role else (teacher_staff.assigned_role or "")
+    grades = []
+    if teacher_staff.grades_taught:
+        try:
+            data = json.loads(teacher_staff.grades_taught)
+            if isinstance(data, list):
+                grades = data
+        except Exception:
+            pass
+    return {
+        "first_name": teacher_staff.first_name,
+        "middle_initial": teacher_staff.middle_initial,
+        "last_name": teacher_staff.last_name,
+        "dob": teacher_staff.dob,
+        "ssn": teacher_staff.staff_ssn,
+        "phone": teacher_staff.phone,
+        "email": teacher_staff.email,
+        "street_address": teacher_staff.street,
+        "apt_unit_suite": teacher_staff.apt_unit,
+        "city": teacher_staff.city,
+        "state": teacher_staff.state,
+        "zip_code": teacher_staff.zip_code,
+        "emergency_contact_name": teacher_staff.emergency_first_name,
+        "emergency_contact_last_name": teacher_staff.emergency_last_name,
+        "emergency_contact_email": teacher_staff.emergency_email,
+        "emergency_contact_phone": teacher_staff.emergency_phone,
+        "emergency_contact_relationship": teacher_staff.emergency_relationship,
+        "assigned_role": role_display,
+        "hire_date": teacher_staff.hire_date,
+        "department": teacher_staff.department,
+        "position": teacher_staff.position,
+        "subject": teacher_staff.subject,
+        "employment_type": teacher_staff.employment_type,
+        "is_temporary": teacher_staff.is_temporary,
+        "access_expires_at": teacher_staff.access_expires_at,
+        "image": teacher_staff.image,
+        "resume_filename": teacher_staff.resume_filename,
+        "other_document_filename": teacher_staff.other_document_filename,
+        "grade_taught": grades,
+    }
+
+
+def _roles_from_add_edit_form(is_tech_actor: bool):
+    """
+    Primary role, additional canonical roles for ``User.secondary_roles`` JSON,
+    and a short display string for ``TeacherStaff.assigned_role`` (max 100 chars).
+    """
+    from utils.user_roles import canonical_role_label
+
+    if is_tech_actor:
+        return "IT Support", [], "IT Support"
+    primary = canonical_role_label((request.form.get("assigned_role") or "").strip() or "Teacher")
+    secondaries = []
+    seen = {primary}
+    for r in request.form.getlist("additional_roles"):
+        c = canonical_role_label((r or "").strip())
+        if c and c not in seen:
+            seen.add(c)
+            secondaries.append(c)
+    parts = [primary] + secondaries
+    display = ", ".join(parts)
+    if len(display) > 100:
+        display = display[:97].rstrip(", ") + "..."
+    return primary, secondaries, display
+
+
+def _apply_user_roles(user, primary: str, secondaries: list):
+    user.role = primary
+    user.secondary_roles = json.dumps(secondaries) if secondaries else None
+
+
+def _edit_staff_form_context(teacher_staff):
+    """Template kwargs for add_teacher_staff.html in edit mode."""
+    perms = []
+    u = User.query.filter_by(teacher_staff_id=teacher_staff.id).first()
+    try:
+        if u and getattr(u, "permissions", None):
+            raw = u.permissions
+            parsed = json.loads(raw) if isinstance(raw, str) else (list(raw) if raw else [])
+            if isinstance(parsed, list):
+                perms = parsed
+    except Exception:
+        perms = []
+    from utils.user_roles import parse_secondary_roles, canonical_role_label
+
+    extras = []
+    if u:
+        extras = [
+            canonical_role_label(x) for x in parse_secondary_roles(getattr(u, "secondary_roles", None))
+        ]
+    return {
+        "teacher_staff": teacher_staff,
+        "editing": True,
+        "staff_data": _dict_for_staff_form(teacher_staff),
+        "additional_roles_selected": extras,
+        "staff_permissions": perms,
+        "staff_role_options": STAFF_FORM_ROLE_OPTIONS,
+    }
+
+
 bp = Blueprint('teachers', __name__)
 
 # Note: The /add-teacher-staff route is registered in management_routes/__init__.py
@@ -60,7 +176,6 @@ def add_teacher_staff():
         phone = request.form.get('phone', '').strip()
         
         # Professional information
-        assigned_role = request.form.get('assigned_role', 'Teacher').strip()
         hire_date = request.form.get('hire_date', '').strip()
         # Handle multiple department selections
         departments = request.form.getlist('department')
@@ -76,12 +191,14 @@ def add_teacher_staff():
         grades_taught = request.form.getlist('grades_taught')
         grades_taught_json = json.dumps(grades_taught) if grades_taught else ''
         
+        is_tech_actor = current_user.role in ['Tech', 'IT Support']
         # Auto-assign role and department for Tech users
-        if current_user.role in ['Tech', 'IT Support']:
-            assigned_role = 'IT Support'
+        if is_tech_actor:
             department = 'Administration'
             # Tech users implicitly get the tech-only experience; permissions not used here
             permissions_json = None
+        
+        primary_role, secondary_roles, assigned_role_display = _roles_from_add_edit_form(is_tech_actor)
         
         # Address fields
         street = request.form.get('street_address', '').strip()
@@ -150,7 +267,7 @@ def add_teacher_staff():
             teacher_staff.phone = phone
             
             # Professional information
-            teacher_staff.assigned_role = assigned_role
+            teacher_staff.assigned_role = assigned_role_display
             teacher_staff.hire_date = hire_date
             teacher_staff.department = department
             teacher_staff.position = position
@@ -223,13 +340,13 @@ def add_teacher_staff():
             user = User()
             user.username = username
             user.password_hash = generate_password_hash(password)
-            user.role = assigned_role
             user.teacher_staff_id = teacher_staff.id
             user.email = email  # Set personal email from form
             user.google_workspace_email = generated_workspace_email  # Set generated workspace email
             user.is_temporary_password = True  # New users must change password
             user.password_changed_at = None
             user.permissions = permissions_json
+            _apply_user_roles(user, primary_role, secondary_roles)
             
             db.session.add(user)
             db.session.commit()
@@ -255,24 +372,24 @@ def add_teacher_staff():
                     )
                     if not created:
                         flash(
-                            f"{assigned_role} created locally, but Google account creation failed for {generated_workspace_email}. "
+                            f"{assigned_role_display} created locally, but Google account creation failed for {generated_workspace_email}. "
                             "Please verify the account does not already exist and that Directory permissions are configured.",
                             "warning",
                         )
                 else:
                     flash(
-                        f"{assigned_role} created locally, but no Google Workspace email was generated, so no Google account was created.",
+                        f"{assigned_role_display} created locally, but no Google Workspace email was generated, so no Google account was created.",
                         "warning",
                     )
             except Exception as e:
                 current_app.logger.error(f"Failed to auto-create Google staff account: {e}")
                 flash(
-                    f"{assigned_role} created locally, but Google account creation encountered an error. Check logs for details.",
+                    f"{assigned_role_display} created locally, but Google account creation encountered an error. Check logs for details.",
                     "warning",
                 )
             
             # Show success message with credentials
-            success_msg = f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}.'
+            success_msg = f'{assigned_role_display} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}.'
             if generated_workspace_email:
                 success_msg += f' Google Workspace Email: {generated_workspace_email}.'
             success_msg += ' User will be required to change password on first login.'
@@ -285,10 +402,17 @@ def add_teacher_staff():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error adding {assigned_role.lower()}: {str(e)}', 'danger')
+            flash(f'Error adding staff account: {str(e)}', 'danger')
             return redirect(request.url)
     
-    return render_template('management/add_teacher_staff.html', staff_permissions=[])
+    return render_template(
+        'management/add_teacher_staff.html',
+        staff_permissions=[],
+        staff_role_options=STAFF_FORM_ROLE_OPTIONS,
+        editing=False,
+        staff_data=None,
+        additional_roles_selected=[],
+    )
 
 
 
@@ -317,8 +441,6 @@ def edit_teacher_staff(staff_id):
         staff_ssn = request.form.get('staff_ssn', '').strip()
         phone = request.form.get('phone', '').strip()
         
-        # Professional information
-        assigned_role = request.form.get('assigned_role', 'Teacher').strip()
         hire_date = request.form.get('hire_date', '').strip()
         employment_status = (request.form.get('employment_status', '') or '').strip() or 'Active'
         marked_for_removal = request.form.get('marked_for_removal') == 'on'
@@ -337,19 +459,24 @@ def edit_teacher_staff(staff_id):
         grades_taught = request.form.getlist('grades_taught')
         grades_taught_json = json.dumps(grades_taught) if grades_taught else ''
         
+        is_tech_actor = current_user.role in ['Tech', 'IT Support']
+        if is_tech_actor:
+            permissions_json = None
+        primary_role, secondary_roles, assigned_role_display = _roles_from_add_edit_form(is_tech_actor)
+        
         # Validate required fields
         if not all([first_name, last_name, email]):
             if is_ajax:
                 return jsonify({'success': False, 'message': 'First name, last name, and email are required.'})
             flash('First name, last name, and email are required.', 'danger')
-            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
         
         # Validate email format
         if '@' not in email or '.' not in email:
             if is_ajax:
                 return jsonify({'success': False, 'message': 'Please enter a valid email address.'})
             flash('Please enter a valid email address.', 'danger')
-            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
         
         # Check if email already exists (excluding current staff)
         existing_staff = TeacherStaff.query.filter_by(email=email).first()
@@ -357,7 +484,7 @@ def edit_teacher_staff(staff_id):
             if is_ajax:
                 return jsonify({'success': False, 'message': 'A teacher/staff member with this email already exists.'})
             flash('A teacher/staff member with this email already exists.', 'danger')
-            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
         
         try:
             # Update teacher/staff record
@@ -370,7 +497,7 @@ def edit_teacher_staff(staff_id):
             teacher_staff.phone = phone
             
             # Professional information
-            teacher_staff.assigned_role = assigned_role
+            teacher_staff.assigned_role = assigned_role_display
             teacher_staff.hire_date = hire_date
             teacher_staff.employment_status = employment_status
             teacher_staff.marked_for_removal = marked_for_removal
@@ -398,12 +525,12 @@ def edit_teacher_staff(staff_id):
                         if is_ajax:
                             return jsonify({'success': False, 'message': 'Invalid expiration date format. Please use the date picker.'})
                         flash('Invalid expiration date format. Please use the date picker.', 'warning')
-                        return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+                        return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
                 else:
                     if is_ajax:
                         return jsonify({'success': False, 'message': 'Expiration date is required for temporary staff.'})
                     flash('Expiration date is required for temporary staff.', 'danger')
-                    return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+                    return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
             else:
                 teacher_staff.access_expires_at = None
             
@@ -425,8 +552,26 @@ def edit_teacher_staff(staff_id):
             user = User.query.filter_by(teacher_staff_id=staff_id).first()
             if user:
                 user.email = email
-                user.role = assigned_role
+                _apply_user_roles(user, primary_role, secondary_roles)
                 user.permissions = permissions_json
+                gwe = (request.form.get("google_workspace_email") or "").strip()
+                if gwe:
+                    existing_gwe = User.query.filter_by(google_workspace_email=gwe).first()
+                    if existing_gwe and existing_gwe.id != user.id:
+                        if is_ajax:
+                            return jsonify(
+                                {
+                                    "success": False,
+                                    "message": f"Google Workspace email {gwe} is already in use by another user.",
+                                }
+                            ), 400
+                        flash(f"Google Workspace email {gwe} is already in use.", "danger")
+                        return render_template(
+                            "management/add_teacher_staff.html", **_edit_staff_form_context(teacher_staff)
+                        )
+                    user.google_workspace_email = gwe
+                else:
+                    user.google_workspace_email = None
             
             db.session.commit()
             # Google Directory sync immediately after commit (Save → Workspace updated in one step)
@@ -442,35 +587,20 @@ def edit_teacher_staff(staff_id):
                     )
             
             if is_ajax:
-                return jsonify({'success': True, 'message': f'{assigned_role} updated successfully!'})
+                return jsonify({'success': True, 'message': f'{assigned_role_display} updated successfully!'})
             
-            flash(f'{assigned_role} updated successfully!', 'success')
+            flash(f'{assigned_role_display} updated successfully!', 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
             db.session.rollback()
-            error_msg = f'Error updating {assigned_role.lower()}: {str(e)}'
+            error_msg = f'Error updating staff: {str(e)}'
             if is_ajax:
                 return jsonify({'success': False, 'message': error_msg})
             flash(error_msg, 'danger')
-            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
     
-    staff_permissions = []
-    try:
-        if teacher_staff.user and getattr(teacher_staff.user, 'permissions', None):
-            raw = teacher_staff.user.permissions
-            staff_permissions = json.loads(raw) if isinstance(raw, str) else (list(raw) if raw else [])
-            if not isinstance(staff_permissions, list):
-                staff_permissions = []
-    except Exception:
-        staff_permissions = []
-
-    return render_template(
-        'management/add_teacher_staff.html',
-        teacher_staff=teacher_staff,
-        editing=True,
-        staff_permissions=staff_permissions
-    )
+    return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
 
 
 
@@ -1100,11 +1230,36 @@ def view_teacher(teacher_id):
             current_app.logger.warning(f"Error counting students for teacher {teacher_id}: {str(e)}")
             total_students = 0
         
-        # Get role from user account
+        # Get role from user account (display + edit modal uses primary_role / secondary_roles)
         try:
             role = teacher.user.role if teacher.user else "No Account"
         except AttributeError:
             role = "No Account"
+
+        from utils.user_roles import canonical_role_label, parse_secondary_roles
+
+        u = getattr(teacher, "user", None)
+        primary_role = ""
+        secondary_roles_list: list = []
+        permissions_list: list = []
+        if u and getattr(u, "role", None):
+            primary_role = canonical_role_label(u.role) or ""
+            for s in parse_secondary_roles(getattr(u, "secondary_roles", None)):
+                c = canonical_role_label(s)
+                if c and c != primary_role:
+                    secondary_roles_list.append(c)
+            try:
+                rawp = getattr(u, "permissions", None)
+                if rawp:
+                    permissions_list = json.loads(rawp) if isinstance(rawp, str) else list(rawp or [])
+                if not isinstance(permissions_list, list):
+                    permissions_list = []
+                permissions_list = [str(p).strip() for p in permissions_list if p]
+            except Exception:
+                permissions_list = []
+        elif teacher.assigned_role:
+            # No login yet: prefill primary from first segment of directory field
+            primary_role = (teacher.assigned_role.split(",")[0] or "").strip()
     except Exception as e:
         current_app.logger.error(f"Error processing teacher data {teacher_id}: {str(e)}")
         return jsonify({'error': 'Could not load teacher/staff details.'}), 500
@@ -1150,15 +1305,40 @@ def view_teacher(teacher_id):
 
     # Grades taught may be stored as JSON string
     grades_taught_str = None
+    grades_taught_list: list = []
     try:
         if teacher.grades_taught:
             if isinstance(teacher.grades_taught, str):
                 grades_taught_str = teacher.grades_taught
+                try:
+                    parsed = json.loads(teacher.grades_taught)
+                    if isinstance(parsed, list):
+                        grades_taught_list = [str(x) for x in parsed]
+                except Exception:
+                    pass
             else:
                 import json as _json
+
                 grades_taught_str = _json.dumps(teacher.grades_taught)
+                if isinstance(teacher.grades_taught, list):
+                    grades_taught_list = [str(x) for x in teacher.grades_taught]
     except Exception:
         grades_taught_str = None
+
+    department_list: list = []
+    if teacher.department:
+        department_list = [p.strip() for p in str(teacher.department).split(",") if p.strip()]
+
+    access_expires_iso = None
+    try:
+        _ae = getattr(teacher, "access_expires_at", None)
+        if _ae is not None:
+            from datetime import datetime as _dt
+
+            if isinstance(_ae, _dt):
+                access_expires_iso = _ae.strftime("%Y-%m-%dT%H:%M")
+    except Exception:
+        access_expires_iso = None
 
     try:
         return jsonify({
@@ -1170,6 +1350,10 @@ def view_teacher(teacher_id):
             'dob': _fmt_date(getattr(teacher, 'dob', None)),
             'staff_ssn': getattr(teacher, 'staff_ssn', None),
             'role': role,
+            'primary_role': primary_role,
+            'secondary_roles': secondary_roles_list,
+            'permissions': permissions_list,
+            'staff_role_options': STAFF_FORM_ROLE_OPTIONS,
             'assigned_role': getattr(teacher, 'assigned_role', None),
             'employment_type': getattr(teacher, 'employment_type', None),
             'employment_status': getattr(teacher, 'employment_status', 'Active'),
@@ -1180,6 +1364,7 @@ def view_teacher(teacher_id):
             'google_workspace_email': teacher.user.google_workspace_email if teacher.user and hasattr(teacher.user, 'google_workspace_email') else None,
             'username': teacher.user.username if teacher.user and hasattr(teacher.user, 'username') else None,
             'department': teacher.department,
+            'department_list': department_list,
             'position': teacher.position,
             'hire_date': _fmt_date(teacher.hire_date),
             'phone': teacher.phone,
@@ -1196,10 +1381,11 @@ def view_teacher(teacher_id):
             'emergency_phone': getattr(teacher, 'emergency_phone', None),
             'emergency_relationship': getattr(teacher, 'emergency_relationship', None),
             'grades_taught': grades_taught_str or '',
+            'grades_taught_list': grades_taught_list,
             'assigned_classes': [{'id': c.id, 'name': c.name, 'subject': c.subject} for c in assigned_classes],
             'total_students': total_students,
             'is_temporary': getattr(teacher, 'is_temporary', False),
-            'access_expires_at': _fmt_date(getattr(teacher, 'access_expires_at', None))
+            'access_expires_at': access_expires_iso or _fmt_date(getattr(teacher, 'access_expires_at', None)),
         })
     except Exception as e:
         current_app.logger.error(f"Error serializing teacher data {teacher_id}: {str(e)}")

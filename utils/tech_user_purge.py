@@ -146,10 +146,18 @@ def purge_user_dependencies(user_id: int) -> None:
     Steps:
     1. Group chats created by the user (messages + memberships).
     2. Direct / threaded messages (sender/recipient/participants).
-    3. Student-assistant rows tied to this login (NOT NULL assistant_user_id).
+    3. Student assistant **action logs** (``assistant_user_id``) and **roster** rows
+       (``StudentAssistant`` is keyed by ``student_id``, not user id).
     4. Schema-driven sweep for any remaining FK to ``user`` (logs, grades history, comms, etc.).
     """
-    from models import MessageGroupMember, MessageReaction, Notification, StudentAssistant, StudentAssistantActionLog
+    from models import (
+        MessageGroupMember,
+        MessageReaction,
+        Notification,
+        StudentAssistant,
+        StudentAssistantActionLog,
+        User,
+    )
 
     skip_reflect: FrozenSet[str] = frozenset({"user", "message"})
 
@@ -162,7 +170,11 @@ def purge_user_dependencies(user_id: int) -> None:
     StudentAssistantActionLog.query.filter_by(assistant_user_id=user_id).delete(
         synchronize_session=False
     )
-    StudentAssistant.query.filter_by(assistant_user_id=user_id).delete(synchronize_session=False)
+    urow = db.session.get(User, user_id)
+    if urow and urow.student_id:
+        StudentAssistant.query.filter_by(student_id=urow.student_id).delete(
+            synchronize_session=False
+        )
 
     mids = _message_thread_ids_for_user(user_id)
     _delete_messages_for_ids(mids)

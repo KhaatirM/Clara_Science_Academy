@@ -10,6 +10,33 @@ _MGMT_PICK_ROLES = frozenset({"School Administrator", "Director"})
 _TECH_ROUTE_ROLES = frozenset({"Tech", "IT Support", "Director"})  # who may open /tech/* routes
 _MGMT_ROLES = frozenset({"School Administrator", "Director"})
 
+# Production DBs sometimes store lowercase or shorthand labels (e.g. admin, teacher).
+_ROLE_CANON_ALIASES = {
+    "admin": "School Administrator",
+    "administrator": "School Administrator",
+    "school administrator": "School Administrator",
+    "school_administrator": "School Administrator",
+    "director": "Director",
+    "teacher": "Teacher",
+    "tech": "Tech",
+    "it support": "IT Support",
+    "it_support": "IT Support",
+    "student": "Student",
+    "other staff": "Other Staff",
+    "other_staff": "Other Staff",
+}
+
+
+def canonical_role_label(role: Any) -> str:
+    """Normalize role strings for comparisons (case-insensitive + common aliases)."""
+    if role is None:
+        return ""
+    s = str(role).strip()
+    if not s:
+        return ""
+    key = s.lower()
+    return _ROLE_CANON_ALIASES.get(key, s)
+
 
 def _parse_secondary_roles(raw: Any) -> List[str]:
     if not raw:
@@ -27,15 +54,15 @@ def _parse_secondary_roles(raw: Any) -> List[str]:
 
 
 def all_role_strings(user) -> Set[str]:
-    """Primary role plus any ``secondary_roles`` JSON entries."""
+    """Primary role plus any ``secondary_roles`` JSON entries (canonical labels)."""
     if not user:
         return set()
     roles: Set[str] = set()
     pr = getattr(user, "role", None)
     if pr:
-        roles.add(str(pr).strip())
+        roles.add(canonical_role_label(pr))
     for s in _parse_secondary_roles(getattr(user, "secondary_roles", None)):
-        roles.add(s)
+        roles.add(canonical_role_label(s))
     return {r for r in roles if r}
 
 
@@ -56,7 +83,7 @@ def staff_must_choose_dashboard(user) -> bool:
     Both a tech-style role (Tech/IT Support) and a management role (School Admin/Director) —
     user must pick which dashboard to open (e.g. after merging two accounts).
     """
-    if not user or getattr(user, "role", None) == "Student":
+    if not user or canonical_role_label(getattr(user, "role", None)) == "Student":
         return False
     r = all_role_strings(user)
     return bool(r & _TECH_PICK_ROLES) and bool(r & _MGMT_PICK_ROLES)

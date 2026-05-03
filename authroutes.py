@@ -12,6 +12,7 @@ from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 
 # Authentication and decorators
 from decorators import is_teacher_role, has_any_permission
+from utils.user_roles import canonical_role_label
 
 # Application imports - lazy import to avoid circular dependency
 def get_log_activity():
@@ -181,7 +182,7 @@ def login():
                             )
                             return render_template('shared/login.html')
 
-                if user.role == 'Student' and user.student_id:
+                if canonical_role_label(user.role) == 'Student' and user.student_id:
                     from models import Student
                     from utils.student_login_policy import grade_may_have_login
                     st = Student.query.get(user.student_id)
@@ -224,7 +225,7 @@ def login():
                 )
                 
                 # Auto-record school-day attendance for students (7–10 AM Present, 10 AM–3 PM Late)
-                if user.role == 'Student' and user.student_id:
+                if canonical_role_label(user.role) == 'Student' and user.student_id:
                     try:
                         from services.attendance_on_login import record_school_day_attendance_on_login
                         record_school_day_attendance_on_login(user)
@@ -293,7 +294,7 @@ def choose_staff_dashboard():
         user_has_management_entry_access,
     )
 
-    if current_user.role == 'Student':
+    if canonical_role_label(current_user.role) == 'Student':
         return redirect(url_for('auth.dashboard'))
     if not staff_must_choose_dashboard(current_user):
         return redirect(url_for('auth.dashboard'))
@@ -333,7 +334,7 @@ def dashboard():
         user_has_management_entry_access,
     )
 
-    if current_user.role == 'Student':
+    if canonical_role_label(current_user.role) == 'Student':
         return redirect(url_for('student.student_dashboard'))
 
     if staff_must_choose_dashboard(current_user):
@@ -346,9 +347,9 @@ def dashboard():
 
     if is_teacher_role(current_user.role):
         return redirect(url_for('teacher.dashboard.teacher_dashboard'))
-    elif current_user.role in ['School Administrator', 'Director']:
+    elif user_has_management_entry_access(current_user):
         return redirect(url_for('management.management_dashboard'))
-    elif current_user.role in ['Tech', 'IT Support']:
+    elif user_has_tech_route_access(current_user):
         return redirect(url_for('tech.tech_dashboard'))
     else:
         # Permission-based Administration staff (e.g. Other Staff with Administration department)
@@ -425,7 +426,7 @@ def change_password_popup():
         
         # Get user ID for display
         user_id = ''
-        if current_user.role == 'Student' and current_user.student_id:
+        if canonical_role_label(current_user.role) == 'Student' and current_user.student_id:
             from models import Student
             student = Student.query.get(current_user.student_id)
             if student:
@@ -716,7 +717,7 @@ def change_password_ajax():
             redirect_url = url_for('management.dashboard')
         elif current_user.role == 'Teacher':
             redirect_url = url_for('teacher.dashboard.teacher_dashboard')
-        elif current_user.role == 'Student':
+        elif canonical_role_label(current_user.role) == 'Student':
             redirect_url = url_for('student.dashboard')
         else:
             redirect_url = url_for('auth.dashboard')
@@ -980,7 +981,7 @@ def google_callback():
         ).first()
         
         if user:
-            if user.role == 'Student' and user.student_id:
+            if canonical_role_label(user.role) == 'Student' and user.student_id:
                 from models import Student
                 from utils.student_login_policy import grade_may_have_login
                 st = Student.query.get(user.student_id)
@@ -1015,7 +1016,7 @@ def google_callback():
             )
             
             # Auto-record school-day attendance for students (7–10 AM Present, 10 AM–3 PM Late)
-            if user.role == 'Student' and user.student_id:
+            if canonical_role_label(user.role) == 'Student' and user.student_id:
                 try:
                     from services.attendance_on_login import record_school_day_attendance_on_login
                     record_school_day_attendance_on_login(user)

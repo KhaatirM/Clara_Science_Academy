@@ -3,7 +3,11 @@ from flask import abort, request, flash, redirect, url_for
 from flask_login import current_user
 import json
 
-from utils.user_roles import user_has_tech_route_access, user_has_management_entry_access
+from utils.user_roles import (
+    user_has_tech_route_access,
+    user_has_management_entry_access,
+    canonical_role_label,
+)
 
 TEACHER_ROLES = [
     'History Teacher',
@@ -20,10 +24,23 @@ TEACHER_ROLES = [
 ]
 
 def is_teacher_role(role):
-    """Check if a role is considered a teacher role"""
+    """Check if a role is considered a teacher role (case-insensitive; accepts ``teacher``, subject teachers, etc.)."""
     if not role:
         return False
-    return role in TEACHER_ROLES or 'Teacher' in role
+    r = str(role).strip()
+    if r in TEACHER_ROLES:
+        return True
+    canon = canonical_role_label(r)
+    if canon in TEACHER_ROLES:
+        return True
+    if canon == 'Teacher':
+        return True
+    rl = r.lower()
+    if rl in ('teacher', 'substitute', 'counselor'):
+        return True
+    if 'teacher' in rl or 'counselor' in rl:
+        return True
+    return 'Teacher' in r
 
 
 def get_user_permissions(user):
@@ -96,7 +113,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        if current_user.role != 'Director':
+        if canonical_role_label(current_user.role) != 'Director':
             abort(403)  # Forbidden - wrong role
         return f(*args, **kwargs)
     return decorated_function
@@ -234,27 +251,14 @@ def teacher_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        
-        # Get role and normalize it (strip whitespace)
+
         role = str(current_user.role).strip() if current_user.role else None
-        
-        # Debug output (will show in console)
-        print(f"[DEBUG teacher_required] User: {current_user.username}, Role: '{role}'")
-        
-        # Check if role is a teacher role or admin role
         is_teacher = is_teacher_role(role)
-        is_admin_role = role in ['School Administrator', 'Director']
-        
-        print(f"[DEBUG teacher_required] is_teacher_role: {is_teacher}, is_admin: {is_admin_role}")
-        
+        is_admin_role = user_has_management_entry_access(current_user)
+
         if not (is_teacher or is_admin_role):
-            # Debug output
-            print(f"[ERROR] Teacher required check FAILED for user {current_user.username}")
-            print(f"[ERROR] Role: '{role}' (type: {type(role)})")
-            print(f"[ERROR] TEACHER_ROLES list: {TEACHER_ROLES}")
-            print(f"[ERROR] 'Teacher' in role: {'Teacher' in str(role) if role else False}")
             abort(403)  # Forbidden - wrong role
-        
+
         return f(*args, **kwargs)
     return decorated_function
 
@@ -264,7 +268,7 @@ def student_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        if current_user.role != 'Student':
+        if canonical_role_label(current_user.role) != 'Student':
             flash(
                 'The student portal is only for student accounts. '
                 'Staff should sign in from the main login page and open your staff dashboard.',

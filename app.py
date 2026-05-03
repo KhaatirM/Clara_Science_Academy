@@ -816,6 +816,18 @@ def create_app(config_class=None):
             return {"dual_dashboard_staff": False}
 
     @app.context_processor
+    def inject_role_canonical():
+        """Canonical role label for sidebar/nav (handles lowercase DB values like admin, teacher)."""
+        if not current_user.is_authenticated:
+            return {"role_canonical": ""}
+        try:
+            from utils.user_roles import canonical_role_label
+
+            return {"role_canonical": canonical_role_label(current_user.role)}
+        except Exception:
+            return {"role_canonical": (getattr(current_user, "role", None) or "")}
+
+    @app.context_processor
     def inject_role_display():
         """Single place to control how a user's role is displayed in the sidebar."""
         try:

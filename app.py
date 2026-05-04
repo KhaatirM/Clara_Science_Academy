@@ -8,7 +8,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
 from sqlalchemy import func, and_, text
 from datetime import datetime, timezone
-from decorators import is_teacher_role
+from decorators import is_teacher_role, user_can_manage_assignments_and_grades
 
 # Import extensions to avoid circular imports
 from extensions import db, login_manager, csrf, mail
@@ -1200,10 +1200,11 @@ def create_app(config_class=None):
         assignment = Assignment.query.get_or_404(assignment_id)
         class_obj = assignment.class_info
 
-        # Check authorization - teachers/admins can view files for their classes
-        # Directors and School Administrators always have access (including when class_obj is None)
-        if current_user.role in ['Director', 'School Administrator']:
-            pass  # Authorized
+        # Check authorization - teachers/admins can view files for their classes.
+        # Use same rule as management assignment routes: Director/SA in primary *or* secondary_roles,
+        # or explicit assignments_grades:manage (not just primary role string — avoids Tech+SA 403 in iframe).
+        if user_can_manage_assignments_and_grades(current_user):
+            pass  # Authorized (any class, including missing class_obj)
         elif class_obj:
             if current_user.role == 'Student':
                 # Students must use student.download_assignment_file; this route supports them for shared views
@@ -1329,8 +1330,7 @@ def create_app(config_class=None):
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         class_obj = group_assignment.class_info
 
-        # Authorization
-        if current_user.role in ['Director', 'School Administrator']:
+        if user_can_manage_assignments_and_grades(current_user):
             pass
         elif class_obj:
             if current_user.role == 'Student':

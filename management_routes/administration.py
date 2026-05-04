@@ -98,7 +98,11 @@ def settings():
     # Check if admin has connected their Google account
     user = User.query.get(current_user.id)
     google_connected = user.google_refresh_token is not None
-    return render_template('management/management_settings.html', google_connected=google_connected)
+    return render_template(
+        'management/management_settings.html',
+        google_connected=google_connected,
+        settings_back_url=url_for('management.management_dashboard'),
+    )
 
 
 # ============================================================================

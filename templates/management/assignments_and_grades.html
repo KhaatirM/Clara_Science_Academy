@@ -425,6 +425,9 @@
                                     {% set _type = (assignment.assignment_type or '')|lower %}
                                     {% if _type == 'quiz' %}
                                         <span class="badge bg-primary"><i class="bi bi-question-circle me-1"></i>Quiz</span>
+                                        {% if assignment.quiz_authoring_is_draft %}
+                                        <span class="badge bg-secondary"><i class="bi bi-pencil me-1"></i>Draft</span>
+                                        {% endif %}
                                     {% elif _type == 'discussion' %}
                                         <span class="badge bg-info"><i class="bi bi-chat-dots me-1"></i>Discussion</span>
                                     {% elif _type == 'project' %}

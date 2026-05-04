@@ -12,6 +12,11 @@ from models import (
 )
 from datetime import datetime
 from utils.school_timezone import get_school_timezone_name
+from teacher_routes.assignment_utils import (
+    quiz_authoring_save_action,
+    quiz_draft_default_due_date,
+    count_quiz_questions_in_request,
+)
 
 bp = Blueprint('quizzes', __name__)
 
@@ -45,24 +50,52 @@ def _build_quiz_data_for_edit(assignment):
 def create_quiz_assignment():
     """Create or edit a quiz assignment"""
     if request.method == 'POST':
+        save_action = quiz_authoring_save_action(request.form)
+        is_draft = save_action == 'draft'
         assignment_id = request.form.get('assignment_id', type=int)
         is_edit = bool(assignment_id)
-        title = request.form.get('title')
+        title = (request.form.get('title') or '').strip()
         class_id = request.form.get('class_id', type=int)
         description = request.form.get('description', '')
-        due_date_str = request.form.get('due_date')
-        quarter = request.form.get('quarter')
-        
-        if not all([title, class_id, due_date_str, quarter]):
-            flash("Please fill in all required fields.", "danger")
-            redirect_target = url_for('teacher.create_quiz_assignment')
+        due_date_str = (request.form.get('due_date') or '').strip()
+        quarter = (request.form.get('quarter') or '').strip()
+
+        def _redirect_back():
+            rt = url_for('teacher.create_quiz_assignment')
             if is_edit:
-                redirect_target += f'?edit={assignment_id}'
-            return redirect(redirect_target)
-        
+                rt += f'?edit={assignment_id}'
+            return redirect(rt)
+
+        if is_draft:
+            if not class_id:
+                flash("Choose a class to save your draft.", "danger")
+                return _redirect_back()
+            title = title or 'Untitled quiz (draft)'
+            quarter = quarter or '1'
+            try:
+                due_date = (
+                    datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+                    if due_date_str
+                    else quiz_draft_default_due_date()
+                )
+            except ValueError:
+                due_date = quiz_draft_default_due_date()
+        else:
+            if not all([title, class_id, due_date_str, quarter]):
+                flash("Please fill in all required fields.", "danger")
+                return _redirect_back()
+            try:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash("Invalid due date.", "danger")
+                return _redirect_back()
+
+        link_google_form = request.form.get('link_google_form') == 'on'
+        if not is_draft and not link_google_form and count_quiz_questions_in_request(request.form) < 1:
+            flash("Add at least one question before publishing, or use Save draft.", "warning")
+            return _redirect_back()
+
         try:
-            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            
             # Parse open_date and close_date if provided
             open_date_str = request.form.get('open_date', '').strip()
             close_date_str = request.form.get('close_date', '').strip()
@@ -85,15 +118,18 @@ def create_quiz_assignment():
             if not close_date:
                 close_date = due_date
             
-            # Calculate status based on dates
+            # Calculate status based on dates (drafts stay inactive until published)
             from teacher_routes.assignment_utils import calculate_assignment_status
-            temp_assignment = type('obj', (object,), {
-                'status': 'Active',
-                'open_date': open_date,
-                'close_date': close_date,
-                'due_date': due_date
-            })
-            calculated_status = calculate_assignment_status(temp_assignment)
+            if is_draft:
+                calculated_status = 'Inactive'
+            else:
+                temp_assignment = type('obj', (object,), {
+                    'status': 'Active',
+                    'open_date': open_date,
+                    'close_date': close_date,
+                    'due_date': due_date
+                })
+                calculated_status = calculate_assignment_status(temp_assignment)
             
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
@@ -127,6 +163,7 @@ def create_quiz_assignment():
                 existing.quarter = str(quarter)
                 existing.class_id = class_id
                 existing.status = calculated_status
+                existing.quiz_authoring_is_draft = is_draft
                 new_assignment = existing
                 # Delete old quiz graph in FK-safe order before rebuilding.
                 old_question_ids = [
@@ -152,6 +189,7 @@ def create_quiz_assignment():
                     school_year_id=current_school_year.id,
                     assignment_type='quiz',
                     status=calculated_status,
+                    quiz_authoring_is_draft=is_draft,
                     created_by=current_user.id
                 )
                 db.session.add(new_assignment)
@@ -291,6 +329,14 @@ def create_quiz_assignment():
             # Update assignment total_points to total from questions
             new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
+            if is_draft:
+                flash(
+                    'Draft saved. Open it again from Assignments & Grades when you are ready to continue.'
+                    if is_edit
+                    else 'Draft saved. You can finish and publish later from Assignments & Grades.',
+                    'success',
+                )
+                return redirect(url_for('teacher.create_quiz_assignment') + f'?edit={new_assignment.id}')
             flash('Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!', 'success')
             return redirect(url_for('teacher.dashboard.assignments_and_grades'))
             
@@ -323,7 +369,16 @@ def create_quiz_assignment():
     
     question_banks_url = url_for('teacher.quizzes.question_banks_json')
     save_to_bank_url = url_for('teacher.quizzes.save_to_bank')
-    return render_template('shared/create_quiz_assignment.html', classes=classes, teacher=teacher, assignment=assignment, quiz_data=quiz_data, question_banks_url=question_banks_url, save_to_bank_url=save_to_bank_url)
+    return render_template(
+        'shared/create_quiz_assignment.html',
+        classes=classes,
+        teacher=teacher,
+        assignment=assignment,
+        quiz_data=quiz_data,
+        question_banks_url=question_banks_url,
+        save_to_bank_url=save_to_bank_url,
+        quiz_drafts_enabled=True,
+    )
 
 
 @bp.route('/api/question-banks')

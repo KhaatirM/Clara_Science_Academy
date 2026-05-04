@@ -681,6 +681,8 @@ class Assignment(db.Model):
     
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
+    # Quiz only: staff save work-in-progress; students never see until published (quiz_authoring_is_draft cleared)
+    quiz_authoring_is_draft = db.Column(db.Boolean, default=False, nullable=False)
     
     # Temporary status override: when set, overrides automatic status until status_override_until passes
     status_override = db.Column(db.String(20), nullable=True)  # Active, Inactive, Voided

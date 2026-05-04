@@ -98,6 +98,33 @@ def _provision_student_login_if_needed(student):
     }
 
 
+def _ensure_student_google_workspace_email(student):
+    """
+    Fill User.google_workspace_email using Student.generate_email() when a portal User exists,
+    the grade allows Google login, and Workspace email is still blank.
+
+    This matches the same naming rules used for Directory sync and provisioning so students can
+    sign in with Google without admins typing the school address manually.
+    Does not commit.
+    """
+    user = getattr(student, "user", None)
+    if not user:
+        return False
+    if not grade_may_have_login(student.grade_level):
+        return False
+    if (user.google_workspace_email or "").strip():
+        return False
+    generated = student.generate_email()
+    if not generated:
+        return False
+    user.google_workspace_email = generated
+    if not (student.email or "").strip():
+        student.email = generated
+    if not (user.email or "").strip():
+        user.email = generated
+    return True
+
+
 def _build_entrance_school_year_options(start_year=2020):
     """Return school-year labels from current year back to start_year."""
     today = date.today()
@@ -1867,6 +1894,27 @@ def get_class_students(class_id):
 def view_student(student_id):
     """View detailed student information"""
     student = Student.query.get_or_404(student_id)
+
+    if _ensure_student_google_workspace_email(student):
+        try:
+            db.session.commit()
+            uid = getattr(getattr(student, "user", None), "id", None)
+            if uid and (student.user.google_workspace_email or "").strip():
+                try:
+                    sync_single_user_to_google(uid)
+                except Exception as sync_e:
+                    current_app.logger.warning(
+                        "view_student: Directory sync after auto-fill failed for user %s: %s",
+                        uid,
+                        sync_e,
+                    )
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.warning(
+                "view_student: could not persist auto-filled Workspace email for student %s: %s",
+                student_id,
+                e,
+            )
     
     # Calculate age from DOB
     age = None
@@ -2020,25 +2068,25 @@ def edit_student(student_id):
         if student_email:
             student.email = student_email
         
-        # Update Google Workspace email in User account if student has one
+        # Google Workspace email: explicit value from form, or auto-fill from Student.generate_email()
         google_workspace_email = request.form.get('google_workspace_email', '').strip()
         if student.user:
             if google_workspace_email:
-                # Check if this email is already used by another user
                 existing_user = User.query.filter_by(google_workspace_email=google_workspace_email).first()
                 if existing_user and existing_user.id != student.user.id:
                     return jsonify({'success': False, 'message': f'Google Workspace email {google_workspace_email} is already in use by another user.'}), 400
-                
                 student.user.google_workspace_email = google_workspace_email
             else:
-                # Clear the Google Workspace email if field is empty
-                student.user.google_workspace_email = None
+                # Empty field = use canonical generated school email (same as Directory), do not wipe
+                _ensure_student_google_workspace_email(student)
 
         new_creds = None
         if not grade_may_have_login(student.grade_level):
             _strip_student_user_account(student)
         else:
             new_creds = _provision_student_login_if_needed(student)
+            if getattr(student, "user", None):
+                _ensure_student_google_workspace_email(student)
 
         db.session.commit()
         # Google Directory sync immediately after commit (Save → Workspace updated in one step)

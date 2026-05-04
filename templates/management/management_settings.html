@@ -20,7 +20,7 @@
                             <p class="text-white mb-0 opacity-90"><i class="bi bi-person me-2"></i>{{ current_user.username }} - {{ current_user.role }}</p>
                         </div>
                     </div>
-                    <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-back-settings text-decoration-none">
+                    <a href="{{ settings_back_url }}" class="btn btn-back-settings text-decoration-none">
                         <i class="bi bi-arrow-left me-2"></i>Back
                     </a>
                 </div>
@@ -223,7 +223,8 @@
             </div>
         </div>
         
-        <!-- Google Classroom Integration -->
+        <!-- Google Classroom Integration (management / teacher-style roles only; hidden on Tech settings) -->
+        {% if show_google_classroom_section|default(true) %}
         <div class="col-12">
             <div class="settings-card google-card animated-fade-in" style="animation-delay: 0.4s;">
                 <div class="settings-card-header">
@@ -302,6 +303,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 

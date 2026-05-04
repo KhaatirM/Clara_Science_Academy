@@ -380,6 +380,33 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: assignment advanced grading columns check failed (may already exist): {e}")
 
+        # Quiz authoring draft (save incomplete quiz; students never see until published)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(assignment)"))
+                    columns = [row[1] for row in r]
+                    if 'quiz_authoring_is_draft' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE assignment ADD COLUMN quiz_authoring_is_draft INTEGER NOT NULL DEFAULT 0"
+                        ))
+                        conn.commit()
+                        print("Added assignment.quiz_authoring_is_draft column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'assignment' AND column_name = 'quiz_authoring_is_draft'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            'ALTER TABLE "assignment" ADD COLUMN quiz_authoring_is_draft BOOLEAN NOT NULL DEFAULT false'
+                        ))
+                        conn.commit()
+                        print("Added assignment.quiz_authoring_is_draft column.")
+        except Exception as e:
+            print(f"Note: assignment.quiz_authoring_is_draft check failed (may already exist): {e}")
+
         # Add assignment.status_override and status_override_until if missing (for temporary status overrides)
         for table_name in ('assignment', 'group_assignment'):
             try:

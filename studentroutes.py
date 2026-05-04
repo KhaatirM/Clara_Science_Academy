@@ -2354,6 +2354,10 @@ def take_quiz(assignment_id):
     if not assignment_visible_to_students(assignment):
         flash('This assignment is not available.', 'warning')
         return redirect(url_for('student.student_assignments'))
+
+    if getattr(assignment, 'quiz_authoring_is_draft', False):
+        flash('This quiz has not been published yet.', 'warning')
+        return redirect(url_for('student.student_assignments'))
     
     # Check if assignment is a quiz
     if assignment.assignment_type != 'quiz':

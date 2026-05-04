@@ -103,14 +103,20 @@ def assignment_visible_to_students(assignment_or_group_assignment):
 
 
 def assignment_student_visibility_filter():
-    """SQLAlchemy filter: students only see approved or non-assistant assignments."""
-    from sqlalchemy import or_
+    """SQLAlchemy filter: students only see approved or non-assistant assignments; hide quiz drafts."""
+    from sqlalchemy import and_, or_
     from models import Assignment
 
-    return or_(
+    approved = or_(
         Assignment.assistant_approval_status.is_(None),
         Assignment.assistant_approval_status == ASSISTANT_APPROVAL_APPROVED,
     )
+    # Quizzes saved as in-progress drafts are staff-only until published
+    not_quiz_draft = or_(
+        Assignment.assignment_type != 'quiz',
+        Assignment.quiz_authoring_is_draft.isnot(True),
+    )
+    return and_(approved, not_quiz_draft)
 
 
 def group_assignment_student_visibility_filter():

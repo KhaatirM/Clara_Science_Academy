@@ -328,3 +328,38 @@ def is_assignment_open_for_student(assignment, student_id):
     
     return True  # Assignment is open
 
+
+def quiz_authoring_save_action(form):
+    """Form value for quiz builder: 'draft' (save progress) or 'publish' (students may see when dates allow)."""
+    v = (form.get("quiz_save_action") or "publish").strip().lower()
+    return v if v in ("draft", "publish") else "publish"
+
+
+def quiz_draft_default_due_date():
+    """UTC naive datetime used when saving a draft without a due date yet."""
+    from datetime import timedelta
+
+    return datetime.utcnow() + timedelta(days=7)
+
+
+def count_quiz_questions_in_request(form):
+    """
+    Count non-empty quiz questions in POST data (block_order or legacy question_text_* keys).
+    Used to require at least one question before publishing.
+    """
+    block_order_str = (form.get("block_order") or "").strip()
+    n = 0
+    if block_order_str:
+        for block in block_order_str.split(","):
+            block = block.strip()
+            if block.startswith("question_"):
+                qid = block.replace("question_", "")
+                if (form.get(f"question_text_{qid}") or "").strip():
+                    n += 1
+        return n
+    for key in form.keys():
+        if key.startswith("question_text_") and not key.endswith("[]"):
+            if (form.get(key) or "").strip():
+                n += 1
+    return n
+

@@ -193,6 +193,20 @@ def tech_dashboard():
     
     return render_template('tech/tech_dashboard.html', users=users, maintenance=maintenance)
 
+
+@tech_blueprint.route('/settings')
+@login_required
+@tech_required
+def settings():
+    """Account preferences (password, theme) for Tech / IT Support — same layout as other staff settings."""
+    return render_template(
+        'management/management_settings.html',
+        settings_back_url=url_for('tech.tech_dashboard'),
+        show_google_classroom_section=False,
+        google_connected=False,
+    )
+
+
 @tech_blueprint.route('/activity/log')
 @login_required
 @tech_required

@@ -22,7 +22,12 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo
 import json
 from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
-from teacher_routes.assignment_utils import is_assignment_open_for_student
+from teacher_routes.assignment_utils import (
+    is_assignment_open_for_student,
+    quiz_authoring_save_action,
+    quiz_draft_default_due_date,
+    count_quiz_questions_in_request,
+)
 from utils.grade_helpers import (
     get_points_earned,
     numeric_score_from_grade_dict,
@@ -150,47 +155,70 @@ def _build_quiz_data_for_edit(assignment):
 def create_quiz_assignment():
     """Create or edit a quiz assignment - management version"""
     if request.method == 'POST':
+        save_action = quiz_authoring_save_action(request.form)
+        is_draft = save_action == 'draft'
         assignment_id = request.form.get('assignment_id', type=int)
         is_edit = bool(assignment_id)
-        title = request.form.get('title')
+        title = (request.form.get('title') or '').strip()
         class_id = request.form.get('class_id', type=int)
         description = request.form.get('description', '')
-        due_date_str = request.form.get('due_date')
-        quarter = request.form.get('quarter')
-        
-        if not all([title, class_id, due_date_str, quarter]):
-            flash("Please fill in all required fields.", "danger")
-            redirect_target = url_for('management.create_quiz_assignment')
+        due_date_str = (request.form.get('due_date') or '').strip()
+        quarter = (request.form.get('quarter') or '').strip()
+        link_google_form_early = request.form.get('link_google_form') == 'on'
+
+        def _redirect_quiz_back():
+            rt = url_for('management.create_quiz_assignment')
             if is_edit:
-                redirect_target += f'?edit={assignment_id}'
-            return redirect(redirect_target)
-        
+                rt += f'?edit={assignment_id}'
+            return redirect(rt)
+
+        if is_draft:
+            if not class_id:
+                flash("Choose a class to save your draft.", "danger")
+                return _redirect_quiz_back()
+            title = title or 'Untitled quiz (draft)'
+            quarter = quarter or '1'
+        elif not all([title, class_id, due_date_str, quarter]):
+            flash("Please fill in all required fields.", "danger")
+            return _redirect_quiz_back()
+
+        if not is_draft and not link_google_form_early and count_quiz_questions_in_request(request.form) < 1:
+            flash("Add at least one question before publishing, or use Save draft.", "warning")
+            return _redirect_quiz_back()
+
         try:
-            from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+            from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz, calculate_assignment_status
+
             tz_name = get_school_timezone_name()
-            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
-            if not due_date:
-                raise ValueError("Invalid due date")
-            
+            if is_draft:
+                due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name) if due_date_str else None
+                if not due_date:
+                    due_date = quiz_draft_default_due_date()
+            else:
+                due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+                if not due_date:
+                    raise ValueError("Invalid due date")
+
             # Parse open_date and close_date if provided (interpreted as school timezone)
             open_date_str = request.form.get('open_date', '').strip()
             close_date_str = request.form.get('close_date', '').strip()
             open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
             close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
-            
+
             # If close_date not provided, default to due_date
             if not close_date:
                 close_date = due_date
-            
-            # Calculate status based on dates
-            from teacher_routes.assignment_utils import calculate_assignment_status
-            temp_assignment = type('obj', (object,), {
-                'status': 'Active',
-                'open_date': open_date,
-                'close_date': close_date,
-                'due_date': due_date
-            })
-            calculated_status = calculate_assignment_status(temp_assignment)
+
+            if is_draft:
+                calculated_status = 'Inactive'
+            else:
+                temp_assignment = type('obj', (object,), {
+                    'status': 'Active',
+                    'open_date': open_date,
+                    'close_date': close_date,
+                    'due_date': due_date
+                })
+                calculated_status = calculate_assignment_status(temp_assignment)
             
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
@@ -213,7 +241,7 @@ def create_quiz_assignment():
             show_correct_answers = request.form.get('show_correct_answers') == 'on'
             
             # Get Google Forms link settings
-            link_google_form = request.form.get('link_google_form') == 'on'
+            link_google_form = link_google_form_early
             google_form_url = request.form.get('google_form_url', '').strip()
             google_form_id = None
             
@@ -254,6 +282,7 @@ def create_quiz_assignment():
                 existing.google_form_url = google_form_url if link_google_form else None
                 existing.google_form_linked = link_google_form
                 existing.assignment_context = assignment_context
+                existing.quiz_authoring_is_draft = is_draft
                 new_assignment = existing
                 # Clean old quiz graph in FK-safe order before rebuilding questions.
                 from models import QuizProgress
@@ -279,6 +308,7 @@ def create_quiz_assignment():
                     school_year_id=current_school_year.id,
                     status=calculated_status,
                     assignment_type='quiz',
+                    quiz_authoring_is_draft=is_draft,
                     allow_save_and_continue=allow_save_and_continue,
                     max_save_attempts=max_save_attempts,
                     save_timeout_minutes=save_timeout_minutes,
@@ -432,6 +462,14 @@ def create_quiz_assignment():
             # Update assignment total_points
             new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
+            if is_draft:
+                flash(
+                    'Draft saved. Open it again from Assignments & Grades when you are ready to continue.'
+                    if is_edit
+                    else 'Draft saved. You can finish and publish later from Assignments & Grades.',
+                    'success',
+                )
+                return redirect(url_for('management.create_quiz_assignment') + f'?edit={new_assignment.id}')
             flash('Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!', 'success')
             return redirect(url_for('management.assignments_and_grades'))
             
@@ -453,7 +491,16 @@ def create_quiz_assignment():
         quiz_data = _build_quiz_data_for_edit(assignment)
     question_banks_url = url_for('management.assignments.question_banks_json')
     save_to_bank_url = url_for('management.assignments.save_to_bank')
-    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter, assignment=assignment, quiz_data=quiz_data, question_banks_url=question_banks_url, save_to_bank_url=save_to_bank_url)
+    return render_template(
+        'shared/create_quiz_assignment.html',
+        classes=classes,
+        current_quarter=current_quarter,
+        assignment=assignment,
+        quiz_data=quiz_data,
+        question_banks_url=question_banks_url,
+        save_to_bank_url=save_to_bank_url,
+        quiz_drafts_enabled=True,
+    )
 
 
 @bp.route('/api/question-banks')

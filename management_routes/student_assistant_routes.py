@@ -1180,6 +1180,7 @@ def assistant_add_quiz_assignment(class_id):
         question_banks_url='',
         save_to_bank_url='',
         student_assistant_mode=True,
+        quiz_drafts_enabled=False,
         form_action=url_for('student_assistant.assistant_add_quiz_assignment', class_id=class_id),
         back_url=url_for('student_assistant.class_hub', class_id=class_id),
     )

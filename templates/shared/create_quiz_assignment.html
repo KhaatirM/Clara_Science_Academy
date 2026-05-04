@@ -38,8 +38,15 @@
     <form id="quizAssignmentForm" method="POST" enctype="multipart/form-data" action="{{ form_action if form_action is defined else '' }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="assignment_type" value="quiz">
+        <input type="hidden" name="quiz_save_action" id="quizSaveAction" value="publish">
         {% if assignment %}
         <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+        {% endif %}
+        {% if assignment and assignment.quiz_authoring_is_draft %}
+        <div class="alert alert-warning border-0 shadow-sm mb-4 d-flex align-items-center gap-2">
+            <i class="bi bi-pencil-square fs-4"></i>
+            <div><strong>Draft quiz.</strong> Students cannot see this assignment until you publish it (use the green button).</div>
+        </div>
         {% endif %}
         
         <div class="row">
@@ -397,8 +404,14 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-grid gap-3">
+                            {% if quiz_drafts_enabled is not defined or quiz_drafts_enabled %}
+                            <button type="submit" class="btn btn-lg btn-outline-secondary fw-semibold shadow-sm" id="saveQuizDraftBtn" formnovalidate>
+                                <i class="bi bi-save me-2"></i>Save draft
+                            </button>
+                            <p class="small text-muted mb-0 px-1">Save progress without publishing. Students will not see this quiz until you publish.</p>
+                            {% endif %}
                             <button type="submit" class="btn btn-lg fw-bold shadow-sm" id="createQuizBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
-                                <i class="bi bi-check-circle me-2"></i>{{ 'Update Quiz Assignment' if assignment else 'Create Quiz Assignment' }}
+                                <i class="bi bi-check-circle me-2"></i>{{ 'Publish quiz' if (assignment and assignment.quiz_authoring_is_draft) else ('Update Quiz Assignment' if assignment else 'Create Quiz Assignment') }}
                             </button>
                             {% if can_assignments_admin_ui %}
                                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-secondary">
@@ -1805,12 +1818,46 @@ document.addEventListener('DOMContentLoaded', function() {
     // DnD for newly created blocks
     bindContainerDnD();
     
+    const quizSaveActionInput = document.getElementById('quizSaveAction');
+    const saveQuizDraftBtn = document.getElementById('saveQuizDraftBtn');
+    const requiredDraftIds = ['title', 'due_date', 'quarter', 'class_id'];
+
+    function setPublishRequired(on) {
+        requiredDraftIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (on) el.setAttribute('required', 'required');
+                else el.removeAttribute('required');
+            }
+        });
+    }
+
+    saveQuizDraftBtn?.addEventListener('click', function () {
+        if (quizSaveActionInput) quizSaveActionInput.value = 'draft';
+        setPublishRequired(false);
+    });
+    document.getElementById('createQuizBtn')?.addEventListener('click', function () {
+        if (quizSaveActionInput) quizSaveActionInput.value = 'publish';
+        setPublishRequired(true);
+    });
+
     // Form submission
     form.addEventListener('submit', function(e) {
         buildBlockOrder();
+        const isDraftSubmit = quizSaveActionInput && quizSaveActionInput.value === 'draft';
         console.log('Form submission started');
         const questions = questionsContainer.querySelectorAll('.question-item');
         console.log(`Found ${questions.length} questions`);
+
+        if (isDraftSubmit) {
+            setPublishRequired(true);
+            const submitBtn = document.getElementById('saveQuizDraftBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving draft…';
+            }
+            return;
+        }
         
         // Remove required attribute from all hidden radio buttons to prevent browser validation errors
         questions.forEach(question => {
@@ -1828,7 +1875,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // If linking Google Form, skip question validation
         if (!linkGoogleForm && questions.length === 0) {
             e.preventDefault();
-            alert('Please add at least one question to the quiz, or link a Google Form.');
+            alert('Please add at least one question to the quiz, or link a Google Form. (Or use Save draft to continue later.)');
             return;
         }
         
@@ -1839,7 +1886,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Validate questions
+        // Validate questions (publish only — draft bypasses above by early return)
         let isValid = true;
         let validationError = '';
         

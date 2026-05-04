@@ -81,6 +81,65 @@ def has_any_permission(user, perms):
     return any(p in pset for p in (perms or []))
 
 
+def user_can_manage_assignments_and_grades(user):
+    """
+    Who may act as management on assignments/grades: Director or School Administrator
+    in primary or secondary roles, or explicit ``assignments_grades:manage`` permission.
+    Use this instead of ``current_user.role in ('Director', 'School Administrator')``
+    so dual-role staff (e.g. Tech + School Administrator) are not blocked.
+    """
+    if not user:
+        return False
+    if user_has_management_entry_access(user):
+        return True
+    return has_permission(user, 'assignments_grades:manage')
+
+
+# Top-level ``management.*`` route names that mirror nested ``management.assignments.*``
+# (registered on the parent blueprint for URL compatibility). Permission-only admins with
+# ``assignments_grades:manage`` must reach these without hitting ``abort(403)``.
+_ASSIGNMENTS_GRADES_TOP_LEVEL_ENDPOINTS = frozenset({
+    'management.grade_assignment',
+    'management.save_student_grade',
+    'management.send_reminder',
+    'management.edit_assignment',
+    'management.view_assignment',
+    'management.add_assignment',
+    'management.assignment_type_selector',
+    'management.create_quiz_assignment',
+    'management.create_discussion_assignment',
+    'management.group_assignment_type_selector',
+    'management.class_grades',
+    'management.class_grades_view',
+    'management.classes.class_grades',
+    'management.classes.class_grades_view',
+    'management.review_extension_request',
+    'management.view_extension_requests',
+    'management.admin_grade_statistics',
+    'management.admin_grade_history',
+    'management.admin_group_grade_statistics',
+    'management.admin_view_group_assignment',
+    'management.admin_grade_group_assignment',
+    'management.admin_edit_group_assignment',
+    'management.admin_delete_group_assignment',
+    'management.admin_grant_extensions',
+    'management.admin_grant_group_extensions',
+    'management.grant_extensions',
+    'management.grant_group_extensions',
+    'management.admin_change_group_assignment_status',
+    'management.void_group_assignment',
+    'management.unvoid_group_assignment',
+    'management.void_assignment_for_students',
+    'management.unvoid_assignment_for_students',
+    'management.bulk_void_assignments',
+    'management.admin_class_group_assignments',
+    'management.admin_group_assignment_type_selector',
+    'management.students.void_assignment_for_students',
+    'management.students.unvoid_assignment_for_students',
+    'management.students.bulk_void_assignments',
+})
+
+
 def permissions_required(*perms, require_all=False, allow_admin=True):
     """
     Allow access if:
@@ -146,6 +205,14 @@ def management_required(f):
                 abort(403)
 
             endpoint = (request.endpoint or '').strip()
+            # Nested assignment views live under ``management.assignments.*``; permission-only
+            # staff with ``assignments_grades:manage`` should match the same scope as the hub.
+            if has_permission(current_user, 'assignments_grades:manage') and (
+                endpoint.startswith('management.assignments.')
+                or endpoint in _ASSIGNMENTS_GRADES_TOP_LEVEL_ENDPOINTS
+            ):
+                return f(*args, **kwargs)
+
             # Endpoint-to-permissions allowlist. Keep this narrow to avoid exposing settings/billing/etc.
             endpoint_required_any = {
                 # Management home

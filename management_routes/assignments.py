@@ -4,7 +4,7 @@ Assignments routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required
+from decorators import management_required, user_can_manage_assignments_and_grades
 from models import (
     db, Assignment, AssignmentAttachment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
     AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, QuizSection, DiscussionThread,
@@ -762,7 +762,7 @@ def review_extension_request(request_id):
     try:
         # Get teacher_staff_id for administrators (use current user if available)
         teacher_staff_id = None
-        if current_user.role in ['Director', 'School Administrator']:
+        if user_can_manage_assignments_and_grades(current_user):
             # Try to get teacher_staff_id from current_user
             if hasattr(current_user, 'teacher_staff_id') and current_user.teacher_staff_id:
                 teacher_staff_id = current_user.teacher_staff_id
@@ -2065,7 +2065,7 @@ def save_student_grade(assignment_id, student_id):
 def send_reminder(assignment_id):
     """Send deadline reminder to selected students (from grading page bulk action)."""
     assignment = Assignment.query.get_or_404(assignment_id)
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         flash("You are not authorized to send reminders.", "danger")
         return redirect(url_for('management.assignments_and_grades'))
 
@@ -2116,8 +2116,8 @@ def grade_assignment(assignment_id):
         
         class_obj = assignment.class_info
         
-        # Authorization check - Directors and School Administrators can grade any assignment
-        if current_user.role not in ['Director', 'School Administrator']:
+        # Authorization check — align with @management_required / dual secondary roles
+        if not user_can_manage_assignments_and_grades(current_user):
             flash("You are not authorized to grade assignments.", "danger")
             return redirect(url_for('management.assignments_and_grades'))
         
@@ -3077,8 +3077,7 @@ def edit_assignment(assignment_id):
     if assignment.assignment_type == 'discussion':
         return redirect(url_for('management.create_discussion_assignment') + f'?edit={assignment_id}')
     
-    # Authorization check - Directors and School Administrators can edit any assignment
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         flash("You are not authorized to edit this assignment.", "danger")
         return redirect(url_for('management.assignments_and_grades'))
 
@@ -3289,8 +3288,7 @@ def remove_assignment(assignment_id):
         else:
             return redirect(url_for('management.assignments_and_grades'))
     
-    # Authorization check - Directors and School Administrators can remove any assignment
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         flash("You are not authorized to remove this assignment.", "danger")
         return redirect(url_for('management.assignments_and_grades'))
     
@@ -4019,7 +4017,7 @@ def grant_assignment_redo(assignment_id):
     from models import class_additional_teachers, class_substitute_teachers
     
     is_teacher = is_teacher_role(current_user.role)
-    is_admin = current_user.role in ['Director', 'School Administrator']
+    is_admin = user_can_manage_assignments_and_grades(current_user)
     
     if is_teacher:
         # Teachers can only grant redos for their own classes (primary, additional, or substitute)
@@ -4319,7 +4317,7 @@ def revoke_assignment_redo(redo_id):
                 return jsonify({'success': False, 'message': 'You can only revoke redos for your own classes.'})
         else:
             return jsonify({'success': False, 'message': 'Teacher record not found.'})
-    elif current_user.role not in ['Director', 'School Administrator']:
+    elif not user_can_manage_assignments_and_grades(current_user):
         return jsonify({'success': False, 'message': 'You are not authorized to revoke redos.'})
     
     # Don't allow revoking if student has already used the redo
@@ -4370,7 +4368,7 @@ def grant_redo_from_request(request_id):
     from models import class_additional_teachers, class_substitute_teachers
 
     is_teacher = is_teacher_role(current_user.role)
-    is_admin = current_user.role in ['Director', 'School Administrator']
+    is_admin = user_can_manage_assignments_and_grades(current_user)
 
     if is_teacher:
         if not current_user.teacher_staff_id:
@@ -4503,7 +4501,7 @@ def reject_redo_request(request_id):
     from models import class_additional_teachers, class_substitute_teachers
 
     is_teacher = is_teacher_role(current_user.role)
-    is_admin = current_user.role in ['Director', 'School Administrator']
+    is_admin = user_can_manage_assignments_and_grades(current_user)
 
     if is_teacher:
         if not current_user.teacher_staff_id:
@@ -4558,7 +4556,7 @@ def view_assignment_redos(assignment_id):
                 return jsonify({'success': False, 'message': 'You can only view redos for your own classes.'}), 403
         else:
             return jsonify({'success': False, 'message': 'Teacher record not found.'}), 403
-    elif current_user.role not in ['Director', 'School Administrator']:
+    elif not user_can_manage_assignments_and_grades(current_user):
         return jsonify({'success': False, 'message': 'You are not authorized to view redos.'}), 403
     
     # Get all redos for this assignment
@@ -4598,8 +4596,7 @@ def change_assignment_status(assignment_id):
     """Change assignment status"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors and School Administrators can change any assignment status
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         return jsonify({'success': False, 'message': 'You are not authorized to change assignment status.'})
     
     # Accept both form data and JSON (some callers use JSON)
@@ -4668,8 +4665,7 @@ def grant_extensions():
         # Get the assignment
         assignment = Assignment.query.get_or_404(assignment_id)
         
-        # Authorization check - Directors and School Administrators can grant extensions for any assignment
-        if current_user.role not in ['Director', 'School Administrator']:
+        if not user_can_manage_assignments_and_grades(current_user):
             return jsonify({'success': False, 'message': 'You are not authorized to grant extensions.'})
         
         # Get the teacher_staff_id for granted_by field
@@ -4743,8 +4739,7 @@ def admin_grant_group_extensions(assignment_id):
     from models import GroupAssignment, GroupAssignmentExtension, StudentGroupMember
     from teacher_routes.utils import teacher_or_management_for_group_assignment
 
-    # Auth check via decorator logic
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         from teacher_routes.utils import is_authorized_for_class
         if not is_authorized_for_class(group_assignment.class_info):
@@ -4799,7 +4794,7 @@ def grant_group_extensions(assignment_id):
     from teacher_routes.utils import is_authorized_for_class
 
     group_assignment = GroupAssignment.query.get_or_404(assignment_id)
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         if not is_authorized_for_class(group_assignment.class_info):
             flash("You are not authorized to grant extensions.", "danger")
             return redirect(url_for('teacher.assignments.view_group_assignment', assignment_id=assignment_id))
@@ -5079,9 +5074,7 @@ def admin_grade_group_assignment(assignment_id):
     try:
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         
-        # Authorization check - Teachers can grade assignments for their classes, Admins can grade any
-        if current_user.role not in ['Director', 'School Administrator']:
-            # Check if teacher is authorized for this class
+        if not user_can_manage_assignments_and_grades(current_user):
             if not is_authorized_for_class(group_assignment.class_info):
                 flash("You are not authorized to grade this assignment.", "danger")
                 return redirect(url_for('teacher.dashboard.assignments_and_grades'))
@@ -5467,8 +5460,7 @@ def admin_delete_group_assignment(assignment_id):
 @login_required
 def admin_edit_group_assignment(assignment_id):
     """Edit a group assignment - allows teachers (authorized for class) and admins."""
-    # Enforce authorization: Directors/Admins or teachers authorized for the class
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_can_manage_assignments_and_grades(current_user):
         from models import GroupAssignment
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         from teacher_routes.utils import is_authorized_for_class
@@ -5627,8 +5619,7 @@ def admin_edit_group_assignment(assignment_id):
 
                 db.session.commit()
                 flash('Assignment updated successfully!', 'success')
-                # Redirect to appropriate view: teacher view for teachers, admin view for admins
-                if current_user.role in ['Director', 'School Administrator']:
+                if user_can_manage_assignments_and_grades(current_user):
                     return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
                 return redirect(url_for('teacher.assignments.view_group_assignment', assignment_id=assignment_id))
                 
@@ -5646,7 +5637,7 @@ def admin_edit_group_assignment(assignment_id):
             ga = GroupAssignment.query.get(assignment_id)
             class_id = ga.class_id if ga else None
             if class_id:
-                if current_user.role in ['Director', 'School Administrator']:
+                if user_can_manage_assignments_and_grades(current_user):
                     return redirect(url_for('management.assignments_and_grades', class_id=class_id))
                 return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         except Exception:
@@ -5717,7 +5708,7 @@ def admin_reopen_assignment(assignment_id):
         # Get the teacher_staff_id for the current user (admin/director)
         # For management users, we need to find or create a TeacherStaff record
         teacher_staff = None
-        if current_user.role in ['Director', 'School Administrator']:
+        if user_can_manage_assignments_and_grades(current_user):
             # Try to find existing TeacherStaff record
             if current_user.teacher_staff_id:
                 teacher_staff = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()

@@ -320,13 +320,13 @@
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="btn-group view-toggle-buttons w-100" role="group">
-                        <button type="button" class="btn {% if view_mode == 'assignments' %}btn-primary active{% else %}btn-outline-primary{% endif %} btn-lg" onclick="toggleView('assignments')" id="assignmentsBtn">
-                            <i class="fas fa-tasks view-btn-icon"></i>
-                            <span class="view-btn-text">Assignments View</span>
-                        </button>
                         <button type="button" class="btn {% if view_mode == 'grades' %}btn-primary active{% else %}btn-outline-primary{% endif %} btn-lg" onclick="toggleView('grades')" id="gradesBtn">
                             <i class="fas fa-chart-bar view-btn-icon"></i>
                             <span class="view-btn-text">Grades View</span>
+                        </button>
+                        <button type="button" class="btn {% if view_mode == 'assignments' %}btn-primary active{% else %}btn-outline-primary{% endif %} btn-lg" onclick="toggleView('assignments')" id="assignmentsBtn">
+                            <i class="fas fa-tasks view-btn-icon"></i>
+                            <span class="view-btn-text">Assignments View</span>
                         </button>
                         <button type="button" class="btn {% if view_mode == 'table' %}btn-primary active{% else %}btn-outline-primary{% endif %} btn-lg" onclick="toggleView('table')" id="tableBtn">
                             <i class="fas fa-table view-btn-icon"></i>
@@ -680,65 +680,84 @@
                 </div>
                 {% elif enrolled_students and all_assignments %}
                 <!-- Grades Table View -->
-                <div class="card border-0 shadow-lg">
-                    <div class="card-header bg-gradient-info text-white border-0">
-                        <div class="d-flex align-items-center justify-content-between">
+                <div class="card border-0 shadow-lg grades-overview-card">
+                    <div class="card-header grades-overview-header text-white border-0 rounded-0">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                             <div class="d-flex align-items-center">
-                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
-                                    <i class="bi bi-table text-white fs-5"></i>
+                                <div class="grades-overview-header-icon me-3">
+                                    <i class="bi bi-grid-3x3-gap-fill fs-5"></i>
                                 </div>
                                 <div>
-                                    <h5 class="mb-1 fw-bold">Student Grades Overview</h5>
-                                    <small class="opacity-75">View and manage student performance</small>
+                                    <h5 class="mb-0 fw-bold">Student grades matrix</h5>
+                                    <small class="opacity-75">Scroll sideways for assignments · sticky name &amp; average</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table class="table table-hover mb-0" style="min-width: 100%; white-space: nowrap;">
-                                <thead class="table-light">
+                        <div class="grades-overview-toolbar">
+                            <label for="gradesTableStudentFilter" class="form-label small fw-bold text-muted mb-2 d-block">
+                                <i class="bi bi-funnel me-1"></i>Filter students
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="bi bi-person-lines-fill"></i></span>
+                                <input type="search" class="form-control" id="gradesTableStudentFilter"
+                                       placeholder="Name, student ID, or grade level…"
+                                       autocomplete="off"
+                                       aria-describedby="gradesTableStudentFilterHelp">
+                                <button type="button" class="btn btn-outline-secondary" id="gradesTableStudentFilterClear" title="Clear filter">Clear</button>
+                            </div>
+                            <div id="gradesTableStudentFilterHelp" class="mb-0">
+                                <span id="gradesTableStudentFilterCount" class="grades-filter-count"></span>
+                            </div>
+                            <div id="gradesTableNoMatches" class="alert alert-warning border-0 py-2 px-3 small mb-0 mt-3 d-none shadow-sm" style="border-radius: 10px;" role="status">
+                                <i class="bi bi-info-circle me-1"></i>No students match this search. Try a different spelling or clear the filter.
+                            </div>
+                        </div>
+                        <div class="grades-overview-scroll table-responsive">
+                            <table class="table table-hover mb-0 grades-overview-table">
+                                <thead>
                                     <tr>
-                                        <th class="border-0 fw-bold text-dark" style="width: 180px; min-width: 180px; position: sticky; left: 0; background-color: #f8f9fa; z-index: 10;">Student</th>
-                                        <th class="border-0 fw-bold text-dark" style="width: 110px; min-width: 110px;">Student ID</th>
-                                        <th class="border-0 fw-bold text-dark" style="width: 110px; min-width: 110px;">Grade Level</th>
+                                        <th class="grades-th-corner-l border-0">Student</th>
+                                        <th class="border-0" style="width: 110px; min-width: 110px;">ID</th>
+                                        <th class="border-0" style="width: 110px; min-width: 110px;">Level</th>
                                         {% for item_type, assignment in sorted_assignments %}
-                                        <th class="border-0 fw-bold text-dark text-center" style="width: 130px; min-width: 130px;">
-                                            <div class="d-flex flex-column align-items-center px-2">
-                                                <span class="small text-truncate" style="max-width: 120px;" title="{{ assignment.title }}">{{ assignment.title[:20] }}{% if assignment.title|length > 20 %}...{% endif %}</span>
-                                                <span class="badge {% if item_type == 'individual' %}bg-primary bg-opacity-20 text-dark border border-primary{% else %}bg-info bg-opacity-20 text-dark border border-info{% endif %} small mt-1">{{ 'Individual' if item_type == 'individual' else 'Group' }}</span>
-                                                {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge bg-dark bg-opacity-50 small mt-1" style="font-size: 0.65rem;">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
+                                        <th class="grades-th-assign border-0 text-center" style="width: 130px; min-width: 130px;">
+                                            <div class="grades-assign-head">
+                                                <span class="grades-assign-title text-truncate d-block" title="{{ assignment.title }}">{{ assignment.title[:20] }}{% if assignment.title|length > 20 %}…{% endif %}</span>
+                                                <span class="badge {% if item_type == 'individual' %}bg-primary bg-opacity-15 text-primary-emphasis border border-primary-subtle{% else %}bg-info bg-opacity-15 text-info-emphasis border border-info-subtle{% endif %} rounded-pill px-2" style="font-size: 0.65rem;">{{ 'Solo' if item_type == 'individual' else 'Group' }}</span>
+                                                {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge bg-dark bg-opacity-10 text-dark border border-secondary-subtle rounded-pill px-2" style="font-size: 0.6rem;">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
                                             </div>
                                         </th>
                                         {% endfor %}
-                                        <th class="border-0 fw-bold text-dark text-center" style="width: 100px; min-width: 100px; position: sticky; right: 0; background-color: #f8f9fa; z-index: 10;">Average</th>
+                                        <th class="grades-th-corner-r border-0 text-center">Avg</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="gradesTableStudentBody">
                                     {% for student in enrolled_students %}
-                                    <tr>
-                                        <td class="align-middle" style="white-space: nowrap; position: sticky; left: 0; background-color: white; z-index: 5;">
+                                    <tr class="grades-table-student-row" data-student-haystack="{{ ((student.first_name ~ ' ' ~ student.last_name ~ ' ' ~ (student.student_id or '') ~ ' ' ~ (student.grade_level|string if student.grade_level is not none else ''))|lower) }}">
+                                        <td class="grades-td-student align-middle">
                                             <div class="d-flex align-items-center">
-                                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2 flex-shrink-0">
-                                                    <i class="bi bi-person text-success"></i>
+                                                <div class="grades-student-avatar me-2">
+                                                    <i class="bi bi-person-fill"></i>
                                                 </div>
-                                                <div class="flex-grow-1" style="min-width: 0;">
-                                                    <strong class="text-dark" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">{{ student.first_name }} {{ student.last_name }}</strong>
+                                                <div class="flex-grow-1 text-truncate" style="min-width: 0;">
+                                                    <strong class="text-dark d-block text-truncate">{{ student.first_name }} {{ student.last_name }}</strong>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="align-middle">
-                                            <span class="badge bg-info bg-opacity-20 text-dark border border-info">
+                                            <span class="badge text-dark border fw-normal" style="background: #f1f5f9; border-color: #e2e8f0 !important; font-size: 0.75rem;">
                                                 {{ student.student_id or 'N/A' }}
                                             </span>
                                         </td>
                                         <td class="align-middle">
-                                            <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
-                                                Grade {{ student.grade_level }}
+                                            <span class="badge rounded-pill bg-warning bg-opacity-15 text-dark border border-warning-subtle" style="font-size: 0.75rem;">
+                                                Gr {{ student.grade_level }}
                                             </span>
                                         </td>
                                         {% for item_type, assignment in sorted_assignments %}
-                                        <td class="align-middle text-center" style="padding: 0.75rem 0.5rem;">
+                                        <td class="align-middle grades-td-grade-cell">
                                             {% set grade_key = assignment.id if item_type == 'individual' else 'group_' ~ assignment.id %}
                                             {% set grade_info = student_grades.get(student.id, {}).get(grade_key, {}) %}
                                             {% set grade = grade_info.get('grade', 'Not Graded') %}
@@ -772,7 +791,7 @@
                                             {% endif %}
                                         </td>
                                         {% endfor %}
-                                        <td class="align-middle text-center" style="padding: 0.75rem 0.5rem; position: sticky; right: 0; background-color: white; z-index: 5;">
+                                        <td class="grades-td-average align-middle text-center">
                                             {% set average = student_averages.get(student.id) %}
                                             {% if average is none or average == 'N/A' %}
                                                 <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">N/A</span>
@@ -811,75 +830,96 @@
 
             <!-- Grades View -->
             <div id="gradesView" class="view-content" style="display: {% if view_mode == 'grades' %}block{% else %}none{% endif %};">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-chart-bar me-2"></i>Assignment Grades Overview
-                        </h5>
+                <div class="card border-0 shadow-lg grades-by-assignment-card">
+                    <div class="card-header grades-by-assignment-header text-white border-0 rounded-0">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <div class="grades-by-assignment-header-icon">
+                                <i class="bi bi-clipboard-data fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">Grades by assignment</h5>
+                                <small class="opacity-75">Submissions, grading progress, and class average per assignment</small>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-light">
+                    <div class="card-body p-0">
+                        <div class="grades-by-assignment-scroll table-responsive">
+                            <table class="table mb-0 grades-by-assignment-table">
+                                <thead>
                                     <tr>
-                                        <th><i class="fas fa-tasks me-1"></i>Assignment</th>
-                                        <th><i class="fas fa-calendar me-1"></i>Due Date</th>
-                                        <th><i class="fas fa-users me-1"></i>Submissions</th>
-                                        <th><i class="fas fa-check me-1"></i>Graded</th>
-                                        <th><i class="fas fa-chart-line me-1"></i>Average Score</th>
-                                        <th><i class="fas fa-cog me-1"></i>Actions</th>
+                                        <th scope="col"><i class="bi bi-journal-text me-1"></i>Assignment</th>
+                                        <th scope="col"><i class="bi bi-calendar-event me-1"></i>Due</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-inbox me-1"></i>Submissions</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-check2-circle me-1"></i>Graded</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-graph-up-arrow me-1"></i>Average</th>
+                                        <th scope="col"><i class="bi bi-lightning-charge me-1"></i>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% if sorted_assignments %}
                                         {% for item_type, assignment in sorted_assignments %}
                                         {% set grade_info = assignment_grades.get(assignment.id if item_type == 'individual' else 'group_' ~ assignment.id, {}) %}
-                                        <tr>
+                                        {% set total_s = grade_info.get('total_submissions', 0) %}
+                                        {% set graded_c = grade_info.get('graded_count', 0) %}
+                                        {% set avg_sc = grade_info.get('average_score', 0) %}
+                                        <tr class="grades-by-assignment-row">
                                             <td>
-                                                <strong>{{ assignment.title }}</strong><br>
-                                                <small class="text-muted">{{ assignment.assignment_type if item_type == 'individual' else (assignment.assignment_type or 'Group Assignment') }}</small>
-                                                <span class="badge {% if item_type == 'individual' %}bg-primary{% else %}bg-info{% endif %} ms-2">{{ 'Individual' if item_type == 'individual' else 'Group' }}</span>
-                                                {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge bg-dark ms-1">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
+                                                <div class="grades-ba-title text-dark">{{ assignment.title }}</div>
+                                                <div class="grades-ba-meta d-flex flex-wrap align-items-center gap-1 mt-1">
+                                                    <span class="text-muted small">{{ assignment.assignment_type if item_type == 'individual' else (assignment.assignment_type or 'Group Assignment') }}</span>
+                                                    <span class="badge rounded-pill {% if item_type == 'individual' %}bg-primary bg-opacity-15 text-primary-emphasis border border-primary-subtle{% else %}bg-info bg-opacity-15 text-info-emphasis border border-info-subtle{% endif %}" style="font-size: 0.7rem;">{{ 'Solo' if item_type == 'individual' else 'Group' }}</span>
+                                                    {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge rounded-pill bg-dark bg-opacity-10 text-dark border border-secondary-subtle" style="font-size: 0.65rem;">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
+                                                </div>
                                             </td>
-                                            <td>{{ assignment.due_date.strftime('%m/%d/%Y') if assignment.due_date else 'N/A' }}</td>
-                                            <td>
-                                                <span class="badge bg-info">{{ grade_info.get('total_submissions', 0) }}</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-{% if grade_info.get('graded_count', 0) == grade_info.get('total_submissions', 0) and grade_info.get('total_submissions', 0) > 0 %}success{% else %}warning{% endif %}">
-                                                    {{ grade_info.get('graded_count', 0) }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {% if grade_info.get('average_score', 0) > 0 %}
-                                                    <span class="badge bg-{% if grade_info.average_score >= 80 %}success{% elif grade_info.average_score >= 60 %}warning{% else %}danger{% endif %}">
-                                                        {{ grade_info.average_score }}%
-                                                    </span>
+                                            <td class="align-middle">
+                                                {% if assignment.due_date %}
+                                                <span class="grades-ba-date-pill"><i class="bi bi-calendar3 me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
                                                 {% else %}
-                                                    <span class="text-muted">N/A</span>
+                                                <span class="text-muted small">—</span>
                                                 {% endif %}
                                             </td>
-                                            <td>
-                                                <div class="d-flex flex-wrap gap-1">
+                                            <td class="align-middle text-center">
+                                                <span class="grades-ba-stat grades-ba-stat-info">{{ total_s }}</span>
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                <span class="grades-ba-stat {% if graded_c == total_s and total_s > 0 %}grades-ba-stat-done{% else %}grades-ba-stat-warn{% endif %}">{{ graded_c }}{% if total_s > 0 %}<span class="grades-ba-stat-denom">/{{ total_s }}</span>{% endif %}</span>
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                {% if avg_sc > 0 %}
+                                                    {% if avg_sc >= 80 %}
+                                                    <span class="grades-ba-avg grades-ba-avg-high">{{ avg_sc }}%</span>
+                                                    {% elif avg_sc >= 70 %}
+                                                    <span class="grades-ba-avg grades-ba-avg-mid">{{ avg_sc }}%</span>
+                                                    {% elif avg_sc >= 60 %}
+                                                    <span class="grades-ba-avg grades-ba-avg-low">{{ avg_sc }}%</span>
+                                                    {% else %}
+                                                    <span class="grades-ba-avg grades-ba-avg-below">{{ avg_sc }}%</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="grades-ba-avg grades-ba-avg-na">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="align-middle">
+                                                <div class="grades-ba-actions d-flex flex-wrap gap-1">
                                                     {% if item_type == 'individual' %}
-                                                    <button class="btn btn-outline-primary btn-sm" onclick="viewAssignment({{ assignment.id }})" title="View Assignment Details">
-                                                        <i class="fas fa-eye me-1"></i>View Assignment
+                                                    <button type="button" class="btn btn-sm grades-ba-btn" onclick="viewAssignment({{ assignment.id }})" title="View assignment">
+                                                        <i class="bi bi-eye"></i><span class="d-none d-xl-inline ms-1">View</span>
                                                     </button>
-                                                    <button class="btn btn-outline-success btn-sm" onclick="gradeAssignment({{ assignment.id }})" title="Grade Student Submissions">
-                                                        <i class="fas fa-edit me-1"></i>Grade
+                                                    <button type="button" class="btn btn-sm grades-ba-btn grades-ba-btn-primary" onclick="gradeAssignment({{ assignment.id }})" title="Grade submissions">
+                                                        <i class="bi bi-pencil-square"></i><span class="d-none d-xl-inline ms-1">Grade</span>
                                                     </button>
                                                     {% else %}
-                                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=assignment.id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Group Assignment Details">
-                                                        <i class="fas fa-eye me-1"></i>View Assignment
+                                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=assignment.id) }}{% endif %}" class="btn btn-sm grades-ba-btn" title="View group assignment">
+                                                        <i class="bi bi-eye"></i><span class="d-none d-xl-inline ms-1">View</span>
                                                     </a>
                                                     {% if use_management_assignments_urls %}
-                                                    <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-success btn-sm" title="Grade Group Submissions">
-                                                        <i class="fas fa-edit me-1"></i>Grade
+                                                    <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" class="btn btn-sm grades-ba-btn grades-ba-btn-primary" title="Grade group submissions">
+                                                        <i class="bi bi-pencil-square"></i><span class="d-none d-xl-inline ms-1">Grade</span>
                                                     </a>
                                                     {% endif %}
                                                     {% endif %}
-                                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Class">
-                                                        <i class="fas fa-users me-1"></i>View Class
+                                                    <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-sm grades-ba-btn" title="Open class">
+                                                        <i class="bi bi-people"></i><span class="d-none d-xl-inline ms-1">Class</span>
                                                     </a>
                                                 </div>
                                             </td>
@@ -887,9 +927,10 @@
                                         {% endfor %}
                                     {% else %}
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
-                                            <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
-                                            No assignment data available
+                                        <td colspan="6" class="grades-by-assignment-empty text-center py-5">
+                                            <div class="grades-by-assignment-empty-icon mb-3"><i class="bi bi-inbox"></i></div>
+                                            <p class="text-muted mb-0 fw-semibold">No assignments in this class yet</p>
+                                            <p class="text-muted small mb-0 mt-1">Create an assignment or check another class.</p>
                                         </td>
                                     </tr>
                                     {% endif %}
@@ -922,12 +963,11 @@
 
 <script>
 function viewClassAssignmentsAndGrades(classId) {
-    // Redirect to assignments and grades page with selected class, defaulting to assignments view
-    // Use the correct route based on user role
+    // Redirect with selected class; default view is grades (see server + DOMContentLoaded fallback)
     {% if use_management_assignments_urls %}
-    window.location.href = `{{ url_for('management.assignments_and_grades') }}?class_id=${classId}&view=assignments`;
+    window.location.href = `{{ url_for('management.assignments_and_grades') }}?class_id=${classId}&view=grades`;
     {% else %}
-    window.location.href = `{{ url_for('teacher.dashboard.assignments_and_grades') }}?class_id=${classId}&view=assignments`;
+    window.location.href = `{{ url_for('teacher.dashboard.assignments_and_grades') }}?class_id=${classId}&view=grades`;
     {% endif %}
 }
 
@@ -943,12 +983,14 @@ function toggleView(view) {
     
     const sortBy = document.getElementById('sortBy')?.value || urlParams.get('sort') || 'due_date';
     const sortOrder = document.getElementById('sortOrder')?.value || urlParams.get('order') || 'desc';
+    const studentQ = urlParams.get('student_q') || '';
     
     // Build URL parameters
     const params = new URLSearchParams();
     if (classId) params.append('class_id', classId);
     if (sortBy) params.append('sort', sortBy);
     if (sortOrder) params.append('order', sortOrder);
+    if (studentQ) params.append('student_q', studentQ);
     params.append('view', view);
     
     // Redirect to update the view
@@ -957,6 +999,44 @@ function toggleView(view) {
     {% else %}
     window.location.href = `{{ url_for('teacher.dashboard.assignments_and_grades') }}?${params.toString()}`;
     {% endif %}
+}
+
+function filterGradesTableStudentRows() {
+    const input = document.getElementById('gradesTableStudentFilter');
+    const tbody = document.getElementById('gradesTableStudentBody');
+    const countEl = document.getElementById('gradesTableStudentFilterCount');
+    const noMatches = document.getElementById('gradesTableNoMatches');
+    if (!tbody) return;
+    const q = (input?.value || '').trim().toLowerCase();
+    const rows = tbody.querySelectorAll('.grades-table-student-row');
+    let visible = 0;
+    rows.forEach((row) => {
+        const hay = (row.getAttribute('data-student-haystack') || '').toLowerCase();
+        const show = !q || hay.includes(q);
+        row.style.display = show ? '' : 'none';
+        if (show) visible += 1;
+    });
+    if (countEl) {
+        countEl.textContent = q
+            ? `Showing ${visible} of ${rows.length} student${rows.length !== 1 ? 's' : ''}`
+            : `${rows.length} student${rows.length !== 1 ? 's' : ''} in this class`;
+    }
+    if (noMatches) {
+        noMatches.classList.toggle('d-none', !q || visible > 0);
+    }
+}
+
+function clearGradesTableStudentFilter() {
+    const input = document.getElementById('gradesTableStudentFilter');
+    if (input) input.value = '';
+    filterGradesTableStudentRows();
+    try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('student_q')) {
+            url.searchParams.delete('student_q');
+            window.history.replaceState({}, '', url.toString());
+        }
+    } catch (e) { /* ignore */ }
 }
 
 function viewAssignment(assignmentId) {
@@ -1141,7 +1221,7 @@ function filterClassCards() {
 // Initialize view based on URL parameter (only set display, don't redirect)
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const view = urlParams.get('view') || 'assignments';
+    const view = urlParams.get('view') || 'grades';
     
     if (!document.querySelector('.class-card')) {
         // Only initialize view toggle if we're not on class selection page
@@ -1153,7 +1233,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Update button states
-        const buttons = document.querySelectorAll('#assignmentsBtn, #gradesBtn, #tableBtn');
+        const buttons = document.querySelectorAll('#gradesBtn, #assignmentsBtn, #tableBtn');
         buttons.forEach(btn => {
             btn.classList.remove('active', 'btn-primary');
             btn.classList.add('btn-outline-primary');
@@ -1179,6 +1259,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     filterClassCards();
+
+    // Table view: student row filter (name / ID / grade level substring)
+    const gradesFilterInput = document.getElementById('gradesTableStudentFilter');
+    const gradesFilterClear = document.getElementById('gradesTableStudentFilterClear');
+    if (gradesFilterInput) {
+        const initialQ = urlParams.get('student_q') || '';
+        if (initialQ) {
+            gradesFilterInput.value = initialQ;
+        }
+        gradesFilterInput.addEventListener('input', filterGradesTableStudentRows);
+        filterGradesTableStudentRows();
+    }
+    if (gradesFilterClear) {
+        gradesFilterClear.addEventListener('click', clearGradesTableStudentFilter);
+    }
 });
 
 // Void Assignment Modal Functions

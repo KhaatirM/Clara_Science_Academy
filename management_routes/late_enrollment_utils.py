@@ -236,7 +236,7 @@ def void_assignments_for_late_enrollment(student_id, class_id):
                     new_group_grade = GroupGrade(
                         student_id=student_id,
                         group_assignment_id=group_assignment.id,
-                        student_group_id=member.student_group_id,
+                        group_id=member.group_id,
                         grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                         is_voided=True,
                         voided_at=datetime.utcnow(),

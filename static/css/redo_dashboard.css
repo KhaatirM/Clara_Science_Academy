@@ -1,67 +1,419 @@
-/* ===== REDO DASHBOARD PAGE STYLES ===== */
+/* ===== REDO DASHBOARD — layout, stats, tables, modal ===== */
+
 .redo-dashboard-header {
-    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-    padding: 2rem;
-    border-radius: 15px;
-    color: white;
+    background: linear-gradient(125deg, #c2410c 0%, #ea580c 48%, #f59e0b 100%);
+    padding: 1.5rem 1.75rem;
+    border-radius: 16px;
+    color: #fff;
+    box-shadow: 0 12px 40px rgba(194, 65, 12, 0.22), 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
-/* Back and Refresh Buttons - High Visibility */
+.redo-dashboard-header h2 {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+}
+
+.redo-dashboard-header .redo-header-lead {
+    opacity: 0.92;
+    font-size: 0.95rem;
+    max-width: 36rem;
+}
+
+.redo-dashboard-header .redo-header-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
+}
+
+.redo-dashboard-header .redo-header-icon i {
+    font-size: 1.35rem;
+}
+
+/* Back and refresh */
 .btn-redo-back {
-    background: white;
-    color: #6c757d;
-    border: 2px solid white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
+    background: #fff;
+    color: #9a3412;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    padding: 0.65rem 1.35rem;
+    border-radius: 12px;
     font-weight: 700;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    font-size: 0.95rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
     text-decoration: none;
 }
 
 .btn-redo-back:hover {
-    background: #f8f9fa;
-    color: #495057;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    border-color: white;
+    background: #fffbeb;
+    color: #7c2d12;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-color: #fff;
     text-decoration: none;
 }
 
 .btn-redo-refresh {
-    background: white;
-    color: #ff9800;
-    border: 2px solid white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #c2410c;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    padding: 0.65rem 1.35rem;
+    border-radius: 12px;
     font-weight: 700;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    font-size: 0.95rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
 }
 
 .btn-redo-refresh:hover {
-    background: #f8f9fa;
-    color: #ff9800;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    border-color: white;
+    background: #fff;
+    color: #9a3412;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    border-color: #fff;
 }
 
-.stat-icon {
-    width: 60px;
-    height: 60px;
+/* Stat cards */
+.redo-stat-card {
+    border-radius: 14px;
+    border: 1px solid #f1f5f9;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: #fff;
+}
+
+.redo-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08) !important;
+}
+
+.redo-stat-card .card-body {
+    padding: 1.1rem 1.15rem;
+}
+
+.redo-stat-card .redo-stat-icon {
+    width: 52px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 14px;
+    flex-shrink: 0;
 }
 
-.redo-row {
-    transition: all 0.2s ease;
+.redo-stat-card .redo-stat-icon i {
+    font-size: 1.35rem;
 }
 
-.redo-row:hover {
-    background-color: #f8f9fa;
+.redo-stat-card .redo-stat-value {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: #0f172a;
 }
 
+.redo-stat-card .redo-stat-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-top: 0.15rem;
+}
+
+.redo-stat-card--active .redo-stat-icon {
+    background: linear-gradient(145deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.08));
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.redo-stat-card--done .redo-stat-icon {
+    background: linear-gradient(145deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.08));
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.redo-stat-card--improve .redo-stat-icon {
+    background: linear-gradient(145deg, rgba(14, 165, 233, 0.2), rgba(14, 165, 233, 0.08));
+    color: #0369a1;
+    border: 1px solid rgba(14, 165, 233, 0.35);
+}
+
+.redo-stat-card--overdue .redo-stat-icon {
+    background: linear-gradient(145deg, rgba(239, 68, 68, 0.18), rgba(239, 68, 68, 0.07));
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* Filter panel */
+.redo-filters-panel {
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #fafafa 0%, #fff 55%);
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.redo-filters-panel .card-body {
+    padding: 1.25rem 1.35rem;
+}
+
+.redo-filters-panel .form-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+}
+
+.redo-filters-panel .form-select,
+.redo-filters-panel .form-control {
+    border-radius: 10px;
+    border-color: #e2e8f0;
+}
+
+.redo-filters-panel .form-select:focus,
+.redo-filters-panel .form-control:focus {
+    border-color: #ea580c;
+    box-shadow: 0 0 0 0.2rem rgba(234, 88, 12, 0.15);
+}
+
+.redo-filters-panel .btn-outline-secondary {
+    border-radius: 10px;
+    font-weight: 600;
+    border-color: #e2e8f0;
+}
+
+.redo-filters-panel .btn-outline-secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+/* Section cards */
+.redo-section-card {
+    border-radius: 16px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 10px 36px rgba(15, 23, 42, 0.07), 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.redo-section-header {
+    padding: 0.95rem 1.25rem;
+    border: none;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+}
+
+.redo-section-header h5 {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.redo-section-header small {
+    display: block;
+    font-weight: 500;
+    opacity: 0.88;
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+}
+
+.redo-section-header--requests {
+    background: linear-gradient(125deg, #ca8a04 0%, #eab308 55%, #fde047 100%);
+    color: #422006;
+}
+
+.redo-section-header--reopenings {
+    background: linear-gradient(125deg, #0e7490 0%, #0891b2 50%, #22d3ee 100%);
+    color: #fff;
+}
+
+.redo-section-header--reopenings small {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.redo-section-header--active {
+    background: linear-gradient(125deg, #4c1d95 0%, #6d28d9 45%, #8b5cf6 100%);
+    color: #fff;
+}
+
+.redo-section-header--active small {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+/* Tables */
+.redo-table-wrap {
+    max-height: min(520px, 65vh);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.redo-data-table {
+    font-size: 0.875rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.redo-data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    background: #f8fafc !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    white-space: nowrap;
+    padding: 0.7rem 0.85rem;
+    vertical-align: middle;
+}
+
+.redo-data-table tbody td {
+    padding: 0.8rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.redo-data-table tbody tr:nth-child(even) td {
+    background: #fafafa;
+}
+
+.redo-row,
+.redo-request-row,
+.reopening-row {
+    transition: background 0.15s ease;
+}
+
+.redo-data-table tbody tr:hover td {
+    background: #fff7ed !important;
+}
+
+.redo-cell-title {
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+
+.redo-cell-sub {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 0.15rem;
+    line-height: 1.35;
+}
+
+.redo-pill-date {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+}
+
+.redo-badge-grade {
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.35rem 0.55rem;
+}
+
+.redo-actions .btn {
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.redo-actions .btn-group .btn {
+    border-radius: 10px;
+}
+
+.redo-actions .btn-outline-primary {
+    border-color: #c4b5fd;
+    color: #5b21b6;
+}
+
+.redo-actions .btn-outline-primary:hover {
+    background: #f5f3ff;
+    border-color: #8b5cf6;
+    color: #4c1d95;
+}
+
+/* Empty state (main list) */
+.redo-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+}
+
+.redo-empty-state .redo-empty-icon {
+    font-size: 3rem;
+    color: #cbd5e1;
+    line-height: 1;
+}
+
+.redo-empty-state p {
+    max-width: 22rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Grant modal */
+.redo-modal .modal-content {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
+}
+
+.redo-modal .modal-header {
+    background: linear-gradient(125deg, #15803d 0%, #22c55e 100%);
+    color: #fff;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.redo-modal .modal-header .btn-close {
+    filter: invert(1);
+    opacity: 0.85;
+}
+
+.redo-modal .modal-title {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.redo-modal .modal-body {
+    padding: 1.25rem 1.35rem;
+}
+
+.redo-modal .modal-footer {
+    border-top: 1px solid #f1f5f9;
+    padding: 1rem 1.25rem;
+}
+
+.redo-modal .form-control {
+    border-radius: 10px;
+}
+
+.redo-modal .btn-success {
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 0.5rem 1.25rem;
+}

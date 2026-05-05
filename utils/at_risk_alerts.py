@@ -71,16 +71,12 @@ def get_at_risk_alerts_for_user():
     if not current_user.is_authenticated:
         return at_risk_alerts, 0, 0
 
-    role = getattr(current_user, 'role', '') or ''
-    is_admin_user = role in ['Director', 'School Administrator']
+    from utils.user_roles import all_role_strings, user_has_management_entry_access
+    from decorators import is_teacher_role
 
-    # Only compute for teachers and admins
-    teacher_roles = [
-        'History Teacher', 'Science Teacher', 'Physics Teacher',
-        'English Language Arts Teacher', 'Math Teacher', 'Substitute Teacher',
-        'School Counselor', 'School Administrator', 'Director'
-    ]
-    is_teacher = role in teacher_roles or 'Teacher' in role
+    # Primary role can be Tech with School Administrator in secondary_roles — treat as admin.
+    is_admin_user = user_has_management_entry_access(current_user)
+    is_teacher = any(is_teacher_role(r) for r in all_role_strings(current_user))
     if not (is_teacher or is_admin_user):
         return at_risk_alerts, 0, 0
 

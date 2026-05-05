@@ -879,7 +879,7 @@ def assignments_and_grades():
         class_filter = request.args.get('class_id', '') or ''
         sort_by = request.args.get('sort', 'due_date') or 'due_date'
         sort_order = request.args.get('order', 'desc') or 'desc'
-        view_mode = request.args.get('view', 'assignments') or 'assignments'
+        view_mode = request.args.get('view', 'grades') or 'grades'
         
         # Ensure all parameters are safe
         if not isinstance(class_filter, str):
@@ -889,7 +889,7 @@ def assignments_and_grades():
         if not isinstance(sort_order, str):
             sort_order = 'desc'
         if not isinstance(view_mode, str):
-            view_mode = 'assignments'
+            view_mode = 'grades'
         
         # If no class is selected, show the class selection interface (like /management/assignments)
         if not class_filter or not class_filter.strip():

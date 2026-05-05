@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 1, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 4, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,55 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 1, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 4, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 1</strong> focuses on <strong>Google Workspace Directory automation</strong> (OUs, school-wide and per-class Groups), <strong>staff portal and welcome-email</strong> options, and <strong>clearer “school email”</strong> wording across the app. <strong>April 29</strong> still covers <strong>dashboard zoom</strong>, <strong>quiz grading</strong>, and <strong>admin Student &amp; Staff tables</strong>; older sections below document grading safeguards, rosters, report cards, and the full changelog.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 4</strong> brings a big refresh to <strong>Assignments &amp; Grades</strong> (default <strong>Grades</strong> view, table view student search, and clearer redo workflows), a redesigned <strong>Redo dashboard</strong>, and a fix so <strong>Academic Concerns</strong> alerts work for staff with <strong>merged roles</strong> (for example Tech plus School Administrator). <strong>May 1</strong> below covers <strong>Google Workspace Directory</strong> and class email lists; earlier entries cover dashboard zoom, quiz grading, and the full changelog.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 4, 2026 - Assignments & grades, redo dashboard, academic alerts (dual roles) -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Assignments &amp; Grades, Redo Dashboard &amp; Academic Alerts – May 4, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignments &amp; Grades — default Grades view:</strong> When you open a class, the page now lands on <strong>Grades view</strong> first (assignment list with due dates, submissions, graded counts, class average, and quick actions). The view toggle order is <strong>Grades → Assignments → Table</strong>. Choosing a class from the class picker opens with <code>view=grades</code>.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grades view design:</strong> The by-assignment table uses a violet header card, sticky column headers, zebra rows, date and stat pills, tiered average badges, and compact action buttons (View / Grade / Class) with clearer icons.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Table view — student filter:</strong> In the student-by-assignment matrix, use <strong>Filter students</strong> to narrow rows by name, student ID, or grade level. Shareable URLs support <code>student_q=…</code>; switching views keeps that query; <strong>Clear</strong> removes it from the address bar. The matrix card uses sticky name and average columns, improved spacing, and a teal-themed header consistent with the rest of the tool.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Redo &amp; reopen:</strong> For PDF/paper-style work, use <strong>Redo / reopen</strong> from <strong>View Assignment</strong> (quick actions) to grant opportunities or reopen submissions; the dedicated grading screen no longer duplicates that control. The <strong>Redo dashboard</strong> respects each teacher’s classes (primary, co-teacher, substitute), includes <strong>Active reopenings</strong> and pending student requests in search/filter, and uses past-deadline wording where appropriate.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Redo dashboard design:</strong> Warm hero header, stat tiles, a unified filter strip (class, status, student search), and color-coded sections for pending requests, active reopenings, and active redo opportunities — plus an updated <strong>Grant redo</strong> modal.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Roster &amp; voiding fix:</strong> Group roster and void flows now use the correct <code>group_id</code> on group membership and group grades (fixing errors when updating rosters or voiding group assignment grades).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher navigation:</strong> Sidebar highlights <strong>Assignments &amp; Grades</strong> and <strong>Students</strong> where it matters, with a clearer active state across grading, extensions, redo, and related flows.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic Concerns for merged accounts:</strong> The corner <strong>Academic Alert</strong> and full concerns modal now load for users whose <strong>School Administrator</strong> or <strong>Director</strong> role (or teacher-type role) appears in <strong>secondary roles</strong> while the primary login role is something else — for example <strong>Tech + School Administrator</strong>. Alerts use the same school-wide or class scope as before once eligibility is detected.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and admins reach grading-oriented views faster, can scan large classes in table view, manage redo and reopening in one place, and see academic-risk alerts reliably no matter how staff roles are split between primary and secondary fields.</p>
+                        </div>
+                    </div>
+
                     <!-- May 1, 2026 - Google Directory, class groups, staff portal & welcome mail -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Workspace, Staff Portal &amp; Class Email Lists – May 1, 2026</h6>
@@ -1642,11 +1684,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownApr29_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay4_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownApr29_2026', 'true');
+            sessionStorage.setItem('updateModalShownMay4_2026', 'true');
         }, 500);
     }
 });

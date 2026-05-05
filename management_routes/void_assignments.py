@@ -41,7 +41,7 @@ def void_assignment_for_students(assignment_id):
                 
                 for group in groups:
                     # Get all members of this group
-                    members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                    members = StudentGroupMember.query.filter_by(group_id=group.id).all()
                     
                     for member in members:
                         group_grade = GroupGrade.query.filter_by(
@@ -62,7 +62,7 @@ def void_assignment_for_students(assignment_id):
                             new_group_grade = GroupGrade(
                                 student_id=member.student_id,
                                 group_assignment_id=assignment_id,
-                                student_group_id=group.id,
+                                group_id=group.id,
                                 grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                                 is_voided=True,
                                 voided_by=current_user.id,
@@ -102,7 +102,7 @@ def void_assignment_for_students(assignment_id):
                             new_group_grade = GroupGrade(
                                 student_id=int(student_id),
                                 group_assignment_id=assignment_id,
-                                student_group_id=member.student_group_id,
+                                group_id=member.group_id,
                                 grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                                 is_voided=True,
                                 voided_by=current_user.id,

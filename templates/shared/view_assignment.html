@@ -802,7 +802,156 @@
     </div>
 </div>
 
+<!-- Grant redo / reopen (PDF/Paper) — same API as grading page; students with submission get a redo, others get a reopening -->
+<div class="modal fade" id="redoOpportunityModal" tabindex="-1" aria-labelledby="redoOpportunityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-modern">
+            <div class="modal-header bg-warning">
+                <div class="flex-grow-1">
+                    <h5 class="modal-title mb-0" id="redoOpportunityModalLabel">
+                        <i class="bi bi-arrow-repeat me-2"></i>Redo or reopen access
+                    </h5>
+                    <p class="mb-0 small text-dark opacity-75">One action: if the student <strong>already submitted</strong>, they get a tracked <strong>redo</strong> (deadline below). If they <strong>have not</strong>, they get a <strong>reopening</strong> so they can submit. You don’t need to choose—the system picks based on their submission.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="redoOpportunityForm" onsubmit="handleRedoOpportunitySubmit(event)">
+                <div class="modal-body modal-body-enhanced">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="alert alert-info border-0 mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Final grade policy: the student’s score is generally the better of the original and redo, with late rules applied to the redo attempt where applicable.
+                    </div>
+                    <div class="date-picker-section mb-3">
+                        <label for="redo_opportunity_deadline" class="section-label">
+                            <i class="bi bi-calendar-event me-2"></i>Deadline <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control form-control-modern" id="redo_opportunity_deadline" name="redo_deadline" required>
+                    </div>
+                    <div class="reason-section mb-3">
+                        <label for="redo_opportunity_reason" class="section-label">
+                            <i class="bi bi-chat-text me-2"></i>Reason <span class="text-muted">(optional)</span>
+                        </label>
+                        <textarea class="form-control form-control-modern" id="redo_opportunity_reason" name="reason" rows="2" placeholder="Visible to the student"></textarea>
+                    </div>
+                    <div class="student-selection-section">
+                        <div class="selection-header">
+                            <i class="bi bi-people me-2"></i>Select students
+                        </div>
+                        <div class="select-all-card">
+                            <input class="form-check-input" type="checkbox" id="selectAllRedoOpportunity" onclick="toggleAllRedoOpportunityStudents(this)">
+                            <label class="select-all-label" for="selectAllRedoOpportunity">
+                                <i class="bi bi-check-all me-2"></i>Select all
+                            </label>
+                        </div>
+                        <div class="students-grid">
+                            {% if assignment.class_info and assignment.class_info.enrollments %}
+                            {% set enrollments = assignment.class_info.enrollments %}
+                            {% for enrollment in enrollments %}
+                            {% if enrollment.is_active and enrollment.student %}
+                            <div class="student-select-card">
+                                <input class="form-check-input redo-opportunity-checkbox" type="checkbox" name="redo_student_ids" value="{{ enrollment.student.id }}" id="redoOpp{{ enrollment.student.id }}">
+                                <label class="student-select-label" for="redoOpp{{ enrollment.student.id }}">
+                                    <div class="student-avatar-mini">
+                                        {{ enrollment.student.first_name[0] }}{{ enrollment.student.last_name[0] }}
+                                    </div>
+                                    <span>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</span>
+                                </label>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-muted small mb-0">No roster loaded for this class.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-enhanced">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning" id="redoOpportunitySubmitBtn">
+                        <i class="bi bi-arrow-repeat me-2"></i>Grant
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+function openRedoOpportunityModal() {
+    const deadlineInput = document.getElementById('redo_opportunity_deadline');
+    if (deadlineInput) {
+        const today = new Date();
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        deadlineInput.value = nextWeek.toISOString().split('T')[0];
+        deadlineInput.min = today.toISOString().split('T')[0];
+    }
+    const reason = document.getElementById('redo_opportunity_reason');
+    if (reason) reason.value = '';
+    document.querySelectorAll('.redo-opportunity-checkbox').forEach(cb => { cb.checked = false; });
+    const selectAll = document.getElementById('selectAllRedoOpportunity');
+    if (selectAll) selectAll.checked = false;
+    new bootstrap.Modal(document.getElementById('redoOpportunityModal')).show();
+}
+
+function toggleAllRedoOpportunityStudents(source) {
+    document.querySelectorAll('.redo-opportunity-checkbox').forEach(cb => {
+        cb.checked = source.checked;
+    });
+}
+
+function handleRedoOpportunitySubmit(event) {
+    event.preventDefault();
+    const selected = Array.from(document.querySelectorAll('.redo-opportunity-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        showToast('warning', 'Please select at least one student.');
+        return;
+    }
+    const deadline = document.getElementById('redo_opportunity_deadline')?.value;
+    if (!deadline) {
+        showToast('warning', 'Please choose a deadline.');
+        return;
+    }
+    const reason = document.getElementById('redo_opportunity_reason')?.value || '';
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    formData.append('redo_deadline', deadline);
+    formData.append('reason', reason);
+    selected.forEach(id => formData.append('student_ids[]', id));
+
+    const btn = document.getElementById('redoOpportunitySubmitBtn');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Granting...';
+
+    const grantUrl = '{{ url_for("management.assignments.grant_assignment_redo", assignment_id=assignment.id) }}';
+    fetch(grantUrl, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (data.success) {
+            showToast('success', data.message || 'Done.');
+            bootstrap.Modal.getInstance(document.getElementById('redoOpportunityModal')).hide();
+            setTimeout(() => location.reload(), 400);
+        } else {
+            showToast('danger', data.message || 'Could not grant redo.');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        showToast('danger', 'Request failed. Please try again.');
+    });
+}
+
 function handleExtensionSubmit(event) {
     event.preventDefault();
     const form = event.target;

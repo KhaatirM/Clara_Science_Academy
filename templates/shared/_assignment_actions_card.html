@@ -97,10 +97,20 @@
                 <i class="bi bi-clock-history"></i>
                 <span>Extensions</span>
             </button>
-            <button class="btn btn-compact btn-compact-reopen" onclick="openReopenModal()">
+            {# PDF/Paper: grant-redo API creates AssignmentRedo if student submitted, else AssignmentReopening — one action covers both; skip duplicate Reopen. #}
+            {% if assignment.assignment_type not in ['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper'] %}
+            <button type="button" class="btn btn-compact btn-compact-reopen" onclick="openReopenModal()">
                 <i class="bi bi-arrow-repeat"></i>
                 <span>Reopen</span>
             </button>
+            {% endif %}
+            {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper', 'pdf_paper'] %}
+            <button type="button" class="btn btn-compact btn-compact-redo" onclick="openRedoOpportunityModal()"
+                    title="If the student already submitted, this grants a tracked redo. If not, it reopens access so they can submit.">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>Redo / reopen</span>
+            </button>
+            {% endif %}
             {% set has_voided_grades = assignment.grades|selectattr('is_voided', 'equalto', True)|list|length > 0 %}
             {% if has_voided_grades %}
             <button class="btn btn-compact btn-compact-unvoid" data-bs-toggle="modal" data-bs-target="#unvoidModal">

@@ -604,23 +604,45 @@ def my_students():
     
     # Directors and School Administrators see all students, teachers only see students in their classes
     if is_admin():
-        students = Student.query.all()
+        students = list(Student.query.all())
+        students.sort(key=lambda s: ((s.last_name or '').lower(), (s.first_name or '').lower()))
     else:
         # Check if teacher object exists
         if teacher is None:
             # If user is a Teacher but has no teacher_staff_id, show empty students list
             students = []
         else:
-            # Get classes for this teacher
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-            class_ids = [c.id for c in classes]
-            
-            # Get students enrolled in these classes
-            enrollments = Enrollment.query.filter(
-                Enrollment.class_id.in_(class_ids),
-                Enrollment.is_active == True
+            # Same class visibility as Assignments & Grades: primary, additional, or substitute teacher
+            accessible_classes = Class.query.filter(
+                or_(
+                    Class.teacher_id == teacher.id,
+                    Class.id.in_(
+                        db.session.query(class_additional_teachers.c.class_id)
+                        .filter(class_additional_teachers.c.teacher_id == teacher.id)
+                    ),
+                    Class.id.in_(
+                        db.session.query(class_substitute_teachers.c.class_id)
+                        .filter(class_substitute_teachers.c.teacher_id == teacher.id)
+                    ),
+                )
             ).all()
-            students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+            class_ids = [c.id for c in accessible_classes if c and getattr(c, 'id', None)]
+
+            if not class_ids:
+                students = []
+            else:
+                enrollments = Enrollment.query.filter(
+                    Enrollment.class_id.in_(class_ids),
+                    Enrollment.is_active == True
+                ).all()
+                seen = set()
+                students = []
+                for enrollment in enrollments:
+                    if not enrollment.student or enrollment.student_id in seen:
+                        continue
+                    seen.add(enrollment.student_id)
+                    students.append(enrollment.student)
+                students.sort(key=lambda s: ((s.last_name or '').lower(), (s.first_name or '').lower()))
     
     return render_template('students/role_students.html', students=students, teacher=teacher)
 
@@ -678,7 +700,7 @@ def assignments_and_grades():
         class_filter = request.args.get('class_id', '') or ''
         sort_by = request.args.get('sort', 'due_date') or 'due_date'
         sort_order = request.args.get('order', 'desc') or 'desc'
-        view_mode = request.args.get('view', 'assignments') or 'assignments'
+        view_mode = request.args.get('view', 'grades') or 'grades'
         
         # If no class is selected, show the class selection interface
         if not class_filter or not class_filter.strip():

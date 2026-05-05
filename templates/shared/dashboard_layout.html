@@ -123,10 +123,33 @@
 
                 {# --- TEACHER TABS --- #}
                 {% elif (sidebar_role_canonical in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and sidebar_role_canonical not in ['Director', 'School Administrator'] %}
+                    {% set _ep = request.endpoint or '' %}
+                    {% set _teacher_assign_grades_active = (
+                        _ep == 'teacher.dashboard.assignments_and_grades'
+                        or _ep == 'teacher.dashboard.my_assignments'
+                        or _ep == 'teacher.redo_dashboard'
+                        or _ep == 'teacher.view_extension_requests'
+                        or _ep == 'teacher.review_extension_request'
+                        or _ep == 'teacher.create_quiz_assignment'
+                        or _ep == 'teacher.create_discussion_assignment'
+                        or _ep == 'teacher.assignment_type_selector'
+                        or _ep == 'teacher.group_assignment_type_selector'
+                        or _ep.startswith('teacher.assignments.')
+                        or _ep.startswith('teacher.grading.')
+                        or _ep.startswith('teacher.quizzes.')
+                        or (_ep.startswith('teacher.groups.') and 'group_assignment' in _ep)
+                    ) %}
+                    {% set _teacher_students_active = (
+                        _ep == 'teacher.dashboard.my_students'
+                        or _ep == 'teacher.dashboard.student_grades_report'
+                        or _ep == 'teacher.dashboard.student_grades_report_pdf'
+                        or _ep == 'teacher.dashboard.student_attendance_report'
+                        or _ep == 'teacher.dashboard.student_attendance_report_pdf'
+                    ) %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.dashboard.teacher_dashboard' %}active{% endif %}" href="{{ url_for('teacher.dashboard.teacher_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.dashboard.my_classes' %}active{% endif %}" href="{{ url_for('teacher.dashboard.my_classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint in ['teacher.dashboard.my_assignments','teacher.assignments.view_assignment_submissions','teacher.assignments.view_assignment','teacher.assignments.add_assignment','teacher.assignments.edit_assignment','teacher.assignments.remove_assignment'] %}active{% endif %}" href="{{ url_for('teacher.dashboard.my_assignments') }}"><i class="bi bi-file-earmark-text-fill"></i><span> Assignments</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint in ['teacher.dashboard.assignments_and_grades', 'teacher.grading.my_grades', 'teacher.grading.student_grades', 'teacher.grading.grade_assignment', 'teacher.grading.save_student_grade'] %}active{% endif %}" href="{{ url_for('teacher.dashboard.assignments_and_grades') }}"><i class="bi bi-journal-check"></i><span> Grading</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if _teacher_assign_grades_active %}active{% endif %}" href="{{ url_for('teacher.dashboard.assignments_and_grades') }}"><i class="bi bi-journal-check"></i><span> Assignments &amp; Grades</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if _teacher_students_active %}active{% endif %}" href="{{ url_for('teacher.dashboard.my_students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint in ['teacher.attendance.attendance_hub','teacher.attendance.take_attendance','teacher.attendance.view_attendance_records'] %}active{% endif %}" href="{{ url_for('teacher.attendance.attendance_hub') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.dashboard.teacher_schedule' %}active{% endif %}" href="{{ url_for('teacher.dashboard.teacher_schedule') }}"><i class="bi bi-calendar-week-fill"></i><span> Schedule</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.dashboard.calendar' %}active{% endif %}" href="{{ url_for('teacher.dashboard.calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
@@ -339,8 +362,8 @@
         {% include 'shared/password_change_popup.html' %}
     {% endif %}
     
-    <!-- Academic Concerns toast & modal (all teacher/admin tabs) -->
-    {% if not disable_academic_alert_popup and (has_mgmt_role_access or role_canonical in TEACHER_ROLES or 'Teacher' in (current_user.role or '')) and at_risk_alerts %}
+    <!-- Academic Concerns toast & modal (all teacher/admin tabs); audience = mgmt or any teacher-like role in primary/secondary -->
+    {% if not disable_academic_alert_popup and academic_concerns_audience|default(false) and at_risk_alerts %}
         {% include 'shared/academic_concerns_partial.html' %}
     {% endif %}
 

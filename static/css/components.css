@@ -5418,6 +5418,19 @@
     box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
+.btn-compact-redo {
+    background: white;
+    border-color: #fd7e14;
+    color: #fd7e14;
+}
+
+.btn-compact-redo:hover {
+    background: #fd7e14;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(253, 126, 20, 0.35);
+}
+
 .btn-compact-void {
     background: white;
     border-color: #dc3545;

@@ -10,18 +10,21 @@
 <div class="container-fluid px-2 px-md-4">
     <!-- Header -->
     <div class="redo-dashboard-header mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <h2 class="mb-1">
-                    <i class="bi bi-arrow-repeat me-2"></i>Assignment Redo Dashboard
-                </h2>
-                <p class="text-muted mb-0">Monitor and manage all active redo opportunities</p>
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div class="d-flex gap-3">
+                <div class="redo-header-icon">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+                <div>
+                    <h2 class="mb-2 text-white">Redo dashboard</h2>
+                    <p class="redo-header-lead mb-0 text-white">Pending student requests, active reopenings, and redo opportunities in one place. Filter by class or status to focus your queue.</p>
+                </div>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-shrink-0">
                 <a href="{% if can_assignments_admin_ui %}{{ url_for('management.assignments_and_grades') }}{% else %}{{ url_for('teacher.dashboard.assignments_and_grades') }}{% endif %}" class="btn btn-redo-back">
                     <i class="bi bi-arrow-left me-2"></i>Back
                 </a>
-                <button class="btn btn-redo-refresh" onclick="refreshDashboard()">
+                <button type="button" class="btn btn-redo-refresh" onclick="refreshDashboard()">
                     <i class="bi bi-arrow-clockwise me-2"></i>Refresh
                 </button>
             </div>
@@ -31,68 +34,60 @@
     <!-- Statistics Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm redo-stat-card redo-stat-card--active h-100">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
-                                <i class="bi bi-arrow-repeat fs-3"></i>
-                            </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="redo-stat-icon">
+                            <i class="bi bi-arrow-repeat"></i>
                         </div>
-                        <div class="ms-3">
-                            <h3 class="mb-0">{{ active_redos }}</h3>
-                            <p class="text-muted mb-0 small">Active Redos</p>
+                        <div>
+                            <div class="redo-stat-value">{{ active_redos }}</div>
+                            <div class="redo-stat-label">Active redos</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm redo-stat-card redo-stat-card--done h-100">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-success bg-opacity-10 text-success p-3 rounded-circle">
-                                <i class="bi bi-check-circle fs-3"></i>
-                            </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="redo-stat-icon">
+                            <i class="bi bi-check-circle"></i>
                         </div>
-                        <div class="ms-3">
-                            <h3 class="mb-0">{{ completed_redos }}</h3>
-                            <p class="text-muted mb-0 small">Completed</p>
+                        <div>
+                            <div class="redo-stat-value">{{ completed_redos }}</div>
+                            <div class="redo-stat-label">Completed</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm redo-stat-card redo-stat-card--improve h-100">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-info bg-opacity-10 text-info p-3 rounded-circle">
-                                <i class="bi bi-graph-up fs-3"></i>
-                            </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="redo-stat-icon">
+                            <i class="bi bi-graph-up-arrow"></i>
                         </div>
-                        <div class="ms-3">
-                            <h3 class="mb-0">{{ improvement_rate }}%</h3>
-                            <p class="text-muted mb-0 small">Avg Improvement</p>
+                        <div>
+                            <div class="redo-stat-value">{{ improvement_rate }}%</div>
+                            <div class="redo-stat-label">Avg improvement</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm redo-stat-card redo-stat-card--overdue h-100">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
-                                <i class="bi bi-clock-history fs-3"></i>
-                            </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="redo-stat-icon">
+                            <i class="bi bi-alarm"></i>
                         </div>
-                        <div class="ms-3">
-                            <h3 class="mb-0">{{ overdue_redos }}</h3>
-                            <p class="text-muted mb-0 small">Past redo deadline</p>
+                        <div>
+                            <div class="redo-stat-value">{{ overdue_redos }}</div>
+                            <div class="redo-stat-label">Past redo deadline</div>
                         </div>
                     </div>
                 </div>
@@ -101,35 +96,41 @@
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4 border-0 shadow-sm">
+    <div class="card mb-4 border-0 shadow-sm redo-filters-panel">
         <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-light-subtle">
+                <i class="bi bi-funnel text-warning"></i>
+                <span class="fw-bold text-dark">Filters</span>
+                <span class="text-muted small d-none d-md-inline">Apply to all sections below</span>
+            </div>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Filter by Class</label>
+                    <label class="form-label fw-bold" for="classFilter">Class</label>
                     <select class="form-select" id="classFilter" onchange="filterRedos()">
-                        <option value="">All Classes</option>
+                        <option value="">All classes</option>
                         {% for class in classes %}
                         <option value="{{ class.id }}">{{ class.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Filter by Status</label>
+                    <label class="form-label fw-bold" for="statusFilter">Status</label>
                     <select class="form-select" id="statusFilter" onchange="filterRedos()">
-                        <option value="">All Statuses</option>
+                        <option value="">All statuses</option>
                         <option value="pending">Pending</option>
                         <option value="submitted">Submitted</option>
                         <option value="graded">Graded</option>
                         <option value="overdue">Past redo deadline</option>
+                        <option value="reopened">Reopened</option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold">Search Student</label>
-                    <input type="text" class="form-control" id="searchInput" placeholder="Search by name..." oninput="filterRedos()">
+                    <label class="form-label fw-bold" for="searchInput">Student</label>
+                    <input type="search" class="form-control" id="searchInput" placeholder="Search by student name…" autocomplete="off" oninput="filterRedos()">
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
-                        <i class="bi bi-x-circle me-1"></i>Clear
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                        <i class="bi bi-x-lg me-1"></i>Clear
                     </button>
                 </div>
             </div>
@@ -138,14 +139,15 @@
 
     <!-- Pending Redo Requests (from students on inactive assignments) -->
     {% if redo_requests %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0"><i class="bi bi-inbox me-2"></i>Pending Redo Requests</h5>
+    <div class="card border-0 shadow-sm mb-4 redo-section-card">
+        <div class="card-header redo-section-header redo-section-header--requests">
+            <h5><i class="bi bi-inbox"></i> Pending redo requests</h5>
+            <small>Students asked for another attempt — grant to set a new deadline, or reject the request.</small>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+            <div class="table-responsive redo-table-wrap">
+                <table class="table mb-0 redo-data-table">
+                    <thead>
                         <tr>
                             <th>Student</th>
                             <th>Assignment</th>
@@ -158,13 +160,15 @@
                     <tbody>
                         {% for rr in redo_requests %}
                         {% if rr.assignment and rr.student %}
-                        <tr>
-                            <td><strong>{{ rr.student.first_name }} {{ rr.student.last_name }}</strong></td>
-                            <td>{{ rr.assignment.title }}</td>
+                        <tr class="redo-request-row"
+                            data-class-id="{{ rr.assignment.class_id if rr.assignment else '' }}"
+                            data-student-name="{{ rr.student.first_name }} {{ rr.student.last_name }}">
+                            <td><span class="redo-cell-title">{{ rr.student.first_name }} {{ rr.student.last_name }}</span></td>
+                            <td><span class="redo-cell-title">{{ rr.assignment.title }}</span></td>
                             <td>{{ rr.assignment.class_info.name if rr.assignment.class_info else '—' }}</td>
-                            <td><small>{{ (rr.reason or 'No reason')[:80] }}{% if rr.reason and rr.reason|length > 80 %}...{% endif %}</small></td>
-                            <td>{{ rr.requested_at.strftime('%m/%d/%Y') }}</td>
-                            <td>
+                            <td><div class="redo-cell-sub">{{ (rr.reason or 'No reason')[:100] }}{% if rr.reason and rr.reason|length > 100 %}…{% endif %}</div></td>
+                            <td><span class="redo-pill-date"><i class="bi bi-calendar3 me-1"></i>{{ rr.requested_at.strftime('%b %d, %Y') }}</span></td>
+                            <td class="redo-actions">
                                 <div class="btn-group btn-group-sm">
                                     <button type="button" class="btn btn-success" onclick="openGrantRedoModal({{ rr.id }}, {{ rr.assignment_id }}, '{{ rr.student.first_name }} {{ rr.student.last_name }}', '{{ rr.assignment.title|replace("'", "\\'") }}')">
                                         <i class="bi bi-check-circle me-1"></i>Grant
@@ -184,23 +188,71 @@
     </div>
     {% endif %}
 
-    <!-- Redo List -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Active Redo Opportunities</h5>
+    <!-- Active Reopenings (for assignments reopened to allow submissions) -->
+    {% if reopenings %}
+    <div class="card border-0 shadow-sm mb-4 redo-section-card">
+        <div class="card-header redo-section-header redo-section-header--reopenings">
+            <h5><i class="bi bi-unlock"></i> Active reopenings</h5>
+            <small>Assignments opened again so students can submit (e.g. PDF/paper). Shown when status filter is “Reopened” or “All”.</small>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+            <div class="table-responsive redo-table-wrap">
+                <table class="table mb-0 redo-data-table">
+                    <thead>
                         <tr>
                             <th>Student</th>
                             <th>Assignment</th>
                             <th>Class</th>
-                            <th>Original Grade</th>
-                            <th>Redo Status</th>
+                            <th>Reopened</th>
+                            <th>Attempts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reopening in reopenings %}
+                        {% if reopening.assignment and reopening.student %}
+                        <tr class="reopening-row"
+                            data-class-id="{{ reopening.assignment.class_id if reopening.assignment else '' }}"
+                            data-student-name="{{ reopening.student.first_name }} {{ reopening.student.last_name }}"
+                            data-status="reopened">
+                            <td><span class="redo-cell-title">{{ reopening.student.first_name }} {{ reopening.student.last_name }}</span></td>
+                            <td><span class="redo-cell-title">{{ reopening.assignment.title if reopening.assignment else 'Unknown Assignment' }}</span></td>
+                            <td>{{ reopening.assignment.class_info.name if (reopening.assignment and reopening.assignment.class_info) else 'Unknown Class' }}</td>
+                            <td>
+                                {% if reopening.reopened_at %}
+                                <span class="redo-pill-date"><i class="bi bi-calendar3 me-1"></i>{{ reopening.reopened_at.strftime('%b %d, %Y') }}</span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge rounded-pill bg-light text-dark border fw-semibold">{{ reopening.additional_attempts if reopening.additional_attempts is not none else 0 }}</span></td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Redo List -->
+    <div class="card border-0 shadow-sm redo-section-card">
+        <div class="card-header redo-section-header redo-section-header--active">
+            <h5><i class="bi bi-list-check"></i> Active redo opportunities</h5>
+            <small>Granted redos with deadlines and grading workflow. Use actions to open the grader or revoke if needed.</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive redo-table-wrap">
+                <table class="table mb-0 redo-data-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Assignment</th>
+                            <th>Class</th>
+                            <th>Original</th>
+                            <th>Status</th>
                             <th>Deadline</th>
-                            <th>Final Grade</th>
+                            <th>Final</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -211,61 +263,59 @@
                             data-student-name="{{ redo.student.first_name }} {{ redo.student.last_name }}"
                             data-status="{{ 'graded' if redo.final_grade else ('submitted' if redo.is_used else ('overdue' if redo.is_overdue else 'pending')) }}">
                             <td>
-                                <strong>{{ redo.student.first_name }} {{ redo.student.last_name }}</strong>
-                                <br><small class="text-muted">Grade {{ redo.student.grade_level | display_grade }}</small>
+                                <span class="redo-cell-title">{{ redo.student.first_name }} {{ redo.student.last_name }}</span>
+                                <div class="redo-cell-sub">Grade {{ redo.student.grade_level | display_grade }}</div>
                             </td>
                             <td>
-                                {{ redo.assignment.title if redo.assignment else 'Unknown Assignment' }}
-                                <br><small class="text-muted">{{ redo.reason or 'No reason' }}</small>
+                                <span class="redo-cell-title">{{ redo.assignment.title if redo.assignment else 'Unknown Assignment' }}</span>
+                                <div class="redo-cell-sub">{{ redo.reason or 'No reason noted' }}</div>
                             </td>
                             <td>{{ redo.assignment.class_info.name if (redo.assignment and redo.assignment.class_info) else 'Unknown Class' }}</td>
                             <td>
                                 {% if redo.original_grade %}
-                                    <span class="badge bg-danger">{{ redo.original_grade }}%</span>
+                                    <span class="badge redo-badge-grade bg-danger bg-opacity-15 text-danger-emphasis border border-danger-subtle">{{ redo.original_grade }}%</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">N/A</span>
+                                    <span class="badge redo-badge-grade bg-secondary bg-opacity-15 text-secondary-emphasis border border-secondary-subtle">N/A</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if redo.final_grade %}
-                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Graded</span>
+                                    <span class="badge rounded-pill bg-success bg-opacity-15 text-success-emphasis border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Graded</span>
                                 {% elif redo.is_used %}
-                                    <span class="badge bg-info"><i class="bi bi-hourglass-split"></i> Submitted</span>
+                                    <span class="badge rounded-pill bg-info bg-opacity-15 text-info-emphasis border border-info-subtle"><i class="bi bi-hourglass-split me-1"></i>Submitted</span>
                                 {% elif redo.is_overdue %}
-                                    <span class="badge bg-danger"><i class="bi bi-calendar-x"></i> Deadline passed</span>
+                                    <span class="badge rounded-pill bg-danger bg-opacity-15 text-danger-emphasis border border-danger-subtle"><i class="bi bi-calendar-x me-1"></i>Deadline passed</span>
                                 {% else %}
-                                    <span class="badge bg-warning"><i class="bi bi-clock"></i> Pending</span>
+                                    <span class="badge rounded-pill bg-warning bg-opacity-20 text-dark border border-warning-subtle"><i class="bi bi-clock me-1"></i>Pending</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {{ redo.redo_deadline.strftime('%m/%d/%Y') }}
+                                <span class="redo-pill-date"><i class="bi bi-flag me-1"></i>{{ redo.redo_deadline.strftime('%b %d, %Y') }}</span>
                                 {% if redo.is_overdue %}
-                                    <br><small class="text-danger fw-bold">Past deadline</small>
+                                    <div class="redo-cell-sub text-danger fw-bold mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Past deadline</div>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if redo.final_grade %}
-                                    <span class="badge bg-success fs-6">{{ redo.final_grade }}%</span>
+                                    <span class="badge redo-badge-grade bg-success fs-6">{{ redo.final_grade }}%</span>
                                     {% if redo.was_redo_late %}
-                                        <br><small class="text-warning"><i class="bi bi-exclamation-circle"></i> Late penalty</small>
+                                        <div class="redo-cell-sub text-warning mt-1"><i class="bi bi-exclamation-circle me-1"></i>Late penalty</div>
                                     {% endif %}
                                 {% elif redo.redo_grade %}
-                                    <span class="badge bg-info">{{ redo.redo_grade }}%</span>
-                                    <br><small class="text-muted">Awaiting calculation</small>
+                                    <span class="badge redo-badge-grade bg-info bg-opacity-20 text-dark border border-info-subtle">{{ redo.redo_grade }}%</span>
+                                    <div class="redo-cell-sub">Awaiting final</div>
                                 {% else %}
-                                    <span class="text-muted">--</span>
+                                    <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="redo-actions">
                                 <div class="btn-group btn-group-sm">
                                     {% if redo.assignment %}
                                     <a href="{{ url_for('management.grade_assignment', assignment_id=redo.assignment_id) }}" 
-                                       class="btn btn-outline-primary" title="Grade">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
+                                       class="btn btn-outline-primary" title="Grade"><i class="bi bi-pencil-square"></i></a>
                                     {% endif %}
                                     {% if not redo.is_used %}
-                                    <button class="btn btn-outline-danger" onclick="revokeRedo({{ redo.id }})" title="Revoke">
+                                    <button type="button" class="btn btn-outline-danger" onclick="revokeRedo({{ redo.id }})" title="Revoke redo">
                                         <i class="bi bi-x-circle"></i>
                                     </button>
                                     {% endif %}
@@ -279,9 +329,10 @@
             </div>
             
             {% if not redos %}
-            <div class="p-5 text-center">
-                <i class="bi bi-inbox fs-1 text-muted"></i>
-                <p class="text-muted mt-3">No active redo opportunities at this time.</p>
+            <div class="redo-empty-state">
+                <div class="redo-empty-icon mb-3"><i class="bi bi-check2-circle"></i></div>
+                <p class="fw-semibold text-dark mb-1">No active redo opportunities</p>
+                <p class="text-muted small mb-0">When you grant a redo or reopen an assignment, it will show up here with deadlines and status.</p>
             </div>
             {% endif %}
         </div>
@@ -289,26 +340,26 @@
 </div>
 
 <!-- Grant Redo Modal -->
-<div class="modal fade" id="grantRedoModal" tabindex="-1" aria-labelledby="grantRedoModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog">
+<div class="modal fade redo-modal" id="grantRedoModal" tabindex="-1" aria-labelledby="grantRedoModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="grantRedoModalLabel">
-                    <i class="bi bi-check-circle me-2"></i>Grant Redo
+                    <i class="bi bi-check-circle me-2"></i>Grant redo
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-3">Granting redo for <strong id="grantRedoStudentName"></strong> — <span id="grantRedoAssignmentTitle"></span></p>
-                <div class="mb-3">
-                    <label for="grantRedoDeadline" class="form-label">Redo deadline</label>
+                <p class="mb-3 text-secondary">You are granting a redo for <strong class="text-dark" id="grantRedoStudentName"></strong> on <span class="text-dark" id="grantRedoAssignmentTitle"></span>.</p>
+                <div class="mb-0">
+                    <label for="grantRedoDeadline" class="form-label fw-semibold">Redo deadline</label>
                     <input type="date" class="form-control" id="grantRedoDeadline" required>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-success" id="grantRedoConfirmBtn" onclick="grantRedoFromRequest()">
-                    <i class="bi bi-check-circle me-1"></i>Grant Redo
+                    <i class="bi bi-check-circle me-1"></i>Grant redo
                 </button>
             </div>
         </div>
@@ -325,9 +376,11 @@ function filterRedos() {
     const statusFilter = document.getElementById('statusFilter').value;
     const searchInput = document.getElementById('searchInput').value.toLowerCase();
     
-    const rows = document.querySelectorAll('.redo-row');
+    const redoRows = document.querySelectorAll('.redo-row');
+    const requestRows = document.querySelectorAll('.redo-request-row');
+    const reopeningRows = document.querySelectorAll('.reopening-row');
     
-    rows.forEach(row => {
+    redoRows.forEach(row => {
         const classId = row.getAttribute('data-class-id');
         const studentName = row.getAttribute('data-student-name').toLowerCase();
         const status = row.getAttribute('data-status');
@@ -338,6 +391,32 @@ function filterRedos() {
         if (statusFilter && status !== statusFilter) show = false;
         if (searchInput && !studentName.includes(searchInput)) show = false;
         
+        row.style.display = show ? '' : 'none';
+    });
+
+    // Pending requests don't have "status" in the same sense; they are always pending.
+    requestRows.forEach(row => {
+        const classId = row.getAttribute('data-class-id');
+        const studentName = row.getAttribute('data-student-name').toLowerCase();
+
+        let show = true;
+        if (classFilter && classId !== classFilter) show = false;
+        if (statusFilter && statusFilter !== 'pending') show = false;
+        if (searchInput && !studentName.includes(searchInput)) show = false;
+
+        row.style.display = show ? '' : 'none';
+    });
+
+    reopeningRows.forEach(row => {
+        const classId = row.getAttribute('data-class-id');
+        const studentName = row.getAttribute('data-student-name').toLowerCase();
+        const status = row.getAttribute('data-status');
+
+        let show = true;
+        if (classFilter && classId !== classFilter) show = false;
+        if (statusFilter && status !== statusFilter) show = false;
+        if (searchInput && !studentName.includes(searchInput)) show = false;
+
         row.style.display = show ? '' : 'none';
     });
 }

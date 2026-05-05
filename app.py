@@ -1027,28 +1027,38 @@ def create_app(config_class=None):
     # Inject at_risk_alerts for teacher/admin dashboard pages (shown on all tabs)
     @app.context_processor
     def inject_at_risk_alerts():
-        out = {'at_risk_alerts': [], 'failing_count': 0, 'overdue_count': 0}
+        out = {
+            'at_risk_alerts': [],
+            'failing_count': 0,
+            'overdue_count': 0,
+            'academic_concerns_audience': False,
+        }
         if not current_user.is_authenticated:
             return out
-        role = getattr(current_user, 'role', '') or ''
-        is_admin = role in ['Director', 'School Administrator']
-        teacher_roles = [
-            # Simplified roles
-            'Teacher', 'Substitute', 'Counselor',
-            # Legacy roles still present in existing accounts
-            'History Teacher', 'Science Teacher', 'Physics Teacher',
-            'English Language Arts Teacher', 'Math Teacher', 'Substitute Teacher',
-            'School Counselor',
-            # Admin roles are allowed too
-            'School Administrator', 'Director'
-        ]
-        is_teacher = role in teacher_roles or 'Teacher' in role
-        if not (is_teacher or is_admin):
+        # Primary role may be Tech while School Administrator lives in secondary_roles;
+        # teacher roles may appear only in secondary_roles — use same helpers as alert computation.
+        try:
+            from utils.user_roles import all_role_strings, user_has_management_entry_access
+            from decorators import is_teacher_role
+
+            audience = user_has_management_entry_access(current_user) or any(
+                is_teacher_role(r) for r in all_role_strings(current_user)
+            )
+            out['academic_concerns_audience'] = audience
+            if not audience:
+                return out
+        except Exception as e:
+            current_app.logger.warning(f"Context processor at_risk_alerts (role gate): {e}")
             return out
         try:
             from utils.at_risk_alerts import get_at_risk_alerts_for_user
             alerts, failing, overdue = get_at_risk_alerts_for_user()
-            return {'at_risk_alerts': alerts, 'failing_count': failing, 'overdue_count': overdue}
+            return {
+                **out,
+                'at_risk_alerts': alerts,
+                'failing_count': failing,
+                'overdue_count': overdue,
+            }
         except Exception as e:
             current_app.logger.warning(f"Context processor at_risk_alerts: {e}")
             return out

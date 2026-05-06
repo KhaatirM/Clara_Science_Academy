@@ -20,6 +20,205 @@ from teacher_routes.assignment_utils import (
 
 bp = Blueprint('quizzes', __name__)
 
+def _upsert_quiz_from_blocks(*, assignment, blocks):
+    """
+    Rebuild quiz sections/questions from ordered blocks.
+    Blocks format matches `create_quiz_assignment.html`:
+      - {type:'section', title: str}
+      - {type:'question', question_text, question_type, points, options:[{option_text,is_correct}]}
+    """
+    # Delete existing graph in FK-safe order
+    old_question_ids = [
+        q.id for q in QuizQuestion.query.with_entities(QuizQuestion.id).filter_by(assignment_id=assignment.id).all()
+    ]
+    if old_question_ids:
+        QuizAnswer.query.filter(QuizAnswer.question_id.in_(old_question_ids)).delete(synchronize_session=False)
+        QuizOption.query.filter(QuizOption.question_id.in_(old_question_ids)).delete(synchronize_session=False)
+    QuizProgress.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+    QuizQuestion.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+    QuizSection.query.filter_by(assignment_id=assignment.id).delete(synchronize_session=False)
+
+    # Re-create sections/questions in order
+    section_order = 0
+    question_order = 0
+    total_points = 0.0
+    current_section_id = None
+    for b in blocks or []:
+        btype = (b.get('type') or '').strip().lower()
+        if btype == 'section':
+            title = (b.get('title') or '').strip() or f'Part {section_order + 1}'
+            sec = QuizSection(assignment_id=assignment.id, title=title, order=section_order)
+            db.session.add(sec)
+            db.session.flush()
+            current_section_id = sec.id
+            section_order += 1
+            continue
+        if btype != 'question':
+            continue
+
+        qtext = (b.get('question_text') or '').strip()
+        if not qtext:
+            continue
+        qtype = (b.get('question_type') or 'multiple_choice').strip()
+        try:
+            pts = float(b.get('points', 1.0))
+        except (TypeError, ValueError):
+            pts = 1.0
+        if pts <= 0:
+            pts = 1.0
+        total_points += pts
+
+        q = QuizQuestion(
+            assignment_id=assignment.id,
+            section_id=current_section_id,
+            question_text=qtext,
+            question_type=qtype,
+            points=pts,
+            order=question_order,
+        )
+        db.session.add(q)
+        db.session.flush()
+
+        opts = b.get('options') or []
+        if qtype == 'multiple_choice':
+            for i, o in enumerate(opts):
+                text = (o.get('option_text') or '').strip()
+                if not text:
+                    continue
+                db.session.add(QuizOption(
+                    question_id=q.id,
+                    option_text=text,
+                    is_correct=bool(o.get('is_correct')),
+                    order=i,
+                ))
+        elif qtype == 'true_false':
+            # Ensure T/F options exist even if client didn't send options.
+            is_true_correct = False
+            for o in opts:
+                if (o.get('option_text') or '').strip().lower() == 'true' and bool(o.get('is_correct')):
+                    is_true_correct = True
+                    break
+            db.session.add(QuizOption(question_id=q.id, option_text='True', is_correct=is_true_correct, order=0))
+            db.session.add(QuizOption(question_id=q.id, option_text='False', is_correct=(not is_true_correct), order=1))
+
+        question_order += 1
+
+    assignment.total_points = total_points if total_points > 0 else 100.0
+
+
+@bp.route('/assignment/create/quiz/autosave', methods=['POST'])
+@login_required
+@teacher_required
+def autosave_quiz_draft():
+    """
+    Autosave quiz draft (server-side) so work survives refresh/logout.
+    """
+    data = request.get_json(silent=True) or {}
+    meta = data.get('meta') or {}
+    blocks = data.get('blocks') or []
+    assignment_id = meta.get('assignment_id')
+
+    class_id = meta.get('class_id')
+    if not class_id:
+        # Can't draft without a class; still allow local storage fallback on client.
+        return jsonify({'success': False, 'message': 'class_id_required'}), 400
+
+    class_obj = Class.query.get(int(class_id))
+    if not is_authorized_for_class(class_obj):
+        return jsonify({'success': False, 'message': 'unauthorized'}), 403
+
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not current_school_year:
+        return jsonify({'success': False, 'message': 'no_active_school_year'}), 400
+
+    title = (meta.get('title') or '').strip() or 'Untitled quiz (autosaved draft)'
+    description = meta.get('description') or ''
+    quarter = str((meta.get('quarter') or '').strip() or '1')
+    due_date_str = (meta.get('due_date') or '').strip()
+    try:
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M') if due_date_str else quiz_draft_default_due_date()
+    except ValueError:
+        due_date = quiz_draft_default_due_date()
+
+    open_date_str = (meta.get('open_date') or '').strip()
+    close_date_str = (meta.get('close_date') or '').strip()
+    open_date = None
+    close_date = None
+    if open_date_str:
+        try:
+            open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            open_date = None
+    if close_date_str:
+        try:
+            close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            close_date = None
+    if not close_date:
+        close_date = due_date
+
+    assignment_context = (meta.get('assignment_context') or 'homework').strip() or 'homework'
+    assignment_category = (meta.get('assignment_category') or '').strip() or None
+    try:
+        category_weight = float(meta.get('category_weight') or 0.0)
+    except (TypeError, ValueError):
+        category_weight = 0.0
+    allow_extra_credit = bool(meta.get('allow_extra_credit'))
+    try:
+        max_extra_credit_points = float(meta.get('max_extra_credit_points') or 0.0)
+    except (TypeError, ValueError):
+        max_extra_credit_points = 0.0
+
+    # Always keep drafts inactive until explicitly published.
+    calculated_status = 'Inactive'
+
+    if assignment_id:
+        assignment = Assignment.query.get(int(assignment_id))
+        if not assignment or assignment.assignment_type != 'quiz' or not is_authorized_for_class(assignment.class_info):
+            return jsonify({'success': False, 'message': 'not_found'}), 404
+        assignment.title = title
+        assignment.description = description
+        assignment.due_date = due_date
+        assignment.open_date = open_date
+        assignment.close_date = close_date
+        assignment.quarter = quarter
+        assignment.class_id = int(class_id)
+        assignment.school_year_id = current_school_year.id
+        assignment.status = calculated_status
+        assignment.quiz_authoring_is_draft = True
+        assignment.assignment_context = assignment_context
+        assignment.assignment_category = assignment_category
+        assignment.category_weight = category_weight
+        assignment.allow_extra_credit = allow_extra_credit
+        assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
+    else:
+        assignment = Assignment(
+            title=title,
+            description=description,
+            due_date=due_date,
+            open_date=open_date,
+            close_date=close_date,
+            total_points=100.0,
+            quarter=quarter,
+            class_id=int(class_id),
+            school_year_id=current_school_year.id,
+            assignment_type='quiz',
+            status=calculated_status,
+            quiz_authoring_is_draft=True,
+            assignment_context=assignment_context,
+            assignment_category=assignment_category,
+            category_weight=category_weight,
+            allow_extra_credit=allow_extra_credit,
+            max_extra_credit_points=max_extra_credit_points if allow_extra_credit else 0.0,
+            created_by=current_user.id,
+        )
+        db.session.add(assignment)
+        db.session.flush()
+
+    _upsert_quiz_from_blocks(assignment=assignment, blocks=blocks)
+    db.session.commit()
+    return jsonify({'success': True, 'assignment_id': assignment.id})
+
 def _build_quiz_data_for_edit(assignment):
     """Build quiz_data dict (blocks with sections and questions) for template pre-fill."""
     from models import QuizSection
@@ -59,6 +258,13 @@ def create_quiz_assignment():
         description = request.form.get('description', '')
         due_date_str = (request.form.get('due_date') or '').strip()
         quarter = (request.form.get('quarter') or '').strip()
+        assignment_context = request.form.get('assignment_context', 'homework')
+        assignment_category = (request.form.get('assignment_category') or '').strip() or None
+        category_weight = request.form.get('category_weight', type=float)
+        if category_weight is None:
+            category_weight = 0.0
+        allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+        max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
 
         def _redirect_back():
             rt = url_for('teacher.create_quiz_assignment')
@@ -164,6 +370,11 @@ def create_quiz_assignment():
                 existing.class_id = class_id
                 existing.status = calculated_status
                 existing.quiz_authoring_is_draft = is_draft
+                existing.assignment_context = assignment_context
+                existing.assignment_category = assignment_category
+                existing.category_weight = float(category_weight or 0.0)
+                existing.allow_extra_credit = allow_extra_credit
+                existing.max_extra_credit_points = float(max_extra_credit_points or 0.0) if allow_extra_credit else 0.0
                 new_assignment = existing
                 # Delete old quiz graph in FK-safe order before rebuilding.
                 old_question_ids = [
@@ -190,6 +401,11 @@ def create_quiz_assignment():
                     assignment_type='quiz',
                     status=calculated_status,
                     quiz_authoring_is_draft=is_draft,
+                    assignment_context=assignment_context,
+                    assignment_category=assignment_category,
+                    category_weight=float(category_weight or 0.0),
+                    allow_extra_credit=allow_extra_credit,
+                    max_extra_credit_points=float(max_extra_credit_points or 0.0) if allow_extra_credit else 0.0,
                     created_by=current_user.id
                 )
                 db.session.add(new_assignment)

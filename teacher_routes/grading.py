@@ -238,6 +238,12 @@ def grade_assignment(assignment_id):
 
                     sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
 
+                    # Prevent accidental mass grading: only save grades for students who have submitted
+                    # (online or in-person) OR already have a grade row.
+                    # This matches the smoke test expectations and avoids grading every roster row on "Save all".
+                    if sub is None and existing_grade is None:
+                        continue
+
                     adjusted = _apply_assignment_adjustments(
                         assignment=assignment,
                         entered_points=points_earned,

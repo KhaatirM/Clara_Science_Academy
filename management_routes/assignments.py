@@ -2285,6 +2285,15 @@ def grade_assignment(assignment_id):
                     except (ValueError, TypeError):
                         continue
 
+                    # Prevent accidental mass grading: only save grades for students who have submitted
+                    # (online or in-person) OR already have a grade row.
+                    existing_grade_row = Grade.query.filter_by(
+                        student_id=student.id,
+                        assignment_id=assignment_id
+                    ).first()
+                    if submission_for_adjustments is None and existing_grade_row is None:
+                        continue
+
                     adjusted = _apply_assignment_adjustments(
                         assignment=assignment,
                         entered_points=points_earned,
@@ -2944,16 +2953,42 @@ def view_assignment(assignment_id):
         total_submissions_count = submissions_count + group_submissions_count
 
         # Statistics payload for view page
-        total_students = Enrollment.query.filter_by(
-            class_id=assignment.class_id,
-            is_active=True
-        ).count() if assignment.class_id else 0
+        enrolled_student_ids = []
+        if assignment.class_id:
+            enrolled_student_ids = [
+                sid for (sid,) in db.session.query(Enrollment.student_id).filter_by(
+                    class_id=assignment.class_id,
+                    is_active=True
+                ).all()
+            ]
 
-        non_voided_grades = Grade.query.filter_by(
-            assignment_id=assignment_id,
-            is_voided=False
-        ).all()
-        graded_count = len(non_voided_grades)
+        # Students voided for THIS assignment should be excluded from overview stats.
+        voided_student_ids = {
+            sid for (sid,) in db.session.query(Grade.student_id).filter(
+                Grade.assignment_id == assignment_id,
+                Grade.is_voided.is_(True),
+            ).distinct().all()
+        }
+        voided_student_ids = set(enrolled_student_ids).intersection(voided_student_ids)
+        eligible_student_ids = [sid for sid in enrolled_student_ids if sid not in voided_student_ids]
+        total_students = len(eligible_student_ids)
+
+        non_voided_grades_q = Grade.query.filter(
+            Grade.assignment_id == assignment_id,
+            Grade.is_voided.is_(False),
+        )
+        if voided_student_ids:
+            non_voided_grades_q = non_voided_grades_q.filter(~Grade.student_id.in_(voided_student_ids))
+        non_voided_grades = non_voided_grades_q.order_by(Grade.graded_at.desc(), Grade.id.desc()).all()
+
+        graded_student_ids = set()
+        latest_grade_by_student = {}
+        for g in non_voided_grades:
+            if g.student_id in graded_student_ids:
+                continue
+            graded_student_ids.add(g.student_id)
+            latest_grade_by_student[g.student_id] = g
+        graded_count = len(graded_student_ids)
 
         assignment_points = 0
         if hasattr(assignment, 'total_points') and assignment.total_points:
@@ -2966,7 +3001,7 @@ def view_assignment(assignment_id):
         if graded_count > 0:
             total_percentage = 0.0
             pct_count = 0
-            for grade in non_voided_grades:
+            for grade in latest_grade_by_student.values():
                 try:
                     if not grade.grade_data:
                         continue
@@ -2995,10 +3030,6 @@ def view_assignment(assignment_id):
         
         # Get current date for status calculations
         today = datetime.now().date()
-        
-        # Get voided grades for the unvoid modal
-        voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
-        voided_student_ids = {g.student_id for g in voided_grades}
         
         # For quiz assignments, check if there are open-ended questions that need manual grading
         has_open_ended_questions = False

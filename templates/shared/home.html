@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 4, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 6, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,47 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 4, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 6, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 4</strong> brings a big refresh to <strong>Assignments &amp; Grades</strong> (default <strong>Grades</strong> view, table view student search, and clearer redo workflows), a redesigned <strong>Redo dashboard</strong>, and a fix so <strong>Academic Concerns</strong> alerts work for staff with <strong>merged roles</strong> (for example Tech plus School Administrator). <strong>May 1</strong> below covers <strong>Google Workspace Directory</strong> and class email lists; earlier entries cover dashboard zoom, quiz grading, and the full changelog.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 6</strong> focuses on <strong>Quiz improvements</strong> (best-score display on retakes, keep-alive to prevent logout mid-quiz, draft autosave, and a faster quiz builder for large multi-section quizzes) plus important <strong>voided-assignment accuracy</strong> fixes in assignment and class grade views. <strong>May 4</strong> below covers the large <strong>Assignments &amp; Grades</strong> refresh and redo dashboard redesign.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 6, 2026 - Quiz reliability, builder UX, and voiding accuracy -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-question-circle me-2"></i>Quiz Reliability, Builder UX &amp; Voiding Accuracy – May 6, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz retakes now show the best score:</strong> When a quiz allows multiple attempts, the student-facing quiz grade and quiz details now display the <strong>highest attempt</strong> (instead of accidentally showing an older attempt).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz sessions stay active during a quiz:</strong> While a student is on a quiz page, the system sends a lightweight keep-alive so they don’t get auto-logged out mid-quiz.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz creation — autosaved drafts:</strong> Quiz builders are now <strong>auto-saved</strong> as drafts in the background. If you refresh or get logged out, your work is preserved unless the draft is deleted. Drafts remain <strong>inactive</strong> until you publish.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz builder — sections in Live Preview + collapsible sections:</strong> Section headers now appear in the live preview, and teachers can <strong>collapse completed sections</strong> to avoid scrolling through 60+ questions.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz creation now includes gradebook settings:</strong> Quiz assignments support the same key options as PDF/Paper assignments, including <strong>category</strong>, <strong>category weight</strong> (unweighted/weighted behavior), and <strong>extra credit</strong>.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Voided assignment accuracy in views:</strong> Assignment overview statistics now exclude students who have the assignment voided, and class grades views display fully-voided assignments correctly (instead of showing “Not Graded”).
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Quizzes are more reliable for students, teachers can build large quizzes faster with less scrolling, and grade/overview statistics are more accurate when voiding is used.</p>
+                        </div>
+                    </div>
+
                     <!-- May 4, 2026 - Assignments & grades, redo dashboard, academic alerts (dual roles) -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Assignments &amp; Grades, Redo Dashboard &amp; Academic Alerts – May 4, 2026</h6>
@@ -1684,11 +1718,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay4_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay6_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMay4_2026', 'true');
+            sessionStorage.setItem('updateModalShownMay6_2026', 'true');
         }, 500);
     }
 });

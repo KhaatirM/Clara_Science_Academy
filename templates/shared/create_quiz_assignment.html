@@ -110,6 +110,64 @@
                                 </select>
                             </div>
                         </div>
+
+                        <!-- Grading & Weighting (matches PDF/Paper options) -->
+                        <div class="row g-3 mt-3">
+                            <div class="col-md-6">
+                                <label for="assignment_context" class="form-label fw-semibold">
+                                    <i class="bi bi-bookmark me-1 text-primary"></i>Context
+                                </label>
+                                {% set qctx = (assignment.assignment_context if assignment and assignment.assignment_context else 'homework') %}
+                                <select class="form-select form-select-lg" id="assignment_context" name="assignment_context">
+                                    <option value="homework" {% if qctx != 'in-class' %}selected{% endif %}>Homework</option>
+                                    <option value="in-class" {% if qctx == 'in-class' %}selected{% endif %}>In-Class</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="assignment_category" class="form-label fw-semibold">
+                                    <i class="bi bi-tags me-1 text-primary"></i>Category
+                                </label>
+                                {% set qcat = (assignment.assignment_category if assignment and assignment.assignment_category else 'Quizzes') %}
+                                <select class="form-select form-select-lg" id="assignment_category" name="assignment_category">
+                                    <option value="" {% if not qcat %}selected{% endif %}>None (Uncategorized)</option>
+                                    <option value="Homework" {% if qcat == 'Homework' %}selected{% endif %}>Homework</option>
+                                    <option value="Tests" {% if qcat == 'Tests' %}selected{% endif %}>Tests</option>
+                                    <option value="Quizzes" {% if qcat == 'Quizzes' %}selected{% endif %}>Quizzes</option>
+                                    <option value="Projects" {% if qcat == 'Projects' %}selected{% endif %}>Projects</option>
+                                    <option value="Labs" {% if qcat == 'Labs' %}selected{% endif %}>Labs</option>
+                                    <option value="Participation" {% if qcat == 'Participation' %}selected{% endif %}>Participation</option>
+                                    <option value="Other" {% if qcat == 'Other' %}selected{% endif %}>Other</option>
+                                </select>
+                                <div class="form-text">Used for weighted gradebooks (if enabled)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="category_weight" class="form-label fw-semibold">
+                                    <i class="bi bi-percent me-1 text-primary"></i>Category Weight (%)
+                                </label>
+                                <input type="number" class="form-control form-control-lg" id="category_weight" name="category_weight"
+                                       value="{{ assignment.category_weight if assignment and assignment.category_weight is not none else 0 }}"
+                                       min="0" max="100" step="0.1">
+                                <div class="form-text">0 = unweighted</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="allow_extra_credit" name="allow_extra_credit"
+                                           {% if assignment and assignment.allow_extra_credit %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="allow_extra_credit">
+                                        <i class="bi bi-star-fill me-2 text-warning"></i>Allow Extra Credit
+                                    </label>
+                                    <div class="form-text">Let students earn points above the quiz total</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="max_extra_credit_points" class="form-label fw-semibold">
+                                    <i class="bi bi-plus-circle me-1 text-warning"></i>Max Extra Credit Points
+                                </label>
+                                <input type="number" class="form-control form-control-lg" id="max_extra_credit_points" name="max_extra_credit_points"
+                                       value="{{ assignment.max_extra_credit_points if assignment and assignment.max_extra_credit_points is not none else 0 }}"
+                                       min="0" step="0.1">
+                            </div>
+                        </div>
                         
                         <!-- Assignment Availability Section -->
                         <div class="row g-3 mt-3">
@@ -536,6 +594,9 @@
                         <p class="text-muted small mb-2">Upload a CSV file. First row must be headers.</p>
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <input type="file" class="form-control" id="bulkCsvFile" accept=".csv,text/csv">
+                            <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="bulkCsvTemplateBtn" title="Download CSV template">
+                                <i class="bi bi-download me-1"></i>Template
+                            </button>
                             <button type="button" class="btn btn-outline-info btn-sm flex-shrink-0" id="bulkCsvFormatBtn" title="CSV format help" data-bs-toggle="collapse" data-bs-target="#bulkCsvFormatHelp" aria-expanded="false" aria-controls="bulkCsvFormatHelp">
                                 <i class="bi bi-info-circle me-1"></i>Format help
                             </button>
@@ -548,15 +609,19 @@
                                     <li><code>question_type</code> – one of: <code>multiple_choice</code>, <code>true_false</code>, <code>short_answer</code>, <code>essay</code></li>
                                     <li><code>points</code> – number (e.g. 1 or 2.5)</li>
                                 </ul>
+                                <strong>Optional columns:</strong>
+                                <ul class="mb-2 mb-md-0">
+                                    <li><code>section</code> – section/part title (a new section is created when this value changes)</li>
+                                </ul>
                                 <strong>For multiple choice only:</strong>
                                 <ul class="mb-2 mb-md-0">
                                     <li><code>option_a</code>, <code>option_b</code>, <code>option_c</code>, <code>option_d</code> – answer choices</li>
                                     <li><code>correct</code> – letter of correct answer: <code>A</code>, <code>B</code>, <code>C</code>, or <code>D</code></li>
                                 </ul>
                                 <strong>Example (first row = headers):</strong>
-                                <pre class="mb-0 mt-1 p-2 bg-white border rounded" style="font-size: 0.75rem;">question_text,question_type,points,option_a,option_b,option_c,option_d,correct
-"What is 2+2?",multiple_choice,1,3,4,5,6,B
-"The sky is blue.",true_false,1,,,,,true</pre>
+                                <pre class="mb-0 mt-1 p-2 bg-white border rounded" style="font-size: 0.75rem;">section,question_text,question_type,points,option_a,option_b,option_c,option_d,correct
+"Part A","What is 2+2?",multiple_choice,1,3,4,5,6,B
+"Part A","The sky is blue.",true_false,1,,,,,true</pre>
                             </div>
                         </div>
                     </div>
@@ -582,6 +647,9 @@
                 <h6 class="mb-0 fw-bold text-primary">Section: <span class="section-title-preview">New Section</span></h6>
             </div>
             <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-primary toggle-section-collapse" title="Collapse/expand this section">
+                    <i class="bi bi-chevron-up"></i>
+                </button>
                 <button type="button" class="btn btn-outline-danger delete-section" title="Remove Section">
                     <i class="bi bi-trash"></i>
                 </button>
@@ -915,32 +983,112 @@ document.addEventListener('DOMContentLoaded', function() {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const text = e.target.result || '';
-                const lines = text.split(/\r?\n/).filter(l => l.length > 0);
-                const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                const idx = (name) => { const i = headers.indexOf(name); return i >= 0 ? i : headers.indexOf(name.replace('_', ' ')); };
-                const qTextIdx = idx('question_text') >= 0 ? idx('question_text') : 0;
-                const typeIdx = idx('question_type') >= 0 ? idx('question_type') : 1;
-                const pointsIdx = idx('points') >= 0 ? idx('points') : 2;
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                if (lines.length < 2) {
+                    alert('CSV must include a header row and at least one data row.');
+                    return;
+                }
+
+                // Minimal CSV parser that supports quoted commas.
+                function parseCsvLine(line) {
+                    const out = [];
+                    let cur = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const ch = line[i];
+                        if (ch === '"') {
+                            // escaped quote
+                            if (inQuotes && line[i + 1] === '"') {
+                                cur += '"';
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (ch === ',' && !inQuotes) {
+                            out.push(cur);
+                            cur = '';
+                        } else {
+                            cur += ch;
+                        }
+                    }
+                    out.push(cur);
+                    return out.map(v => (v || '').trim());
+                }
+
+                function normHeader(h) {
+                    return (h || '')
+                        .toLowerCase()
+                        .trim()
+                        .replace(/^"|"$/g, '')
+                        .replace(/\s+/g, '_');
+                }
+
+                const headersRaw = parseCsvLine(lines[0]);
+                const headers = headersRaw.map(normHeader);
+                const idxAny = (names) => {
+                    for (const n of names) {
+                        const i = headers.indexOf(n);
+                        if (i >= 0) return i;
+                    }
+                    return -1;
+                };
+
+                const qTextIdx = idxAny(['question_text', 'question', 'text']);
+                const typeIdx = idxAny(['question_type', 'type']);
+                const pointsIdx = idxAny(['points', 'pts', 'point']);
+                const sectionIdx = idxAny(['section', 'section_title', 'part', 'part_title']);
+                const correctIdx = idxAny(['correct', 'correct_answer', 'answer']);
+
+                // Option columns: option_a..option_h OR option1..option8
+                const optionCols = [];
+                headers.forEach((h, i) => {
+                    if (/^option_[a-h]$/.test(h)) optionCols.push({ idx: i, label: h.replace('option_', '').toUpperCase() });
+                    if (/^option[1-8]$/.test(h)) optionCols.push({ idx: i, label: String.fromCharCode(64 + parseInt(h.replace('option', ''), 10)) });
+                });
+                optionCols.sort((a, b) => a.idx - b.idx);
+
+                let lastSectionTitle = null;
                 for (let i = 1; i < lines.length; i++) {
-                    const row = lines[i].split(',').map(c => (c || '').trim().replace(/^"|"$/g, ''));
-                    const question_text = (row[qTextIdx] || '').trim();
+                    const row = parseCsvLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim());
+                    const question_text = (qTextIdx >= 0 ? row[qTextIdx] : (row[0] || '')).trim();
                     if (!question_text) continue;
-                    const question_type = (row[typeIdx] || 'multiple_choice').toLowerCase().replace(/\s/g, '_');
-                    const points = parseFloat(row[pointsIdx]) || 1;
+
+                    const question_type = ((typeIdx >= 0 ? row[typeIdx] : '') || 'multiple_choice')
+                        .toLowerCase()
+                        .trim()
+                        .replace(/\s+/g, '_');
+
+                    const points = parseFloat(pointsIdx >= 0 ? row[pointsIdx] : '') || 1;
+
+                    const sectionTitle = (sectionIdx >= 0 ? (row[sectionIdx] || '').trim() : '');
+                    if (sectionTitle && sectionTitle !== lastSectionTitle) {
+                        addSection(sectionTitle);
+                        lastSectionTitle = sectionTitle;
+                    }
+
                     const options = [];
-                    const correctLetter = (row[row.length - 1] || 'A').toUpperCase().charAt(0);
                     if (question_type === 'multiple_choice') {
-                        ['option_a', 'option_b', 'option_c', 'option_d'].forEach((key, j) => {
-                            const k = headers.indexOf(key) >= 0 ? headers.indexOf(key) : 3 + j;
-                            const opt = (row[k] || '').trim();
-                            if (opt) options.push({ option_text: opt, is_correct: (String.fromCharCode(65 + j) === correctLetter) });
+                        const correctRaw = (correctIdx >= 0 ? (row[correctIdx] || '') : '').trim();
+                        const correctLetter = (correctRaw || 'A').toUpperCase().charAt(0);
+
+                        const colsToUse = optionCols.length ? optionCols : [
+                            { idx: 3, label: 'A' },
+                            { idx: 4, label: 'B' },
+                            { idx: 5, label: 'C' },
+                            { idx: 6, label: 'D' },
+                        ];
+                        colsToUse.forEach((c) => {
+                            const opt = (row[c.idx] || '').trim();
+                            if (opt) options.push({ option_text: opt, is_correct: (c.label === correctLetter) });
                         });
                     } else if (question_type === 'true_false') {
-                        const correct = (row[3] || 'true').toLowerCase();
+                        const correctRaw = (correctIdx >= 0 ? (row[correctIdx] || '') : (row[3] || 'true')).trim().toLowerCase();
+                        const correct = (correctRaw === 'false' || correctRaw === 'f' || correctRaw === '0') ? 'false' : 'true';
                         options.push({ option_text: 'True', is_correct: correct === 'true' });
                         options.push({ option_text: 'False', is_correct: correct === 'false' });
                     }
-                    addQuestionFromBank({ question_text: question_text, question_type: question_type, points: points, options: options });
+
+                    addQuestionFromBank({ question_text, question_type, points, options });
                 }
                 fileInput.value = '';
                 bootstrap.Modal.getInstance(document.getElementById('bulkAddModal')).hide();
@@ -950,6 +1098,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         bootstrap.Modal.getInstance(document.getElementById('bulkAddModal')).hide();
     });
+
+    // Download CSV template for bulk import
+    const bulkCsvTemplateBtn = document.getElementById('bulkCsvTemplateBtn');
+    if (bulkCsvTemplateBtn) {
+        bulkCsvTemplateBtn.addEventListener('click', function() {
+            const csv =
+                'section,question_text,question_type,points,option_a,option_b,option_c,option_d,correct\n' +
+                '"Part A","What is 2+2?",multiple_choice,1,3,4,5,6,B\n' +
+                '"Part A","The sky is blue.",true_false,1,,,,,true\n' +
+                '"Part B","Explain your reasoning.",short_answer,2,,,,,\n';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quiz_bulk_import_template.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
+    }
 
     document.getElementById('saveToBankConfirmBtn').addEventListener('click', function() {
         const name = document.getElementById('saveToBankName').value.trim();
@@ -1085,6 +1254,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setupSectionEventListeners(sectionEl) {
         const delBtn = sectionEl.querySelector('.delete-section');
+        const toggleBtn = sectionEl.querySelector('.toggle-section-collapse');
 
         if (delBtn) {
             delBtn.addEventListener('click', function() {
@@ -1099,6 +1269,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateQuestionNumbers();
                 updateSectionUI();
                 updateQuizPreview();
+            });
+        }
+
+        function setCollapsed(isCollapsed) {
+            sectionEl.dataset.collapsed = isCollapsed ? 'true' : 'false';
+            const icon = toggleBtn ? toggleBtn.querySelector('i') : null;
+            if (icon) {
+                icon.className = isCollapsed ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+            }
+
+            // Hide/show all nodes after the section header until the next section header.
+            let cur = sectionEl.nextElementSibling;
+            while (cur) {
+                if (cur.classList.contains('section-block')) break;
+                cur.classList.toggle('d-none', isCollapsed);
+                cur = cur.nextElementSibling;
+            }
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                const currentlyCollapsed = sectionEl.dataset.collapsed === 'true';
+                setCollapsed(!currentlyCollapsed);
             });
         }
     }
@@ -1659,11 +1852,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateQuizPreview() {
-        const questions = questionsContainer.querySelectorAll('.question-item');
         let previewHTML = '';
         let totalPoints = 0;
+        let questionIndex = 0;
+        let currentSectionTitle = null;
         
-        if (questions.length === 0) {
+        const hasAnyQuestions = questionsContainer.querySelectorAll('.question-item').length > 0;
+        if (!hasAnyQuestions) {
             previewHTML = `
                 <div class="text-center text-muted py-3">
                     <i class="bi bi-eye-slash mb-2 d-block" style="font-size: 2rem; opacity: 0.5;"></i>
@@ -1672,21 +1867,41 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         } else {
             previewHTML = '<h6 class="fw-bold mb-3">Quiz Preview:</h6>';
-            questions.forEach((question, index) => {
-                const questionText = question.querySelector('.question-text').value || 'Untitled Question';
-                const questionType = question.querySelector('.question-type').value;
-                const questionPoints = parseFloat(question.querySelector('.question-points').value) || 1;
+            Array.from(questionsContainer.children).forEach((node) => {
+                if (node.classList.contains('section-block')) {
+                    const titleEl = node.querySelector('.section-title-input');
+                    const titlePreview = node.querySelector('.section-title-preview');
+                    const sectionTitle = (titleEl && titleEl.value && titleEl.value.trim())
+                        ? titleEl.value.trim()
+                        : ((titlePreview && titlePreview.textContent && titlePreview.textContent.trim()) ? titlePreview.textContent.trim() : 'New Section');
+                    currentSectionTitle = sectionTitle;
+                    previewHTML += `
+                        <div class="preview-section mt-3 mb-2">
+                            <div class="small fw-bold text-primary">
+                                <i class="bi bi-collection me-1"></i>${sectionTitle}
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                if (!node.classList.contains('question-item')) return;
+
+                const questionText = (node.querySelector('.question-text')?.value || '').trim() || 'Untitled Question';
+                const questionType = node.querySelector('.question-type')?.value || 'multiple_choice';
+                const questionPoints = parseFloat(node.querySelector('.question-points')?.value) || 1;
                 totalPoints += questionPoints;
-                
+                questionIndex += 1;
+
                 const typeIcon = getQuestionTypeIcon(questionType);
                 const typeColor = getQuestionTypeColor(questionType);
-                
+                const sectionPill = currentSectionTitle ? `<span class="badge bg-light text-dark border ms-2">${currentSectionTitle}</span>` : '';
+
                 previewHTML += `
                     <div class="preview-question border-bottom pb-2 mb-2">
                         <div class="d-flex align-items-start">
-                            <span class="badge bg-primary me-2">${index + 1}</span>
+                            <span class="badge bg-primary me-2">${questionIndex}</span>
                             <div class="flex-grow-1">
-                                <strong class="small">${questionText}</strong>
+                                <strong class="small">${questionText}</strong>${sectionPill}
                                 <div class="d-flex align-items-center mt-1">
                                     <i class="bi ${typeIcon} me-1 text-${typeColor}"></i>
                                     <small class="text-muted me-2">${questionType.replace('_', ' ').toUpperCase()}</small>
@@ -1702,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', function() {
         quizPreview.innerHTML = previewHTML;
         
         // Update stats
-        updateQuizStats(questions.length, totalPoints);
+        updateQuizStats(questionIndex, totalPoints);
     }
     
     function getQuestionTypeIcon(type) {
@@ -1951,6 +2166,182 @@ document.addEventListener('DOMContentLoaded', function() {
         // Allow form to submit naturally
         // Form will submit to the backend route
     });
+
+    // ------------------------------------------------------------
+    // Autosave draft (DB + local backup) to survive logout/refresh
+    // ------------------------------------------------------------
+    const autosaveKeyBase = 'quiz_autosave_draft_v1';
+    let autosaveTimer = null;
+    let autosaveDirty = false;
+    let autosaveInFlight = false;
+
+    function getAutosaveStorageKey() {
+        const classId = document.getElementById('class_id')?.value || '';
+        const existingId = document.querySelector('input[name="assignment_id"]')?.value || '';
+        return `${autosaveKeyBase}:class:${classId || 'none'}:assignment:${existingId || 'new'}`;
+    }
+
+    function collectBlocksForAutosave() {
+        const blocks = [];
+        Array.from(questionsContainer.children).forEach((node) => {
+            if (node.classList.contains('section-block')) {
+                const input = node.querySelector('.section-title-input');
+                const preview = node.querySelector('.section-title-preview');
+                const title = (input && input.value && input.value.trim())
+                    ? input.value.trim()
+                    : ((preview && preview.textContent && preview.textContent.trim()) ? preview.textContent.trim() : 'New Section');
+                blocks.push({ type: 'section', title });
+                return;
+            }
+            if (!node.classList.contains('question-item')) return;
+            blocks.push({ type: 'question', ...collectQuestionDataFromElement(node) });
+        });
+        return blocks;
+    }
+
+    function collectMetaForAutosave() {
+        return {
+            assignment_id: document.querySelector('input[name="assignment_id"]')?.value || null,
+            title: document.getElementById('title')?.value || '',
+            class_id: document.getElementById('class_id')?.value || '',
+            description: document.getElementById('description')?.value || '',
+            due_date: document.getElementById('due_date')?.value || '',
+            quarter: document.getElementById('quarter')?.value || '',
+            open_date: document.getElementById('open_date')?.value || '',
+            close_date: document.getElementById('close_date')?.value || '',
+            assignment_context: document.getElementById('assignment_context')?.value || 'homework',
+            assignment_category: document.getElementById('assignment_category')?.value || '',
+            category_weight: document.getElementById('category_weight')?.value || 0,
+            allow_extra_credit: !!document.getElementById('allow_extra_credit')?.checked,
+            max_extra_credit_points: document.getElementById('max_extra_credit_points')?.value || 0,
+        };
+    }
+
+    function markAutosaveDirty() {
+        autosaveDirty = true;
+    }
+
+    function restoreFromLocalBackupIfPresent() {
+        try {
+            const key = getAutosaveStorageKey();
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            const payload = JSON.parse(raw);
+            if (!payload || !payload.blocks) return;
+
+            // If the editor already has content (editing existing), don't overwrite.
+            const hasAnyBlocks = questionsContainer.querySelector('.section-block, .question-item');
+            if (hasAnyBlocks) return;
+
+            // Apply meta (safe fields only)
+            if (payload.meta) {
+                if (document.getElementById('title') && payload.meta.title) document.getElementById('title').value = payload.meta.title;
+                if (document.getElementById('description') && payload.meta.description) document.getElementById('description').value = payload.meta.description;
+                if (document.getElementById('due_date') && payload.meta.due_date) document.getElementById('due_date').value = payload.meta.due_date;
+                if (document.getElementById('quarter') && payload.meta.quarter) document.getElementById('quarter').value = payload.meta.quarter;
+                if (document.getElementById('open_date') && payload.meta.open_date) document.getElementById('open_date').value = payload.meta.open_date;
+                if (document.getElementById('close_date') && payload.meta.close_date) document.getElementById('close_date').value = payload.meta.close_date;
+                if (document.getElementById('assignment_context') && payload.meta.assignment_context) document.getElementById('assignment_context').value = payload.meta.assignment_context;
+                if (document.getElementById('assignment_category') && payload.meta.assignment_category !== undefined) document.getElementById('assignment_category').value = payload.meta.assignment_category;
+                if (document.getElementById('category_weight') && payload.meta.category_weight !== undefined) document.getElementById('category_weight').value = payload.meta.category_weight;
+                if (document.getElementById('allow_extra_credit') && payload.meta.allow_extra_credit !== undefined) document.getElementById('allow_extra_credit').checked = !!payload.meta.allow_extra_credit;
+                if (document.getElementById('max_extra_credit_points') && payload.meta.max_extra_credit_points !== undefined) document.getElementById('max_extra_credit_points').value = payload.meta.max_extra_credit_points;
+            }
+
+            // Clear empty UI and rebuild blocks
+            const emptyMsg = questionsContainer.querySelector('.text-center');
+            if (emptyMsg) emptyMsg.remove();
+            (payload.blocks || []).forEach((b) => {
+                if (b.type === 'section') addSection(b.title || 'New Section');
+                if (b.type === 'question') addQuestionFromBank(b);
+            });
+            if (typeof buildBlockOrder === 'function') buildBlockOrder();
+            updateQuizPreview();
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    async function autosaveDraftNow() {
+        if (autosaveInFlight) return;
+        if (!autosaveDirty) return;
+
+        const meta = collectMetaForAutosave();
+        const blocks = collectBlocksForAutosave();
+
+        // Always keep a local backup first
+        try {
+            localStorage.setItem(getAutosaveStorageKey(), JSON.stringify({ saved_at: Date.now(), meta, blocks }));
+        } catch (e) {}
+
+        // Can't save to DB without a selected class
+        if (!meta.class_id) {
+            autosaveDirty = false;
+            return;
+        }
+
+        autosaveInFlight = true;
+        try {
+            const resp = await fetch("{{ url_for('teacher.quizzes.autosave_quiz_draft') }}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
+                },
+                body: JSON.stringify({ meta, blocks })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.success && data.assignment_id) {
+                    // Ensure we keep editing the same draft after autosave creates it.
+                    let idInput = document.querySelector('input[name="assignment_id"]');
+                    if (!idInput) {
+                        idInput = document.createElement('input');
+                        idInput.type = 'hidden';
+                        idInput.name = 'assignment_id';
+                        form.appendChild(idInput);
+                    }
+                    idInput.value = String(data.assignment_id);
+                }
+            }
+        } catch (e) {
+            // offline/logout: local backup already captured
+        } finally {
+            autosaveDirty = false;
+            autosaveInFlight = false;
+        }
+    }
+
+    function scheduleAutosave() {
+        if (autosaveTimer) return;
+        autosaveTimer = setInterval(autosaveDraftNow, 30000);
+    }
+
+    // Mark dirty on relevant changes
+    ['title','class_id','description','due_date','quarter','open_date','close_date','assignment_context','assignment_category','category_weight','allow_extra_credit','max_extra_credit_points']
+        .forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', markAutosaveDirty);
+            el.addEventListener('change', markAutosaveDirty);
+        });
+
+    // Also mark dirty whenever the question container changes
+    const qcObserver = new MutationObserver(() => markAutosaveDirty());
+    qcObserver.observe(questionsContainer, { childList: true, subtree: true });
+
+    // Ensure we don't lose last edits when navigating away
+    window.addEventListener('beforeunload', function() {
+        try {
+            const meta = collectMetaForAutosave();
+            const blocks = collectBlocksForAutosave();
+            localStorage.setItem(getAutosaveStorageKey(), JSON.stringify({ saved_at: Date.now(), meta, blocks }));
+        } catch (e) {}
+    });
+
+    restoreFromLocalBackupIfPresent();
+    scheduleAutosave();
 });
 </script>
 {% endblock %}

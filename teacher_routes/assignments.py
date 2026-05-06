@@ -716,21 +716,49 @@ def view_assignment(assignment_id):
     today = date.today()
     
     # Calculate statistics
-    total_students = Enrollment.query.filter_by(
-        class_id=class_obj.id,
-        is_active=True
-    ).count()
+    enrolled_student_ids = [
+        sid for (sid,) in db.session.query(Enrollment.student_id).filter_by(
+            class_id=class_obj.id,
+            is_active=True
+        ).all()
+    ]
+
+    # Students voided for THIS assignment should be excluded from overview stats.
+    voided_student_ids = {
+        sid for (sid,) in db.session.query(Grade.student_id).filter(
+            Grade.assignment_id == assignment_id,
+            Grade.is_voided.is_(True),
+        ).distinct().all()
+    }
+    voided_student_ids = set(enrolled_student_ids).intersection(voided_student_ids)
+    eligible_student_ids = [sid for sid in enrolled_student_ids if sid not in voided_student_ids]
+    total_students = len(eligible_student_ids)
 
     # Count unique student submissions for this assignment
-    submissions_count = db.session.query(Submission.student_id).filter_by(
-        assignment_id=assignment_id
-    ).distinct().count()
+    submissions_q = db.session.query(Submission.student_id).filter(
+        Submission.assignment_id == assignment_id,
+    ).distinct()
+    if voided_student_ids:
+        submissions_q = submissions_q.filter(~Submission.student_id.in_(voided_student_ids))
+    submissions_count = submissions_q.count()
 
-    non_voided_grades = Grade.query.filter_by(
-        assignment_id=assignment_id,
-        is_voided=False
-    ).all()
-    graded_count = len(non_voided_grades)
+    non_voided_grades_q = Grade.query.filter(
+        Grade.assignment_id == assignment_id,
+        Grade.is_voided.is_(False),
+    )
+    if voided_student_ids:
+        non_voided_grades_q = non_voided_grades_q.filter(~Grade.student_id.in_(voided_student_ids))
+    non_voided_grades = non_voided_grades_q.order_by(Grade.graded_at.desc(), Grade.id.desc()).all()
+
+    # Count distinct graded students (avoid inflating quizzes with multiple grade rows)
+    graded_student_ids = set()
+    latest_grade_by_student = {}
+    for g in non_voided_grades:
+        if g.student_id in graded_student_ids:
+            continue
+        graded_student_ids.add(g.student_id)
+        latest_grade_by_student[g.student_id] = g
+    graded_count = len(graded_student_ids)
 
     assignment_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else (assignment.points if assignment.points else 0)
     assignment_points = float(assignment_points or 0)
@@ -740,7 +768,7 @@ def view_assignment(assignment_id):
     if graded_count > 0:
         total_percentage = 0.0
         count = 0
-        for grade in non_voided_grades:
+        for grade in latest_grade_by_student.values():
             try:
                 if not grade.grade_data:
                     continue
@@ -768,10 +796,6 @@ def view_assignment(assignment_id):
     submission_rate = round((submissions_count / total_students * 100) if total_students > 0 else 0, 1)
     grading_rate = round((graded_count / total_students * 100) if total_students > 0 else 0, 1)
     pending_count = max(total_students - graded_count, 0)
-    
-    # Get voided grades for the unvoid modal
-    voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
-    voided_student_ids = {g.student_id for g in voided_grades}
     
     return render_template('shared/view_assignment.html', 
                          assignment=assignment,

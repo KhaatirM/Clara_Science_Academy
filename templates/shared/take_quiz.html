@@ -868,6 +868,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Auto-save every 30 seconds
         setInterval(saveQuizProgress, 30000);
     }
+
+    // Keep session alive while student is on this quiz page (prevents auto-logout mid-quiz).
+    // Runs infrequently to reduce server load.
+    (function initQuizKeepAlive() {
+        const keepAliveUrl = "{{ url_for('student.quiz_keepalive', assignment_id=assignment.id) }}";
+
+        function ping() {
+            fetch(keepAliveUrl, { method: 'GET', credentials: 'same-origin', cache: 'no-store' })
+                .catch(() => {});
+        }
+
+        // Ping immediately and then every 5 minutes.
+        ping();
+        setInterval(ping, 5 * 60 * 1000);
+
+        // Also ping when the tab becomes visible again.
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) ping();
+        });
+    })();
     
     // Text-to-speech: read question and choices aloud
     document.getElementById('quizForm') && document.getElementById('quizForm').addEventListener('click', function(e) {

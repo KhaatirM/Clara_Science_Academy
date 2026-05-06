@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 # Core Flask imports
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file, session
 from flask_login import login_required, current_user
 
 # Database and model imports - organized by category
@@ -59,6 +59,43 @@ def _get_points_earned(grade_data):
     if val is not None:
         return val
     return grade_data.get('score')
+
+
+def _pick_best_quiz_grade_row(grade_rows, assignment_total_points):
+    """
+    Choose the best (highest percentage) Grade row from multiple attempts.
+    Tie-breaker: newest graded_at, then highest id.
+    """
+    from datetime import datetime
+    import json
+
+    total_points = assignment_total_points if (assignment_total_points and assignment_total_points > 0) else 100.0
+    best = None
+    best_pct = None
+    best_key = None
+
+    for g in grade_rows or []:
+        if not g or g.is_voided or not getattr(g, "grade_data", None):
+            continue
+        try:
+            gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+        except Exception:
+            continue
+        pts = _get_points_earned(gdata)
+        if pts is None:
+            continue
+        try:
+            pct = (float(pts) / float(total_points) * 100.0) if float(total_points) > 0 else 0.0
+        except (ValueError, TypeError):
+            continue
+
+        key = (g.graded_at or datetime.min, g.id or 0)
+        if best is None or best_pct is None or pct > best_pct or (pct == best_pct and key > best_key):
+            best = g
+            best_pct = pct
+            best_key = key
+
+    return best
 
 
 def allowed_file(filename):
@@ -2125,25 +2162,40 @@ def view_class(class_id):
     # Get submissions and grades for this student.
     # Keep all grade rows for status detection (including voided), but only expose
     # non-voided grades in grade display dictionaries.
-    all_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.id.desc()).all()
-    student_grades = {}
-    grades_dict = {}  # Store Grade objects for status checking
+    all_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.graded_at.desc(), Grade.id.desc()).all()
+    grades_by_assignment = {}
     for g in all_grades:
         if not g.assignment:
             continue
-        # First row wins because query is ordered newest-first.
-        if g.assignment_id not in grades_dict:
-            grades_dict[g.assignment_id] = g
-        if (
-            not g.is_voided
-            and g.assignment.status != 'Voided'
-            and g.assignment_id not in student_grades
-            and g.grade_data
-        ):
-            try:
-                student_grades[g.assignment_id] = json.loads(g.grade_data)
-            except (json.JSONDecodeError, TypeError):
-                pass
+        grades_by_assignment.setdefault(g.assignment_id, []).append(g)
+
+    # Status checks: most recent grade row (even if voided)
+    grades_dict = {aid: glist[0] for aid, glist in grades_by_assignment.items() if glist}
+
+    # Display: quizzes show BEST attempt; others show newest non-voided grade row.
+    student_grades = {}
+    for aid, glist in grades_by_assignment.items():
+        if not glist:
+            continue
+        assignment = glist[0].assignment
+        if not assignment or assignment.status == 'Voided':
+            continue
+
+        chosen = None
+        if assignment.assignment_type == 'quiz':
+            chosen = _pick_best_quiz_grade_row(glist, assignment.total_points)
+        else:
+            for g in glist:
+                if (not g.is_voided) and g.grade_data:
+                    chosen = g
+                    break
+
+        if not chosen or chosen.is_voided or not chosen.grade_data:
+            continue
+        try:
+            student_grades[aid] = json.loads(chosen.grade_data) if isinstance(chosen.grade_data, str) else chosen.grade_data
+        except (json.JSONDecodeError, TypeError):
+            continue
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
@@ -2247,24 +2299,38 @@ def get_class_assignments_api(class_id):
     ).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades. Keep all grade rows for status detection.
-    all_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.id.desc()).all()
-    student_grades = {}
-    grades_dict = {}
+    all_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.graded_at.desc(), Grade.id.desc()).all()
+    grades_by_assignment = {}
     for g in all_grades:
         if not g.assignment:
             continue
-        if g.assignment_id not in grades_dict:
-            grades_dict[g.assignment_id] = g
-        if (
-            not g.is_voided
-            and g.assignment.status != 'Voided'
-            and g.assignment_id not in student_grades
-            and g.grade_data
-        ):
-            try:
-                student_grades[g.assignment_id] = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-            except (json.JSONDecodeError, TypeError):
-                pass
+        grades_by_assignment.setdefault(g.assignment_id, []).append(g)
+
+    grades_dict = {aid: glist[0] for aid, glist in grades_by_assignment.items() if glist}
+
+    student_grades = {}
+    for aid, glist in grades_by_assignment.items():
+        if not glist:
+            continue
+        assignment = glist[0].assignment
+        if not assignment or assignment.status == 'Voided':
+            continue
+
+        chosen = None
+        if assignment.assignment_type == 'quiz':
+            chosen = _pick_best_quiz_grade_row(glist, assignment.total_points)
+        else:
+            for g in glist:
+                if (not g.is_voided) and g.grade_data:
+                    chosen = g
+                    break
+
+        if not chosen or chosen.is_voided or not chosen.grade_data:
+            continue
+        try:
+            student_grades[aid] = json.loads(chosen.grade_data) if isinstance(chosen.grade_data, str) else chosen.grade_data
+        except (json.JSONDecodeError, TypeError):
+            continue
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
@@ -2373,11 +2439,13 @@ def take_quiz(assignment_id):
         flash("You are not enrolled in this class.", "danger")
         return redirect(url_for('student.student_assignments'))
 
-    # Use latest grade if multiple exist (quiz retakes)
-    grade = Grade.query.filter_by(
+    # For quiz retakes, show the BEST attempt (highest percentage).
+    # (We keep multiple grade rows for multiple attempts.)
+    all_quiz_grades = Grade.query.filter_by(
         student_id=student.id,
         assignment_id=assignment_id
-    ).order_by(Grade.graded_at.desc()).first()
+    ).order_by(Grade.graded_at.desc(), Grade.id.desc()).all()
+    grade = _pick_best_quiz_grade_row(all_quiz_grades, assignment.total_points)
 
     grade_data = None
     grading_status = None
@@ -2537,6 +2605,35 @@ def take_quiz(assignment_id):
                          attempts_remaining=attempts_remaining,
                          show_correct_answers=assignment.show_correct_answers if assignment else False)
 
+
+@student_blueprint.route('/quiz-keepalive/<int:assignment_id>', methods=['GET'])
+@login_required
+@student_required
+def quiz_keepalive(assignment_id):
+    """
+    Keep the session alive while a student is actively taking a quiz.
+    Called periodically from the quiz page to avoid auto-logout mid-quiz.
+    """
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    if assignment.assignment_type != 'quiz':
+        abort(404)
+    if not assignment_visible_to_students(assignment):
+        abort(403)
+
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    if not enrollment:
+        abort(403)
+
+    # Touch the session so the expiry is refreshed (permanent cookie renewed).
+    session.permanent = True
+    session.modified = True
+    return ('', 204)
+
 @student_blueprint.route('/save-quiz-progress/<int:assignment_id>', methods=['POST'])
 @login_required
 @student_required
@@ -2693,6 +2790,14 @@ def submit_quiz(assignment_id):
     try:
         # Get all questions for this assignment
         questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
+        # Replace prior answers for this assignment so grading/UI doesn't accidentally
+        # pull the student's first attempt answers (QuizAnswer isn't attempt-scoped).
+        q_ids = [q.id for q in questions]
+        if q_ids:
+            QuizAnswer.query.filter(
+                QuizAnswer.student_id == student.id,
+                QuizAnswer.question_id.in_(q_ids),
+            ).delete(synchronize_session=False)
         total_points = 0
         earned_points = 0
         has_open_ended = False
@@ -2766,29 +2871,14 @@ def submit_quiz(assignment_id):
             'graded_at': datetime.now().isoformat(),
             'grading_status': 'pending' if has_open_ended else 'final',
         }
-        # Keep the latest attempt as the authoritative grade (do NOT keep "highest" as final).
-        # If older grade rows exist from previous attempts, update the newest and remove the rest.
-        existing_grade = Grade.query.filter_by(
+        # Store a NEW grade row for each attempt.
+        grade = Grade(
             student_id=student.id,
-            assignment_id=assignment_id
-        ).order_by(Grade.graded_at.desc()).first()
-        if existing_grade:
-            existing_grade.grade_data = json.dumps(grade_data)
-            existing_grade.graded_at = datetime.now()
-            # Delete any older duplicates to avoid stale "first()" reads elsewhere
-            Grade.query.filter(
-                Grade.student_id == student.id,
-                Grade.assignment_id == assignment_id,
-                Grade.id != existing_grade.id
-            ).delete(synchronize_session=False)
-        else:
-            grade = Grade(
-                student_id=student.id,
-                assignment_id=assignment_id,
-                grade_data=json.dumps(grade_data),
-                graded_at=datetime.now()
-            )
-            db.session.add(grade)
+            assignment_id=assignment_id,
+            grade_data=json.dumps(grade_data),
+            graded_at=datetime.now()
+        )
+        db.session.add(grade)
         
         db.session.commit()
         flash('Quiz submitted successfully!', 'success')
@@ -2827,11 +2917,12 @@ def get_quiz_details(assignment_id):
         assignment_id=assignment_id
     ).count()
     
-    # Use latest grade if multiple exist (quiz retakes)
-    grade = Grade.query.filter_by(
+    # Use BEST grade if multiple exist (quiz retakes)
+    all_quiz_grades = Grade.query.filter_by(
         student_id=student.id,
         assignment_id=assignment_id
-    ).order_by(Grade.graded_at.desc()).first()
+    ).order_by(Grade.graded_at.desc(), Grade.id.desc()).all()
+    grade = _pick_best_quiz_grade_row(all_quiz_grades, assignment.total_points)
     
     # Calculate attempts remaining
     attempts_remaining = None

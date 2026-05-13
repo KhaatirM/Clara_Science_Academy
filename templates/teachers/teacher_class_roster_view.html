@@ -41,7 +41,7 @@
 
   <!-- Statistics Cards -->
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
       <div class="teacher-class-stat-card">
         <div class="teacher-class-stat-icon">
           <i class="bi bi-people-fill"></i>
@@ -52,29 +52,18 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
       <div class="teacher-class-stat-card">
         <div class="teacher-class-stat-icon">
           <i class="bi bi-journal-text"></i>
         </div>
         <div class="teacher-class-stat-content">
-          <div class="teacher-class-stat-number">{{ assignments|length }}</div>
+          <div class="teacher-class-stat-number">{{ assignment_count }}</div>
           <div class="teacher-class-stat-label">Assignments</div>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="teacher-class-stat-card">
-        <div class="teacher-class-stat-icon">
-          <i class="bi bi-calendar-check"></i>
-        </div>
-        <div class="teacher-class-stat-content">
-          <div class="teacher-class-stat-number">{{ recent_attendance|length }}</div>
-          <div class="teacher-class-stat-label">Recent Records</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
       <div class="teacher-class-stat-card">
         <div class="teacher-class-stat-icon">
           <i class="bi bi-megaphone"></i>
@@ -87,11 +76,10 @@
     </div>
   </div>
 
-  <div class="row g-4" style="align-items: start;">
-    <!-- Left Column: Class Info & Management -->
-    <div class="col-12 col-lg-4" style="align-self: start;">
-      <!-- Class Information Card -->
-      <div class="teacher-class-card-modern mb-4">
+  <!-- Row 1: Class Information | Recent Announcements (equal height on large screens) -->
+  <div class="row g-4 align-items-lg-stretch teacher-class-overview-top-row">
+    <div class="col-12 col-lg-4 mb-2 mb-lg-0 d-lg-flex">
+      <div class="teacher-class-card-modern w-100 flex-fill d-flex flex-column mb-0">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-info-circle"></i>
@@ -101,121 +89,48 @@
             <p class="teacher-class-card-subject">Course Details</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="padding: 0.75rem;">
-          <div class="teacher-class-info-section" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
-              <i class="bi bi-book me-2"></i>
+        <div class="teacher-class-card-body teacher-class-card-body--course-info flex-grow-1">
+          <div class="teacher-class-info-section">
+            <div class="teacher-class-info-item teacher-class-info-item--mailing-list">
+              <i class="bi bi-envelope-at" aria-hidden="true"></i>
+              <div class="teacher-class-info-stack">
+                <strong class="teacher-class-info-label-line">Class mailing list:</strong>
+                <div class="teacher-class-mailing-value">
+                  {% if class_item.google_group_email %}
+                    <a href="mailto:{{ class_item.google_group_email }}">{{ class_item.google_group_email }}</a>
+                  {% else %}
+                    <span class="text-muted">Not available yet</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="teacher-class-info-item">
+              <i class="bi bi-book"></i>
               <strong>Subject:</strong> {{ class_item.subject }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
-              <i class="bi bi-mortarboard me-2"></i>
+            <div class="teacher-class-info-item">
+              <i class="bi bi-mortarboard"></i>
               <strong>Grade Level:</strong> {{ class_item.get_grade_levels_display() or 'N/A' }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
-              <i class="bi bi-door-open me-2"></i>
+            <div class="teacher-class-info-item">
+              <i class="bi bi-door-open"></i>
               <strong>Room:</strong> {{ class_item.room_number if class_item.room_number else 'N/A' }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
-              <i class="bi bi-clock me-2"></i>
+            <div class="teacher-class-info-item">
+              <i class="bi bi-clock"></i>
               <strong>Schedule:</strong> {{ class_item.schedule_info if class_item.schedule_info else 'TBD' }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
-              <i class="bi bi-calendar3 me-2"></i>
+            <div class="teacher-class-info-item">
+              <i class="bi bi-calendar3"></i>
               <strong>School Year:</strong> {{ class_item.school_year.name if class_item.school_year else 'N/A' }}
             </div>
           </div>
         </div>
       </div>
-      
-      <!-- Class Management Card -->
-      <div class="teacher-class-card-modern mb-4">
-        <div class="teacher-class-card-header">
-          <div class="teacher-class-card-icon">
-            <i class="bi bi-tools"></i>
-          </div>
-          <div class="teacher-class-card-title-section">
-            <h5 class="teacher-class-card-title">Class Management</h5>
-            <p class="teacher-class-card-subject">Quick Actions</p>
-          </div>
-        </div>
-        <div class="teacher-class-card-body" style="padding: 0.75rem;">
-          <!-- Core Management Actions -->
-          <div class="mb-2">
-            <h6 class="teacher-class-section-title">
-              <i class="bi bi-gear me-2"></i>Core Management
-            </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn-teacher-class-action">
-                  <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-clipboard-check me-1"></i>Take Attendance
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.groups.class_groups', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-people me-1"></i>Manage Groups
-                </a>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Group Work & Assignments -->
-          <div class="mb-2">
-            <h6 class="teacher-class-section-title">
-              <i class="bi bi-people-fill me-2"></i>Group Work & Assignments
-            </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.dashboard.assignments_and_grades', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-journal-plus me-1"></i>Assignments & Grades
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.dashboard.deadline_reminders') }}" class="btn-teacher-class-action">
-                  <i class="bi bi-bell me-1"></i>Deadline Reminders
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.analytics.class_analytics', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-graph-up me-1"></i>Reports & Analytics
-                </a>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Assessment & Feedback -->
-          <div>
-            <h6 class="teacher-class-section-title">
-              <i class="bi bi-star me-2"></i>Assessment & Feedback
-            </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.feedback360.class_feedback360', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.reflection_journals.class_reflection_journals', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-journal-text me-1"></i>Reflection Journals
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.conflict_resolution.class_conflicts', class_id=class_item.id) }}" class="btn-teacher-class-action">
-                  <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Announcements Card -->
-      <div class="teacher-class-card-modern mb-4">
-        <div class="teacher-class-card-header">
+    </div>
+    <div class="col-12 col-lg-8 d-lg-flex">
+      <div class="teacher-class-card-modern teacher-class-card-announcements-tall w-100 flex-fill d-flex flex-column mb-0">
+        <div class="teacher-class-card-header flex-shrink-0">
           <div class="teacher-class-card-icon">
             <i class="bi bi-megaphone"></i>
           </div>
@@ -224,7 +139,7 @@
             <p class="teacher-class-card-subject">Latest Updates</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="max-height: 200px; overflow-y: auto; padding: 0.75rem;">
+        <div class="teacher-class-card-body teacher-class-announcements-body-tall flex-grow-1">
           {% if announcements %}
             <div class="teacher-class-announcements">
               {% for ann in announcements %}
@@ -246,170 +161,136 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Main Content: Students, Assignments, Attendance -->
-    <div class="col-12 col-lg-8">
-      <div class="row g-4">
-        <!-- Enrolled Students Card -->
-        <div class="col-12 col-md-6">
-          <div class="teacher-class-card-modern">
-            <div class="teacher-class-card-header">
-              <div class="teacher-class-card-icon">
-                <i class="bi bi-people-fill"></i>
-              </div>
-              <div class="teacher-class-card-title-section">
-                <h5 class="teacher-class-card-title">Enrolled Students</h5>
-                <p class="teacher-class-card-subject">{{ enrolled_students|length }} Students</p>
-              </div>
-            </div>
-            <div class="teacher-class-card-body" style="max-height: 400px; overflow-y: auto;">
-              {% if enrolled_students %}
-                <div class="teacher-class-students-list">
-                  {% for student in enrolled_students %}
-                    <div class="teacher-class-student-item">
-                      <div class="teacher-class-student-avatar">
-                        {% if student.photo_filename %}
-                          <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" alt="Student Photo">
-                        {% else %}
-                          <span>{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
-                        {% endif %}
-                      </div>
-                      <div class="teacher-class-student-info">
-                        <div class="teacher-class-student-name">{{ student.first_name }} {{ student.last_name }}</div>
-                        <div class="teacher-class-student-id">ID: {{ student.student_id or 'N/A' }}</div>
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% else %}
-                <div class="teacher-class-empty-state">
-                  <i class="bi bi-people"></i>
-                  <p>No students are currently enrolled in this class.</p>
-                </div>
-              {% endif %}
-            </div>
+  <!-- Row 2: Class Management | Enrolled Students -->
+  <div class="row g-4 mt-0 align-items-lg-stretch">
+    <div class="col-12 col-lg-6 d-lg-flex">
+      <div class="teacher-class-card-modern mb-0 w-100 flex-fill d-flex flex-column">
+        <div class="teacher-class-card-header">
+          <div class="teacher-class-card-icon">
+            <i class="bi bi-tools"></i>
+          </div>
+          <div class="teacher-class-card-title-section">
+            <h5 class="teacher-class-card-title">Class Management</h5>
+            <p class="teacher-class-card-subject">Quick Actions</p>
           </div>
         </div>
-        
-        <!-- Recent Assignments Card -->
-        <div class="col-12 col-md-6">
-          <div class="teacher-class-card-modern">
-            <div class="teacher-class-card-header">
-              <div class="teacher-class-card-icon">
-                <i class="bi bi-journal-text"></i>
+        <div class="teacher-class-card-body teacher-class-card-body--mgmt flex-grow-1">
+          <div class="mb-2">
+            <h6 class="teacher-class-section-title">
+              <i class="bi bi-gear me-2"></i>Core Management
+            </h6>
+            <div class="row g-2">
+              <div class="col-12">
+                <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn-teacher-class-action">
+                  <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                </a>
               </div>
-              <div class="teacher-class-card-title-section">
-                <h5 class="teacher-class-card-title">Recent Assignments</h5>
-                <p class="teacher-class-card-subject">{{ assignments|length }} Assignments</p>
+              <div class="col-12">
+                <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                </a>
+              </div>
+              <div class="col-12">
+                <a href="{{ url_for('teacher.groups.class_groups', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-people me-1"></i>Manage Groups
+                </a>
               </div>
             </div>
-            <div class="teacher-class-card-body" style="max-height: 400px; overflow-y: auto;">
-              {% if assignments %}
-                <div class="teacher-class-assignments-list">
-                  {% for assignment in assignments %}
-                    <div class="teacher-class-assignment-item">
-                      <div class="teacher-class-assignment-header">
-                        <h6 class="teacher-class-assignment-title">
-                          <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="text-decoration-none">
-                            {{ assignment.title }}
-                          </a>
-                        </h6>
-                        {% if assignment.due_date %}
-                          <span class="teacher-class-assignment-due">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</span>
-                        {% else %}
-                          <span class="teacher-class-assignment-due">No due date</span>
-                        {% endif %}
-                      </div>
-                      {% if assignment.description %}
-                        <p class="teacher-class-assignment-description">{{ assignment.description[:80] }}{% if assignment.description|length > 80 %}...{% endif %}</p>
-                      {% endif %}
-                      <div class="mt-2 d-flex gap-2 flex-wrap">
-                        <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">
-                          <i class="bi bi-eye me-1"></i>View Details
-                        </a>
-                        <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success">
-                          <i class="bi bi-file-earmark-arrow-up me-1"></i>View Submissions
-                        </a>
-                        <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">
-                          <i class="bi bi-pencil-square me-1"></i>Grade
-                        </a>
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% else %}
-                <div class="teacher-class-empty-state">
-                  <i class="bi bi-journal"></i>
-                  <p>No recent assignments.</p>
-                </div>
-              {% endif %}
+          </div>
+          <div class="mb-2">
+            <h6 class="teacher-class-section-title">
+              <i class="bi bi-people-fill me-2"></i>Group Work & Assignments
+            </h6>
+            <div class="row g-2">
+              <div class="col-12">
+                <a href="{{ url_for('teacher.dashboard.assignments_and_grades', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-journal-plus me-1"></i>Assignments & Grades
+                </a>
+              </div>
+              <div class="col-12">
+                <a href="{{ url_for('teacher.dashboard.deadline_reminders') }}" class="btn-teacher-class-action">
+                  <i class="bi bi-bell me-1"></i>Deadline Reminders
+                </a>
+              </div>
+              <div class="col-12">
+                <a href="{{ url_for('teacher.analytics.class_analytics', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-graph-up me-1"></i>Reports & Analytics
+                </a>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h6 class="teacher-class-section-title">
+              <i class="bi bi-star me-2"></i>Assessment & Feedback
+            </h6>
+            <div class="row g-2">
+              <div class="col-12">
+                <a href="{{ url_for('teacher.feedback360.class_feedback360', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
+                </a>
+              </div>
+              <div class="col-12">
+                <a href="{{ url_for('teacher.reflection_journals.class_reflection_journals', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-journal-text me-1"></i>Reflection Journals
+                </a>
+              </div>
+              <div class="col-12">
+                <a href="{{ url_for('teacher.conflict_resolution.class_conflicts', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <!-- Recent Attendance Card -->
-      <div class="teacher-class-card-modern mt-4">
+    </div>
+    <div class="col-12 col-lg-6 d-lg-flex">
+      <div class="teacher-class-card-modern mb-0 w-100 flex-fill d-flex flex-column">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
-            <i class="bi bi-calendar-check"></i>
+            <i class="bi bi-people-fill"></i>
           </div>
           <div class="teacher-class-card-title-section">
-            <h5 class="teacher-class-card-title">Recent Attendance</h5>
-            <p class="teacher-class-card-subject">Last 7 Days</p>
+            <h5 class="teacher-class-card-title">Enrolled Students</h5>
+            <p class="teacher-class-card-subject">{{ enrolled_students|length }} Students</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="max-height: 180px; overflow-y: auto; padding: 0.75rem;">
-          {% if recent_attendance %}
-            <div class="teacher-class-attendance-table">
-              <div class="teacher-class-attendance-header">
-                <div class="teacher-class-attendance-col">Date</div>
-                <div class="teacher-class-attendance-col">Student</div>
-                <div class="teacher-class-attendance-col">Status</div>
-                <div class="teacher-class-attendance-col">Notes</div>
-              </div>
-              <div class="teacher-class-attendance-body">
-                {% for record in recent_attendance %}
-                  <div class="teacher-class-attendance-row">
-                    <div class="teacher-class-attendance-col">
-                      <span class="teacher-class-attendance-date">{{ record.date.strftime('%b %d, %Y') }}</span>
-                    </div>
-                    <div class="teacher-class-attendance-col">
-                      <span class="teacher-class-attendance-student">{{ record.student.first_name }} {{ record.student.last_name }}</span>
-                    </div>
-                    <div class="teacher-class-attendance-col">
-                      {% set status = record.status %}
-                      {% if status == 'Present' %}
-                        <span class="teacher-class-attendance-badge teacher-class-attendance-present">Present</span>
-                      {% elif status == 'Late' %}
-                        <span class="teacher-class-attendance-badge teacher-class-attendance-late">Late</span>
-                      {% elif status == 'Unexcused Absence' %}
-                        <span class="teacher-class-attendance-badge teacher-class-attendance-unexcused">Unexcused</span>
-                      {% elif status == 'Excused Absence' %}
-                        <span class="teacher-class-attendance-badge teacher-class-attendance-excused">Excused</span>
-                      {% elif status == 'Suspended' %}
-                        <span class="teacher-class-attendance-badge teacher-class-attendance-suspended">Suspended</span>
-                      {% else %}
-                        <span class="teacher-class-attendance-badge teacher-class-attendance-other">{{ status }}</span>
-                      {% endif %}
-                    </div>
-                    <div class="teacher-class-attendance-col">
-                      <span class="teacher-class-attendance-notes">{{ record.notes or '' }}</span>
-                    </div>
+        <div class="teacher-class-card-body teacher-class-students-body-tall flex-grow-1">
+          {% if enrolled_students %}
+            <div class="teacher-class-students-list">
+              {% for student in enrolled_students %}
+                <div class="teacher-class-student-item">
+                  <div class="teacher-class-student-avatar">
+                    {% if student.photo_filename %}
+                      <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" alt="Student Photo">
+                    {% else %}
+                      <span>{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
+                    {% endif %}
                   </div>
-                {% endfor %}
-              </div>
+                  <div class="teacher-class-student-info">
+                    <div class="teacher-class-student-name">{{ student.first_name }} {{ student.last_name }}</div>
+                    <div class="teacher-class-student-id">ID: {{ student.student_id or 'N/A' }}</div>
+                  </div>
+                </div>
+              {% endfor %}
             </div>
           {% else %}
             <div class="teacher-class-empty-state">
-              <i class="bi bi-calendar-x"></i>
-              <p>No recent attendance records.</p>
+              <i class="bi bi-people"></i>
+              <p>No students are currently enrolled in this class.</p>
             </div>
           {% endif %}
         </div>
       </div>
+    </div>
+  </div>
 
-      {% if student_assistants or assistant_action_logs %}
-      <div class="teacher-class-card-modern mt-4">
+  {% if student_assistants or assistant_action_logs %}
+  <div class="row g-4 mt-0">
+    <div class="col-12">
+      <div class="teacher-class-card-modern mb-0">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-person-badge"></i>
@@ -455,8 +336,8 @@
           {% endif %}
         </div>
       </div>
-      {% endif %}
     </div>
   </div>
+  {% endif %}
 </div>
 {% endblock %}

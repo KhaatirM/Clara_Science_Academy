@@ -44,13 +44,14 @@
         <tbody>
             {% if class_objects %}
                 {% for class_obj in class_objects %}
-                    {% set class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                    {% set class_grade = grades.get(class_obj.id, {}) if grades else {} %}
                     {% set letter_grade = class_grade.get('letter', 'N/A') if class_grade else 'N/A' %}
                     {% set percentage = class_grade.get('percentage', class_grade.get('average', 0)) if class_grade else 0 %}
                     <tr>
                         <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
                         <td>{{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
-                        <td>{% if class_grade.get('comments') %}{{ class_grade.get('comments') }}{% else %}N/A{% endif %}</td>
+                        {% set comment = (comments_by_class.get(class_obj.id|string, '') if comments_by_class else '') %}
+                        <td>{% if include_comments and comment %}{{ comment|nl2br }}{% else %}N/A{% endif %}</td>
                     </tr>
                 {% endfor %}
             {% else %}
@@ -86,6 +87,11 @@
     <div class="section-title">Teacher Comments:</div>
     <div class="comments-box">
         <p>{{ report_card.comments|nl2br }}</p>
+    </div>
+
+    <div class="section-title" style="margin-top: 0.6cm;">Additional Comment/Concern:</div>
+    <div class="comments-box">
+        <p>{% if additional_comments %}{{ additional_comments|nl2br }}{% else %}N/A{% endif %}</p>
     </div>
 
     <div class="footer">

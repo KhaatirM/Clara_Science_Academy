@@ -86,6 +86,21 @@
                             </div>
                         </div>
                         
+                        <div class="class-info-item">
+                            <div class="class-info-icon icon-subject">
+                                <i class="bi bi-envelope-at"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Class mailing list (Google Group)</small>
+                                {% if class.google_group_email %}
+                                    <strong><a href="mailto:{{ class.google_group_email }}">{{ class.google_group_email }}</a></strong>
+                                {% else %}
+                                    <strong class="text-muted">Not set yet</strong>
+                                    <small class="d-block text-muted">Open the class once from “View Class” to create and sync the group.</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
                         <!-- Google Classroom Status (for all users) -->
                         <div class="google-classroom-status {% if class.google_classroom_id %}linked{% endif %}">
                             <div class="d-flex align-items-center justify-content-between">

@@ -76,12 +76,19 @@
                       <label for="student_id" class="form-label fw-semibold">
                         <i class="bi bi-person me-2"></i>Student <span class="text-danger">*</span>
                       </label>
+                      <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="showWithdrawnStudents">
+                        <label class="form-check-label" for="showWithdrawnStudents">
+                          Show withdrawn students
+                        </label>
+                      </div>
                       <select class="form-select form-select-lg" id="student_id" name="student_id" required>
                         <option value="">Choose a student...</option>
                         {% for student in students %}
                           <option value="{{ student.id }}">
                             {{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}
                             {% if student.student_id %} (ID: {{ student.student_id }}){% endif %}
+                            {% if student.is_active is defined and not student.is_active %} (Withdrawn){% endif %}
                           </option>
                         {% endfor %}
                       </select>
@@ -321,20 +328,17 @@
                       </div>
                     </div>
                     <div class="col-md-6">
-                      <div class="option-card position-relative" style="opacity: 0.7; cursor: not-allowed;">
-                        <span class="badge bg-warning text-dark position-absolute top-0 start-50 translate-middle-x" style="z-index: 10; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
-                          In Development
-                        </span>
+                      <div class="option-card">
                         <div class="form-check form-switch form-switch-lg">
-                          <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance" disabled>
-                          <label class="form-check-label" for="include_attendance" style="cursor: not-allowed;">
+                          <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
+                          <label class="form-check-label" for="include_attendance">
                             <div class="d-flex align-items-center">
                               <div class="option-icon me-3">
                                 <i class="bi bi-calendar-check"></i>
                               </div>
                               <div>
                                 <strong>Include Attendance</strong>
-                                <small class="text-muted d-block">Add attendance statistics to the report card</small>
+                                <small class="text-muted d-block">Show a summary table on page 1 (4th–8th report cards)</small>
                               </div>
                             </div>
                           </label>
@@ -344,20 +348,17 @@
                   </div>
                   <div class="row g-3 mt-2">
                     <div class="col-md-6">
-                      <div class="option-card position-relative" style="opacity: 0.7; cursor: not-allowed;">
-                        <span class="badge bg-warning text-dark position-absolute top-0 start-50 translate-middle-x" style="z-index: 10; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
-                          In Development
-                        </span>
+                      <div class="option-card">
                         <div class="form-check form-switch form-switch-lg">
-                          <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments" disabled>
-                          <label class="form-check-label" for="include_comments" style="cursor: not-allowed;">
+                          <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments" checked>
+                          <label class="form-check-label" for="include_comments">
                             <div class="d-flex align-items-center">
                               <div class="option-icon me-3">
                                 <i class="bi bi-chat-text"></i>
                               </div>
                               <div>
                                 <strong>Include Comments</strong>
-                                <small class="text-muted d-block">Add teacher comments to the report card</small>
+                                <small class="text-muted d-block">Pull saved teacher comments (and allow overrides below)</small>
                               </div>
                             </div>
                           </label>
@@ -370,6 +371,55 @@
             </div>
 
             <hr class="my-5">
+
+            <!-- Step 6: Teacher Comments (optional) -->
+            <div class="form-section mb-5" id="comments-section" style="display: none;">
+              <div class="section-header mb-4">
+                <div class="section-icon">
+                  <i class="bi bi-chat-dots"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold mb-1">6. Teacher Comments (Optional)</h5>
+                  <p class="text-muted mb-0 small">Saved comments will be auto-filled. You can override before generating.</p>
+                </div>
+              </div>
+              <div id="comments-container" class="alert alert-info border-0 shadow-sm">
+                <i class="bi bi-info-circle me-2"></i>
+                Select a student and classes first to load comment boxes.
+              </div>
+              <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" id="persist_comment_overrides" name="persist_comment_overrides">
+                <label class="form-check-label" for="persist_comment_overrides">
+                  Save overrides back to teacher comments (management)
+                </label>
+                <div class="form-text">If checked, your overrides will be stored for future report generations too.</div>
+              </div>
+            </div>
+
+            <!-- Step 7: Additional Comments (optional) -->
+            <div class="form-section mb-5" id="additional-comments-section">
+              <div class="section-header mb-4">
+                <div class="section-icon">
+                  <i class="bi bi-chat-square-text"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold mb-1">7. Additional Comments (Optional)</h5>
+                  <p class="text-muted mb-0 small">This will appear in the “Additional Comment/Concern” box on the PDF.</p>
+                </div>
+              </div>
+
+              <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                  <label for="additional_comments" class="form-label fw-semibold">Additional Comment/Concern</label>
+                  <textarea
+                    class="form-control"
+                    id="additional_comments"
+                    name="additional_comments"
+                    rows="4"
+                    placeholder="Type any additional notes to include on the report card..."></textarea>
+                </div>
+              </div>
+            </div>
 
             <!-- Generate Button -->
             <div class="text-center mt-5 pt-4 border-top">
@@ -397,11 +447,15 @@
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('reportCardForm');
   const studentSelect = document.getElementById('student_id');
+  const showWithdrawnToggle = document.getElementById('showWithdrawnStudents');
   const classesContainer = document.getElementById('classes-container');
   const loadingClasses = document.getElementById('loading-classes');
   const noClassesMessage = document.getElementById('no-classes-message');
   const classesList = document.getElementById('classes-list');
   const generateBtn = document.getElementById('generateBtn');
+  const includeCommentsToggle = document.getElementById('include_comments');
+  const commentsSection = document.getElementById('comments-section');
+  const commentsContainer = document.getElementById('comments-container');
 
   const confirmationSection = document.getElementById('confirmation-section');
   const confirmationSeparator = document.getElementById('confirmation-separator');
@@ -421,6 +475,26 @@ document.addEventListener('DOMContentLoaded', function() {
         classesList.innerHTML = '';
       }
     });
+  }
+
+  // Best-effort withdrawn filter: hide options that include "(Withdrawn)" in label.
+  // (We label withdrawn students in the backend option text once wired; until then, this is harmless.)
+  if (showWithdrawnToggle && studentSelect) {
+    const applyWithdrawnFilter = function() {
+      const showAll = !!this.checked;
+      Array.from(studentSelect.options).forEach(opt => {
+        if (!opt.value) return;
+        const isWithdrawn = (opt.textContent || '').toLowerCase().includes('withdrawn');
+        opt.hidden = (!showAll && isWithdrawn);
+      });
+      if (studentSelect.selectedOptions.length && studentSelect.selectedOptions[0].hidden) {
+        studentSelect.value = '';
+      }
+    };
+
+    showWithdrawnToggle.addEventListener('change', applyWithdrawnFilter);
+    // Apply once on load so withdrawn students are hidden by default.
+    applyWithdrawnFilter.call(showWithdrawnToggle);
   }
   
   // Auto-load student details and classes if student is pre-selected
@@ -473,7 +547,14 @@ document.addEventListener('DOMContentLoaded', function() {
     noClassesMessage.style.display = 'none';
     classesList.innerHTML = '';
 
-    fetch(`/management/api/student/${studentId}/classes`)
+    // Load eligible classes based on selected school year + selected quarters.
+    const schoolYearId = (document.getElementById('school_year_id')?.value || '').trim();
+    const quarters = Array.from(document.querySelectorAll('input[name="quarters"]:checked')).map(x => x.value);
+    const params = new URLSearchParams();
+    if (schoolYearId) params.set('school_year_id', schoolYearId);
+    (quarters.length ? quarters : ['Q1','Q2','Q3','Q4']).forEach(q => params.append('quarters', q));
+
+    fetch(`/management/api/student/${studentId}/classes?${params.toString()}`)
       .then(response => response.json())
       .then(data => {
         loadingClasses.style.display = 'none';
@@ -514,6 +595,9 @@ document.addEventListener('DOMContentLoaded', function() {
           classesContainer.style.display = 'block';
           // Select all classes by default
           updateClassSelection();
+
+          // Load comment boxes after classes render (if enabled)
+          loadCommentsBoxes();
         } else {
           noClassesMessage.style.display = 'block';
           noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>No classes found for this student.';
@@ -535,6 +619,90 @@ document.addEventListener('DOMContentLoaded', function() {
         card.classList.remove('selected');
       }
     });
+
+    // Refresh comment boxes when class selection changes
+    loadCommentsBoxes();
+  }
+
+  function getSelectedStudentId() {
+    const el = document.getElementById('student_id');
+    return el && el.value ? el.value : null;
+  }
+
+  function getSelectedSchoolYearId() {
+    const el = document.getElementById('school_year_id');
+    return el && el.value ? el.value : null;
+  }
+
+  function getSelectedQuarters() {
+    return Array.from(document.querySelectorAll('input[name="quarters"]:checked')).map(x => x.value);
+  }
+
+  function getSelectedClassIds() {
+    return Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked')).map(x => x.value);
+  }
+
+  function loadCommentsBoxes() {
+    if (!commentsSection || !commentsContainer) return;
+    const enabled = includeCommentsToggle && includeCommentsToggle.checked;
+    if (!enabled) {
+      commentsSection.style.display = 'none';
+      return;
+    }
+    commentsSection.style.display = 'block';
+
+    const studentId = getSelectedStudentId();
+    const schoolYearId = getSelectedSchoolYearId();
+    const quarters = getSelectedQuarters();
+    const classIds = getSelectedClassIds();
+
+    if (!studentId || !schoolYearId || quarters.length === 0 || classIds.length === 0) {
+      commentsContainer.className = 'alert alert-info border-0 shadow-sm';
+      commentsContainer.innerHTML = '<i class="bi bi-info-circle me-2"></i>Select student, quarters, and classes to load comments.';
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('student_id', studentId);
+    params.set('school_year_id', schoolYearId);
+    quarters.forEach(q => params.append('quarters', q));
+    classIds.forEach(cid => params.append('class_ids', cid));
+
+    commentsContainer.className = 'text-center py-4';
+    commentsContainer.innerHTML = '<div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted">Loading comments...</div>';
+
+    fetch(`/management/api/report-card/comments?${params.toString()}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.success) {
+          commentsContainer.className = 'alert alert-warning border-0 shadow-sm';
+          commentsContainer.textContent = 'Could not load comments.';
+          return;
+        }
+        const byClass = data.comments_by_class || {};
+        const classMap = data.class_map || {};
+
+        let html = '';
+        html += `<div class="card border-0 shadow-sm"><div class="card-body">`;
+        classIds.forEach(cid => {
+          const name = (classMap[cid] || `Class ${cid}`);
+          const text = (byClass[cid]) ? byClass[cid] : '';
+          const fieldName = `comment_${cid}`;
+          html += `
+            <div class="mb-3">
+              <label class="form-label fw-semibold">${name}</label>
+              <textarea class="form-control" name="${fieldName}" rows="3" placeholder="Comment for ${name}...">${(text || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</textarea>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+        commentsContainer.className = '';
+        commentsContainer.innerHTML = html;
+      })
+      .catch(() => {
+        commentsContainer.className = 'alert alert-warning border-0 shadow-sm';
+        commentsContainer.textContent = 'Could not load comments.';
+      });
   }
 
   // Form validation and submission
@@ -641,6 +809,22 @@ document.addEventListener('DOMContentLoaded', function() {
       generateBtn.disabled = false;
     }
   });
+
+  // Reload eligible classes when quarter or school year changes (report-card context changed).
+  document.querySelectorAll('input[name="quarters"]').forEach(cb => cb.addEventListener('change', function() {
+    const sid = getSelectedStudentId();
+    if (sid) loadStudentClasses(sid);
+  }));
+  const schoolYearSelect = document.getElementById('school_year_id');
+  if (schoolYearSelect) schoolYearSelect.addEventListener('change', function() {
+    const sid = getSelectedStudentId();
+    if (sid) loadStudentClasses(sid);
+  });
+
+  // Keep comment boxes in sync with toggles/quarters/year changes
+  if (includeCommentsToggle) includeCommentsToggle.addEventListener('change', loadCommentsBoxes);
+  document.querySelectorAll('input[name="quarters"]').forEach(cb => cb.addEventListener('change', loadCommentsBoxes));
+  if (schoolYearSelect) schoolYearSelect.addEventListener('change', loadCommentsBoxes);
 });
 </script>
 {% endblock %}

@@ -934,7 +934,7 @@ def unvoid_assignment_for_students(assignment_id):
                 
                 groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
                 for group in groups:
-                    members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                    members = StudentGroupMember.query.filter_by(group_id=group.id).all()
                     for member in members:
                         group_grade = GroupGrade.query.filter_by(
                             group_assignment_id=assignment_id,
@@ -951,9 +951,16 @@ def unvoid_assignment_for_students(assignment_id):
                 
                 message = f'Restored group assignment "{group_assignment.title}" for all students ({unvoided_count} grades)'
             else:
-                from models import StudentGroupMember
+                from models import StudentGroupMember, StudentGroup
                 for student_id in student_ids:
-                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                    member = (
+                        StudentGroupMember.query.join(StudentGroup)
+                        .filter(
+                            StudentGroupMember.student_id == int(student_id),
+                            StudentGroup.class_id == group_assignment.class_id,
+                        )
+                        .first()
+                    )
                     if member:
                         group_grade = GroupGrade.query.filter_by(
                             group_assignment_id=assignment_id,

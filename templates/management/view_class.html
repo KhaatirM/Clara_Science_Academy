@@ -41,7 +41,7 @@
 
   <!-- Statistics Cards -->
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
       <div class="classes-stat-card">
         <div class="classes-stat-icon">
           <i class="bi bi-people-fill"></i>
@@ -52,7 +52,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
       <div class="classes-stat-card">
         <div class="classes-stat-icon">
           <i class="bi bi-journal-text"></i>
@@ -63,18 +63,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="classes-stat-card">
-        <div class="classes-stat-icon">
-          <i class="bi bi-calendar-check"></i>
-        </div>
-        <div class="classes-stat-content">
-          <div class="classes-stat-number">{{ recent_attendance|length }}</div>
-          <div class="classes-stat-label">Recent Records</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4">
       <div class="classes-stat-card">
         <div class="classes-stat-icon">
           <i class="bi bi-person-badge"></i>
@@ -103,41 +92,41 @@
         </div>
         <div class="class-card-body-modern">
           <div class="class-card-detail-modern">
-            <i class="bi bi-book me-2"></i>
+            <i class="bi bi-book"></i>
             <strong>Subject:</strong> {{ class_info.subject or 'N/A' }}
           </div>
           <div class="class-card-detail-modern">
-            <i class="bi bi-graduation-cap me-2"></i>
+            <i class="bi bi-graduation-cap"></i>
             <strong>Grade Levels:</strong> {{ class_info.get_grade_levels_display() or 'N/A' }}
           </div>
           <div class="class-card-detail-modern">
-            <i class="bi bi-door-open me-2"></i>
+            <i class="bi bi-door-open"></i>
             <strong>Room:</strong> {{ class_info.room_number if class_info.room_number else 'N/A' }}
               </div>
           <div class="class-card-detail-modern">
-            <i class="bi bi-calendar-event me-2"></i>
+            <i class="bi bi-calendar-event"></i>
             <strong>Schedule:</strong> {{ class_info.schedule or 'TBD' }}
             </div>
           <div class="class-card-detail-modern">
-            <i class="bi bi-calendar-year me-2"></i>
+            <i class="bi bi-calendar-year"></i>
             <strong>School Year:</strong> {{ class_info.school_year.name if class_info.school_year else 'N/A' }}
               </div>
           {% if teacher %}
             <div class="class-card-detail-modern">
-              <i class="bi bi-person me-2"></i>
+              <i class="bi bi-person"></i>
               <strong>Teacher:</strong> {{ teacher.first_name }} {{ teacher.last_name }}
             </div>
             <div class="class-card-detail-modern">
-              <i class="bi bi-envelope me-2"></i>
+              <i class="bi bi-envelope"></i>
               <strong>Teacher Email:</strong> {{ teacher.email or 'N/A' }}
             </div>
             <div class="class-card-detail-modern">
-              <i class="bi bi-telephone me-2"></i>
+              <i class="bi bi-telephone"></i>
               <strong>Teacher Phone:</strong> {{ teacher.phone or 'N/A' }}
             </div>
           {% else %}
             <div class="class-card-detail-modern">
-              <i class="bi bi-person-x me-2"></i>
+              <i class="bi bi-person-x"></i>
               <strong>Teacher:</strong> No teacher assigned
             </div>
           {% endif %}
@@ -256,11 +245,11 @@
       
     </div>
 
-    <!-- Main Content: Students, Assignments, Attendance -->
+    <!-- Main Content: Students & assignments -->
     <div class="col-12 col-md-8">
       <div class="row g-4">
         <!-- Enrolled Students Card -->
-        <div class="col-12 col-md-6">
+        <div class="col-12">
           <div class="class-card-modern h-100">
             <div class="class-card-header-modern">
               <div class="class-card-icon-modern">
@@ -297,52 +286,6 @@
                 <div class="classes-empty-state">
                   <i class="bi bi-people"></i>
                   <p>No students are currently enrolled in this class.</p>
-                </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        
-        <!-- Recent Attendance Card -->
-        <div class="col-12 col-md-6">
-          <div class="class-card-modern h-100">
-            <div class="class-card-header-modern">
-              <div class="class-card-icon-modern">
-                <i class="bi bi-calendar-check"></i>
-                </div>
-              <div class="class-card-title-section-modern">
-                <h5 class="class-card-title-modern">Recent Attendance</h5>
-                <p class="class-card-subject-modern">{{ recent_attendance|length }} Records (7 days)</p>
-              </div>
-            </div>
-            <div class="class-card-body-modern">
-              {% if recent_attendance %}
-                <div class="class-attendance-list">
-                      {% for attendance in recent_attendance %}
-                    <div class="class-attendance-item">
-                      <div class="class-attendance-avatar">
-                        <i class="bi bi-person"></i>
-                            </div>
-                      <div class="class-attendance-info">
-                        <div class="class-attendance-student">{{ attendance.student.first_name }} {{ attendance.student.last_name }}</div>
-                        <div class="class-attendance-details">
-                          <span class="class-attendance-date">{{ attendance.date.strftime('%b %d, %Y') }}</span>
-                                {% if attendance.status == 'Present' %}
-                            <span class="class-attendance-badge class-attendance-present">Present</span>
-                                {% elif attendance.status == 'Excused Absence' %}
-                            <span class="class-attendance-badge class-attendance-excused">Excused</span>
-                                {% else %}
-                            <span class="class-attendance-badge class-attendance-absent">Absent</span>
-                                {% endif %}
-                              </div>
-                            </div>
-                          </div>
-                      {% endfor %}
-                </div>
-              {% else %}
-                <div class="classes-empty-state">
-                  <i class="bi bi-calendar-x"></i>
-                  <p>No attendance records found for the last 7 days.</p>
                 </div>
               {% endif %}
             </div>

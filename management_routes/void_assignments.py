@@ -75,13 +75,19 @@ def void_assignment_for_students(assignment_id):
                 
                 message = f'Voided group assignment "{group_assignment.title}" for all students ({voided_count} grades)'
             else:
-                # Void for specific students
-                from models import StudentGroupMember
+                # Void for specific students (membership must be in this class)
+                from models import StudentGroupMember, StudentGroup
                 import json
                 
                 for student_id in student_ids:
-                    # Find student's group for this assignment
-                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                    member = (
+                        StudentGroupMember.query.join(StudentGroup)
+                        .filter(
+                            StudentGroupMember.student_id == int(student_id),
+                            StudentGroup.class_id == group_assignment.class_id,
+                        )
+                        .first()
+                    )
                     
                     if member:
                         group_grade = GroupGrade.query.filter_by(
@@ -261,13 +267,20 @@ def unvoid_assignment_for_students(assignment_id):
                 message = f'Restored group assignment "{group_assignment.title}" for all students'
             else:
                 for student_id in student_ids:
-                    from models import StudentGroupMember
-                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
-                    
+                    from models import StudentGroupMember, StudentGroup
+                    member = (
+                        StudentGroupMember.query.join(StudentGroup)
+                        .filter(
+                            StudentGroupMember.student_id == int(student_id),
+                            StudentGroup.class_id == group_assignment.class_id,
+                        )
+                        .first()
+                    )
+
                     if member:
                         group_grade = GroupGrade.query.filter_by(
                             group_assignment_id=assignment_id,
-                            student_group_id=member.student_group_id,
+                            student_id=int(student_id),
                             is_voided=True
                         ).first()
                         

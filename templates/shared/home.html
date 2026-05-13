@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 6, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 9, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,51 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 6, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 9, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 6</strong> focuses on <strong>Quiz improvements</strong> (best-score display on retakes, keep-alive to prevent logout mid-quiz, draft autosave, and a faster quiz builder for large multi-section quizzes) plus important <strong>voided-assignment accuracy</strong> fixes in assignment and class grade views. <strong>May 4</strong> below covers the large <strong>Assignments &amp; Grades</strong> refresh and redo dashboard redesign.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 9</strong> brings a polished <strong>class roster</strong> experience, clearer <strong>view class</strong> pages for teachers and admins, streamlined <strong>void assignment</strong> flows, <strong>profile photos</strong> for students and staff (including from leadership dashboards), and stronger <strong>report card</strong> tools for withdrawn students and historical class eligibility. <strong>May 6</strong> below still highlights <strong>quiz reliability</strong>, builder UX, and voiding accuracy in grade views.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 9, 2026 - Rosters, class pages, void UX, photos, report cards -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-people me-2"></i>Class Rosters, View Class, Photos &amp; Report Cards – May 9, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Manage class roster:</strong> Select enrolled students by clicking the whole card (no separate checkbox column). Removing a student from the roster no longer uses a blocking browser confirm dialog. Soft-deleted students are hidden from rosters where they should not appear.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Void assignments:</strong> Card-based void experience with cleaner controls (native radios hidden where the flow was refactored) so voiding feels consistent with the rest of Assignments &amp; Grades.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>View class (teachers &amp; admins):</strong> Course information uses more comfortable spacing. The class mailing list shows the label on one line and the list address on the next for easier reading.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>View class — less clutter:</strong> Recent assignments and recent attendance summary blocks were removed so the class overview stays focused on what you need day to day.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher class layout:</strong> Recent announcements stay in the main column with height aligned to the class info row; enrolled students sit beside class management for a clearer two-column layout.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student &amp; staff photos:</strong> Upload a photo when adding a student or staff member; change it when editing. Leadership can update photos from dashboard modals (multipart save with CSRF). Images persist on the student and teacher/staff records used across the app.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report cards &amp; withdrawn students:</strong> Generation supports searching and selecting withdrawn students where appropriate, with class lists driven by school year and quarters. Enrollment windows (academic periods) are used so only eligible classes appear, and saving a report card record enforces the same rules on the server.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Rosters and voiding are faster and calmer to use, class pages read more cleanly, staff can keep directory-style photos current, and report cards respect real enrollment history—including students who have left mid-year when policy allows.</p>
+                        </div>
+                    </div>
+
                     <!-- May 6, 2026 - Quiz reliability, builder UX, and voiding accuracy -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-question-circle me-2"></i>Quiz Reliability, Builder UX &amp; Voiding Accuracy – May 6, 2026</h6>
@@ -1718,11 +1756,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay6_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay9_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMay6_2026', 'true');
+            sessionStorage.setItem('updateModalShownMay9_2026', 'true');
         }, 500);
     }
 });

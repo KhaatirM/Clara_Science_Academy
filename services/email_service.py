@@ -1,8 +1,13 @@
 """
 Email sending service. Uses Flask-Mail with Google Workspace SMTP.
+
+Deliverability: From must match the authenticated MAIL_USERNAME. For spam issues, also verify
+Google Admin → Apps → Google Workspace → Gmail → Authenticate email (DKIM), and DNS SPF/DMARC
+for the domain. Optional MAIL_REPLY_TO (monitored inbox) often helps versus pure no-reply.
 """
 
 import html
+import uuid
 
 from flask import current_app, has_request_context, url_for
 from extensions import mail
@@ -19,6 +24,32 @@ def _staff_login_url() -> str:
             pass
     base = (current_app.config.get("PUBLIC_BASE_URL") or "").rstrip("/")
     return f"{base}/login" if base else ""
+
+
+def _default_sender_email() -> str:
+    """Envelope From address string (must match Google SMTP auth user)."""
+    return (current_app.config.get('MAIL_USERNAME') or '').strip()
+
+
+def _message_id_domain() -> str:
+    explicit = current_app.config.get('MAIL_MESSAGE_ID_DOMAIN')
+    if explicit:
+        return str(explicit).strip().lstrip('@')
+    addr = _default_sender_email()
+    if '@' in addr:
+        return addr.rsplit('@', 1)[-1].strip().rstrip('>')
+    return 'local'
+
+
+def _transactional_extra_headers() -> dict:
+    """Headers that help classify mail as system-generated (not bulk marketing)."""
+    domain = _message_id_domain()
+    return {
+        'Message-ID': f'<{uuid.uuid4().hex}@{domain}>',
+        'Auto-Submitted': 'auto-generated',
+        # Reduces auto-reply / OOF loops to donotrespond@ (Exchange / Outlook)
+        'X-Auto-Response-Suppress': 'OOF, AutoReply',
+    }
 
 
 def send_email(to_email, subject, body_text, body_html=None):
@@ -39,11 +70,35 @@ def send_email(to_email, subject, body_text, body_html=None):
         return False
     try:
         from flask_mail import Message
+
+        sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+        auth_user = _default_sender_email().lower()
+        if isinstance(sender, (tuple, list)) and len(sender) == 2:
+            sender_email = str(sender[1]).strip().lower()
+            if auth_user and sender_email and sender_email != auth_user:
+                current_app.logger.warning(
+                    'MAIL_DEFAULT_SENDER email (%s) does not match MAIL_USERNAME (%s); '
+                    'fix env/config for better deliverability',
+                    sender[1],
+                    current_app.config.get('MAIL_USERNAME'),
+                )
+        elif isinstance(sender, str) and auth_user:
+            if sender.strip().lower() != auth_user:
+                current_app.logger.warning(
+                    'MAIL_DEFAULT_SENDER does not match MAIL_USERNAME; fix env/config for better deliverability'
+                )
+
+        reply_to = current_app.config.get('MAIL_REPLY_TO')
+        extra = _transactional_extra_headers()
+
         msg = Message(
             subject=subject,
+            sender=sender,
             recipients=[to_email] if isinstance(to_email, str) else to_email,
             body=body_text,
             html=body_html,
+            reply_to=reply_to,
+            extra_headers=extra,
         )
         mail.send(msg)
         return True

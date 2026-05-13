@@ -113,6 +113,38 @@
                                 </div>
                             </div>
 
+                            <div class="form-group">
+                                <label for="term_type" class="form-label-modern">
+                                    <i class="bi bi-calendar4-range"></i>
+                                    Class Term
+                                </label>
+                                <select class="form-select-modern" id="term_type" name="term_type">
+                                    {% set _term_type = class_info.term_type if class_info.term_type else 'full_year' %}
+                                    <option value="full_year" {% if _term_type == 'full_year' %}selected{% endif %}>Full year (all quarters)</option>
+                                    <option value="semester" {% if _term_type == 'semester' %}selected{% endif %}>Semester (S1 or S2)</option>
+                                    <option value="quarter" {% if _term_type == 'quarter' %}selected{% endif %}>Single quarter (Q1–Q4)</option>
+                                </select>
+                                <small class="form-hint">This controls how non-applicable quarters display on report cards.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="term_value" class="form-label-modern">
+                                    <i class="bi bi-calendar2-week"></i>
+                                    Term Value
+                                </label>
+                                <select class="form-select-modern" id="term_value" name="term_value">
+                                    {% set _term_value = class_info.term_value if class_info.term_value else '' %}
+                                    <option value="" {% if not _term_value %}selected{% endif %}>—</option>
+                                    <option value="S1" {% if _term_value == 'S1' %}selected{% endif %}>S1 (Q1 + Q2)</option>
+                                    <option value="S2" {% if _term_value == 'S2' %}selected{% endif %}>S2 (Q3 + Q4)</option>
+                                    <option value="Q1" {% if _term_value == 'Q1' %}selected{% endif %}>Q1 only</option>
+                                    <option value="Q2" {% if _term_value == 'Q2' %}selected{% endif %}>Q2 only</option>
+                                    <option value="Q3" {% if _term_value == 'Q3' %}selected{% endif %}>Q3 only</option>
+                                    <option value="Q4" {% if _term_value == 'Q4' %}selected{% endif %}>Q4 only</option>
+                                </select>
+                                <small class="form-hint">For semester/quarter classes. Leave blank for full-year.</small>
+                            </div>
+
                             <div class="form-group form-group-full">
                                 <label for="description" class="form-label-modern">
                                     <i class="bi bi-file-text"></i>

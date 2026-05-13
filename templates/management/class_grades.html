@@ -2,6 +2,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_class_grades.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_assignments_and_grades.css') }}">
 {% endblock %}
 
 {% block title %}Class Grades - {{ class_info.name }}{% endblock %}
@@ -580,20 +581,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Void for:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="void_scope" id="void_all_students" value="all" checked>
-                        <label class="form-check-label" for="void_all_students">
+                    <label class="void-scope-card" for="void_all_students">
+                        <input class="void-scope-card-input" type="radio" name="void_scope" id="void_all_students" value="all" checked>
+                        <span class="void-scope-card-text">
                             <strong>All Students</strong>
                             <small class="text-muted d-block">Void this assignment for every student in the class</small>
-                        </label>
-                    </div>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="radio" name="void_scope" id="void_specific_students" value="specific">
-                        <label class="form-check-label" for="void_specific_students">
+                        </span>
+                    </label>
+                    <label class="void-scope-card" for="void_specific_students">
+                        <input class="void-scope-card-input" type="radio" name="void_scope" id="void_specific_students" value="specific">
+                        <span class="void-scope-card-text">
                             <strong>Specific Students</strong>
                             <small class="text-muted d-block">Choose which students to void this assignment for</small>
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                 </div>
                 
                 <div id="student_selection" style="display: none;" class="mb-3">

@@ -357,7 +357,7 @@ def get_quarter_grades_for_report(student_id, school_year_id, class_ids=None):
         class_ids: Optional list of class IDs to filter
     
     Returns:
-        dict: {'Q1': {'Math [4th]': {'letter': 'A', 'percentage': 95}, ...}, ...}
+        dict: {'Q1': {<class_id>: {'letter': 'A', 'percentage': 95, 'class_name': 'Math'}, ...}, ...}
     """
     query = QuarterGrade.query.filter_by(
         student_id=student_id,
@@ -387,11 +387,12 @@ def get_quarter_grades_for_report(student_id, school_year_id, class_ids=None):
         
         # Only add if quarter_key is valid
         if quarter_key in result:
-            result[quarter_key][class_name] = {
+            result[quarter_key][qg.class_id] = {
                 'letter': qg.letter_grade,
                 'percentage': qg.percentage,
                 'average': qg.percentage,  # Alias for compatibility
-                'assignments_count': qg.assignments_count
+                'assignments_count': qg.assignments_count,
+                'class_name': class_name,
             }
     
     return result

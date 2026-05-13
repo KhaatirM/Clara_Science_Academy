@@ -57,7 +57,7 @@
                         {% for quarter_key in ['Q1', 'Q2', 'Q3', 'Q4'] %}
                             {% if grades_by_quarter and grades_by_quarter.get(quarter_key) %}
                                 {% set q_grades = grades_by_quarter.get(quarter_key, {}) %}
-                                {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
+                                {% set class_grade = q_grades.get(class_obj.id, {}) if q_grades else {} %}
                                 {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
                                 {% set percentage = class_grade.get('percentage', '') if class_grade else '' %}
                                 <td style="text-align: center;">

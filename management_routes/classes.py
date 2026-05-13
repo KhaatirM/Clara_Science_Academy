@@ -202,6 +202,8 @@ def add_class():
             teacher_id = request.form.get('teacher_id', type=int)
             room_number = request.form.get('room_number', '').strip()
             schedule = request.form.get('schedule', '').strip()
+            term_type = (request.form.get('term_type', '') or '').strip() or 'full_year'
+            term_value = (request.form.get('term_value', '') or '').strip() or None
             max_students = request.form.get('max_students', 30, type=int)
             description = request.form.get('description', '').strip()
             
@@ -223,6 +225,8 @@ def add_class():
                 school_year_id=current_school_year.id,
                 room_number=room_number if room_number else None,
                 schedule=schedule if schedule else None,
+                term_type=term_type,
+                term_value=term_value,
                 max_students=max_students,
                 description=description if description else None,
                 is_active=True
@@ -336,12 +340,19 @@ def manage_class(class_id):
     
     class_obj = Class.query.get_or_404(class_id)
     
-    # Get all students for potential enrollment
-    all_students = Student.query.all()
+    # Active students only (soft-deleted / archived students stay out of roster UI)
+    all_students = (
+        Student.query.filter(Student.is_deleted == False)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     
     # Get currently enrolled students
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    enrolled_students = [
+        e.student for e in enrollments
+        if e.student and not getattr(e.student, 'is_deleted', False)
+    ]
     
     # Get available teachers for assignment
     available_teachers = [
@@ -382,6 +393,14 @@ def edit_class(class_id):
             class_obj.room_number = request.form.get('room_number', '').strip() or None
             schedule_text = request.form.get('schedule', '').strip() or None
             class_obj.schedule = schedule_text
+            term_type = (request.form.get('term_type', '') or '').strip() or 'full_year'
+            term_value = (request.form.get('term_value', '') or '').strip() or None
+            if term_type not in ['full_year', 'semester', 'quarter']:
+                term_type = 'full_year'
+            if term_type == 'full_year':
+                term_value = None
+            class_obj.term_type = term_type
+            class_obj.term_value = term_value
             class_obj.max_students = request.form.get('max_students', 30, type=int)
             class_obj.description = request.form.get('description', '').strip() or None
             class_obj.is_active = 'is_active' in request.form
@@ -610,6 +629,9 @@ def class_roster(class_id):
                     added_count = 0
                     for student_id in student_ids:
                         student_id = int(student_id)
+                        stu = Student.query.get(student_id)
+                        if not stu or getattr(stu, 'is_deleted', False):
+                            continue
                         # Check if student is already enrolled
                         existing_enrollment = Enrollment.query.filter_by(
                             class_id=class_id, student_id=student_id, is_active=True
@@ -641,20 +663,29 @@ def class_roster(class_id):
                     flash('Please select at least one student to add.', 'warning')
                         
             elif action == 'remove':
-                student_id = request.form.get('student_id', type=int)
-                if student_id:
-                    # Deactivate enrollment instead of deleting
-                    enrollment = Enrollment.query.filter_by(
-                        class_id=class_id, student_id=student_id, is_active=True
-                    ).first()
-                    
-                    if enrollment:
-                        enrollment.is_active = False
+                student_ids = request.form.getlist('student_id')
+                if not student_ids:
+                    flash('Please select at least one student to remove.', 'warning')
+                else:
+                    removed = 0
+                    for raw_id in student_ids:
+                        try:
+                            student_id = int(raw_id)
+                        except (TypeError, ValueError):
+                            continue
+                        enrollment = Enrollment.query.filter_by(
+                            class_id=class_id, student_id=student_id, is_active=True
+                        ).first()
+                        if enrollment:
+                            enrollment.is_active = False
+                            enrollment.dropped_at = datetime.utcnow()
+                            removed += 1
+                    if removed:
                         db.session.commit()
                         try_provision_class_google_group(class_id)
-                        flash('Student removed from class successfully!', 'success')
+                        flash(f'Removed {removed} student(s) from this class.', 'success')
                     else:
-                        flash('Student not found in this class.', 'warning')
+                        flash('No matching enrollments to remove.', 'warning')
             
             return redirect(url_for('management.class_roster', class_id=class_id))
             
@@ -663,25 +694,30 @@ def class_roster(class_id):
             flash(f'Error updating roster: {str(e)}', 'danger')
             return redirect(url_for('management.class_roster', class_id=class_id))
     
-    # Get all students for potential enrollment
-    all_students = Student.query.all()
+    # Active students only (soft-deleted / archived students stay out of roster UI)
+    all_students = (
+        Student.query.filter(Student.is_deleted == False)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     
     # Get currently enrolled students (ACTIVE enrollments only)
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = []
     for enrollment in enrollments:
         student = Student.query.get(enrollment.student_id)
-        if student:
-            # Convert dob string to date object for age calculation
-            if isinstance(student.dob, str):
+        if not student or getattr(student, 'is_deleted', False):
+            continue
+        # Convert dob string to date object for age calculation
+        if isinstance(student.dob, str):
+            try:
+                student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
+            except ValueError:
                 try:
-                    student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
+                    student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
                 except ValueError:
-                    try:
-                        student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
-                    except ValueError:
-                        student.dob = None
-            enrolled_students.append(student)
+                    student.dob = None
+        enrolled_students.append(student)
     
     # Get available teachers for assignment
     available_teachers = [
@@ -1165,9 +1201,12 @@ def class_grades(class_id):
     # Get view mode (table or student_cards)
     view_mode = request.args.get('view', 'table')
     
-    # Get enrolled students
+    # Get enrolled students (exclude soft-deleted student records)
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    enrolled_students = [
+        e.student for e in enrollments
+        if e.student and not getattr(e.student, 'is_deleted', False)
+    ]
     
     # Get individual assignments for this class (exclude voided assignments from grade calculations)
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
@@ -2035,13 +2074,6 @@ def view_class(class_id):
     # Sort by due date
     all_assignments.sort(key=lambda x: x.due_date if x.due_date else datetime.max.date(), reverse=True)
     
-    # Get recent attendance records for this class (last 7 days)
-    from datetime import timedelta
-    recent_attendance = Attendance.query.filter(
-        Attendance.class_id == class_id,
-        Attendance.date >= datetime.now().date() - timedelta(days=7)
-    ).order_by(Attendance.date.desc()).all()
-    
     # Get current date for assignment status comparison
     today = datetime.now().date()
     
@@ -2070,7 +2102,6 @@ def view_class(class_id):
                          assignments=assignments,
                          group_assignments=group_assignments,
                          all_assignments=all_assignments,
-                         recent_attendance=recent_attendance,
                          today=today,
                          is_current_user_teacher=is_current_user_teacher,
                          role_prefix=None,
@@ -2109,6 +2140,9 @@ def manage_class_roster(class_id):
                 for student_id in student_ids:
                     try:
                         student_id = int(student_id)
+                        stu = Student.query.get(student_id)
+                        if not stu or getattr(stu, 'is_deleted', False):
+                            continue
                         # Check if student is already enrolled
                         existing_enrollment = Enrollment.query.filter_by(
                             student_id=student_id, 
@@ -2151,37 +2185,49 @@ def manage_class_roster(class_id):
                         flash(f'Error enrolling students: {str(e)}', 'danger')
                 else:
                     flash('No students were enrolled.', 'warning')
-                    
+
         elif action == 'remove':
-            student_id = request.form.get('student_id', type=int)
-            
-            if student_id:
-                # Find and deactivate the enrollment
-                enrollment = Enrollment.query.filter_by(
-                    student_id=student_id, 
-                    class_id=class_id, 
-                    is_active=True
-                ).first()
-                
-                if enrollment:
-                    enrollment.is_active = False
-                    enrollment.dropped_at = datetime.utcnow()
+            student_ids = request.form.getlist('student_id')
+            if not student_ids:
+                flash('Please select at least one student to remove.', 'warning')
+            else:
+                removed = 0
+                for raw_id in student_ids:
+                    try:
+                        student_id = int(raw_id)
+                    except (TypeError, ValueError):
+                        continue
+                    enrollment = Enrollment.query.filter_by(
+                        student_id=student_id,
+                        class_id=class_id,
+                        is_active=True,
+                    ).first()
+                    if enrollment:
+                        enrollment.is_active = False
+                        enrollment.dropped_at = datetime.utcnow()
+                        removed += 1
+                if removed:
                     try:
                         db.session.commit()
                         try_provision_class_google_group(class_id)
-                        flash('Student removed from class successfully.', 'success')
+                        flash(
+                            f'Removed {removed} student(s) from this class.',
+                            'success',
+                        )
                     except Exception as e:
                         db.session.rollback()
-                        flash(f'Error removing student: {str(e)}', 'danger')
+                        flash(f'Error removing students: {str(e)}', 'danger')
                 else:
-                    flash('Student is not enrolled in this class.', 'warning')
-            else:
-                flash('No student selected for removal.', 'warning')
-        
+                    flash('No matching enrollments to remove.', 'warning')
+
         return redirect(url_for('management.manage_class_roster', class_id=class_id))
     
-    # Get all students for potential enrollment
-    all_students = Student.query.all()
+    # Active students only (soft-deleted / archived students stay out of roster UI)
+    all_students = (
+        Student.query.filter(Student.is_deleted == False)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     
     # Convert dob string to date object for each student to allow for age calculation
     for student in all_students:
@@ -2202,20 +2248,21 @@ def manage_class_roster(class_id):
     enrolled_students = []
     for enrollment in enrollments:
         student = Student.query.get(enrollment.student_id)
-        if student:
-            # Convert dob string to date object for age calculation
-            if isinstance(student.dob, str):
+        if not student or getattr(student, 'is_deleted', False):
+            continue
+        # Convert dob string to date object for age calculation
+        if isinstance(student.dob, str):
+            try:
+                # First, try to parse 'YYYY-MM-DD' format
+                student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
+            except ValueError:
                 try:
-                    # First, try to parse 'YYYY-MM-DD' format
-                    student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
+                    # Fallback to 'MM/DD/YYYY' format
+                    student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
                 except ValueError:
-                    try:
-                        # Fallback to 'MM/DD/YYYY' format
-                        student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
-                    except ValueError:
-                        # If parsing fails, set dob to None so it will be handled gracefully in the template
-                        student.dob = None
-            enrolled_students.append(student)
+                    # If parsing fails, set dob to None so it will be handled gracefully in the template
+                    student.dob = None
+        enrolled_students.append(student)
     
     # Get all teachers for the summary display
     available_teachers = [
@@ -2250,7 +2297,10 @@ def admin_class_groups(class_id):
         
         # Get enrolled students for this class
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+        enrolled_students = [
+            e.student for e in enrollments
+            if e.student and not getattr(e.student, 'is_deleted', False)
+        ]
         
         # Add members_list and member_count to each group (template expects group.members_list with {student, is_leader})
         for group in groups:
@@ -2293,7 +2343,10 @@ def admin_auto_create_groups(class_id):
         
         # Get enrolled students for this class
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        enrolled_students = [enrollment.student for enrollment in enrollments]
+        enrolled_students = [
+            e.student for e in enrollments
+            if e.student and not getattr(e.student, 'is_deleted', False)
+        ]
         
         if request.method == 'POST':
             # Handle auto-create logic here

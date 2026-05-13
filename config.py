@@ -87,6 +87,10 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or 'donotrespond@clarascienceacademy.org'
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = ('Clara Science Academy', os.environ.get('MAIL_USERNAME') or 'donotrespond@clarascienceacademy.org')
+    # Optional: domain for Message-ID (default = domain part of MAIL_USERNAME). Must match your sending domain.
+    MAIL_MESSAGE_ID_DOMAIN = (os.environ.get('MAIL_MESSAGE_ID_DOMAIN') or '').strip().lstrip('@') or None
+    # Optional: monitored address for replies. Improves deliverability vs a bare no-reply From with no Reply-To.
+    MAIL_REPLY_TO = (os.environ.get('MAIL_REPLY_TO') or '').strip() or None
 
     # Ensure the upload folder and subdirs exist
     if not os.path.exists(UPLOAD_FOLDER):

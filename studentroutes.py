@@ -2588,7 +2588,52 @@ def take_quiz(assignment_id):
         for question in questions:
             options = QuizOption.query.filter_by(question_id=question.id).all()
             quiz_options_by_question[question.id] = options
+
+    # Timed quiz: compute remaining seconds (supports pausing via save & continue).
+    timer_remaining_seconds = (assignment.time_limit_minutes * 60) if assignment.time_limit_minutes else None
+    if assignment.time_limit_minutes and assignment.allow_save_and_continue and not submission:
+        now_utc = datetime.utcnow()
+        progress = QuizProgress.query.filter_by(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            is_submitted=False,
+        ).first()
+
+        if not progress:
+            progress = QuizProgress(
+                student_id=student.id,
+                assignment_id=assignment_id,
+                answers_data=json.dumps({}),
+                progress_percentage=0,
+                questions_answered=0,
+                total_questions=len(questions),
+                last_saved_at=now_utc,
+                timer_started_at=now_utc,
+                timer_remaining_seconds=timer_remaining_seconds,
+            )
+            db.session.add(progress)
+            db.session.commit()
+        else:
+            # If timer fields were not initialized (legacy rows), initialize them.
+            if progress.timer_remaining_seconds is None:
+                progress.timer_remaining_seconds = timer_remaining_seconds
+                if progress.timer_started_at is None:
+                    progress.timer_started_at = now_utc
+                db.session.commit()
+
+            if progress.timer_started_at and progress.timer_remaining_seconds is not None:
+                elapsed = (now_utc - progress.timer_started_at).total_seconds()
+                timer_remaining_seconds = max(0, int(progress.timer_remaining_seconds - elapsed))
+            elif progress.timer_remaining_seconds is not None:
+                # Timer is paused; resume it when student opens the quiz again.
+                timer_remaining_seconds = max(0, int(progress.timer_remaining_seconds))
+                progress.timer_started_at = now_utc
+                db.session.commit()
     
+    closes_at = assignment.close_date or assignment.due_date
+    closes_at_utc = _as_utc_aware(closes_at) if closes_at else None
+    server_now_utc = datetime.now(timezone.utc)
+
     return render_template('shared/take_quiz.html', 
                          assignment=assignment,
                          questions=questions,
@@ -2603,7 +2648,10 @@ def take_quiz(assignment_id):
                          quiz_options_by_question=quiz_options_by_question,
                          submissions_count=submissions_count,
                          attempts_remaining=attempts_remaining,
-                         show_correct_answers=assignment.show_correct_answers if assignment else False)
+                         show_correct_answers=assignment.show_correct_answers if assignment else False,
+                         closes_at_iso=(closes_at_utc.isoformat() if closes_at_utc else None),
+                         server_now_iso=server_now_utc.isoformat(),
+                         timer_remaining_seconds=timer_remaining_seconds)
 
 
 @student_blueprint.route('/quiz-keepalive/<int:assignment_id>', methods=['GET'])
@@ -2632,7 +2680,21 @@ def quiz_keepalive(assignment_id):
     # Touch the session so the expiry is refreshed (permanent cookie renewed).
     session.permanent = True
     session.modified = True
-    return ('', 204)
+
+    closes_at = assignment.close_date or assignment.due_date
+    closes_at_utc = _as_utc_aware(closes_at) if closes_at else None
+    now_utc = datetime.now(timezone.utc)
+    seconds_remaining = None
+    if closes_at_utc:
+        seconds_remaining = int((closes_at_utc - now_utc).total_seconds())
+
+    return jsonify({
+        'success': True,
+        'server_now': now_utc.isoformat(),
+        'closes_at': closes_at_utc.isoformat() if closes_at_utc else None,
+        'seconds_remaining': seconds_remaining,
+        'is_open': bool(is_assignment_open_for_student(assignment, student.id)),
+    })
 
 @student_blueprint.route('/save-quiz-progress/<int:assignment_id>', methods=['POST'])
 @login_required
@@ -2649,10 +2711,11 @@ def save_quiz_progress(assignment_id):
         if not assignment.allow_save_and_continue:
             return jsonify({'success': False, 'message': 'This quiz does not allow save and continue'})
         
-        data = request.get_json()
+        data = request.get_json() or {}
         answers = data.get('answers', {})
         progress_percentage = data.get('progress_percentage', 0)
         questions_answered = data.get('questions_answered', 0)
+        pause_timer = bool(data.get('pause_timer', False))
         
         # Get total questions count
         total_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).count()
@@ -2663,14 +2726,16 @@ def save_quiz_progress(assignment_id):
             assignment_id=assignment_id
         ).first()
         
+        now_utc = datetime.utcnow()
+
         if progress:
             # Update existing progress
             progress.answers_data = json.dumps(answers)
             progress.progress_percentage = progress_percentage
             progress.questions_answered = questions_answered
             progress.total_questions = total_questions
-            progress.last_saved_at = datetime.utcnow()
-            progress.updated_at = datetime.utcnow()
+            progress.last_saved_at = now_utc
+            progress.updated_at = now_utc
         else:
             # Create new progress
             progress = QuizProgress(
@@ -2680,12 +2745,34 @@ def save_quiz_progress(assignment_id):
                 progress_percentage=progress_percentage,
                 questions_answered=questions_answered,
                 total_questions=total_questions,
-                last_saved_at=datetime.utcnow()
+                last_saved_at=now_utc
             )
             db.session.add(progress)
+
+        # Timed quiz pause/resume bookkeeping (only meaningful when time limit is set).
+        timer_remaining_seconds = None
+        if assignment.time_limit_minutes:
+            limit_seconds = int(assignment.time_limit_minutes * 60)
+            if progress.timer_remaining_seconds is None:
+                progress.timer_remaining_seconds = limit_seconds
+            # Compute remaining using server timestamps whenever running.
+            if progress.timer_started_at and progress.timer_remaining_seconds is not None:
+                elapsed = (now_utc - progress.timer_started_at).total_seconds()
+                timer_remaining_seconds = max(0, int(progress.timer_remaining_seconds - elapsed))
+            else:
+                timer_remaining_seconds = max(0, int(progress.timer_remaining_seconds or limit_seconds))
+
+            if pause_timer:
+                progress.timer_remaining_seconds = timer_remaining_seconds
+                progress.timer_started_at = None
         
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Progress saved successfully'})
+        return jsonify({
+            'success': True,
+            'message': 'Progress saved successfully',
+            'timer_remaining_seconds': timer_remaining_seconds,
+            'timer_is_paused': bool(assignment.time_limit_minutes and pause_timer),
+        })
         
     except Exception as e:
         db.session.rollback()
@@ -2724,6 +2811,25 @@ def load_quiz_progress(assignment_id):
                 db.session.commit()
                 return jsonify({'success': False, 'message': 'Saved progress has expired'})
             
+            # Timed quiz: compute remaining from server timestamps.
+            timer_remaining_seconds = None
+            timer_is_paused = False
+            if assignment.time_limit_minutes:
+                now_utc = datetime.utcnow()
+                limit_seconds = int(assignment.time_limit_minutes * 60)
+                if progress.timer_remaining_seconds is None:
+                    progress.timer_remaining_seconds = limit_seconds
+                    if progress.timer_started_at is None:
+                        progress.timer_started_at = now_utc
+                    db.session.commit()
+
+                if progress.timer_started_at and progress.timer_remaining_seconds is not None:
+                    elapsed = (now_utc - progress.timer_started_at).total_seconds()
+                    timer_remaining_seconds = max(0, int(progress.timer_remaining_seconds - elapsed))
+                else:
+                    timer_remaining_seconds = max(0, int(progress.timer_remaining_seconds or limit_seconds))
+                    timer_is_paused = True
+
             # Return progress data
             return jsonify({
                 'success': True,
@@ -2732,7 +2838,9 @@ def load_quiz_progress(assignment_id):
                     'progress_percentage': progress.progress_percentage,
                     'questions_answered': progress.questions_answered,
                     'total_questions': progress.total_questions,
-                    'last_saved_at': progress.last_saved_at.isoformat()
+                    'last_saved_at': progress.last_saved_at.isoformat(),
+                    'timer_remaining_seconds': timer_remaining_seconds,
+                    'timer_is_paused': timer_is_paused,
                 }
             })
         else:
@@ -2757,11 +2865,34 @@ def submit_quiz(assignment_id):
         flash("This is not a quiz assignment.", "danger")
         return redirect(url_for('student.student_assignments'))
     
-    # Check if assignment is open for this student (considering extensions)
+    # Check if assignment is open for this student (considering extensions).
+    # If the quiz closes while the student is actively taking it, allow a short grace window
+    # so "auto-save + auto-submit on close" can complete reliably.
     from teacher_routes.assignment_utils import is_assignment_open_for_student
     if not is_assignment_open_for_student(assignment, student.id):
-        flash("This quiz is not currently open for submission.", "warning")
-        return redirect(url_for('student.student_assignments'))
+        closes_at = assignment.close_date or assignment.due_date
+        closes_at_utc = _as_utc_aware(closes_at) if closes_at else None
+        now_utc = datetime.now(timezone.utc)
+        opened_at_str = (request.form.get('quiz_opened_at') or '').strip()
+        opened_at_utc = None
+        if opened_at_str:
+            try:
+                opened_at_utc = datetime.fromisoformat(opened_at_str)
+                if opened_at_utc.tzinfo is None:
+                    opened_at_utc = opened_at_utc.replace(tzinfo=timezone.utc)
+            except ValueError:
+                opened_at_utc = None
+
+        grace_seconds = 120  # 2 minutes
+        allow_grace = (
+            closes_at_utc is not None
+            and opened_at_utc is not None
+            and opened_at_utc <= closes_at_utc
+            and (now_utc - closes_at_utc).total_seconds() <= grace_seconds
+        )
+        if not allow_grace:
+            flash("This quiz is not currently open for submission.", "warning")
+            return redirect(url_for('student.student_assignments'))
     
     # Check number of attempts
     submissions_count = Submission.query.filter_by(
@@ -2787,6 +2918,30 @@ def submit_quiz(assignment_id):
         flash(f"You have reached the maximum number of attempts ({effective_max_attempts}) for this quiz.", "warning")
         return redirect(url_for('student.student_assignments'))
     
+    # Timed quiz enforcement / metadata (server-side truth, supports pause/resume).
+    timed_meta = None
+    if assignment.time_limit_minutes and assignment.allow_save_and_continue:
+        now_utc = datetime.utcnow()
+        progress = QuizProgress.query.filter_by(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            is_submitted=False,
+        ).first()
+        if progress:
+            limit_seconds = int(assignment.time_limit_minutes * 60)
+            if progress.timer_remaining_seconds is None:
+                progress.timer_remaining_seconds = limit_seconds
+            if progress.timer_started_at and progress.timer_remaining_seconds is not None:
+                elapsed = (now_utc - progress.timer_started_at).total_seconds()
+                remaining = max(0, int(progress.timer_remaining_seconds - elapsed))
+            else:
+                remaining = max(0, int(progress.timer_remaining_seconds or limit_seconds))
+            timed_meta = {
+                'time_limit_seconds': limit_seconds,
+                'time_remaining_seconds': remaining,
+                'submitted_due_to_timer': remaining <= 0,
+            }
+
     try:
         # Get all questions for this assignment
         questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
@@ -2871,6 +3026,8 @@ def submit_quiz(assignment_id):
             'graded_at': datetime.now().isoformat(),
             'grading_status': 'pending' if has_open_ended else 'final',
         }
+        if timed_meta:
+            grade_data['timed_quiz'] = timed_meta
         # Store a NEW grade row for each attempt.
         grade = Grade(
             student_id=student.id,
@@ -2880,6 +3037,16 @@ def submit_quiz(assignment_id):
         )
         db.session.add(grade)
         
+        # Mark any saved progress as submitted (prevents resuming after submission).
+        if assignment.allow_save_and_continue:
+            progress = QuizProgress.query.filter_by(
+                student_id=student.id,
+                assignment_id=assignment_id,
+                is_submitted=False,
+            ).first()
+            if progress:
+                progress.is_submitted = True
+                progress.timer_started_at = None
         db.session.commit()
         flash('Quiz submitted successfully!', 'success')
         return redirect(url_for('student.take_quiz', assignment_id=assignment_id))

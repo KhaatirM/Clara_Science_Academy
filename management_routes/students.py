@@ -24,6 +24,20 @@ import uuid
 import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
+
+
+def _remove_uploaded_student_photo(filename: str) -> None:
+    """Delete a prior student_* upload from static/uploads when replacing photo."""
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        return
+    if not str(filename).startswith("student_"):
+        return
+    path = os.path.join(current_app.root_path, "static", "uploads", filename)
+    if os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 from utils.credential_modal import student_grade3_plus_modal_payload, student_k2_modal_payload
 from services.google_directory_service import create_google_user
 from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
@@ -535,15 +549,47 @@ def get_enrolled_students_json(class_id):
 @login_required
 @management_required
 def get_student_classes(student_id):
-    """Get all classes a student is actively enrolled in"""
+    """
+    Get classes a student was enrolled in for a given school year and selected quarters.
+    Includes withdrawn students and inactive enrollments, but enforces overlap with the selected period.
+    Query params:
+      - school_year_id (int, optional; defaults to active school year)
+      - quarters (Q1..Q4, repeatable; optional; defaults to all quarters)
+    """
     try:
         student = Student.query.get_or_404(student_id)
-        enrollments = Enrollment.query.filter_by(student_id=student_id, is_active=True).all()
+
+        school_year_id = request.args.get('school_year_id', type=int)
+        if not school_year_id:
+            sy = SchoolYear.query.filter_by(is_active=True).first()
+            school_year_id = sy.id if sy else None
+
+        quarters = request.args.getlist('quarters')
+        valid_quarters = [q for q in (quarters or []) if q in ['Q1', 'Q2', 'Q3', 'Q4']]
+        if not valid_quarters:
+            valid_quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+
+        # Determine overlap window from selected quarters (fallback to school year bounds).
+        window_start = None
+        window_end = None
+        if school_year_id:
+            from management_routes.reports import _selected_quarters_date_window
+            window_start, window_end = _selected_quarters_date_window(school_year_id, valid_quarters)
+
+        # Include enrollments even if inactive; filter by school_year and overlap.
+        enrollments_q = Enrollment.query.filter_by(student_id=student_id).join(Class)
+        if school_year_id:
+            enrollments_q = enrollments_q.filter(Class.school_year_id == school_year_id)
+        enrollments = enrollments_q.all()
         
         classes_data = []
         for enrollment in enrollments:
             class_info = enrollment.class_info
             if class_info:
+                if window_start and window_end:
+                    from management_routes.reports import _enrollment_overlaps_window
+                    if not _enrollment_overlaps_window(enrollment, window_start, window_end):
+                        continue
                 classes_data.append({
                     'id': class_info.id,
                     'name': class_info.name,
@@ -1330,7 +1376,7 @@ def _void_one_assignment_impl(assignment_id, assignment_type, student_ids, void_
             # Void for all students in groups
             groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
             for group in groups:
-                members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                members = StudentGroupMember.query.filter_by(group_id=group.id).all()
                 for member in members:
                     group_grade = GroupGrade.query.filter_by(
                         group_assignment_id=assignment_id,
@@ -1358,7 +1404,7 @@ def _void_one_assignment_impl(assignment_id, assignment_type, student_ids, void_
                         new_group_grade = GroupGrade(
                             student_id=member.student_id,
                             group_assignment_id=assignment_id,
-                            student_group_id=group.id,
+                            group_id=group.id,
                             grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                             is_voided=True,
                             voided_by=current_user.id,
@@ -1371,9 +1417,16 @@ def _void_one_assignment_impl(assignment_id, assignment_type, student_ids, void_
                         affected.append((member.student_id, class_id, school_year_id, quarter))
             return (voided_count, affected)
         else:
-            # Void for specific students
+            # Void for specific students (membership must be in this class)
             for student_id in student_ids:
-                member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                member = (
+                    StudentGroupMember.query.join(StudentGroup)
+                    .filter(
+                        StudentGroupMember.student_id == int(student_id),
+                        StudentGroup.class_id == class_id,
+                    )
+                    .first()
+                )
                 if member:
                     group_grade = GroupGrade.query.filter_by(
                         group_assignment_id=assignment_id,
@@ -1401,7 +1454,7 @@ def _void_one_assignment_impl(assignment_id, assignment_type, student_ids, void_
                         new_group_grade = GroupGrade(
                             student_id=int(student_id),
                             group_assignment_id=assignment_id,
-                            student_group_id=member.student_group_id,
+                            group_id=member.group_id,
                             grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                             is_voided=True,
                             voided_by=current_user.id,
@@ -1687,7 +1740,7 @@ def unvoid_assignment_for_students(assignment_id):
                 
                 groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
                 for group in groups:
-                    members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                    members = StudentGroupMember.query.filter_by(group_id=group.id).all()
                     for member in members:
                         group_grade = GroupGrade.query.filter_by(
                             group_assignment_id=assignment_id,
@@ -1706,7 +1759,14 @@ def unvoid_assignment_for_students(assignment_id):
             else:
                 from models import StudentGroupMember
                 for student_id in student_ids:
-                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                    member = (
+                        StudentGroupMember.query.join(StudentGroup)
+                        .filter(
+                            StudentGroupMember.student_id == int(student_id),
+                            StudentGroup.class_id == group_assignment.class_id,
+                        )
+                        .first()
+                    )
                     if member:
                         group_grade = GroupGrade.query.filter_by(
                             group_assignment_id=assignment_id,
@@ -2062,6 +2122,39 @@ def edit_student(student_id):
         student.city = request.form.get('city', student.city)
         student.state = request.form.get('state', student.state)
         student.zip_code = request.form.get('zip_code', student.zip_code)
+
+        # Optional profile photo (multipart)
+        if "student_image" in request.files:
+            up = request.files["student_image"]
+            if up and getattr(up, "filename", None) and up.filename.strip():
+                if not allowed_file(up.filename):
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": "Invalid photo type. Please upload JPG, PNG, or GIF.",
+                            }
+                        ),
+                        400,
+                    )
+                ext = up.filename.rsplit(".", 1)[1].lower()
+                if ext not in ("jpg", "jpeg", "png", "gif"):
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": "Invalid photo type. Please upload JPG, PNG, or GIF.",
+                            }
+                        ),
+                        400,
+                    )
+                new_name = f"student_{uuid.uuid4().hex}.{ext}"
+                upload_folder = os.path.join(current_app.root_path, "static", "uploads")
+                os.makedirs(upload_folder, exist_ok=True)
+                up.save(os.path.join(upload_folder, new_name))
+                old = student.photo_filename
+                student.photo_filename = new_name
+                _remove_uploaded_student_photo(old)
         
         # Update student's personal email
         student_email = request.form.get('email', student.email)

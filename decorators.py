@@ -137,6 +137,7 @@ _ASSIGNMENTS_GRADES_TOP_LEVEL_ENDPOINTS = frozenset({
     'management.students.void_assignment_for_students',
     'management.students.unvoid_assignment_for_students',
     'management.students.bulk_void_assignments',
+    'management.students.get_enrolled_students_json',
 })
 
 

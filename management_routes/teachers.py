@@ -13,6 +13,38 @@ from services.google_directory_service import create_google_user
 from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
 from services.email_service import send_staff_welcome_email
 from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
+import os
+import uuid
+from management_routes.utils import allowed_file
+
+
+def _remove_staff_upload_photo(filename: str) -> None:
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        return
+    if not str(filename).startswith("staff_"):
+        return
+    path = os.path.join(current_app.root_path, "static", "uploads", filename)
+    if os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _save_staff_upload_photo(file_storage):
+    """Save staff profile image. Returns filename, None if empty, '__invalid__' if bad type."""
+    if not file_storage or not getattr(file_storage, "filename", None) or not str(file_storage.filename).strip():
+        return None
+    if not allowed_file(file_storage.filename):
+        return "__invalid__"
+    ext = file_storage.filename.rsplit(".", 1)[1].lower()
+    if ext not in ("jpg", "jpeg", "png", "gif"):
+        return "__invalid__"
+    fname = f"staff_{uuid.uuid4().hex}.{ext}"
+    folder = os.path.join(current_app.root_path, "static", "uploads")
+    os.makedirs(folder, exist_ok=True)
+    file_storage.save(os.path.join(folder, fname))
+    return fname
 
 
 def _parse_dt_ymd(s):
@@ -377,6 +409,16 @@ def add_teacher_staff():
             teacher_staff.emergency_email = emergency_email
             teacher_staff.emergency_phone = emergency_phone
             teacher_staff.emergency_relationship = emergency_relationship
+
+            # Profile photo (optional)
+            if "staff_image" in request.files:
+                up = request.files["staff_image"]
+                saved = _save_staff_upload_photo(up)
+                if saved == "__invalid__":
+                    flash("Invalid staff photo. Please upload a JPG, PNG, or GIF.", "danger")
+                    return redirect(request.url)
+                if saved:
+                    teacher_staff.image = saved
             
             db.session.add(teacher_staff)
             db.session.flush()  # Get the teacher_staff ID
@@ -598,6 +640,18 @@ def edit_teacher_staff(staff_id):
             teacher_staff.emergency_email = request.form.get('emergency_contact_email', '').strip()
             teacher_staff.emergency_phone = request.form.get('emergency_contact_phone', '').strip()
             teacher_staff.emergency_relationship = request.form.get('emergency_contact_relationship', '').strip()
+            
+            if "staff_image" in request.files:
+                up = request.files["staff_image"]
+                saved = _save_staff_upload_photo(up)
+                if saved == "__invalid__":
+                    if is_ajax:
+                        return jsonify({"success": False, "message": "Invalid staff photo. Please upload a JPG, PNG, or GIF."}), 400
+                    flash("Invalid staff photo. Please upload a JPG, PNG, or GIF.", "danger")
+                    return render_template("management/add_teacher_staff.html", **_edit_staff_form_context(teacher_staff))
+                if saved:
+                    _remove_staff_upload_photo(teacher_staff.image)
+                    teacher_staff.image = saved
             
             user = User.query.filter_by(teacher_staff_id=staff_id).first()
 
@@ -1531,6 +1585,7 @@ def view_teacher(teacher_id):
             'total_students': total_students,
             'is_temporary': getattr(teacher, 'is_temporary', False),
             'access_expires_at': access_expires_iso or _fmt_date(getattr(teacher, 'access_expires_at', None)),
+            'image': getattr(teacher, 'image', None),
         })
     except Exception as e:
         current_app.logger.error(f"Error serializing teacher data {teacher_id}: {str(e)}")

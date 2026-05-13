@@ -85,6 +85,42 @@
                                             </div>
                                             <div class="invalid-feedback">Subject is required.</div>
                                         </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="term_type" class="form-label fw-semibold">
+                                                <i class="bi bi-calendar4-range me-2 text-primary"></i>
+                                                Class Term
+                                            </label>
+                                            <select class="form-select form-select-lg border-2" id="term_type" name="term_type">
+                                                <option value="full_year" selected>Full year (all quarters)</option>
+                                                <option value="semester">Semester (S1 or S2)</option>
+                                                <option value="quarter">Single quarter (Q1–Q4)</option>
+                                            </select>
+                                            <div class="form-text mt-2">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                Controls how non-applicable quarters display on report cards.
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="term_value" class="form-label fw-semibold">
+                                                <i class="bi bi-calendar2-week me-2 text-primary"></i>
+                                                Term Value
+                                            </label>
+                                            <select class="form-select form-select-lg border-2" id="term_value" name="term_value">
+                                                <option value="" selected>—</option>
+                                                <option value="S1">S1 (Q1 + Q2)</option>
+                                                <option value="S2">S2 (Q3 + Q4)</option>
+                                                <option value="Q1">Q1 only</option>
+                                                <option value="Q2">Q2 only</option>
+                                                <option value="Q3">Q3 only</option>
+                                                <option value="Q4">Q4 only</option>
+                                            </select>
+                                            <div class="form-text mt-2">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                Use for semester/quarter classes. Leave blank for full-year.
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

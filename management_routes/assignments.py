@@ -1062,12 +1062,6 @@ def assignments_and_grades():
                     except:
                         group_assignments = []
 
-                    # Get enrolled students for voided-student computation
-                    _enrollments = Enrollment.query.filter_by(class_id=selected_class_id, is_active=True).all()
-                    _enrolled_students = [e.student for e in _enrollments if e.student]
-                    _enrolled_student_ids = {s.id for s in _enrolled_students}
-
-                    # Combine individual and group assignments, sort by due_date (most recent first)
                     def _due_ts(d):
                         if d is None:
                             return 0
@@ -1084,7 +1078,10 @@ def assignments_and_grades():
 
                     # Get enrolled students for voided-student name resolution
                     _enrollments = Enrollment.query.filter_by(class_id=selected_class_id, is_active=True).all()
-                    _enrolled_students = [e.student for e in _enrollments if e and getattr(e, 'student', None)]
+                    _enrolled_students = [
+                        e.student for e in _enrollments
+                        if e and getattr(e, 'student', None) and not getattr(e.student, 'is_deleted', False)
+                    ]
 
                 # Get grade data for each individual assignment
                 for assignment in class_assignments:
@@ -1171,24 +1168,24 @@ def assignments_and_grades():
                     
                     total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
                     avg_pct = round((total_score / len(graded_grades) / total_points * 100), 1) if graded_grades and total_points > 0 else 0
-                    # Voided status: all voided (assignment level or all grades) vs partially voided
-                    # Use enrolled count, not grade count: voiding creates grades for voided students only,
-                    # so comparing to len(grades) incorrectly treats "2 voided of 3 enrolled" as all voided.
+                    # Voided status: every *enrolled* student must have a voided grade row (unique students).
+                    # Comparing len(voided grade rows) to enrollment count breaks when retakes create multiple rows per student.
                     all_voided = assignment.status == 'Voided'
-                    voided_grades = [g for g in grades if g.is_voided]
-                    voided_count = len(voided_grades)
-                    enrolled_count = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).count()
-                    if not all_voided and enrolled_count > 0:
-                        all_voided = voided_count == enrolled_count
-                    partially_voided = not all_voided and voided_count > 0
+                    enrolled_student_ids = {
+                        e.student_id
+                        for e in Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+                        if e.student_id
+                    }
+                    voided_student_ids = {g.student_id for g in grades if g.is_voided}
+                    if not all_voided and enrolled_student_ids:
+                        all_voided = enrolled_student_ids <= voided_student_ids
+                    partially_voided = not all_voided and bool(voided_student_ids & enrolled_student_ids)
+                    voided_count = len(voided_student_ids & enrolled_student_ids)
                     voided_student_names = []
                     if partially_voided and selected_class:
-                        enr = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
-                        for e in enr:
-                            if e.student:
-                                g = next((x for x in grades if x.student_id == e.student.id and x.is_voided), None)
-                                if g:
-                                    voided_student_names.append(f"{e.student.first_name} {e.student.last_name}")
+                        for e in Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all():
+                            if e.student and e.student_id in voided_student_ids:
+                                voided_student_names.append(f"{e.student.first_name} {e.student.last_name}")
                     assignment_grades[assignment.id] = {
                         'total_submissions': total_submissions,
                         'graded_count': len(graded_grades),
@@ -1249,13 +1246,11 @@ def assignments_and_grades():
                     
                     total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
                     avg_pct_ga = round((total_score / len(graded_group_grades) / total_points_ga * 100), 1) if graded_group_grades and total_points_ga > 0 else 0
-                    # Voided status for group assignments
-                    # Use total applicable students (in assigned groups), not grade count - same bug as individual:
-                    # voiding creates GroupGrade records for voided students only, so len(group_grades) is wrong.
+                    # Voided status for group assignments: compare *unique voided students* to applicable roster.
                     ga_all_voided = group_assignment.status == 'Voided'
                     ga_voided_grades = [g for g in group_grades if g.is_voided]
-                    ga_voided_count = len(ga_voided_grades)
-                    ga_total_applicable = 0
+                    ga_voided_student_ids = {g.student_id for g in ga_voided_grades}
+                    applicable_student_ids = set()
                     try:
                         from models import StudentGroupMember, StudentGroup
                         sel = group_assignment.selected_group_ids
@@ -1272,17 +1267,24 @@ def assignments_and_grades():
                                 StudentGroup.class_id == group_assignment.class_id,
                                 StudentGroup.is_active == True
                             ).all()
-                        ga_total_applicable = len({m.student_id for m in members if m.student_id})
+                        applicable_student_ids = {m.student_id for m in members if m.student_id}
                     except Exception:
-                        ga_total_applicable = len(group_grades)  # fallback
-                    if not ga_all_voided and ga_total_applicable > 0:
-                        ga_all_voided = ga_voided_count == ga_total_applicable
-                    ga_partially_voided = not ga_all_voided and ga_voided_count > 0
+                        applicable_student_ids = {g.student_id for g in group_grades if g.student_id}
+                    ga_total_applicable = len(applicable_student_ids)
+                    if not ga_all_voided and applicable_student_ids:
+                        ga_all_voided = applicable_student_ids <= ga_voided_student_ids
+                    ga_partially_voided = not ga_all_voided and bool(ga_voided_student_ids & applicable_student_ids)
+                    ga_voided_count = len(ga_voided_student_ids & applicable_student_ids)
                     ga_voided_student_names = []
                     if ga_partially_voided and selected_class:
-                        for gg in ga_voided_grades:
-                            if gg.student:
-                                ga_voided_student_names.append(f"{gg.student.first_name} {gg.student.last_name}")
+                        seen_nm = set()
+                        for sid in ga_voided_student_ids & applicable_student_ids:
+                            gg = next((x for x in ga_voided_grades if x.student_id == sid and x.student), None)
+                            if gg and gg.student:
+                                nm = f"{gg.student.first_name} {gg.student.last_name}"
+                                if nm not in seen_nm:
+                                    seen_nm.add(nm)
+                                    ga_voided_student_names.append(nm)
                     ga_needs_grading = len(graded_group_grades) == 0
                     assignment_grades[f'group_{group_assignment.id}'] = {
                         'total_submissions': total_group_submissions,
@@ -1329,7 +1331,10 @@ def assignments_and_grades():
         if selected_class:
             try:
                 enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
-                enrolled_students = [e.student for e in enrollments if e.student]
+                enrolled_students = [
+                    e.student for e in enrollments
+                    if e.student and not getattr(e.student, 'is_deleted', False)
+                ]
                 # Combine regular and group assignments for table view (use sorted order)
                 all_assignments = [item[1] for item in sorted_assignments] if sorted_assignments else list(class_assignments or []) + list(group_assignments or [])
                 
@@ -2853,7 +2858,10 @@ def view_assignment(assignment_id):
             enrolled_students = []
             if class_info:
                 enrollments = Enrollment.query.filter_by(class_id=class_info.id, is_active=True).all()
-                enrolled_students = [e.student for e in enrollments if e.student]
+                enrolled_students = [
+                    e.student for e in enrollments
+                    if e.student and not getattr(e.student, 'is_deleted', False)
+                ]
             
             # Get participant details
             participants = []

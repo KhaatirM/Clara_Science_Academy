@@ -304,14 +304,25 @@ th {
 .grades-layout-container {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    /* Stretch left column to match grading-scale height so attendance can sit on the bottom */
+    align-items: stretch;
     gap: 2%;
     margin-top: 0.4cm;
     margin-bottom: 0.8cm;
 }
 
-.grades-text {
+/* Left column: narrative text + optional attendance summary (under description) */
+.grades-text-column {
     width: 58%;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    min-height: 0;
+}
+
+.grades-text {
+    width: 100%;
+    flex: 0 0 auto;
 }
 
 .grades-text p {
@@ -320,11 +331,43 @@ th {
     line-height: 1.2;
 }
 
+/* Page 1 attendance (4–8): bottom-aligned with grading-scale box (via margin-top: auto) */
+.page1-attendance-box {
+    margin-top: auto;
+    width: 100%;
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+}
+
+.page1-attendance-box .report-attendance-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    font-size: 8.5pt;
+}
+
+.page1-attendance-box .report-attendance-summary-table th,
+.page1-attendance-box .report-attendance-summary-table td {
+    border: 1px solid #ccc;
+    padding: 4px 4px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.page1-attendance-box .report-attendance-summary-table th {
+    font-weight: bold;
+    background: #f5f5f5;
+}
+
 .grading-scale {
     width: 40%;
     border: 1px solid #ccc;
     padding: 10px;
     box-sizing: border-box;
+    /* Keep natural height; do not stretch the bordered box when row is tall */
+    align-self: flex-start;
 }
 
 .grading-scale h6 {

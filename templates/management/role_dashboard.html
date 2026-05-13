@@ -1181,6 +1181,7 @@
                                             <label class="form-label">Grade Level</label>
                                             <select class="form-select student-input" id="editGradeLevel" name="grade_level">
                                                 <option value="">Select Grade</option>
+                                                <option value="0">Kindergarten</option>
                                                 <option value="1">1st Grade</option>
                                                 <option value="2">2nd Grade</option>
                                                 <option value="3">3rd Grade</option>
@@ -2892,7 +2893,7 @@
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.9;"></button>
           </div>
-          <form id="profileEditForm">
+          <form id="profileEditForm" method="post" enctype="multipart/form-data">
             <div class="modal-body max-height-70vh" id="profileEditModalBody" style="padding: 2rem; background: #f8f9fa;">
               <!-- Form fields will be loaded by JS -->
             </div>
@@ -3633,6 +3634,18 @@
             });
     }
 
+    function gradeLevelEditSelectInnerHtml(selectedVal) {
+        const sel = selectedVal != null && selectedVal !== '' ? String(selectedVal) : '';
+        const opts = [
+            ['0', 'Kindergarten'], ['1', '1st Grade'], ['2', '2nd Grade'], ['3', '3rd Grade'],
+            ['4', '4th Grade'], ['5', '5th Grade'], ['6', '6th Grade'], ['7', '7th Grade'],
+            ['8', '8th Grade'], ['9', '9th Grade'], ['10', '10th Grade'], ['11', '11th Grade'], ['12', '12th Grade']
+        ];
+        return '<select class="form-control" name="grade_level" required>' +
+            opts.map(([v, lab]) => '<option value="' + v + '"' + (sel === v ? ' selected' : '') + '>' + lab + '</option>').join('') +
+            '</select>';
+    }
+
     function editStudent(studentId) {
         fetch(`/management/view-student/${studentId}`)
             .then(response => response.json())
@@ -3657,7 +3670,7 @@
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Grade Level</label>
-                      <input type='text' class='form-control' name='grade_level' value='${data.grade_level || ''}'>
+                      ${gradeLevelEditSelectInnerHtml(data.grade_level)}
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Gender <span class='text-danger'>*</span></label>
@@ -3682,6 +3695,12 @@
                     <div class='col-md-6 mb-3'>
                       <label>Expected Graduation Date</label>
                       <input type='text' class='form-control' name='expected_grad_date' value='${data.expected_grad_date || ''}' readonly>
+                    </div>
+                    <div class='col-12 mb-3'>
+                      <label class='form-label'>Student photo</label>
+                      ${(data.photo_filename && /^[a-zA-Z0-9._-]+$/.test(String(data.photo_filename))) ? "<div class='mb-2'><img src=\"/static/uploads/" + String(data.photo_filename).replace(/\"/g, '') + "\" alt=\"\" class=\"img-thumbnail\" style=\"max-height:100px\"></div>" : "<p class='text-muted small mb-2'>No photo on file.</p>"}
+                      <input type='file' class='form-control' name='student_image' accept='image/jpeg,image/png,image/gif,.jpg,.jpeg,.png,.gif'>
+                      <small class='text-muted'>Optional. Leave empty to keep the current photo.</small>
                     </div>
                   </div>
                   
@@ -3825,8 +3844,15 @@
                 form.onsubmit = function(e) {
                   e.preventDefault();
                   let formData = new FormData(form);
+                  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                  if (csrfMeta && csrfMeta.content) {
+                    formData.append('csrf_token', csrfMeta.content);
+                  }
                   fetch(`/management/edit-student/${studentId}`, {
                     method: 'POST',
+                    headers: {
+                      ...(csrfMeta && csrfMeta.content ? { 'X-CSRFToken': csrfMeta.content } : {})
+                    },
                     body: formData
                   })
                   .then(response => response.json())
@@ -3997,6 +4023,14 @@
                                             <i class="bi bi-telephone me-1 text-primary"></i>Phone Number
                                         </label>
                                         <input type="tel" class="form-control" name="phone" value="${data.phone || ''}" placeholder="e.g., 555-123-4567" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-image me-1 text-primary"></i>Profile photo
+                                        </label>
+                                        ${(data.image && /^[a-zA-Z0-9._-]+$/.test(String(data.image))) ? '<div class="mb-2"><img src="/static/uploads/' + String(data.image) + '" alt="" class="img-thumbnail rounded" style="max-height: 100px;"></div>' : '<p class="text-muted small mb-2">No photo on file.</p>'}
+                                        <input type="file" class="form-control" name="staff_image" accept="image/jpeg,image/png,image/gif,.jpg,.jpeg,.png,.gif">
+                                        <small class="text-muted d-block mt-1">Optional. JPG, PNG, or GIF. Leave empty to keep the current photo.</small>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">

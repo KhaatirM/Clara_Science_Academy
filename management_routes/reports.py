@@ -12,6 +12,103 @@ from models import db, ReportCard, SchoolYear, Class, Student, Enrollment
 
 bp = Blueprint('reports', __name__)
 
+def _as_date(value):
+    """Convert datetime/date/str to date, best-effort."""
+    if value is None:
+        return None
+    from datetime import datetime as _dt, date as _date
+    if isinstance(value, _date) and not isinstance(value, _dt):
+        return value
+    if isinstance(value, _dt):
+        return value.date()
+    if isinstance(value, str):
+        # Try common formats
+        for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
+            try:
+                return _dt.strptime(value.strip(), fmt).date()
+            except Exception:
+                continue
+    return None
+
+
+def _selected_quarters_date_window(school_year_id, quarters_clean):
+    """
+    Return (start_date, end_date) for the union window of selected quarters.
+    Uses AcademicPeriod quarter records; falls back to SchoolYear bounds if missing.
+    """
+    from models import AcademicPeriod, SchoolYear
+
+    periods = AcademicPeriod.query.filter_by(
+        school_year_id=school_year_id,
+        period_type='quarter',
+    ).filter(AcademicPeriod.name.in_(quarters_clean)).all()
+    if periods:
+        start = min(p.start_date for p in periods if p and p.start_date)
+        end = max(p.end_date for p in periods if p and p.end_date)
+        return start, end
+
+    sy = SchoolYear.query.get(school_year_id)
+    if sy:
+        return sy.start_date, sy.end_date
+    return None, None
+
+
+def _enrollment_overlaps_window(enrollment, window_start, window_end):
+    """
+    True if enrollment overlaps [window_start, window_end] (dates).
+    Treats null dropped_at as open-ended; null enrolled_at as far past.
+    """
+    if not window_start or not window_end:
+        return False
+    enrolled_at = _as_date(getattr(enrollment, 'enrolled_at', None)) or window_start
+    dropped_at = _as_date(getattr(enrollment, 'dropped_at', None)) or window_end
+    return enrolled_at <= window_end and dropped_at >= window_start
+
+
+@bp.route('/api/report-card/comments')
+@login_required
+@permissions_required('report_cards:generate')
+def api_report_card_comments():
+    """
+    Return existing saved comments for a student/classes (single comment per class) so management can prefill overrides.
+    """
+    from models import ReportCardComment
+
+    try:
+        student_id = request.args.get('student_id', type=int)
+        school_year_id = request.args.get('school_year_id', type=int)
+        class_ids = [int(x) for x in request.args.getlist('class_ids') if str(x).isdigit()]
+
+        if not student_id or not school_year_id or not class_ids:
+            return jsonify({'success': False, 'message': 'Missing required parameters'}), 400
+
+        class_map = {}
+        for c in Class.query.filter(Class.id.in_(class_ids)).all():
+            class_map[str(c.id)] = c.name
+
+        comments = ReportCardComment.query.filter(
+            ReportCardComment.student_id == student_id,
+            ReportCardComment.school_year_id == school_year_id,
+            ReportCardComment.quarter == 'ALL',
+            ReportCardComment.class_id.in_(class_ids),
+        ).all()
+
+        by_class = {}
+        for row in comments:
+            by_class[str(row.class_id)] = row.comment_text or ''
+
+        return jsonify({
+            'success': True,
+            'class_map': class_map,
+            'comments_by_class': by_class,
+        })
+    except Exception as e:
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            raise
+        current_app.logger.exception('api_report_card_comments failed')
+        return jsonify({'success': False, 'message': 'Error loading comments'}), 500
+
 
 def _build_entrance_school_year_options(start_year=2020):
     """Return school-year labels from current year back to start_year."""
@@ -148,6 +245,20 @@ def _quarter_str_from_selection(quarters_to_include):
     return quarters_to_include[-1]
 
 
+def _extract_comment_overrides_from_form(form, quarters_to_include, class_ids_int):
+    """
+    Read management report-card comment overrides from form fields:
+      comment_<class_id>
+    Returns: { '123': 'text', ... }
+    """
+    out = {}
+    for cid in class_ids_int or []:
+        key = f'comment_{cid}'
+        if key in form:
+            out[str(cid)] = (form.get(key) or '').strip()
+    return out
+
+
 def persist_report_card_record(
     student_id_int,
     school_year_id_int,
@@ -156,6 +267,9 @@ def persist_report_card_record(
     report_type='official',
     include_attendance=True,
     include_comments=True,
+    additional_comments=None,
+    comments_overrides=None,
+    persist_comment_overrides=False,
     enrollment_must_be_active=True,
     notify_admins=True,
 ):
@@ -192,18 +306,31 @@ def persist_report_card_record(
         out['error'] = 'Could not determine report period from quarters.'
         return out
 
+    # Enrollment/class eligibility:
+    # - Allow withdrawn students (Student.is_active=False) to generate historical report cards.
+    # - Enforce that enrollment overlapped the selected quarter window.
+    window_start, window_end = _selected_quarters_date_window(school_year_id_int, quarters_clean)
+
     valid_class_ids = []
     for class_id in class_ids_int:
         q = Enrollment.query.filter_by(student_id=student_id_int, class_id=class_id)
         if enrollment_must_be_active:
             q = q.filter_by(is_active=True)
-        if q.first():
-            valid_class_ids.append(class_id)
-        else:
+        enrollments = q.all()
+        if not enrollments:
             out['warnings'].append(
                 f"Student is not enrolled ({'active' if enrollment_must_be_active else 'any'}) "
                 f"in class ID {class_id}."
             )
+            continue
+        # Overlap check (active-at-that-time)
+        if window_start and window_end:
+            if not any(_enrollment_overlaps_window(e, window_start, window_end) for e in enrollments):
+                out['warnings'].append(
+                    f"Student enrollment does not overlap selected period for class ID {class_id}."
+                )
+                continue
+        valid_class_ids.append(class_id)
 
     if not valid_class_ids:
         out['error'] = 'No valid classes for this student.'
@@ -213,6 +340,16 @@ def persist_report_card_record(
     if not student:
         out['error'] = 'Student not found.'
         return out
+    if getattr(student, 'is_deleted', False):
+        out['error'] = (
+            'This student has been archived (removed from the school roster). '
+            'New report cards cannot be generated for archived students.'
+        )
+        return out
+
+    # Withdrawn students: allow historical generation without requiring active enrollment.
+    if getattr(student, 'is_active', True) is False:
+        enrollment_must_be_active = False
 
     if not getattr(student, 'gender', None):
         out['error'] = (
@@ -280,6 +417,59 @@ def persist_report_card_record(
             'grades_by_quarter': calculated_grades_by_quarter,
             'selected_quarters': quarters_clean,
         }
+        report_card_data['additional_comments'] = (additional_comments or '').strip()
+
+        # Attach report card comments (teacher-entered) and optionally apply overrides.
+        comments_by_class = {}
+        if include_comments:
+            from models import ReportCardComment
+            existing_rows = ReportCardComment.query.filter(
+                ReportCardComment.student_id == student_id_int,
+                ReportCardComment.school_year_id == school_year_id_int,
+                ReportCardComment.quarter == 'ALL',
+                ReportCardComment.class_id.in_(valid_class_ids),
+            ).all()
+            for row in existing_rows:
+                comments_by_class[str(row.class_id)] = row.comment_text or ''
+
+            # Apply overrides from management generation form
+            if comments_overrides and isinstance(comments_overrides, dict):
+                for cid in valid_class_ids:
+                    cid_str = str(cid)
+                    if cid_str in comments_overrides:
+                        comments_by_class[cid_str] = (comments_overrides.get(cid_str) or '').strip()
+
+            # Optionally persist overrides back into ReportCardComment table
+            if persist_comment_overrides and comments_overrides and isinstance(comments_overrides, dict):
+                for cid in valid_class_ids:
+                    cid_str = str(cid)
+                    if cid_str not in comments_overrides:
+                        continue
+                    txt = (comments_overrides.get(cid_str) or '').strip()
+                    existing = ReportCardComment.query.filter_by(
+                        student_id=student_id_int,
+                        class_id=cid,
+                        school_year_id=school_year_id_int,
+                        quarter='ALL',
+                    ).first()
+                    if existing:
+                        existing.comment_text = txt
+                        existing.author_user_id = getattr(current_user, 'id', None)
+                        existing.author_teacher_staff_id = None
+                        existing.source = 'management'
+                    else:
+                        db.session.add(ReportCardComment(
+                            student_id=student_id_int,
+                            class_id=cid,
+                            school_year_id=school_year_id_int,
+                            quarter='ALL',
+                            comment_text=txt,
+                            author_user_id=getattr(current_user, 'id', None),
+                            author_teacher_staff_id=None,
+                            source='management',
+                        ))
+
+        report_card_data['comments_by_class'] = comments_by_class
 
         if include_attendance:
             from models import Attendance
@@ -427,7 +617,12 @@ def _notify_admins_report_card_generated(student, school_year, quarter_str, repo
 @login_required
 @permissions_required('report_cards:generate')
 def generate_report_card_form():
-    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    # Student picker: active roster only (soft-deleted students are archived, not shown here).
+    students = (
+        Student.query.filter(Student.is_deleted == False)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     
     if request.method == 'POST':
@@ -439,6 +634,8 @@ def generate_report_card_form():
         report_type = request.form.get('report_type', 'official')  # Default to official
         include_attendance = request.form.get('include_attendance') == 'on'
         include_comments = request.form.get('include_comments') == 'on'
+        persist_comment_overrides = request.form.get('persist_comment_overrides') == 'on'
+        additional_comments = (request.form.get('additional_comments') or '').strip()
         
         if not all([student_id, school_year_id]):
             flash("Please select a student and school year.", 'danger')
@@ -478,6 +675,9 @@ def generate_report_card_form():
             report_type=report_type,
             include_attendance=include_attendance,
             include_comments=include_comments,
+            additional_comments=additional_comments,
+            comments_overrides=_extract_comment_overrides_from_form(request.form, quarters_to_include, class_ids_int),
+            persist_comment_overrides=persist_comment_overrides,
             enrollment_must_be_active=True,
             notify_admins=True,
         )
@@ -587,6 +787,8 @@ def generate_report_card_form():
                 class_objects=class_objects,
                 include_attendance=include_attendance,
                 include_comments=include_comments,
+                comments_by_class=report_card_data.get('comments_by_class', {}) if isinstance(report_card_data, dict) else {},
+                additional_comments=report_card_data.get('additional_comments', '') if isinstance(report_card_data, dict) else '',
                 generated_date=datetime.utcnow(),
                 report_type=report_type,
                 template_prefix=template_prefix
@@ -623,9 +825,18 @@ def generate_report_card_form():
             except Exception as e:
                 current_app.logger.warning(f'Could not load logo file: {str(e)}')
             
+            # Ensure any remaining /static asset URLs resolve without HTTP fetches.
+            # (WeasyPrint can load local files via file:// URLs; this also stabilizes tests.)
+            try:
+                static_root = os.path.join(current_app.root_path, 'static').replace('\\', '/')
+                html_content = re.sub(r'href=\"/static/', f'href=\"file:///{static_root}/', html_content)
+                html_content = re.sub(r'src=\"/static/', f'src=\"file:///{static_root}/', html_content)
+            except Exception:
+                pass
+
             # Generate PDF
             pdf_buffer = BytesIO()
-            HTML(string=html_content).write_pdf(pdf_buffer)
+            HTML(string=html_content, base_url=current_app.root_path).write_pdf(pdf_buffer)
             pdf_buffer.seek(0)
             
             # Create response - use inline so browser can display it
@@ -652,6 +863,10 @@ def generate_report_card_form():
 </html>'''
             return error_html, 500
         except Exception as e:
+            # Let normal HTTP 404/403/redirect handling behave normally.
+            from werkzeug.exceptions import HTTPException
+            if isinstance(e, HTTPException):
+                raise
             current_app.logger.error(f'Error generating PDF: {str(e)}')
             import traceback
             current_app.logger.error(traceback.format_exc())
@@ -765,6 +980,7 @@ def generate_report_card_pdf(report_card_id):
             report_type = report_card_data.get('report_type', 'official')
             include_attendance = report_card_data.get('include_attendance', False)
             include_comments = report_card_data.get('include_comments', False)
+            comments_by_class = report_card_data.get('comments_by_class', {}) if isinstance(report_card_data, dict) else {}
         else:
             grades = report_card_data if report_card_data else {}
             grades_by_quarter = None
@@ -773,6 +989,7 @@ def generate_report_card_pdf(report_card_id):
             report_type = 'official'  # Default for old report cards
             include_attendance = False
             include_comments = False
+            comments_by_class = {}
 
         # Only fetch fresh quarter grades from DB when we have no saved snapshot
         if not grades_by_quarter or not isinstance(grades_by_quarter, dict):
@@ -887,6 +1104,20 @@ def generate_report_card_pdf(report_card_id):
             template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
         
         # Render the HTML template
+        # Backward-compat: older snapshots used comments_by_quarter; collapse to comments_by_class if needed.
+        if not comments_by_class and isinstance(report_card_data, dict):
+            legacy = report_card_data.get('comments_by_quarter')
+            if isinstance(legacy, dict):
+                # pick first non-empty comment per class across any quarters present
+                tmp = {}
+                for qmap in legacy.values():
+                    if not isinstance(qmap, dict):
+                        continue
+                    for cid, txt in qmap.items():
+                        if cid not in tmp and txt:
+                            tmp[str(cid)] = txt
+                comments_by_class = tmp
+
         html_content = render_template(
             template_name,
             report_card=report_card,
@@ -898,6 +1129,8 @@ def generate_report_card_pdf(report_card_id):
             class_objects=class_objects,
             include_attendance=include_attendance,
             include_comments=include_comments,
+            comments_by_class=comments_by_class,
+            additional_comments=report_card_data.get('additional_comments', '') if isinstance(report_card_data, dict) else '',
             generated_date=report_card.generated_at or datetime.utcnow(),
             report_type=report_type,
             template_prefix=template_prefix
@@ -939,9 +1172,17 @@ def generate_report_card_pdf(report_card_id):
         except Exception as e:
             current_app.logger.warning(f'Could not load logo file: {str(e)}')
         
+        # Ensure any remaining /static asset URLs resolve without HTTP fetches.
+        try:
+            static_root = os.path.join(current_app.root_path, 'static').replace('\\', '/')
+            html_content = re.sub(r'href=\"/static/', f'href=\"file:///{static_root}/', html_content)
+            html_content = re.sub(r'src=\"/static/', f'src=\"file:///{static_root}/', html_content)
+        except Exception:
+            pass
+
         # Generate PDF
         pdf_buffer = BytesIO()
-        HTML(string=html_content).write_pdf(pdf_buffer)
+        HTML(string=html_content, base_url=current_app.root_path).write_pdf(pdf_buffer)
         pdf_buffer.seek(0)
         
         # Create response
@@ -956,6 +1197,10 @@ def generate_report_card_pdf(report_card_id):
         flash('PDF generation requires WeasyPrint. Please install it: pip install weasyprint', 'error')
         return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
     except Exception as e:
+        # Let normal HTTP 404/403/redirect handling behave normally.
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            raise
         current_app.logger.error(f'Error generating PDF: {str(e)}')
         flash(f'Error generating PDF: {str(e)}', 'danger')
         return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
@@ -998,7 +1243,11 @@ def report_cards():
     
     # Get data for filters
     school_years = [sy.name for sy in SchoolYear.query.order_by(SchoolYear.name.desc()).all()]
-    all_students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    all_students = (
+        Student.query.filter(Student.is_deleted == False)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     all_classes = Class.query.order_by(Class.name).all()
     quarters = ['All', 'Q1', 'Q2', 'Q3', 'Q4']
     
@@ -1006,7 +1255,7 @@ def report_cards():
                          report_cards=report_cards_list,
                          recent_reports=report_cards_list,
                          school_years=SchoolYear.query.all(),
-                         students=Student.query.all(),
+                         students=all_students,
                          classes=Class.query.all(),
                          quarters=quarters)
 
@@ -1051,9 +1300,14 @@ def report_cards_by_category(category):
     category_info = categories[category]
     
     # Get students in this grade category
-    students = Student.query.filter(
-        Student.grade_level.in_(category_info['grades'])
-    ).order_by(Student.last_name, Student.first_name).all()
+    students = (
+        Student.query.filter(
+            Student.is_deleted == False,
+            Student.grade_level.in_(category_info['grades']),
+        )
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     
     return render_template('management/report_cards_category_students.html',
                          students=students,

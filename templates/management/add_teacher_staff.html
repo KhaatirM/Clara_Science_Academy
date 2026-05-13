@@ -117,6 +117,18 @@
                 <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" value="{{ staff_data.email if staff_data else '' }}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                  <div class="invalid-feedback">A valid email address is required.</div>
             </div>
+            <div class="col-12">
+                <label for="staff_image" class="form-label fw-bold" style="color: #495057;">
+                    <i class="bi bi-image me-1 text-primary"></i>Profile photo <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <input type="file" class="form-control" id="staff_image" name="staff_image" accept="image/jpeg,image/png,image/gif,.jpg,.jpeg,.png,.gif">
+                {% if editing and staff_data and staff_data.image %}
+                <div class="mt-2">
+                    <img src="{{ url_for('static', filename='uploads/' ~ staff_data.image) }}" alt="Current staff photo" class="img-thumbnail rounded" style="max-height: 120px;">
+                </div>
+                {% endif %}
+                <div class="form-text">JPG, PNG, or GIF. Saved on the staff record; upload a new file when editing to replace.</div>
+            </div>
             </div>
                     </div>
                 </div>

@@ -285,10 +285,23 @@
                 </div>
                 <div class="roster-section-body">
                     {% if enrolled_students %}
+                        <form method="POST" id="removeStudentsForm" class="mb-0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="action" value="remove"/>
+                            <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllEnrolled()">
+                                    <i class="bi bi-check-all me-1"></i>Select all
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllEnrolled()">
+                                    <i class="bi bi-x me-1"></i>Clear all
+                                </button>
+                                <span class="ms-auto text-muted small" id="enrolledSelectedCount">0 selected</span>
+                            </div>
                         <div class="roster-student-grid" id="enrolledStudentsList">
                             {% for student in enrolled_students %}
-                            <div class="roster-student-card" data-student-name="{{ student.first_name|lower }} {{ student.last_name|lower }}" data-student-id="{{ student.student_id|lower }}">
-                                <div class="roster-student-header">
+                            <div class="roster-student-card roster-student-card-selectable" data-student-name="{{ student.first_name|lower }} {{ student.last_name|lower }}" data-student-id="{{ (student.student_id or '')|lower }}">
+                                <input class="visually-hidden roster-checkbox-enrolled" type="checkbox" name="student_id" value="{{ student.id }}" id="enr_cb_{{ student.id }}" onchange="updateEnrolledSelectedCount()" aria-label="Select {{ student.first_name }} {{ student.last_name }} for removal">
+                                <div class="roster-student-header d-flex align-items-center flex-wrap gap-2">
                                     <div class="roster-student-avatar">
                                         <span>{{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}</span>
                                     </div>
@@ -328,20 +341,16 @@
                                         <i class="bi bi-eye"></i>
                                         <span>View</span>
                                     </a>
-                                    <form method="POST" style="display: inline;" 
-                                          onsubmit="return confirm('Remove {{ student.first_name }} {{ student.last_name }} from this class?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <input type="hidden" name="action" value="remove">
-                                        <input type="hidden" name="student_id" value="{{ student.id }}">
-                                        <button type="submit" class="btn btn-roster-action btn-roster-remove">
-                                            <i class="bi bi-person-dash"></i>
-                                            <span>Remove</span>
-                                        </button>
-                                    </form>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
+                            <div class="mt-3 pt-2 border-top">
+                                <button type="submit" class="btn btn-roster-remove w-100 w-sm-auto" id="removeSubmitBtn" disabled>
+                                    <i class="bi bi-person-dash me-2"></i>Remove selected (<span id="removeBtnCount">0</span>)
+                                </button>
+                            </div>
+                        </form>
                     {% else %}
                         <div class="roster-empty-state">
                             <div class="roster-empty-icon">
@@ -409,28 +418,28 @@
                                     
                                     {% if not is_enrolled %}
                                         {% set available_count = available_count + 1 %}
-                                        <div class="roster-available-item" data-student-name="{{ student.first_name|lower }} {{ student.last_name|lower }}" data-student-id="{{ student.student_id|lower }}">
-                                            <input class="roster-checkbox" type="checkbox" 
-                                                   name="student_id" value="{{ student.id }}" 
+                                        <label class="roster-available-item roster-available-label" data-student-name="{{ student.first_name|lower }} {{ student.last_name|lower }}" data-student-id="{{ (student.student_id or '')|lower }}">
+                                            <input class="roster-checkbox" type="checkbox"
+                                                   name="student_id" value="{{ student.id }}"
                                                    id="student_{{ student.id }}"
                                                    onchange="updateSelectedCount()">
-                                            <label class="roster-available-label" for="student_{{ student.id }}">
-                                                <div class="roster-available-avatar">
+                                            <span class="roster-available-inner">
+                                                <span class="roster-available-avatar">
                                                     {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
-                                                </div>
-                                                <div class="roster-available-info">
-                                                    <div class="roster-available-name">{{ student.first_name }} {{ student.last_name }}</div>
-                                                    <div class="roster-available-meta">
+                                                </span>
+                                                <span class="roster-available-info">
+                                                    <span class="roster-available-name">{{ student.first_name }} {{ student.last_name }}</span>
+                                                    <span class="roster-available-meta">
                                                         <span class="roster-meta-badge">
                                                             <i class="bi bi-card-text"></i>{{ student.student_id or 'No ID' }}
                                                         </span>
                                                         <span class="roster-meta-badge">
                                                             <i class="bi bi-mortarboard"></i>Grade {{ student.grade_level | display_grade }}
                                                         </span>
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        </div>
+                                                    </span>
+                                                </span>
+                                            </span>
+                                        </label>
                                     {% endif %}
                                 {% endfor %}
                                 
@@ -576,7 +585,41 @@ function updateSelectedCount() {
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     updateSelectedCount();
+    updateEnrolledSelectedCount();
+    // Click anywhere on enrolled student card toggles checkbox (except View link / checkbox itself)
+    document.querySelectorAll('#enrolledStudentsList .roster-student-card-selectable').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('a') || e.target.closest('button')) return;
+            if (e.target.closest('input[type="checkbox"]')) return;
+            var cb = card.querySelector('.roster-checkbox-enrolled');
+            if (!cb) return;
+            cb.checked = !cb.checked;
+            updateEnrolledSelectedCount();
+        });
+    });
 });
+
+function selectAllEnrolled() {
+    const boxes = document.querySelectorAll('#enrolledStudentsList .roster-checkbox-enrolled');
+    const visible = Array.from(boxes).filter(cb => cb.closest('.roster-student-card').style.display !== 'none');
+    visible.forEach(cb => { cb.checked = true; });
+    updateEnrolledSelectedCount();
+}
+
+function clearAllEnrolled() {
+    document.querySelectorAll('#enrolledStudentsList .roster-checkbox-enrolled').forEach(cb => { cb.checked = false; });
+    updateEnrolledSelectedCount();
+}
+
+function updateEnrolledSelectedCount() {
+    const checked = document.querySelectorAll('#enrolledStudentsList .roster-checkbox-enrolled:checked').length;
+    const countEl = document.getElementById('enrolledSelectedCount');
+    const btnCount = document.getElementById('removeBtnCount');
+    const btn = document.getElementById('removeSubmitBtn');
+    if (countEl) countEl.textContent = `${checked} selected`;
+    if (btnCount) btnCount.textContent = checked;
+    if (btn) btn.disabled = checked === 0;
+}
 </script>
 
 

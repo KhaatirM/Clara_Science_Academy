@@ -539,7 +539,7 @@
                             <div class="d-flex flex-wrap gap-2">
                                 {% if assignment.allow_save_and_continue %}
                                     <button type="button" class="btn px-3 py-2" id="saveProgressBtn" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.5rem; font-weight: 600;">
-                                        <i class="bi bi-save me-1"></i>Save Progress
+                                        <i class="bi bi-save me-1"></i>{% if assignment.time_limit_minutes %}Save & Exit{% else %}Save Progress{% endif %}
                                     </button>
                                     <button type="button" class="btn px-3 py-2" id="loadProgressBtn" style="display: none; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.5rem; font-weight: 600;">
                                         <i class="bi bi-arrow-clockwise me-1"></i>Load Saved
@@ -570,6 +570,7 @@
                         {% if questions %}
                             <form id="quizForm" method="POST" action="{{ url_for('student.submit_quiz', assignment_id=assignment.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="quiz_opened_at" value="{{ server_now_iso or '' }}"/>
                                 {% for question in questions %}
                                     {% if question.section and (loop.index0 == 0 or questions[loop.index0 - 1].section_id != question.section_id) %}
                                     <div class="mb-3 mt-2 pt-3 border-top border-2 rounded p-3 quiz-section-header question-card" data-question-number="{{ loop.index }}" style="display: {{ 'block' if loop.index == 1 else 'none' }}; background: linear-gradient(135deg, #e8ecff 0%, #f0f4ff 100%); border-color: #667eea !important;">
@@ -800,7 +801,7 @@ let quizState = {
     totalQuestions: {{ questions|length if questions else 0 }},
     isReviewMode: false,
     timer: null,
-    timeRemaining: {{ assignment.time_limit_minutes * 60 if assignment.time_limit_minutes else 0 }},
+    timeRemaining: {{ timer_remaining_seconds if timer_remaining_seconds is not none else (assignment.time_limit_minutes * 60 if assignment.time_limit_minutes else 0) }},
     isTimerActive: {{ 'true' if assignment.time_limit_minutes else 'false' }}
 };
 
@@ -827,6 +828,23 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.addEventListener('click', () => navigateQuestion(1));
         updateNavigationButtons();
         updateQuestionCounter();
+    }
+
+    // Prevent accidental form submits while navigating:
+    // - Pressing Enter in a text input inside a form submits by default.
+    // - For quizzes, Enter should advance (except inside textareas where Enter means newline).
+    const quizForm = document.getElementById('quizForm');
+    if (quizForm) {
+        quizForm.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter') return;
+            const t = e.target;
+            const tag = t && t.tagName ? t.tagName.toLowerCase() : '';
+            if (tag === 'textarea') return;
+            // If focused on the actual submit button, allow normal submission.
+            if (t && t.id === 'submitQuizBtn') return;
+            e.preventDefault();
+            navigateQuestion(1);
+        });
     }
     
     // Initialize review mode
@@ -859,29 +877,64 @@ document.addEventListener('DOMContentLoaded', function() {
             input.addEventListener('input', updateProgress);
         });
         
-        // Save progress button
-        saveBtn.addEventListener('click', saveQuizProgress);
+        // Save button:
+        // - Timed quizzes: pauses timer + exits so it can resume later.
+        // - Untimed: normal save.
+        saveBtn.addEventListener('click', function() {
+            if (quizState.isTimerActive) {
+                saveQuizProgress({ pauseTimer: true, exitAfter: true });
+            } else {
+                saveQuizProgress({ pauseTimer: false, exitAfter: false });
+            }
+        });
         
         // Load progress button
         loadBtn.addEventListener('click', loadQuizProgress);
         
-        // Auto-save every 30 seconds
-        setInterval(saveQuizProgress, 30000);
+        // Auto-save every 30 seconds (does not pause timer).
+        setInterval(function() { saveQuizProgress({ pauseTimer: false, exitAfter: false, silent: true }); }, 30000);
     }
 
     // Keep session alive while student is on this quiz page (prevents auto-logout mid-quiz).
     // Runs infrequently to reduce server load.
     (function initQuizKeepAlive() {
         const keepAliveUrl = "{{ url_for('student.quiz_keepalive', assignment_id=assignment.id) }}";
+        let didAutoSubmitOnClose = false;
+
+        function autoSubmitBecauseClosed() {
+            if (didAutoSubmitOnClose) return;
+            didAutoSubmitOnClose = true;
+
+            // Best-effort save before submit (only if save/continue is enabled).
+            try {
+                if (typeof saveQuizProgress === 'function') saveQuizProgress();
+            } catch (e) {}
+
+            // Give the save request a moment, then submit.
+            setTimeout(function() {
+                try {
+                    const form = document.getElementById('quizForm');
+                    if (form) form.submit(); // bypasses confirm() and submits immediately
+                } catch (e) {}
+            }, 800);
+        }
 
         function ping() {
             fetch(keepAliveUrl, { method: 'GET', credentials: 'same-origin', cache: 'no-store' })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    const remaining = typeof data.seconds_remaining === 'number' ? data.seconds_remaining : null;
+                    if (remaining !== null && remaining <= 0) {
+                        autoSubmitBecauseClosed();
+                    }
+                })
                 .catch(() => {});
         }
 
-        // Ping immediately and then every 5 minutes.
+        // Ping immediately and then regularly to detect close time.
         ping();
-        setInterval(ping, 5 * 60 * 1000);
+        setInterval(ping, 30 * 1000);
 
         // Also ping when the tab becomes visible again.
         document.addEventListener('visibilitychange', function() {
@@ -1003,9 +1056,11 @@ function updateProgressDisplay() {
     }
 }
 
-function saveQuizProgress() {
+function saveQuizProgress(opts) {
+    opts = opts || {};
     const saveBtn = document.getElementById('saveProgressBtn');
     const loadBtn = document.getElementById('loadProgressBtn');
+    const isSilent = !!opts.silent;
     
     if (saveBtn) {
         saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
@@ -1022,35 +1077,53 @@ function saveQuizProgress() {
         body: JSON.stringify({
             answers: quizProgress.answers,
             progress_percentage: Math.round((quizProgress.answered / quizProgress.total) * 100),
-            questions_answered: quizProgress.answered
+            questions_answered: quizProgress.answered,
+            pause_timer: !!opts.pauseTimer,
+            timer_remaining_seconds: quizState.isTimerActive ? quizState.timeRemaining : null
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            if (quizState.isTimerActive && typeof data.timer_remaining_seconds === 'number') {
+                quizState.timeRemaining = data.timer_remaining_seconds;
+                updateTimerDisplay();
+                if (data.timer_is_paused) {
+                    if (quizState.timer) clearInterval(quizState.timer);
+                }
+            }
             if (saveBtn) {
                 saveBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saved!';
                 setTimeout(() => {
-                    saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+                    saveBtn.innerHTML = quizState.isTimerActive
+                        ? '<i class="bi bi-save me-1"></i>Save & Exit'
+                        : '<i class="bi bi-save me-1"></i>Save Progress';
                     saveBtn.disabled = false;
                 }, 2000);
             }
             if (loadBtn) {
                 loadBtn.style.display = 'inline-block';
             }
+            if (opts.exitAfter) {
+                window.location.href = "{{ url_for('student.student_assignments') }}";
+            }
         } else {
-            alert('Failed to save progress: ' + (data.message || 'Unknown error'));
+            if (!isSilent) alert('Failed to save progress: ' + (data.message || 'Unknown error'));
             if (saveBtn) {
-                saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+                saveBtn.innerHTML = quizState.isTimerActive
+                    ? '<i class="bi bi-save me-1"></i>Save & Exit'
+                    : '<i class="bi bi-save me-1"></i>Save Progress';
                 saveBtn.disabled = false;
             }
         }
     })
     .catch(error => {
         console.error('Error saving progress:', error);
-        alert('Failed to save progress. Please try again.');
+        if (!isSilent) alert('Failed to save progress. Please try again.');
         if (saveBtn) {
-            saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+            saveBtn.innerHTML = quizState.isTimerActive
+                ? '<i class="bi bi-save me-1"></i>Save & Exit'
+                : '<i class="bi bi-save me-1"></i>Save Progress';
             saveBtn.disabled = false;
         }
     });
@@ -1089,6 +1162,12 @@ function loadQuizProgress() {
             // Update progress display
             quizProgress.answers = data.progress.answers;
             updateProgress();
+
+            // Restore timer (server truth)
+            if (quizState.isTimerActive && typeof data.progress.timer_remaining_seconds === 'number') {
+                quizState.timeRemaining = data.progress.timer_remaining_seconds;
+                updateTimerDisplay();
+            }
         } else {
             // No saved progress found - this is normal for new attempts
         }

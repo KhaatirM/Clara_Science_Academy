@@ -28,6 +28,100 @@ from googleapiclient.errors import HttpError
 
 bp = Blueprint('dashboard', __name__)
 
+
+@bp.route('/student/<int:student_id>/report-card-comments', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def report_card_comments(student_id):
+    """
+    Enter per-class report card comments for a student for a given quarter.
+    These comments are later pulled into report card generation (and snapshotted).
+    """
+    from models import ReportCardComment
+
+    student = Student.query.get_or_404(student_id)
+    teacher = get_teacher_or_admin()
+
+    # Active school year is the target for comments.
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not school_year:
+        flash('No active school year found.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_students'))
+
+    # Single comment per class (not quarter-specific).
+    quarter = 'ALL'
+
+    # Determine which classes this teacher can comment on for this student.
+    enrollments = Enrollment.query.filter_by(
+        student_id=student_id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == school_year.id
+    ).all()
+    class_objects = [e.class_info for e in enrollments if e.class_info]
+
+    # Teachers should only see classes they are authorized for (admins see all).
+    if not is_admin():
+        class_objects = [c for c in class_objects if is_authorized_for_class(c)]
+
+    if request.method == 'POST':
+        try:
+            saved = 0
+            for class_obj in class_objects:
+                field = f'comment_{class_obj.id}'
+                text = (request.form.get(field) or '').strip()
+
+                existing = ReportCardComment.query.filter_by(
+                    student_id=student_id,
+                    class_id=class_obj.id,
+                    school_year_id=school_year.id,
+                    quarter=quarter,
+                ).first()
+
+                if existing:
+                    existing.comment_text = text
+                    existing.author_user_id = getattr(current_user, 'id', None)
+                    existing.author_teacher_staff_id = getattr(teacher, 'id', None) if teacher else None
+                    existing.source = 'teacher' if not is_admin() else 'management'
+                else:
+                    db.session.add(ReportCardComment(
+                        student_id=student_id,
+                        class_id=class_obj.id,
+                        school_year_id=school_year.id,
+                        quarter=quarter,
+                        comment_text=text,
+                        author_user_id=getattr(current_user, 'id', None),
+                        author_teacher_staff_id=getattr(teacher, 'id', None) if teacher else None,
+                        source='teacher' if not is_admin() else 'management',
+                    ))
+                saved += 1
+
+            db.session.commit()
+            flash(f'Saved comments for {saved} class(es).', 'success')
+            return redirect(url_for('teacher.dashboard.report_card_comments', student_id=student_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving comments: {str(e)}', 'danger')
+            return redirect(url_for('teacher.dashboard.report_card_comments', student_id=student_id))
+
+    # GET: load existing comments
+    existing_comments = {
+        c.class_id: c.comment_text
+        for c in ReportCardComment.query.filter_by(
+            student_id=student_id,
+            school_year_id=school_year.id,
+            quarter=quarter,
+        ).all()
+    }
+
+    return render_template(
+        'teachers/report_card_comments.html',
+        student=student,
+        school_year=school_year,
+        class_objects=class_objects,
+        existing_comments=existing_comments,
+    )
+
 @bp.route('/dashboard')
 @login_required
 @teacher_required
@@ -269,23 +363,18 @@ def view_class(class_id):
         flash("You are not authorized to access this class.", "danger")
         return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
-    # Get only actively enrolled students for this class
+    from services.class_google_group import try_provision_class_google_group
+    try_provision_class_google_group(class_id)
+    db.session.refresh(class_obj)
+
+    # Get only actively enrolled students for this class (exclude archived student records)
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
-    
-    # Debug logging
-    print(f"DEBUG: Class ID: {class_id}")
-    print(f"DEBUG: Found {len(enrollments)} enrollments")
-    print(f"DEBUG: Enrolled students: {[f'{s.first_name} {s.last_name}' for s in enrolled_students]}")
+    enrolled_students = [
+        e.student for e in enrollments
+        if e.student is not None and not getattr(e.student, 'is_deleted', False)
+    ]
 
-    # Get recent assignments for this class
-    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).limit(5).all()
-
-    # Get recent attendance records for this class (last 7 days)
-    recent_attendance = Attendance.query.filter(
-        Attendance.class_id == class_id,
-        Attendance.date >= datetime.now().date() - timedelta(days=7)
-    ).order_by(Attendance.date.desc()).all()
+    assignment_count = Assignment.query.filter_by(class_id=class_id).count()
 
     # Get recent announcements for this class
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
@@ -315,8 +404,7 @@ def view_class(class_id):
         'teachers/teacher_class_roster_view.html',
         class_item=class_obj,
         enrolled_students=enrolled_students,
-        assignments=assignments,
-        recent_attendance=recent_attendance,
+        assignment_count=assignment_count,
         announcements=announcements,
         student_assistants=student_assistants,
         assistant_action_logs=assistant_action_logs,
@@ -925,11 +1013,33 @@ def assignments_and_grades():
                         
                         total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
                         avg_pct = round((total_score / graded_with_score / total_points * 100), 1) if graded_with_score > 0 and total_points > 0 else 0
+                        enrolled_student_ids = {
+                            e.student_id
+                            for e in Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+                            if e.student_id
+                        }
+                        voided_student_ids = {g.student_id for g in grades if g.is_voided}
+                        all_voided = assignment.status == 'Voided' or (
+                            bool(enrolled_student_ids) and enrolled_student_ids <= voided_student_ids
+                        )
+                        partially_voided = not all_voided and bool(voided_student_ids & enrolled_student_ids)
+                        voided_count = len(voided_student_ids & enrolled_student_ids)
+                        voided_student_names = []
+                        if partially_voided and selected_class:
+                            for e in Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all():
+                                if e.student and e.student_id in voided_student_ids:
+                                    voided_student_names.append(f"{e.student.first_name} {e.student.last_name}")
                         assignment_grades[assignment.id] = {
                             'total_submissions': total_submissions,
                             'graded_count': graded_with_score,
                             'average_score': avg_pct,
-                            'is_autogradeable': is_autogradeable
+                            'is_autogradeable': is_autogradeable,
+                            'has_open_ended_questions': False,
+                            'pending_manual_grading': 0,
+                            'all_voided': all_voided,
+                            'partially_voided': partially_voided,
+                            'voided_count': voided_count,
+                            'voided_student_names': voided_student_names,
                         }
                     
                     # Get grade data for group assignments
@@ -960,10 +1070,51 @@ def assignments_and_grades():
                         
                         total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
                         avg_pct_ga = round((total_score / graded_with_score / total_points_ga * 100), 1) if graded_with_score > 0 and total_points_ga > 0 else 0
+                        ga_voided_grades = [g for g in group_grades if g.is_voided]
+                        ga_voided_student_ids = {g.student_id for g in ga_voided_grades}
+                        applicable_student_ids = set()
+                        try:
+                            from models import StudentGroupMember, StudentGroup
+                            sel = group_assignment.selected_group_ids
+                            if sel:
+                                ids = json.loads(sel) if isinstance(sel, str) else sel
+                                ids = [int(x) for x in ids]
+                                members = StudentGroupMember.query.join(StudentGroup).filter(
+                                    StudentGroup.id.in_(ids),
+                                    StudentGroup.class_id == group_assignment.class_id,
+                                    StudentGroup.is_active == True
+                                ).all()
+                            else:
+                                members = StudentGroupMember.query.join(StudentGroup).filter(
+                                    StudentGroup.class_id == group_assignment.class_id,
+                                    StudentGroup.is_active == True
+                                ).all()
+                            applicable_student_ids = {m.student_id for m in members if m.student_id}
+                        except Exception:
+                            applicable_student_ids = {g.student_id for g in group_grades if g.student_id}
+                        ga_all_voided = group_assignment.status == 'Voided' or (
+                            bool(applicable_student_ids) and applicable_student_ids <= ga_voided_student_ids
+                        )
+                        ga_partially_voided = not ga_all_voided and bool(ga_voided_student_ids & applicable_student_ids)
+                        ga_voided_count = len(ga_voided_student_ids & applicable_student_ids)
+                        ga_voided_student_names = []
+                        if ga_partially_voided and selected_class:
+                            seen_nm = set()
+                            for sid in ga_voided_student_ids & applicable_student_ids:
+                                gg = next((x for x in ga_voided_grades if x.student_id == sid and x.student), None)
+                                if gg and gg.student:
+                                    nm = f"{gg.student.first_name} {gg.student.last_name}"
+                                    if nm not in seen_nm:
+                                        seen_nm.add(nm)
+                                        ga_voided_student_names.append(nm)
                         assignment_grades[f'group_{group_assignment.id}'] = {
                             'total_submissions': total_group_submissions,
                             'graded_count': graded_with_score,
-                            'average_score': avg_pct_ga
+                            'average_score': avg_pct_ga,
+                            'all_voided': ga_all_voided,
+                            'partially_voided': ga_partially_voided,
+                            'voided_count': ga_voided_count,
+                            'voided_student_names': ga_voided_student_names,
                         }
             
             except Exception as e:
@@ -1009,7 +1160,10 @@ def assignments_and_grades():
         if selected_class:
             try:
                 enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
-                enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+                enrolled_students = [
+                    e.student for e in enrollments
+                    if e.student and not getattr(e.student, 'is_deleted', False)
+                ]
                 # Combine regular and group assignments (use sorted order)
                 all_assignments_list = [item[1] for item in sorted_assignments] if sorted_assignments else list(class_assignments or []) + list(group_assignments or [])
             except Exception as e:

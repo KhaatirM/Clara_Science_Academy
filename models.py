@@ -491,6 +491,12 @@ class Class(db.Model):
     # Class metadata
     room_number = db.Column(db.String(20), nullable=True)
     schedule = db.Column(db.String(200), nullable=True)  # e.g., "Mon/Wed/Fri 9:00-10:00"
+    # Course term metadata for report cards:
+    # - full_year: spans all quarters
+    # - semester: spans S1 (Q1,Q2) or S2 (Q3,Q4)
+    # - quarter: spans only one specific quarter (Q1/Q2/Q3/Q4)
+    term_type = db.Column(db.String(20), nullable=False, default='full_year')
+    term_value = db.Column(db.String(10), nullable=True)
     max_students = db.Column(db.Integer, default=30, nullable=False)
     description = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -985,6 +991,11 @@ class QuizProgress(db.Model):
     total_questions = db.Column(db.Integer, default=0, nullable=False)
     last_saved_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_submitted = db.Column(db.Boolean, default=False, nullable=False)
+    # Timed quizzes: if assignment.time_limit_minutes is set, we persist remaining time across save/continue.
+    # When running, timer_started_at is set and timer_remaining_seconds is the remaining seconds at that start moment.
+    # When paused, timer_started_at is NULL and timer_remaining_seconds stores the paused remaining seconds.
+    timer_started_at = db.Column(db.DateTime, nullable=True)
+    timer_remaining_seconds = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -1241,6 +1252,43 @@ class ReportCard(db.Model):
 
     def __repr__(self):
         return f"ReportCard(Student ID: {self.student_id}, Quarter: {self.quarter})"
+
+
+class ReportCardComment(db.Model):
+    """
+    Teacher (or staff) comments for report cards.
+    Stored per-student, per-class, per-school-year, per-quarter.
+    """
+    __tablename__ = 'report_card_comment'
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    quarter = db.Column(db.String(10), nullable=False)  # 'Q1'...'Q4'
+
+    comment_text = db.Column(db.Text, nullable=True)
+
+    # Author metadata (teacher preferred; management/system can also author)
+    author_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    author_teacher_staff_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    source = db.Column(db.String(20), nullable=False, default='teacher')  # teacher|management|system
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    student = db.relationship('Student', backref='report_card_comments', lazy=True)
+    class_info = db.relationship('Class', backref='report_card_comments', lazy=True)
+    school_year = db.relationship('SchoolYear', backref='report_card_comments', lazy=True)
+    author_user = db.relationship('User', backref='authored_report_card_comments', lazy=True)
+    author_teacher_staff = db.relationship('TeacherStaff', backref='authored_report_card_comments', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'class_id', 'school_year_id', 'quarter', name='uq_report_card_comment_key'),
+    )
+
+    def __repr__(self):
+        return f"ReportCardComment(student={self.student_id}, class={self.class_id}, {self.quarter}, sy={self.school_year_id})"
 
 
 class SubjectRequirement(db.Model):

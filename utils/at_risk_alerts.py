@@ -83,7 +83,7 @@ def get_at_risk_alerts_for_user():
     try:
         # Determine student scope
         if is_admin_user:
-            student_ids = [s.id for s in Student.query.all()]
+            student_ids = [s.id for s in Student.query.filter(Student.is_deleted == False).all()]
             class_ids = None
         else:
             from teacher_routes.utils import get_teacher_or_admin
@@ -113,6 +113,13 @@ def get_at_risk_alerts_for_user():
                     Enrollment.is_active == True
                 ).all()
                 student_ids = list({e.student_id for e in enrollments if e.student_id})
+                if student_ids:
+                    student_ids = [
+                        r[0]
+                        for r in db.session.query(Student.id)
+                        .filter(Student.id.in_(student_ids), Student.is_deleted == False)
+                        .all()
+                    ]
             else:
                 student_ids = []
 
@@ -128,10 +135,13 @@ def get_at_risk_alerts_for_user():
         group_assignments = []
         group_grades = []
         if is_admin_user:
-            group_assignments = GroupAssignment.query.all()
+            group_assignments = GroupAssignment.query.filter(
+                GroupAssignment.status != 'Voided',
+            ).all()
         elif class_ids:
             group_assignments = GroupAssignment.query.filter(
-                GroupAssignment.class_id.in_(class_ids)
+                GroupAssignment.class_id.in_(class_ids),
+                GroupAssignment.status != 'Voided',
             ).all()
 
         if group_assignments:

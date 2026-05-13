@@ -345,6 +345,45 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: class google_group_email column check failed (may already exist): {e}")
 
+        # Class term metadata (full year vs semester/quarter); required by Class ORM on Postgres
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(class)"))
+                    columns = [row[1] for row in r]
+                    if 'term_type' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE class ADD COLUMN term_type VARCHAR(20) NOT NULL DEFAULT 'full_year'"
+                        ))
+                        conn.commit()
+                        print("Added class.term_type column.")
+                    if 'term_value' not in columns:
+                        conn.execute(text("ALTER TABLE class ADD COLUMN term_value VARCHAR(10)"))
+                        conn.commit()
+                        print("Added class.term_value column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'class' AND column_name = 'term_type'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            'ALTER TABLE "class" ADD COLUMN term_type VARCHAR(20) NOT NULL DEFAULT \'full_year\''
+                        ))
+                        conn.commit()
+                        print("Added class.term_type column.")
+                    r2 = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'class' AND column_name = 'term_value'"
+                    ))
+                    if r2.fetchone() is None:
+                        conn.execute(text('ALTER TABLE "class" ADD COLUMN term_value VARCHAR(10)'))
+                        conn.commit()
+                        print("Added class.term_value column.")
+        except Exception as e:
+            print(f"Note: class term_type/term_value column check failed (may already exist): {e}")
+
         # Add assignment advanced grading columns if missing
         _assignment_cols = [
             ('allow_extra_credit', 'BOOLEAN DEFAULT FALSE', 'INTEGER DEFAULT 0'),

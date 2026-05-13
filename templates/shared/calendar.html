@@ -19,7 +19,7 @@
                             <i class="bi bi-info-circle me-2"></i>
                             {% if can_calendar_admin_ui %}
                                 Manage and view school calendar events
-                            {% elif 'Teacher' in current_user.role %}
+                            {% elif current_user.teacher_staff_id or ('teacher' in ((current_user.role or '')|lower)) %}
                                 View school calendar and important dates
                             {% else %}
                                 View school calendar and holidays
@@ -29,7 +29,7 @@
                     <div class="d-flex flex-wrap gap-2">
                         <!-- Quick Navigation -->
                         <div class="btn-group" role="group">
-                            {% if 'Teacher' in current_user.role %}
+                            {% if current_user.teacher_staff_id or ('teacher' in ((current_user.role or '')|lower)) %}
                                 <a href="{{ url_for('teacher.dashboard.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-light" style="border-radius: 0.5rem 0 0 0.5rem;">
                                     <i class="bi bi-chevron-left me-1"></i>Previous
                                 </a>

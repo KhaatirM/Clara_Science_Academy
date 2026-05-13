@@ -163,7 +163,7 @@
                                     </a>
                                 </div>
                             {% endif %}
-                        {% elif 'Teacher' in current_user.role and not has_mgmt_role_access %}
+                        {% elif not has_mgmt_role_access and (current_user.teacher_staff_id or ('teacher' in ((current_user.role or '')|lower))) %}
                             <div class="d-flex gap-2 mb-2 class-action-buttons">
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="action-btn btn-view flex-fill">
                                     <i class="bi bi-eye-fill action-btn-icon"></i><span class="action-btn-text">View Class</span>

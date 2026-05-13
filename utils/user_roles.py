@@ -38,6 +38,26 @@ def canonical_role_label(role: Any) -> str:
     return _ROLE_CANON_ALIASES.get(key, s)
 
 
+def user_primary_role_is_teaching_staff(user) -> bool:
+    """
+    True when the user's primary ``User.role`` indicates teaching staff.
+
+    Handles DB variants like lowercase ``teacher``, canonical ``Teacher``, and
+    subject titles such as ``English Language Arts Teacher`` (substring match).
+    """
+    if not user:
+        return False
+    raw = getattr(user, "role", None)
+    if raw is None:
+        return False
+    s = str(raw).strip()
+    if not s:
+        return False
+    if canonical_role_label(s) == "Teacher":
+        return True
+    return "teacher" in s.lower()
+
+
 def parse_secondary_roles(raw: Any) -> List[str]:
     """Parse ``secondary_roles`` JSON list; tolerate legacy single-string or comma-separated values."""
     if not raw:

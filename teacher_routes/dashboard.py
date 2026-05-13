@@ -1791,6 +1791,7 @@ def view_student_details_data(student_id):
         all_grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student.id,
             Assignment.class_id.in_(teacher_class_ids),
+            Assignment.status != 'Voided',
             db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
         ).all()
         
@@ -1908,7 +1909,8 @@ def view_student_details_data(student_id):
                     missing_assignments_by_class[class_name] = []
                 grade = GroupGrade.query.filter_by(
                     group_assignment_id=ga.id,
-                    student_id=student.id
+                    student_id=student.id,
+                    is_voided=False,
                 ).first()
                 total_pts = getattr(ga, 'total_points', None) or 100.0
                 is_overdue = ga.due_date and ga.due_date < datetime.utcnow()

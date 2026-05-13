@@ -3139,8 +3139,12 @@ def view_student_details(student_id):
     all_missing_assignments = []
     class_gpa_breakdown = []
 
-    # Get all non-voided grades for the student
-    all_grades = Grade.query.filter_by(student_id=student.id).filter(Grade.is_voided == False).all()
+    # Get all non-voided grades for the student (exclude voided assignments)
+    all_grades = Grade.query.join(Assignment).filter(
+        Grade.student_id == student.id,
+        Grade.is_voided == False,
+        Assignment.status != 'Voided',
+    ).all()
     
     # Get all classes this student is enrolled in
     enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
@@ -3284,7 +3288,10 @@ def view_student_details_data(student_id):
         class_gpa_breakdown = {}
 
         # Get all non-voided grades for the student
-        all_grades = Grade.query.filter_by(student_id=student.id).filter(
+        all_grades = Grade.query.join(Assignment).filter(
+            Grade.student_id == student.id,
+            Assignment.status != 'Voided',
+        ).filter(
             db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
         ).all()
         
@@ -3405,7 +3412,8 @@ def view_student_details_data(student_id):
                         missing_assignments_by_class[class_name] = []
                     grade = GroupGrade.query.filter_by(
                         group_assignment_id=ga.id,
-                        student_id=student.id
+                        student_id=student.id,
+                        is_voided=False,
                     ).first()
                     total_pts = getattr(ga, 'total_points', None) or 100.0
                     is_overdue = ga.due_date and ga.due_date < datetime.utcnow()

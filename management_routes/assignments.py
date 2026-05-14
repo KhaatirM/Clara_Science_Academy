@@ -224,7 +224,7 @@ def create_quiz_assignment():
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('management.create_quiz_assignment'))
+                return redirect(url_for('management.create_quiz_assignment') + '?compose=new')
             
             # Get save and continue settings
             allow_save_and_continue = request.form.get('allow_save_and_continue') == 'on'
@@ -262,7 +262,7 @@ def create_quiz_assignment():
                 existing = Assignment.query.get(assignment_id)
                 if not existing or existing.assignment_type != 'quiz':
                     flash("Quiz assignment not found or invalid.", "danger")
-                    return redirect(url_for('management.create_quiz_assignment'))
+                    return redirect(url_for('management.create_quiz_assignment') + '?compose=new')
                 existing.title = title
                 existing.description = description
                 existing.due_date = due_date
@@ -487,7 +487,7 @@ def create_quiz_assignment():
         assignment = Assignment.query.get(edit_id)
         if not assignment or assignment.assignment_type != 'quiz':
             flash("Quiz assignment not found.", "danger")
-            return redirect(url_for('management.create_quiz_assignment'))
+            return redirect(url_for('management.create_quiz_assignment') + '?compose=new')
         quiz_data = _build_quiz_data_for_edit(assignment)
     question_banks_url = url_for('management.assignments.question_banks_json')
     save_to_bank_url = url_for('management.assignments.save_to_bank')

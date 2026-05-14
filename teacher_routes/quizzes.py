@@ -341,7 +341,7 @@ def create_quiz_assignment():
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('teacher.create_quiz_assignment'))
+                return redirect(url_for('teacher.create_quiz_assignment') + '?compose=new')
             
             # Check if user is authorized for this class
             class_obj = Class.query.get(class_id)
@@ -350,16 +350,18 @@ def create_quiz_assignment():
                 redirect_target = url_for('teacher.create_quiz_assignment')
                 if is_edit:
                     redirect_target += f'?edit={assignment_id}'
+                else:
+                    redirect_target += '?compose=new'
                 return redirect(redirect_target)
             
             if is_edit:
                 existing = Assignment.query.get(assignment_id)
                 if not existing or existing.assignment_type != 'quiz':
                     flash("Quiz assignment not found or invalid.", "danger")
-                    return redirect(url_for('teacher.create_quiz_assignment'))
+                    return redirect(url_for('teacher.create_quiz_assignment') + '?compose=new')
                 if not is_authorized_for_class(existing.class_info):
                     flash("You are not authorized to edit this assignment.", "danger")
-                    return redirect(url_for('teacher.create_quiz_assignment'))
+                    return redirect(url_for('teacher.create_quiz_assignment') + '?compose=new')
                 # Update assignment fields
                 existing.title = title
                 existing.description = description
@@ -577,10 +579,10 @@ def create_quiz_assignment():
         assignment = Assignment.query.get(edit_id)
         if not assignment or assignment.assignment_type != 'quiz':
             flash("Quiz assignment not found.", "danger")
-            return redirect(url_for('teacher.create_quiz_assignment'))
+            return redirect(url_for('teacher.create_quiz_assignment') + '?compose=new')
         if not is_authorized_for_class(assignment.class_info):
             flash("You are not authorized to edit this assignment.", "danger")
-            return redirect(url_for('teacher.create_quiz_assignment'))
+            return redirect(url_for('teacher.create_quiz_assignment') + '?compose=new')
         quiz_data = _build_quiz_data_for_edit(assignment)
     
     question_banks_url = url_for('teacher.quizzes.question_banks_json')

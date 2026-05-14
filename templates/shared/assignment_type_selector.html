@@ -194,11 +194,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 showAssignmentTargetModal();
                 break;
             case 'quiz':
-                // Redirect to quiz creation page
+                // Redirect to quiz creation page (?compose=new avoids reusing another quiz's local draft in the same tab)
                 {% if can_assignments_admin_ui %}
-                window.location.href = "{{ url_for('management.create_quiz_assignment') }}";
+                window.location.href = "{{ url_for('management.create_quiz_assignment') }}?compose=new";
                 {% else %}
-                window.location.href = "{{ url_for('teacher.create_quiz_assignment') }}";
+                window.location.href = "{{ url_for('teacher.create_quiz_assignment') }}?compose=new";
                 {% endif %}
                 break;
             case 'discussion':

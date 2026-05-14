@@ -813,6 +813,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const addSectionBtn = document.getElementById('addSectionBtn');
     const quizPreview = document.getElementById('quizPreview');
     const form = document.getElementById('quizAssignmentForm');
+    const QUIZ_COMPOSE_SESSION_STORAGE_KEY = 'quiz_compose_session_v1';
+    const quizAutosaveKeyBase = 'quiz_autosave_draft_v2';
+
+    (function initQuizComposeFromQuery() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('compose') !== 'new') return;
+            sessionStorage.removeItem(QUIZ_COMPOSE_SESSION_STORAGE_KEY);
+            params.delete('compose');
+            const qs = params.toString();
+            const path = window.location.pathname + (qs ? ('?' + qs) : '') + window.location.hash;
+            window.history.replaceState({}, '', path);
+        } catch (e) {}
+    })();
+
+    function getOrInitComposeSessionId() {
+        try {
+            if (document.querySelector('input[name="assignment_id"]')?.value) {
+                return null;
+            }
+        } catch (e) {}
+        try {
+            let sid = sessionStorage.getItem(QUIZ_COMPOSE_SESSION_STORAGE_KEY);
+            if (!sid) {
+                sid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+                    : (String(Date.now()) + '-' + String(Math.random()).slice(2, 10));
+                sessionStorage.setItem(QUIZ_COMPOSE_SESSION_STORAGE_KEY, sid);
+            }
+            return sid;
+        } catch (e) {
+            return 'session-unavailable';
+        }
+    }
+
+    function getAutosaveStorageKey() {
+        const classId = document.getElementById('class_id')?.value || '';
+        const existingId = document.querySelector('input[name="assignment_id"]')?.value || '';
+        if (existingId) {
+            return `${quizAutosaveKeyBase}:class:${classId || 'none'}:assignment:${existingId}`;
+        }
+        const composeId = getOrInitComposeSessionId();
+        return `${quizAutosaveKeyBase}:class:${classId || 'none'}:compose:${composeId}`;
+    }
+
     let dragState = { kind: null, sectionEl: null, questionEl: null, groupNodes: null };
     let dragDropIndicator = null;
     
@@ -2170,16 +2214,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // ------------------------------------------------------------
     // Autosave draft (DB + local backup) to survive logout/refresh
     // ------------------------------------------------------------
-    const autosaveKeyBase = 'quiz_autosave_draft_v1';
     let autosaveTimer = null;
     let autosaveDirty = false;
     let autosaveInFlight = false;
-
-    function getAutosaveStorageKey() {
-        const classId = document.getElementById('class_id')?.value || '';
-        const existingId = document.querySelector('input[name="assignment_id"]')?.value || '';
-        return `${autosaveKeyBase}:class:${classId || 'none'}:assignment:${existingId || 'new'}`;
-    }
 
     function collectBlocksForAutosave() {
         const blocks = [];

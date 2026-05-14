@@ -3852,6 +3852,7 @@ def _void_group_assignment_impl(assignment_id):
                         db.session.add(new_grade)
                         voided_count += 1
             
+            group_assignment.status = 'Voided'
             flash(f'Voided assignment for all groups ({voided_count} students).', 'success')
             
         elif void_scope == 'specific_groups':
@@ -3988,6 +3989,7 @@ def _unvoid_group_assignment_impl(assignment_id):
             grade.voided_reason = None
             unvoided_count += 1
         
+        group_assignment.status = 'Active'
         db.session.commit()
         flash(f'Restored assignment for {unvoided_count} students.', 'success')
         

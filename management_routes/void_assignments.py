@@ -73,6 +73,7 @@ def void_assignment_for_students(assignment_id):
                             db.session.add(new_group_grade)
                             voided_count += 1
                 
+                group_assignment.status = 'Voided'
                 message = f'Voided group assignment "{group_assignment.title}" for all students ({voided_count} grades)'
             else:
                 # Void for specific students (membership must be in this class)
@@ -264,6 +265,7 @@ def unvoid_assignment_for_students(assignment_id):
                     grade.voided_reason = None
                     unvoided_count += 1
                 
+                group_assignment.status = 'Active'
                 message = f'Restored group assignment "{group_assignment.title}" for all students'
             else:
                 for student_id in student_ids:

@@ -1415,6 +1415,7 @@ def _void_one_assignment_impl(assignment_id, assignment_type, student_ids, void_
                         db.session.add(new_group_grade)
                         voided_count += 1
                         affected.append((member.student_id, class_id, school_year_id, quarter))
+            group_assignment.status = 'Voided'
             return (voided_count, affected)
         else:
             # Void for specific students (membership must be in this class)
@@ -1755,6 +1756,7 @@ def unvoid_assignment_for_students(assignment_id):
                             group_grade.voided_reason = None
                             unvoided_count += 1
                 
+                group_assignment.status = 'Active'
                 message = f'Restored group assignment "{group_assignment.title}" for all students ({unvoided_count} grades)'
             else:
                 from models import StudentGroupMember
@@ -3417,6 +3419,14 @@ def view_student_details_data(student_id):
                     ).first()
                     total_pts = getattr(ga, 'total_points', None) or 100.0
                     is_overdue = ga.due_date and ga.due_date < datetime.utcnow()
+                    if not grade:
+                        voided_only = GroupGrade.query.filter_by(
+                            group_assignment_id=ga.id,
+                            student_id=student.id,
+                            is_voided=True,
+                        ).first()
+                        if voided_only:
+                            continue
                     awaiting_grade = False
                     if grade and grade.grade_data:
                         try:

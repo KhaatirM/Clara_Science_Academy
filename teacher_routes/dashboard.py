@@ -1914,6 +1914,14 @@ def view_student_details_data(student_id):
                 ).first()
                 total_pts = getattr(ga, 'total_points', None) or 100.0
                 is_overdue = ga.due_date and ga.due_date < datetime.utcnow()
+                if not grade:
+                    voided_only = GroupGrade.query.filter_by(
+                        group_assignment_id=ga.id,
+                        student_id=student.id,
+                        is_voided=True,
+                    ).first()
+                    if voided_only:
+                        continue
                 awaiting_grade = False
                 if grade and grade.grade_data:
                     try:

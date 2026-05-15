@@ -1213,6 +1213,10 @@ def assignments_and_grades():
                                 gd = json.loads(gg.grade_data) if isinstance(gg.grade_data, str) else gg.grade_data
                                 if gd.get('submission_type') in ('in_person', 'online'):
                                     submission_student_ids.add(gg.student_id)
+                                else:
+                                    pe = get_points_earned(gd)
+                                    if pe is not None and str(pe).strip() != '':
+                                        submission_student_ids.add(gg.student_id)
                             except (json.JSONDecodeError, TypeError):
                                 pass
                     for gs in GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).all():

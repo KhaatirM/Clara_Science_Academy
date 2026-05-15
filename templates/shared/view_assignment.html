@@ -978,9 +978,9 @@ function handleExtensionSubmit(event) {
     
     // Determine the URL based on user role
     {% if can_assignments_admin_ui %}
-        const extensionUrl = '{{ url_for("management.admin_grant_extensions", assignment_id=assignment.id) }}';
+        const extensionUrl = '{{ url_for("management.grant_extensions", assignment_id=assignment.id) }}';
     {% else %}
-        const extensionUrl = '{{ url_for("teacher.assignments.grant_extensions", assignment_id=assignment.id) }}';
+        const extensionUrl = '{{ url_for("teacher.assignments.grant_extensions") }}';
     {% endif %}
     
     fetch(extensionUrl, {

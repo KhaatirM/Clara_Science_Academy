@@ -207,6 +207,7 @@ from .assignments import (
     admin_edit_group_assignment as admin_edit_group_assignment_func,
     admin_delete_group_assignment as admin_delete_group_assignment_func,
     admin_grant_extensions as admin_grant_extensions_func,
+    grant_extensions as grant_extensions_func,
     admin_grant_group_extensions as admin_grant_group_extensions_func,
     grant_group_extensions as grant_group_extensions_func,
     admin_reopen_assignment as admin_reopen_assignment_func,
@@ -996,8 +997,8 @@ def grant_group_extensions_route(assignment_id):
 @login_required
 @management_required
 def grant_extensions_route(assignment_id):
-    """Grant extensions route - alias for admin_grant_extensions"""
-    return admin_grant_extensions_func(assignment_id)
+    """Grant extensions (POST) — assignment_id is in the URL for routing; body fields drive the handler."""
+    return grant_extensions_func()
 
 @management_blueprint.route('/grades/statistics/<int:assignment_id>', endpoint='admin_grade_statistics')
 @login_required

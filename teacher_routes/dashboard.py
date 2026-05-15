@@ -1044,37 +1044,11 @@ def assignments_and_grades():
                     
                     # Get grade data for group assignments
                     for group_assignment in group_assignments:
-                        from models import GroupGrade, GroupSubmission
+                        from models import GroupGrade, GroupSubmission, StudentGroupMember, StudentGroup
                         group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
-                        total_group_submissions = GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).count()
-                        
-                        total_score = 0
-                        graded_with_score = 0
-                        for grade in group_grades:
-                            if grade.is_voided:
-                                continue
-                            if grade.grade_data:
-                                try:
-                                    if isinstance(grade.grade_data, dict):
-                                        grade_dict = grade.grade_data
-                                    else:
-                                        grade_dict = json.loads(grade.grade_data)
-                                    if grade_dict.get('is_voided'):
-                                        continue
-                                    score_val = get_points_earned(grade_dict)
-                                    if score_val is not None and str(score_val).strip() != '':
-                                        total_score += float(score_val)
-                                        graded_with_score += 1
-                                except (json.JSONDecodeError, TypeError):
-                                    continue
-                        
-                        total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
-                        avg_pct_ga = round((total_score / graded_with_score / total_points_ga * 100), 1) if graded_with_score > 0 and total_points_ga > 0 else 0
-                        ga_voided_grades = [g for g in group_grades if g.is_voided]
-                        ga_voided_student_ids = {g.student_id for g in ga_voided_grades}
+
                         applicable_student_ids = set()
                         try:
-                            from models import StudentGroupMember, StudentGroup
                             sel = group_assignment.selected_group_ids
                             if sel:
                                 ids = json.loads(sel) if isinstance(sel, str) else sel
@@ -1092,6 +1066,49 @@ def assignments_and_grades():
                             applicable_student_ids = {m.student_id for m in members if m.student_id}
                         except Exception:
                             applicable_student_ids = {g.student_id for g in group_grades if g.student_id}
+
+                        # Students with a recorded submission signal (matches management assignments view)
+                        submission_student_ids = set()
+                        for gg in group_grades:
+                            if gg.grade_data and not gg.is_voided:
+                                try:
+                                    gd = json.loads(gg.grade_data) if isinstance(gg.grade_data, str) else gg.grade_data
+                                    if gd.get('submission_type') in ('in_person', 'online'):
+                                        submission_student_ids.add(gg.student_id)
+                                except (json.JSONDecodeError, TypeError):
+                                    pass
+                        for gs in GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).all():
+                            if (gs.attachment_file_path or gs.attachment_filename) and gs.group_id:
+                                for m in StudentGroupMember.query.filter_by(group_id=gs.group_id).all():
+                                    if m.student_id:
+                                        submission_student_ids.add(m.student_id)
+
+                        total_score = 0.0
+                        graded_student_ids = set()
+                        for grade in group_grades:
+                            if grade.is_voided:
+                                continue
+                            if grade.grade_data:
+                                try:
+                                    if isinstance(grade.grade_data, dict):
+                                        grade_dict = grade.grade_data
+                                    else:
+                                        grade_dict = json.loads(grade.grade_data)
+                                    if grade_dict.get('is_voided'):
+                                        continue
+                                    score_val = get_points_earned(grade_dict)
+                                    if score_val is not None and str(score_val).strip() != '':
+                                        total_score += float(score_val)
+                                        if grade.student_id:
+                                            graded_student_ids.add(grade.student_id)
+                                except (json.JSONDecodeError, TypeError):
+                                    continue
+
+                        graded_with_score = len(graded_student_ids)
+                        total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
+                        avg_pct_ga = round((total_score / graded_with_score / total_points_ga * 100), 1) if graded_with_score > 0 and total_points_ga > 0 else 0
+                        ga_voided_grades = [g for g in group_grades if g.is_voided]
+                        ga_voided_student_ids = {g.student_id for g in ga_voided_grades}
                         ga_all_voided = group_assignment.status == 'Voided' or (
                             bool(applicable_student_ids) and applicable_student_ids <= ga_voided_student_ids
                         )
@@ -1107,6 +1124,10 @@ def assignments_and_grades():
                                     if nm not in seen_nm:
                                         seen_nm.add(nm)
                                         ga_voided_student_names.append(nm)
+                        grading_scope_total = len(applicable_student_ids) if applicable_student_ids else max(
+                            len(submission_student_ids), len(graded_student_ids), 1
+                        )
+                        total_group_submissions = grading_scope_total
                         assignment_grades[f'group_{group_assignment.id}'] = {
                             'total_submissions': total_group_submissions,
                             'graded_count': graded_with_score,
@@ -1171,6 +1192,31 @@ def assignments_and_grades():
                 enrolled_students = []
                 all_assignments_list = []
         
+        ga_applicable_by_id = {}
+        if selected_class and view_mode == 'table' and group_assignments:
+            from models import StudentGroupMember, StudentGroup
+            for group_assignment in group_assignments:
+                sid_set = set()
+                try:
+                    sel = group_assignment.selected_group_ids
+                    if sel:
+                        ids = json.loads(sel) if isinstance(sel, str) else sel
+                        ids = [int(x) for x in ids]
+                        members = StudentGroupMember.query.join(StudentGroup).filter(
+                            StudentGroup.id.in_(ids),
+                            StudentGroup.class_id == group_assignment.class_id,
+                            StudentGroup.is_active == True
+                        ).all()
+                    else:
+                        members = StudentGroupMember.query.join(StudentGroup).filter(
+                            StudentGroup.class_id == group_assignment.class_id,
+                            StudentGroup.is_active == True
+                        ).all()
+                    sid_set = {m.student_id for m in members if m.student_id}
+                except Exception:
+                    sid_set = set()
+                ga_applicable_by_id[group_assignment.id] = sid_set
+        
         if selected_class and view_mode == 'table':
             
             # Get grades for enrolled students (individual assignments)
@@ -1206,10 +1252,9 @@ def assignments_and_grades():
                             'type': 'individual'
                         }
                 
-                # Get group assignment grades
+                # Get group assignment grades (roster + GroupGrade; score via get_points_earned)
                 from models import GroupGrade, StudentGroupMember, StudentGroup
                 for group_assignment in group_assignments:
-                    # Check if this group assignment is for specific groups
                     assignment_group_ids = []
                     if group_assignment.selected_group_ids:
                         try:
@@ -1217,97 +1262,115 @@ def assignments_and_grades():
                             assignment_group_ids = [int(gid) for gid in raw_group_ids]
                         except (json.JSONDecodeError, TypeError, ValueError):
                             assignment_group_ids = []
-                    
-                    # Find what group this student is in for this class
-                    should_show_assignment = False
-                    student_group_id = None
+
+                    in_roster = student.id in ga_applicable_by_id.get(group_assignment.id, set())
+
                     student_group_name = 'N/A'
-                    
+                    student_group_member = None
                     if not assignment_group_ids:
                         student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
                             StudentGroup.class_id == selected_class.id,
                             StudentGroupMember.student_id == student.id
                         ).order_by(StudentGroupMember.id.desc()).first()
-                        
-                        if student_group_member and student_group_member.group:
-                            student_group_id = student_group_member.group.id
-                            student_group_name = student_group_member.group.name
-                            should_show_assignment = True
                     else:
                         student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
                             StudentGroup.class_id == selected_class.id,
                             StudentGroupMember.student_id == student.id,
                             StudentGroup.id.in_(assignment_group_ids)
                         ).order_by(StudentGroupMember.id.desc()).first()
-                        
-                        if student_group_member and student_group_member.group:
-                            student_group_id = student_group_member.group.id
-                            student_group_name = student_group_member.group.name
-                            should_show_assignment = True
-                    
-                    if should_show_assignment:
-                        if student_group_id:
-                            group_grade = GroupGrade.query.filter_by(
-                                student_id=student.id,
-                                group_assignment_id=group_assignment.id
-                            ).first()
-                            
-                            if group_grade:
-                                try:
-                                    grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
-                                    table_student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                        'grade': grade_data.get('score', 'N/A'),
-                                        'comments': grade_data.get('comments', ''),
-                                        'graded_at': group_grade.graded_at,
-                                        'type': 'group',
-                                        'group_name': student_group_name,
-                                        'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
-                                    }
-                                except (json.JSONDecodeError, TypeError, AttributeError):
-                                    table_student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                        'grade': 'N/A',
-                                        'comments': 'Error parsing grade data',
-                                        'graded_at': None,
-                                        'type': 'group',
-                                        'group_name': student_group_name,
-                                        'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
-                                    }
-                            else:
-                                table_student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                    'grade': 'Not Graded',
-                                    'comments': '',
-                                    'graded_at': None,
+
+                    if student_group_member and student_group_member.group:
+                        student_group_name = student_group_member.group.name
+
+                    group_grade = GroupGrade.query.filter_by(
+                        student_id=student.id,
+                        group_assignment_id=group_assignment.id
+                    ).first()
+
+                    if group_grade and student_group_name == 'N/A' and getattr(group_grade, 'group_id', None):
+                        sg = StudentGroup.query.get(group_grade.group_id)
+                        if sg:
+                            student_group_name = sg.name
+
+                    gkey = f'group_{group_assignment.id}'
+
+                    if in_roster:
+                        if group_grade:
+                            try:
+                                gd = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else (group_grade.grade_data or {})
+                                pts = get_points_earned(gd)
+                                cmt = gd.get('comments') or gd.get('comment') or (group_grade.comments or '')
+                                table_student_grades[student.id][gkey] = {
+                                    'grade': pts if pts is not None else 'N/A',
+                                    'comments': cmt or '',
+                                    'graded_at': group_grade.graded_at,
                                     'type': 'group',
                                     'group_name': student_group_name,
-                                    'is_voided': False
+                                    'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False,
+                                }
+                            except (json.JSONDecodeError, TypeError, AttributeError):
+                                table_student_grades[student.id][gkey] = {
+                                    'grade': 'N/A',
+                                    'comments': 'Error parsing grade data',
+                                    'graded_at': getattr(group_grade, 'graded_at', None),
+                                    'type': 'group',
+                                    'group_name': student_group_name,
+                                    'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False,
                                 }
                         else:
-                            table_student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                'grade': 'No Group',
-                                'comments': 'Student not assigned to a group',
+                            table_student_grades[student.id][gkey] = {
+                                'grade': 'Not Graded',
+                                'comments': '',
                                 'graded_at': None,
                                 'type': 'group',
-                                'group_name': 'N/A',
-                                'is_voided': False
+                                'group_name': student_group_name,
+                                'is_voided': False,
+                            }
+                    elif group_grade and not (group_grade.is_voided if hasattr(group_grade, 'is_voided') else False):
+                        try:
+                            gd = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else (group_grade.grade_data or {})
+                            pts = get_points_earned(gd)
+                            cmt = gd.get('comments') or gd.get('comment') or (group_grade.comments or '')
+                            gn = student_group_name
+                            if gn == 'N/A' and getattr(group_grade, 'group_id', None):
+                                sg = StudentGroup.query.get(group_grade.group_id)
+                                if sg:
+                                    gn = sg.name
+                            table_student_grades[student.id][gkey] = {
+                                'grade': pts if pts is not None else 'N/A',
+                                'comments': cmt or '',
+                                'graded_at': group_grade.graded_at,
+                                'type': 'group',
+                                'group_name': gn,
+                                'is_voided': False,
+                            }
+                        except (json.JSONDecodeError, TypeError, AttributeError):
+                            table_student_grades[student.id][gkey] = {
+                                'grade': 'N/A',
+                                'comments': 'Error parsing grade data',
+                                'graded_at': getattr(group_grade, 'graded_at', None),
+                                'type': 'group',
+                                'group_name': student_group_name,
+                                'is_voided': False,
                             }
                     else:
                         if not assignment_group_ids:
-                            table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                            table_student_grades[student.id][gkey] = {
                                 'grade': 'No Group',
                                 'comments': 'Student not assigned to a group',
                                 'graded_at': None,
                                 'is_voided': False,
                                 'type': 'group',
-                                'group_name': 'N/A'
+                                'group_name': 'N/A',
                             }
                         else:
-                            table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                            table_student_grades[student.id][gkey] = {
                                 'grade': 'Not Assigned',
                                 'comments': 'Not assigned to this group',
                                 'graded_at': None,
                                 'type': 'group',
                                 'group_name': 'N/A',
-                                'is_voided': False
+                                'is_voided': False,
                             }
             
             # Calculate averages for each student

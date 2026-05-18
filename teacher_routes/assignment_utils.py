@@ -189,6 +189,26 @@ def get_effective_assignment_status(assignment):
     return calculate_assignment_status(assignment)
 
 
+def compute_assignment_void_scope(assignment, enrolled_student_ids, voided_student_ids):
+    """
+    Whether an assignment is fully or partially voided for the class roster.
+    enrolled_student_ids / voided_student_ids are student id iterables.
+    """
+    enrolled_set = {sid for sid in (enrolled_student_ids or []) if sid}
+    voided_set = {sid for sid in (voided_student_ids or []) if sid} & enrolled_set
+    all_voided = (
+        getattr(assignment, 'status', None) == 'Voided'
+        or (bool(enrolled_set) and enrolled_set <= voided_set)
+    )
+    partially_voided = not all_voided and bool(voided_set)
+    return {
+        'all_voided': all_voided,
+        'partially_voided': partially_voided,
+        'voided_count': len(voided_set),
+        'enrolled_count': len(enrolled_set),
+    }
+
+
 def get_student_close_date(assignment, student_id):
     """
     Get the effective close date for a student, considering extensions.
@@ -362,4 +382,139 @@ def count_quiz_questions_in_request(form):
             if (form.get(key) or "").strip():
                 n += 1
     return n
+
+
+def teacher_can_review_extension_request(extension_request, teacher):
+    """True if teacher owns the class for this extension request."""
+    if teacher is None:
+        return False
+    assignment = extension_request.assignment
+    class_info = getattr(assignment, 'class_info', None)
+    if not class_info:
+        return False
+    return class_info.teacher_id == teacher.id
+
+
+def apply_extension_request_review(extension_request, action, review_notes, reviewer_id):
+    """
+    Approve or reject a pending extension request and sync AssignmentExtension on approve.
+    Returns a short success message. Caller must commit the session.
+    """
+    from datetime import datetime
+    from models import db
+
+    if extension_request.status != 'Pending':
+        raise ValueError('Request is no longer pending')
+
+    assignment = extension_request.assignment
+    now = datetime.utcnow()
+
+    if action == 'approve':
+        extension_request.status = 'Approved'
+        extension_request.reviewed_at = now
+        extension_request.reviewed_by = reviewer_id
+        extension_request.review_notes = review_notes if review_notes else None
+
+        existing_extension = AssignmentExtension.query.filter_by(
+            assignment_id=assignment.id,
+            student_id=extension_request.student_id,
+            is_active=True,
+        ).first()
+
+        reason = review_notes if review_notes else 'Extension granted'
+        if existing_extension:
+            existing_extension.extended_due_date = extension_request.requested_due_date
+            existing_extension.reason = reason
+        else:
+            db.session.add(AssignmentExtension(
+                assignment_id=assignment.id,
+                student_id=extension_request.student_id,
+                extended_due_date=extension_request.requested_due_date,
+                reason=reason,
+                granted_by=reviewer_id,
+                is_active=True,
+            ))
+
+        return (
+            f'Extension request approved. New due date: '
+            f'{extension_request.requested_due_date.strftime("%Y-%m-%d %I:%M %p")}'
+        )
+
+    extension_request.status = 'Rejected'
+    extension_request.reviewed_at = now
+    extension_request.reviewed_by = reviewer_id
+    extension_request.review_notes = review_notes if review_notes else 'Extension request rejected'
+    return 'Extension request rejected'
+
+
+def bulk_process_extension_reviews(request_ids, action, review_notes, reviewer_id, teacher=None, admin=False):
+    """
+    Review multiple pending extension requests. Returns (processed_requests, failed_entries).
+    Caller must commit the session.
+    """
+    from models import ExtensionRequest
+
+    processed = []
+    failed = []
+
+    for rid in request_ids:
+        extension_request = ExtensionRequest.query.get(rid)
+        if not extension_request:
+            failed.append({'id': rid, 'reason': 'Not found'})
+            continue
+        if not admin and not teacher_can_review_extension_request(extension_request, teacher):
+            failed.append({'id': rid, 'reason': 'Not authorized'})
+            continue
+        if extension_request.status != 'Pending':
+            failed.append({'id': rid, 'reason': 'Not pending'})
+            continue
+        try:
+            apply_extension_request_review(
+                extension_request,
+                action,
+                review_notes,
+                reviewer_id,
+            )
+            processed.append(extension_request)
+        except ValueError as e:
+            failed.append({'id': rid, 'reason': str(e)})
+
+    return processed, failed
+
+
+def notify_extension_request_review(extension_request, action, review_notes=''):
+    """Notify the student about an extension decision (best-effort)."""
+    try:
+        from flask import url_for
+        from app import create_notification
+
+        student_user = getattr(extension_request.student, 'user', None)
+        if not student_user or not student_user.id:
+            return
+
+        assign_title = extension_request.assignment.title
+        if action == 'approve':
+            create_notification(
+                student_user.id,
+                'extension_request',
+                'Extension request approved',
+                (
+                    f'Your extension request for "{assign_title}" was approved. '
+                    f'New due date: {extension_request.requested_due_date.strftime("%B %d, %Y at %I:%M %p")}.'
+                ),
+                link=url_for('student.student_assignments'),
+            )
+        else:
+            create_notification(
+                student_user.id,
+                'extension_request',
+                'Extension request not approved',
+                (
+                    f'Your extension request for "{assign_title}" was not approved.'
+                    + (f' Note: {review_notes}' if review_notes else '')
+                ),
+                link=url_for('student.student_assignments'),
+            )
+    except Exception:
+        pass
 

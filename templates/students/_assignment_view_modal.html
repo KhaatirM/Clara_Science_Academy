@@ -1,0 +1,106 @@
+{# Assignment view modal — populated by openAssignmentViewModal() in role_student_dashboard.html #}
+<div class="modal fade" id="assignmentViewModal" tabindex="-1" aria-labelledby="assignmentViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable sav-modal-dialog">
+        <div class="modal-content sav-modal-content">
+            <div class="modal-header sav-modal-header" id="viewModalHeader">
+                <div class="sav-header-row w-100">
+                    <div class="sav-header-icon" id="viewAssignmentIcon" aria-hidden="true"></div>
+                    <div class="sav-header-text">
+                        <h2 class="sav-title" id="assignmentViewModalLabel">
+                            <span id="viewAssignmentTitle"></span>
+                        </h2>
+                        <p class="sav-subtitle" id="viewAssignmentSubtitle">Assignment details &amp; next steps</p>
+                        <div class="sav-header-chips">
+                            <span class="sav-chip" id="viewAssignmentQuarter"></span>
+                            <span class="sav-chip" id="viewAssignmentType"></span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body sav-modal-body">
+                <div class="sav-status-banner sav-status--pending" id="viewAssignmentBanner" role="status">
+                    <div class="sav-status-icon" id="viewAssignmentStatusIcon" aria-hidden="true"></div>
+                    <div class="flex-grow-1 min-w-0">
+                        <h6 class="sav-status-heading" id="viewAssignmentStatusTitle">Assignment status</h6>
+                        <p class="sav-status-message" id="viewAssignmentStatusMessage">Loading…</p>
+                    </div>
+                    <span class="sav-status-pill sav-pill--pending" id="viewAssignmentStatus"></span>
+                </div>
+
+                <div class="sav-layout">
+                    <div class="sav-main">
+                        <section class="sav-panel" id="viewDescriptionCard">
+                            <h3 class="sav-panel-title"><i class="bi bi-journal-text"></i> Instructions</h3>
+                            <div id="viewAssignmentDescription"></div>
+                            <div id="viewAssignmentInstructions"></div>
+                        </section>
+
+                        <section class="sav-panel" id="viewProgressCard">
+                            <h3 class="sav-panel-title"><i class="bi bi-calendar3"></i> Timeline</h3>
+                            <div class="sav-timeline-grid">
+                                <div class="sav-timeline-card">
+                                    <div class="sav-timeline-label">Due date</div>
+                                    <div id="viewAssignmentDueDate">—</div>
+                                </div>
+                                <div class="sav-timeline-card">
+                                    <div class="sav-timeline-label">Time remaining</div>
+                                    <div id="viewTimeRemaining">Calculating…</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="sav-panel" id="quizDetailsCard" style="display: none;">
+                            <h3 class="sav-panel-title"><i class="bi bi-ui-checks"></i> Quiz details</h3>
+                            <div id="quizDetailsContent"></div>
+                        </section>
+                    </div>
+
+                    <aside class="sav-sidebar">
+                        <section class="sav-panel" id="viewTypeCard">
+                            <h3 class="sav-panel-title" id="viewTypeCardTitle"><i class="bi bi-folder2-open"></i> Materials</h3>
+                            <div id="viewAssignmentAttachment"></div>
+                            <div id="viewTypeInstructions" class="mt-2"></div>
+                            <div id="quizDetailsContainer" class="mt-2"></div>
+                        </section>
+
+                        <section class="sav-panel">
+                            <h3 class="sav-panel-title"><i class="bi bi-person-check"></i> Your progress</h3>
+                            <div id="viewSubmissionStatus"></div>
+                            <div id="viewProgressContainer" class="mt-2">
+                                <div class="progress sav-progress">
+                                    <div class="progress-bar" id="viewProgressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small id="viewProgressText">Progress: 0%</small>
+                            </div>
+                        </section>
+
+                        <section class="sav-panel sav-panel-grade" id="viewGradeFeedbackCard" style="display: none;">
+                            <h3 class="sav-panel-title"><i class="bi bi-chat-square-text"></i> Grade &amp; feedback</h3>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-success" id="viewGradeDisplay">—</span>
+                                <span class="text-muted small">from your teacher</span>
+                            </div>
+                            <div id="viewGradeFeedback">—</div>
+                        </section>
+
+                        <section class="sav-panel sav-panel-actions">
+                            <h3 class="sav-panel-title"><i class="bi bi-lightning-charge"></i> Actions</h3>
+                            <div id="viewActionButtons" class="d-grid gap-2"></div>
+                        </section>
+                    </aside>
+                </div>
+            </div>
+
+            <div class="modal-footer sav-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Close
+                </button>
+                <button type="button" class="btn btn-sav-help" id="viewHelpButton" onclick="showAssignmentHelp()">
+                    <i class="bi bi-question-circle me-1"></i> Need help?
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

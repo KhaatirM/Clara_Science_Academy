@@ -346,25 +346,16 @@ function viewBugReport(reportId) {
 }
 
 function updateBugStatus(reportId, newStatus) {
-    if (confirm(`Are you sure you want to mark bug report #${reportId} as ${newStatus.replace('_', ' ')}?`)) {
-        // This would typically make an AJAX call to update the status
-        alert(`Bug report #${reportId} status updated to ${newStatus.replace('_', ' ')}`);
-        location.reload();
-    }
+    alert(`Bug report #${reportId} status updated to ${newStatus.replace('_', ' ')}`);
+    location.reload();
 }
 
 function acknowledgeError(entryId) {
-    if (confirm('Mark this error as acknowledged?')) {
-        // Acknowledge error functionality would go here
-        alert('Error acknowledgment functionality would be implemented here');
-    }
+    alert('Error acknowledgment functionality would be implemented here');
 }
 
 function acknowledgeAll() {
-    if (confirm('Acknowledge all visible entries?')) {
-        // Acknowledge all entries functionality would go here
-        alert('Acknowledge all entries functionality would be implemented here');
-    }
+    alert('Acknowledge all entries functionality would be implemented here');
 }
 
 function exportLog() {

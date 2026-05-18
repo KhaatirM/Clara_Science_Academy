@@ -555,7 +555,6 @@ function markAll(status) {
 }
 
 function clearAll() {
-    if (confirm('Are you sure you want to clear all attendance selections?')) {
         const radios = document.querySelectorAll('input[type="radio"]:checked');
         radios.forEach(radio => {
             radio.checked = false;
@@ -566,7 +565,6 @@ function clearAll() {
                 updateStats();
             }
         }, 100);
-    }
 }
 
 // Date helper functions

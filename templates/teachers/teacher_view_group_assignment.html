@@ -567,7 +567,6 @@ function goBack() {
 function changeGroupAssignmentStatus(assignmentId, currentStatus) {
   const newStatus = prompt(`Current status: ${currentStatus}\n\nEnter new status (Active, Inactive, Voided):`, currentStatus);
   if (newStatus && newStatus !== currentStatus) {
-    if (confirm(`Change status from "${currentStatus}" to "${newStatus}"?`)) {
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = "{{ url_for('management.admin_change_group_assignment_status', assignment_id=0) }}".replace('0', assignmentId);
@@ -586,7 +585,6 @@ function changeGroupAssignmentStatus(assignmentId, currentStatus) {
       
       document.body.appendChild(form);
       form.submit();
-    }
   }
 }
 

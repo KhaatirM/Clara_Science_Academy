@@ -1,0 +1,295 @@
+/* Compact attendance reports — tab & standalone */
+
+.attn-reports--loading {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.attn-reports {
+  --attn-rpt-accent: #0d9488;
+  --attn-rpt-accent-soft: rgba(13, 148, 136, 0.12);
+  --attn-rpt-border: rgba(15, 23, 42, 0.08);
+  --attn-rpt-muted: #64748b;
+  --attn-rpt-surface: #fff;
+  --attn-rpt-radius: 16px;
+  --attn-rpt-table-max: min(52vh, 520px);
+}
+
+.attn-reports-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.attn-reports-page-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: #0f172a;
+}
+
+.attn-reports-shell {
+  background: var(--attn-rpt-surface);
+  border: 1px solid var(--attn-rpt-border);
+  border-radius: var(--attn-rpt-radius);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.attn-reports-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--attn-rpt-border);
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+}
+
+.attn-reports-range {
+  font-size: 0.88rem;
+  color: var(--attn-rpt-muted);
+  margin: 0;
+}
+
+.attn-reports-range strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.attn-reports-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.attn-reports-preset {
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--attn-rpt-border);
+  background: #fff;
+  color: #334155;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.attn-reports-preset:hover {
+  background: var(--attn-rpt-accent-soft);
+  border-color: rgba(13, 148, 136, 0.35);
+  color: var(--attn-rpt-accent);
+}
+
+.attn-reports-preset.is-active {
+  background: var(--attn-rpt-accent);
+  border-color: var(--attn-rpt-accent);
+  color: #fff;
+}
+
+.attn-reports-stats {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--attn-rpt-border);
+}
+
+.attn-reports-stat {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid var(--attn-rpt-border);
+  background: #f8fafc;
+}
+
+.attn-reports-stat-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.attn-reports-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--attn-rpt-muted);
+  white-space: nowrap;
+}
+
+.attn-reports-stat--present .attn-reports-stat-value { color: #15803d; }
+.attn-reports-stat--late .attn-reports-stat-value { color: #7c3aed; }
+.attn-reports-stat--unexcused .attn-reports-stat-value { color: #475569; }
+.attn-reports-stat--excused .attn-reports-stat-value { color: #b45309; }
+.attn-reports-stat--suspended .attn-reports-stat-value { color: #b91c1c; }
+
+.attn-reports-filters-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--attn-rpt-border);
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+
+.attn-reports-filters-toggle:hover {
+  background: #f8fafc;
+}
+
+.attn-reports-filters-body {
+  padding: 0.85rem 1rem 1rem;
+  border-bottom: 1px solid var(--attn-rpt-border);
+  background: #fafbfc;
+}
+
+.attn-reports-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem 0.85rem;
+}
+
+.attn-reports-filters-grid label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--attn-rpt-muted);
+  margin-bottom: 0.2rem;
+}
+
+.attn-reports-filters-grid .form-select,
+.attn-reports-filters-grid .form-control {
+  font-size: 0.88rem;
+}
+
+.attn-reports-filters-grid select[multiple] {
+  min-height: 4.5rem;
+}
+
+.attn-reports-filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  justify-content: flex-end;
+}
+
+.attn-reports-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  background: #f1f5f9;
+  border-bottom: 1px solid var(--attn-rpt-border);
+}
+
+.attn-reports-table-wrap {
+  max-height: var(--attn-rpt-table-max);
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.attn-reports-table {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.attn-reports-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  border: none;
+  padding: 0.55rem 0.65rem;
+}
+
+.attn-reports-table tbody td {
+  padding: 0.45rem 0.65rem;
+  vertical-align: middle;
+}
+
+.attn-reports-table .attn-rpt-notes {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attn-reports-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--attn-rpt-muted);
+}
+
+.attn-reports-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--attn-rpt-border);
+  background: #fff;
+  font-size: 0.82rem;
+  color: var(--attn-rpt-muted);
+}
+
+.attn-reports-pagination {
+  margin: 0;
+}
+
+.attn-reports-pagination .page-link {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.attn-reports-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--attn-rpt-accent);
+  text-decoration: none;
+}
+
+.attn-reports-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 767.98px) {
+  .attn-reports-presets {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .attn-reports-table-wrap {
+    --attn-rpt-table-max: min(45vh, 400px);
+  }
+}

@@ -90,6 +90,15 @@
 .ext-actions .btn { border-radius: 0.5rem; font-weight: 600; }
 .ext-empty { color: #94a3b8; padding: 2.5rem 1rem; }
 .ext-empty i { font-size: 2.5rem; opacity: 0.6; }
+
+.ext-bulk-toolbar {
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+}
+.ext-bulk-toolbar .form-check-label { font-weight: 600; color: #334155; }
+.ext-request-select { width: 1.15rem; height: 1.15rem; margin-top: 0.35rem; cursor: pointer; }
 </style>
 {% endblock %}
 
@@ -149,6 +158,21 @@
         </div>
         <div class="card-body">
             {% if pending_requests %}
+                <div class="ext-bulk-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="selectAllPending" onchange="toggleAllPendingRequests(this.checked)">
+                        <label class="form-check-label" for="selectAllPending">Select all</label>
+                    </div>
+                    <span class="text-muted small" id="bulkSelectedCount">0 selected</span>
+                    <div class="ms-md-auto d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-success btn-sm" id="bulkApproveBtn" disabled onclick="openBulkReview('approve')">
+                            <i class="bi bi-check-all me-1"></i>Approve selected
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="bulkRejectBtn" disabled onclick="openBulkReview('reject')">
+                            <i class="bi bi-x-lg me-1"></i>Reject selected
+                        </button>
+                    </div>
+                </div>
                 {% for request in pending_requests %}
                 <div class="extension-request-card card" data-request-id="{{ request.id }}"
                      data-student-name="{{ request.student.first_name }} {{ request.student.last_name }}"
@@ -160,6 +184,9 @@
                      data-reason="{{ (request.reason or '')|e }}">
                     <div class="card-body">
                         <div class="row align-items-start">
+                            <div class="col-auto pt-1">
+                                <input type="checkbox" class="form-check-input ext-request-select ext-request-checkbox" value="{{ request.id }}" aria-label="Select request" onchange="updateBulkSelection()">
+                            </div>
                             <div class="col-md-8">
                                 <div class="request-info mb-3">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
@@ -405,10 +432,71 @@
 <script>
 const REVIEW_EXTENSION_URL = "{% if can_assignments_admin_ui %}{{ url_for('management.review_extension_request', request_id=0) }}{% else %}{{ url_for('teacher.review_extension_request', request_id=0) }}{% endif %}".replace('/0/review', '');
 
+const BULK_REVIEW_URL = "{% if can_assignments_admin_ui %}{{ url_for('management.bulk_review_extension_requests') }}{% else %}{{ url_for('teacher.bulk_review_extension_requests') }}{% endif %}";
 let currentReviewRequestId = null;
 let currentReviewAction = null;
+let bulkReviewMode = false;
+
+function getSelectedRequestIds() {
+    return Array.from(document.querySelectorAll('.ext-request-checkbox:checked')).map(function(cb) { return cb.value; });
+}
+
+function updateBulkSelection() {
+    var ids = getSelectedRequestIds();
+    var countEl = document.getElementById('bulkSelectedCount');
+    var approveBtn = document.getElementById('bulkApproveBtn');
+    var rejectBtn = document.getElementById('bulkRejectBtn');
+    var selectAll = document.getElementById('selectAllPending');
+    var boxes = document.querySelectorAll('.ext-request-checkbox');
+    if (countEl) countEl.textContent = ids.length + ' selected';
+    if (approveBtn) approveBtn.disabled = ids.length === 0;
+    if (rejectBtn) rejectBtn.disabled = ids.length === 0;
+    if (selectAll && boxes.length) {
+        selectAll.checked = ids.length > 0 && ids.length === boxes.length;
+        selectAll.indeterminate = ids.length > 0 && ids.length < boxes.length;
+    }
+}
+
+function toggleAllPendingRequests(checked) {
+    document.querySelectorAll('.ext-request-checkbox').forEach(function(cb) { cb.checked = checked; });
+    updateBulkSelection();
+}
+
+function openBulkReview(action) {
+    var ids = getSelectedRequestIds();
+    if (!ids.length) {
+        if (typeof showAppToast === 'function') showAppToast('Select at least one pending request.', 'warning');
+        else alert('Select at least one pending request.');
+        return;
+    }
+    bulkReviewMode = true;
+    currentReviewRequestId = null;
+    currentReviewAction = action;
+    var modal = document.getElementById('reviewExtensionModal');
+    var header = document.getElementById('reviewModalHeader');
+    var title = document.getElementById('reviewModalTitle');
+    var submitBtn = document.getElementById('reviewSubmitBtn');
+    document.getElementById('reviewRequestId').value = '';
+    document.getElementById('reviewAction').value = action;
+    document.getElementById('reviewNotes').value = '';
+    if (action === 'approve') {
+        header.className = 'modal-header bg-success text-white';
+        title.textContent = 'Approve ' + ids.length + ' Extension Request(s)';
+        submitBtn.className = 'btn btn-success';
+        submitBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>Approve selected';
+    } else {
+        header.className = 'modal-header bg-danger text-white';
+        title.textContent = 'Reject ' + ids.length + ' Extension Request(s)';
+        submitBtn.className = 'btn btn-danger';
+        submitBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Reject selected';
+    }
+    new bootstrap.Modal(modal).show();
+}
+
+
 
 function reviewExtensionRequest(requestId, action) {
+    bulkReviewMode = false;
     currentReviewRequestId = requestId;
     currentReviewAction = action;
     const modal = document.getElementById('reviewExtensionModal');
@@ -433,7 +521,6 @@ function reviewExtensionRequest(requestId, action) {
 }
 
 function submitReview() {
-    const requestId = document.getElementById('reviewRequestId').value;
     const action = document.getElementById('reviewAction').value;
     const notes = document.getElementById('reviewNotes').value;
     const formData = new FormData();
@@ -445,7 +532,14 @@ function submitReview() {
     const originalHTML = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
-    var url = REVIEW_EXTENSION_URL + '/' + requestId + '/review';
+    var url;
+    if (bulkReviewMode) {
+        getSelectedRequestIds().forEach(function(id) { formData.append('request_ids[]', id); });
+        url = BULK_REVIEW_URL;
+    } else {
+        const requestId = document.getElementById('reviewRequestId').value;
+        url = REVIEW_EXTENSION_URL + '/' + requestId + '/review';
+    }
     fetch(url, { method: 'POST', body: formData })
         .then(function(r) {
             var ct = (r.headers.get('content-type') || '');
@@ -460,17 +554,28 @@ function submitReview() {
         .then(function(data) {
             if (data && data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('reviewExtensionModal')).hide();
-                alert(data.message || (action === 'approve' ? 'Extension approved.' : 'Extension rejected.'));
+                bulkReviewMode = false;
+                if (typeof showAppToast === 'function') {
+                    showAppToast(data.message || (action === 'approve' ? 'Extension approved.' : 'Extension rejected.'), 'success');
+                }
                 window.location.reload();
             } else {
-                alert(data && data.message ? data.message : 'Error processing request.');
+                if (typeof showAppToast === 'function') {
+                    showAppToast(data && data.message ? data.message : 'Error processing request.', 'error');
+                } else {
+                    alert(data && data.message ? data.message : 'Error processing request.');
+                }
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalHTML;
             }
         })
         .catch(function(err) {
             console.error('Error:', err);
-            alert(err && err.message ? err.message : 'An error occurred. Please try again.');
+            if (typeof showAppToast === 'function') {
+                showAppToast(err && err.message ? err.message : 'An error occurred. Please try again.', 'error');
+            } else {
+                alert(err && err.message ? err.message : 'An error occurred. Please try again.');
+            }
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalHTML;
         });

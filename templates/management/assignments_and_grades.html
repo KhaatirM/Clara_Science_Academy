@@ -864,13 +864,19 @@
                                         {% set total_s = grade_info.get('total_submissions', 0) %}
                                         {% set graded_c = grade_info.get('graded_count', 0) %}
                                         {% set avg_sc = grade_info.get('average_score', 0) %}
-                                        <tr class="grades-by-assignment-row">
+                                        {% set current_status = assignment|effective_assignment_status %}
+                                        {% set all_voided = grade_info.get('all_voided', current_status == 'Voided') %}
+                                        {% set partially_voided = grade_info.get('partially_voided', False) %}
+                                        <tr class="grades-by-assignment-row{% if all_voided or current_status == 'Voided' %} grades-by-assignment-row-voided{% endif %}">
                                             <td>
                                                 <div class="grades-ba-title text-dark">{{ assignment.title }}</div>
                                                 <div class="grades-ba-meta d-flex flex-wrap align-items-center gap-1 mt-1">
-                                                    <span class="text-muted small">{{ assignment.assignment_type if item_type == 'individual' else (assignment.assignment_type or 'Group Assignment') }}</span>
-                                                    <span class="badge rounded-pill {% if item_type == 'individual' %}bg-primary bg-opacity-15 text-primary-emphasis border border-primary-subtle{% else %}bg-info bg-opacity-15 text-info-emphasis border border-info-subtle{% endif %}" style="font-size: 0.7rem;">{{ 'Solo' if item_type == 'individual' else 'Group' }}</span>
-                                                    {% set _at = (assignment.assignment_type or '')|lower %}{% if item_type == 'group' or (_at and _at not in ['quiz', 'discussion']) %}<span class="badge rounded-pill bg-dark bg-opacity-10 text-dark border border-secondary-subtle" style="font-size: 0.65rem;">{{ assignment.assignment_category or 'Uncategorized' }}</span>{% endif %}
+                                                    {% include 'shared/_assignment_meta_badges.html' %}
+                                                    {% if all_voided or current_status == 'Voided' %}
+                                                        <span class="badge rounded-pill bg-secondary" style="font-size: 0.65rem;"><i class="bi bi-slash-circle me-1"></i>Voided</span>
+                                                    {% elif partially_voided %}
+                                                        <span class="badge rounded-pill bg-secondary" style="font-size: 0.65rem;" title="Voided for: {{ grade_info.get('voided_student_names', [])|join(', ') }}"><i class="bi bi-slash-circle me-1"></i>Partially voided</span>
+                                                    {% endif %}
                                                 </div>
                                             </td>
                                             <td class="align-middle">
@@ -881,13 +887,23 @@
                                                 {% endif %}
                                             </td>
                                             <td class="align-middle text-center">
-                                                <span class="grades-ba-stat grades-ba-stat-info">{{ total_s }}</span>
+                                                {% if all_voided or current_status == 'Voided' %}
+                                                    <span class="grades-ba-stat grades-ba-stat-muted" title="Voided for entire class">—</span>
+                                                {% else %}
+                                                    <span class="grades-ba-stat grades-ba-stat-info">{{ total_s }}</span>
+                                                {% endif %}
                                             </td>
                                             <td class="align-middle text-center">
-                                                <span class="grades-ba-stat {% if graded_c == total_s and total_s > 0 %}grades-ba-stat-done{% else %}grades-ba-stat-warn{% endif %}">{{ graded_c }}{% if total_s > 0 %}<span class="grades-ba-stat-denom">/{{ total_s }}</span>{% endif %}</span>
+                                                {% if all_voided or current_status == 'Voided' %}
+                                                    <span class="badge bg-secondary bg-opacity-25 text-dark border border-secondary-subtle" style="font-size: 0.75rem;">Voided</span>
+                                                {% else %}
+                                                    <span class="grades-ba-stat {% if graded_c == total_s and total_s > 0 %}grades-ba-stat-done{% else %}grades-ba-stat-warn{% endif %}">{{ graded_c }}{% if total_s > 0 %}<span class="grades-ba-stat-denom">/{{ total_s }}</span>{% endif %}</span>
+                                                {% endif %}
                                             </td>
                                             <td class="align-middle text-center">
-                                                {% if avg_sc > 0 %}
+                                                {% if all_voided or current_status == 'Voided' %}
+                                                    <span class="grades-ba-avg grades-ba-avg-voided" title="Not included in averages">—</span>
+                                                {% elif avg_sc > 0 %}
                                                     {% if avg_sc >= 80 %}
                                                     <span class="grades-ba-avg grades-ba-avg-high">{{ avg_sc }}%</span>
                                                     {% elif avg_sc >= 70 %}

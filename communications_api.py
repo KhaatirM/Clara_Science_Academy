@@ -12,7 +12,9 @@ from datetime import datetime
 from sqlalchemy import or_, and_
 from shared_communications import (
     get_user_channels, get_direct_messages, get_user_announcements,
-    ensure_class_channel_exists
+    ensure_class_channel_exists,
+    build_class_announcement_panel_payload,
+    serialize_announcement_for_panel,
 )
 from communications_helpers import get_user_full_name
 from utils.user_roles import user_primary_role_is_teaching_staff
@@ -340,6 +342,35 @@ def send_message_api():
         current_app.logger.error(f"Error sending message: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@api_bp.route('/communications/api/class-announcement-panel')
+@login_required
+def class_announcement_panel():
+    """Broadcast options and past announcements for the class announcement modal."""
+    try:
+        class_id = request.args.get('class_id', type=int)
+        if not class_id:
+            return jsonify({'success': False, 'message': 'class_id is required'}), 400
+
+        class_obj = Class.query.get(class_id)
+        if not class_obj:
+            return jsonify({'success': False, 'message': 'Class not found'}), 404
+
+        if current_user.role not in ['Director', 'School Administrator']:
+            if not user_primary_role_is_teaching_staff(current_user):
+                return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+            from teacher_routes.utils import is_authorized_for_class
+            if not is_authorized_for_class(class_obj):
+                return jsonify({'success': False, 'message': 'Access denied'}), 403
+
+        payload = build_class_announcement_panel_payload(current_user, class_obj)
+        return jsonify({'success': True, **payload})
+    except HTTPException:
+        raise
+    except Exception as e:
+        current_app.logger.error(f"Error loading class announcement panel: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @api_bp.route('/communications/create-announcement', methods=['POST'])
 @login_required
 def create_announcement():
@@ -372,8 +403,9 @@ def create_announcement():
             class_obj = Class.query.get(class_id)
             if not class_obj:
                 return jsonify({'success': False, 'message': 'Class not found'}), 404
-            
-            if class_obj.teacher_id != teacher.id:
+
+            from teacher_routes.utils import is_authorized_for_class
+            if not is_authorized_for_class(class_obj):
                 return jsonify({'success': False, 'message': 'You can only send announcements to classes you teach'}), 403
         
         announcement = Announcement(
@@ -414,8 +446,12 @@ def create_announcement():
                     db.session.add(notification)
         
         db.session.commit()
-        
-        return jsonify({'success': True, 'announcement_id': announcement.id})
+
+        return jsonify({
+            'success': True,
+            'announcement_id': announcement.id,
+            'announcement': serialize_announcement_for_panel(announcement),
+        })
     except HTTPException:
         raise
     except Exception as e:

@@ -1,0 +1,465 @@
+{# Student home: profile, goals, announcements, upcoming, notifications #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_announcements_modal.css') }}">
+{% if redo_opportunities %}
+<div class="student-redo-card mb-4">
+    <div class="student-redo-header">
+        <h5 class="mb-0">
+            <i class="bi bi-arrow-repeat me-2"></i>Redo Opportunities
+            <span class="badge bg-warning text-dark ms-2">{{ redo_opportunities|length }}</span>
+        </h5>
+    </div>
+    <div class="student-redo-body">
+        {% for redo in redo_opportunities %}
+        <div class="student-redo-item">
+            <div class="student-redo-icon">
+                <i class="bi bi-arrow-clockwise"></i>
+            </div>
+            <div class="student-redo-info">
+                <h6 class="student-redo-title">{{ redo.assignment.title }}</h6>
+                <p class="student-redo-class mb-1">{{ redo.assignment.class_info.name if redo.assignment.class_info else 'N/A' }}</p>
+                {% if redo.reason %}
+                <p class="student-redo-reason"><i class="bi bi-info-circle me-1"></i>{{ redo.reason }}</p>
+                {% endif %}
+                {% if redo.original_grade %}
+                <p class="student-redo-original-grade">
+                    <i class="bi bi-graph-down me-1"></i>Original Grade: <strong>{{ redo.original_grade }}%</strong>
+                </p>
+                {% endif %}
+            </div>
+            <div class="student-redo-action">
+                <div class="student-redo-deadline mb-2">
+                    <span class="badge bg-warning text-dark">
+                        <i class="bi bi-calendar-event me-1"></i>Due: {{ redo.redo_deadline.strftime('%m/%d/%Y') }}
+                    </span>
+                </div>
+                <a href="{{ url_for('student.submit_assignment', assignment_id=redo.assignment_id, is_redo=1) }}"
+                   class="btn btn-sm btn-warning w-100">
+                    <i class="bi bi-upload me-1"></i>Submit Redo
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="student-home-layout">
+    <div class="student-home-profile">
+        <div class="student-profile-card h-100">
+            <div class="student-profile-header">
+                <div class="student-profile-avatar">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <div class="student-profile-info">
+                    <h4 class="student-profile-name">{{ student.first_name }} {{ student.last_name }}</h4>
+                    <p class="student-profile-id">ID: {{ student.state_id or student.student_id or 'N/A' }}</p>
+                </div>
+            </div>
+            <div class="student-profile-details">
+                <div class="student-profile-item">
+                    <i class="bi bi-mortarboard me-2"></i>
+                    <span>Grade {{ student.grade_level | display_grade }}</span>
+                </div>
+                <div class="student-profile-item">
+                    <i class="bi bi-calendar3 me-2"></i>
+                    <span>{{ student.dob or 'N/A' }}</span>
+                </div>
+                <div class="student-profile-item">
+                    <i class="bi bi-envelope me-2"></i>
+                    <span>{{ student.email or 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="student-home-announcements">
+        <div class="student-home-announcements-card h-100">
+            <div class="student-home-announcements-header">
+                <h5 class="mb-0"><i class="bi bi-megaphone-fill me-2"></i>Announcements</h5>
+                <button type="button" class="student-home-announcements-view-all btn btn-link p-0 border-0" data-bs-toggle="modal" data-bs-target="#studentAnnouncementsAllModal">View all</button>
+            </div>
+            <div class="student-home-announcements-body">
+                {% if announcements %}
+                <div class="student-home-announcements-list">
+                    {% for announcement in announcements[:8] %}
+                    {% set is_schoolwide = announcement.target_group in ['all_students', 'all'] %}
+                    {% set audience_label = 'Entire student assembly' if is_schoolwide else (announcement.class_info.name if announcement.class_info else 'Class') %}
+                    <button type="button" class="student-home-announcement-item{% if announcement.is_important %} is-important{% endif %}"
+                            data-bs-toggle="modal" data-bs-target="#studentAnnouncementViewModal"
+                            data-announcement-title="{{ announcement.title|e }}"
+                            data-announcement-message="{{ announcement.message|e }}"
+                            data-announcement-audience="{{ audience_label|e }}"
+                            data-announcement-time="{{ announcement.timestamp.strftime('%B %d, %Y at %I:%M %p') if announcement.timestamp else '' }}"
+                            data-announcement-important="{{ 'true' if announcement.is_important else 'false' }}">
+                        <div class="student-home-announcement-item-top">
+                            <h6 class="student-home-announcement-title">{{ announcement.title }}</h6>
+                            <small class="student-home-announcement-time">{{ announcement.timestamp.strftime('%b %d, %I:%M %p') if announcement.timestamp else '' }}</small>
+                        </div>
+                        <p class="student-home-announcement-preview">{{ announcement.message[:120] }}{% if announcement.message|length > 120 %}…{% endif %}</p>
+                        <div class="student-home-announcement-footer">
+                            <span class="student-home-announcement-audience{% if is_schoolwide %} is-schoolwide{% endif %}">
+                                <i class="bi {% if is_schoolwide %}bi-people-fill{% else %}bi-book{% endif %} me-1"></i>{{ audience_label }}
+                            </span>
+                            {% if announcement.is_important %}
+                            <span class="student-home-announcement-important-badge">Important</span>
+                            {% endif %}
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="student-home-announcements-empty">
+                    <i class="bi bi-megaphone"></i>
+                    <p class="mb-0">No announcements yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="student-home-goals">
+        <div class="student-goals-card h-100">
+            <div class="student-goals-header">
+                <h5 class="mb-0"><i class="bi bi-target me-2"></i>Academic Goals</h5>
+            </div>
+            <div class="student-goals-body">
+                {% if student.enrollments %}
+                    {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
+                    {% for enrollment in active_enrollments[:5] %}
+                        {% set class = enrollment.class_info %}
+                        {% set goal = goals.get(class.id) %}
+                        {% set current_grade = grades.get(class.name, 0) %}
+                        <div class="mb-3">
+                            <h6>{{ class.name }}</h6>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Current: {{ "%.1f"|format(current_grade) }}%</span>
+                                {% if goal %}
+                                    <span>Goal: {{ "%.1f"|format(goal.target_grade) }}%</span>
+                                {% endif %}
+                            </div>
+                            {% if goal %}
+                                <div class="progress mb-2">
+                                    {% set progress = (current_grade / goal.target_grade * 100) if goal.target_grade > 0 else 0 %}
+                                    <div class="progress-bar {% if progress >= 100 %}bg-success{% elif progress >= 80 %}bg-warning{% else %}bg-danger{% endif %}"
+                                         style="width: {{ [progress, 100]|min }}%">
+                                        {{ "%.1f"|format(progress) }}%
+                                    </div>
+                                </div>
+                                <form method="POST" action="{{ url_for('student.delete_goal', goal_id=goal.id) }}"
+                                      style="display: inline;" onsubmit="return confirm('Delete this goal?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove Goal</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('student.set_goal') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="class_id" value="{{ class.id }}">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="target_grade" class="form-control"
+                                               placeholder="Target %" min="0" max="100" step="0.1" required>
+                                        <button type="submit" class="btn btn-outline-primary">Set Goal</button>
+                                    </div>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">You are not yet enrolled in any classes.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="student-home-assignments-row">
+    <div class="student-home-upcoming">
+        <div class="student-upcoming-card h-100">
+            <div class="student-upcoming-header">
+                <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Assignments</h5>
+            </div>
+            <div class="student-upcoming-body">
+                {% if upcoming_assignments %}
+                    {% for assignment in upcoming_assignments[:5] %}
+                    <div class="student-assignment-item">
+                        <div class="student-assignment-icon">
+                            <i class="bi bi-journal-text"></i>
+                        </div>
+                        <div class="student-assignment-info">
+                            <h6 class="student-assignment-title">{{ assignment.title }}</h6>
+                            <p class="student-assignment-class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
+                        </div>
+                        <div class="student-assignment-due">
+                            <span class="badge bg-warning">Due: {{ assignment.due_date.strftime('%m/%d') if assignment.due_date else 'N/A' }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3 mb-0">No upcoming assignments</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="student-home-notifications">
+        <div class="student-activity-card h-100">
+            <div class="student-activity-header">
+                <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
+            </div>
+            <div class="student-activity-body">
+                <div class="student-activity-timeline">
+                    {% if notifications and notifications|length > 0 %}
+                    {% for notification in notifications[:5] %}
+                    <div class="student-activity-item">
+                        <div class="student-activity-dot"></div>
+                        <div class="student-activity-content">
+                            <h6 class="student-activity-title">{{ notification.title }}</h6>
+                            <p class="student-activity-text">{{ notification.message }}</p>
+                            <small class="student-activity-time">{{ notification.timestamp.strftime('%b %d, %I:%M %p') if notification.timestamp else 'Recently' }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% elif past_due_assignments %}
+                    {% for assignment in past_due_assignments[:5] %}
+                    <div class="student-activity-item">
+                        <div class="student-activity-dot" style="background: #dc3545;"></div>
+                        <div class="student-activity-content">
+                            <h6 class="student-activity-title">Past Due: {{ assignment.title }}</h6>
+                            <p class="student-activity-text">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
+                            <small class="student-activity-time">Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'N/A' }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3 mb-0">No notifications</p>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+{% set announcement_filter_classes = my_classes if my_classes is defined else (classes if classes is defined else []) %}
+
+<div class="modal fade student-announcements-all-modal" id="studentAnnouncementsAllModal" tabindex="-1" aria-labelledby="studentAnnouncementsAllModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable student-announcements-all-modal-dialog">
+        <div class="modal-content student-announcements-all-modal-content">
+            <div class="modal-header student-announcements-all-modal-header border-0">
+                <div class="student-announcements-modal-header-inner">
+                    <div class="student-announcements-modal-icon" aria-hidden="true">
+                        <i class="bi bi-megaphone-fill"></i>
+                    </div>
+                    <div class="student-announcements-modal-header-text">
+                        <h5 class="modal-title mb-0" id="studentAnnouncementsAllModalLabel">Announcements</h5>
+                        <p class="student-announcements-modal-subtitle mb-0">Class updates and school-wide messages</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 d-flex flex-column">
+                <div class="student-announcements-all-filters">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-lg-4">
+                            <label class="student-announcements-filter-label" for="studentAnnouncementsFilterAudience">Audience</label>
+                            <div class="student-announcements-input-wrap">
+                                <i class="bi bi-broadcast student-announcements-input-icon" aria-hidden="true"></i>
+                                <select id="studentAnnouncementsFilterAudience" class="form-select student-announcements-filter-control">
+                                    <option value="all">All announcements</option>
+                                    <option value="schoolwide">Entire student assembly</option>
+                                    {% for c in announcement_filter_classes %}
+                                    <option value="class-{{ c.id }}">{{ c.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-5">
+                            <label class="student-announcements-filter-label" for="studentAnnouncementsFilterSearch">Search</label>
+                            <div class="student-announcements-input-wrap">
+                                <i class="bi bi-search student-announcements-input-icon" aria-hidden="true"></i>
+                                <input type="search" id="studentAnnouncementsFilterSearch" class="form-control student-announcements-filter-control" placeholder="Search title or message…" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-3">
+                            <label class="student-announcements-filter-label d-block">Priority</label>
+                            <label class="student-announcements-important-toggle" for="studentAnnouncementsFilterImportant">
+                                <input type="checkbox" id="studentAnnouncementsFilterImportant" class="student-announcements-important-toggle-input">
+                                <span class="student-announcements-important-toggle-ui">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    Important only
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="student-announcements-filter-meta">
+                        <span class="student-announcements-filter-count" id="studentAnnouncementsFilterCount" aria-live="polite"></span>
+                    </div>
+                </div>
+                {% if announcements %}
+                <div class="student-home-announcements-list student-home-announcements-list--all" id="studentAnnouncementsAllList">
+                    {% for announcement in announcements %}
+                    {% set is_schoolwide = announcement.target_group in ['all_students', 'all'] %}
+                    {% set audience_label = 'Entire student assembly' if is_schoolwide else (announcement.class_info.name if announcement.class_info else 'Class') %}
+                    <button type="button" class="student-home-announcement-item student-announcements-all-item{% if announcement.is_important %} is-important{% endif %}"
+                            data-bs-toggle="modal" data-bs-target="#studentAnnouncementViewModal"
+                            data-filter-audience="{% if is_schoolwide %}schoolwide{% else %}class{% endif %}"
+                            data-filter-class-id="{{ announcement.class_id or '' }}"
+                            data-filter-important="{{ 'true' if announcement.is_important else 'false' }}"
+                            data-announcement-title="{{ announcement.title|e }}"
+                            data-announcement-message="{{ announcement.message|e }}"
+                            data-announcement-audience="{{ audience_label|e }}"
+                            data-announcement-time="{{ announcement.timestamp.strftime('%B %d, %Y at %I:%M %p') if announcement.timestamp else '' }}"
+                            data-announcement-important="{{ 'true' if announcement.is_important else 'false' }}">
+                        <div class="student-home-announcement-item-top">
+                            <h6 class="student-home-announcement-title">{{ announcement.title }}</h6>
+                            <small class="student-home-announcement-time">{{ announcement.timestamp.strftime('%b %d, %I:%M %p') if announcement.timestamp else '' }}</small>
+                        </div>
+                        <p class="student-home-announcement-preview">{{ announcement.message[:200] }}{% if announcement.message|length > 200 %}…{% endif %}</p>
+                        <div class="student-home-announcement-footer">
+                            <span class="student-home-announcement-audience{% if is_schoolwide %} is-schoolwide{% endif %}">
+                                <i class="bi {% if is_schoolwide %}bi-people-fill{% else %}bi-book{% endif %} me-1"></i>{{ audience_label }}
+                            </span>
+                            {% if announcement.is_important %}
+                            <span class="student-home-announcement-important-badge">Important</span>
+                            {% endif %}
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+                <div class="student-announcements-all-empty d-none" id="studentAnnouncementsAllEmptyFiltered">
+                    <div class="student-announcements-all-empty-icon"><i class="bi bi-funnel"></i></div>
+                    <h6>No matches</h6>
+                    <p class="mb-0">Try a different class or clear your search.</p>
+                </div>
+                {% else %}
+                <div class="student-announcements-all-empty">
+                    <div class="student-announcements-all-empty-icon"><i class="bi bi-megaphone"></i></div>
+                    <h6>No announcements yet</h6>
+                    <p class="mb-0">When teachers post updates, they will appear here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade student-announcement-detail-modal" id="studentAnnouncementViewModal" tabindex="-1" aria-labelledby="studentAnnouncementViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content student-announcement-detail-content">
+            <div class="modal-header student-announcement-detail-header">
+                <h5 class="modal-title mb-0" id="studentAnnouncementViewModalLabel">Announcement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body student-announcement-detail-body">
+                <span class="badge bg-primary student-announcement-detail-audience" id="studentAnnouncementViewAudience"></span>
+                <h4 class="student-announcement-detail-title" id="studentAnnouncementViewTitle"></h4>
+                <p class="student-announcement-detail-time mb-0">
+                    <i class="bi bi-clock" aria-hidden="true"></i>
+                    <span id="studentAnnouncementViewTimeText"></span>
+                </p>
+                <p class="student-announcement-detail-message" id="studentAnnouncementViewMessage"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var detailModal = document.getElementById('studentAnnouncementViewModal');
+    var allModal = document.getElementById('studentAnnouncementsAllModal');
+    if (!detailModal) return;
+
+    detailModal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        if (!btn || !btn.hasAttribute('data-announcement-title')) return;
+        document.getElementById('studentAnnouncementViewTitle').textContent = btn.getAttribute('data-announcement-title') || '';
+        document.getElementById('studentAnnouncementViewMessage').textContent = btn.getAttribute('data-announcement-message') || '';
+        var timeText = btn.getAttribute('data-announcement-time') || '';
+        var timeEl = document.getElementById('studentAnnouncementViewTimeText');
+        if (timeEl) timeEl.textContent = timeText;
+        var audience = btn.getAttribute('data-announcement-audience') || '';
+        var audienceEl = document.getElementById('studentAnnouncementViewAudience');
+        audienceEl.textContent = audience;
+        audienceEl.className = 'badge student-announcement-detail-audience ' +
+            (audience.toLowerCase().indexOf('assembly') !== -1 ? 'is-schoolwide' : 'bg-primary');
+        var important = btn.getAttribute('data-announcement-important') === 'true';
+        document.getElementById('studentAnnouncementViewModalLabel').textContent = important ? 'Important announcement' : 'Announcement';
+    });
+
+    if (allModal && typeof bootstrap !== 'undefined') {
+        detailModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            if (!btn || !btn.closest('#studentAnnouncementsAllModal')) return;
+            var allInstance = bootstrap.Modal.getInstance(allModal);
+            if (allInstance) {
+                detailModal.addEventListener('hidden.bs.modal', function restoreAll() {
+                    allInstance.show();
+                    detailModal.removeEventListener('hidden.bs.modal', restoreAll);
+                }, { once: true });
+                allInstance.hide();
+            }
+        });
+    }
+
+    var filterAudience = document.getElementById('studentAnnouncementsFilterAudience');
+    var filterSearch = document.getElementById('studentAnnouncementsFilterSearch');
+    var filterImportant = document.getElementById('studentAnnouncementsFilterImportant');
+    var filterCount = document.getElementById('studentAnnouncementsFilterCount');
+    var allItems = document.querySelectorAll('.student-announcements-all-item');
+    var emptyFiltered = document.getElementById('studentAnnouncementsAllEmptyFiltered');
+    var allList = document.getElementById('studentAnnouncementsAllList');
+
+    function applyAnnouncementFilters() {
+        if (!allItems.length) return;
+        var audienceVal = filterAudience ? filterAudience.value : 'all';
+        var query = filterSearch ? filterSearch.value.trim().toLowerCase() : '';
+        var importantOnly = filterImportant && filterImportant.checked;
+        var visible = 0;
+
+        allItems.forEach(function (item) {
+            var show = true;
+            var itemAudience = item.getAttribute('data-filter-audience') || '';
+            var itemClassId = item.getAttribute('data-filter-class-id') || '';
+            var itemImportant = item.getAttribute('data-filter-important') === 'true';
+
+            if (audienceVal === 'schoolwide') {
+                show = itemAudience === 'schoolwide';
+            } else if (audienceVal.indexOf('class-') === 0) {
+                show = itemAudience === 'class' && itemClassId === audienceVal.replace('class-', '');
+            }
+
+            if (show && importantOnly) {
+                show = itemImportant;
+            }
+
+            if (show && query) {
+                var title = (item.getAttribute('data-announcement-title') || '').toLowerCase();
+                var message = (item.getAttribute('data-announcement-message') || '').toLowerCase();
+                show = title.indexOf(query) !== -1 || message.indexOf(query) !== -1;
+            }
+
+            item.classList.toggle('d-none', !show);
+            if (show) visible += 1;
+        });
+
+        if (filterCount) {
+            filterCount.textContent = visible + ' of ' + allItems.length + ' announcement' + (allItems.length === 1 ? '' : 's') + ' shown';
+        }
+        if (emptyFiltered && allList) {
+            emptyFiltered.classList.toggle('d-none', visible > 0);
+            allList.classList.toggle('d-none', visible === 0);
+        }
+    }
+
+    if (filterAudience) filterAudience.addEventListener('change', applyAnnouncementFilters);
+    if (filterSearch) filterSearch.addEventListener('input', applyAnnouncementFilters);
+    if (filterImportant) filterImportant.addEventListener('change', applyAnnouncementFilters);
+
+    if (allModal) {
+        allModal.addEventListener('shown.bs.modal', function () {
+            if (filterAudience) filterAudience.value = 'all';
+            if (filterSearch) filterSearch.value = '';
+            if (filterImportant) filterImportant.checked = false;
+            applyAnnouncementFilters();
+        });
+    }
+})();
+</script>

@@ -496,3 +496,126 @@ def leave_group(group_id):
     else:
         return redirect(url_for('teacher.dashboard.communications_hub'))
 
+
+def announcement_target_label(announcement):
+    """Human-readable broadcast target for an announcement."""
+    if announcement.target_group == 'all_students':
+        return 'All students'
+    if announcement.target_group == 'all':
+        return 'Everyone'
+    if announcement.target_group == 'all_staff':
+        return 'All staff'
+    if announcement.target_group == 'class':
+        if announcement.class_info:
+            return announcement.class_info.name
+        return 'Class'
+    return (announcement.target_group or 'Unknown').replace('_', ' ').title()
+
+
+def get_broadcast_classes_for_user(user):
+    """Classes this user may send announcements to."""
+    from models import class_additional_teachers, class_substitute_teachers
+    from utils.user_roles import user_primary_role_is_teaching_staff
+
+    if user.role in ['Director', 'School Administrator']:
+        return Class.query.order_by(Class.name).all()
+
+    if not user_primary_role_is_teaching_staff(user):
+        return []
+
+    from teacher_routes.utils import get_teacher_or_admin
+
+    teacher = get_teacher_or_admin()
+    if not teacher:
+        return []
+
+    return Class.query.filter(
+        or_(
+            Class.teacher_id == teacher.id,
+            Class.id.in_(
+                db.session.query(class_additional_teachers.c.class_id).filter(
+                    class_additional_teachers.c.teacher_id == teacher.id
+                )
+            ),
+            Class.id.in_(
+                db.session.query(class_substitute_teachers.c.class_id).filter(
+                    class_substitute_teachers.c.teacher_id == teacher.id
+                )
+            ),
+        )
+    ).order_by(Class.name).all()
+
+
+def get_past_announcements_for_class_page(class_id, limit=25):
+    """Announcements shown on a class detail page (this class + school-wide)."""
+    return (
+        Announcement.query.filter(
+            or_(
+                Announcement.class_id == class_id,
+                Announcement.target_group == 'all_students',
+                Announcement.target_group == 'all',
+            )
+        )
+        .order_by(Announcement.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def serialize_announcement_for_panel(announcement):
+    """JSON-serializable announcement for the class announcement modal."""
+    sender = announcement.sender
+    sender_name = sender.username if sender else 'Unknown'
+
+    return {
+        'id': announcement.id,
+        'title': announcement.title,
+        'message': announcement.message,
+        'timestamp': announcement.timestamp.isoformat() if announcement.timestamp else None,
+        'target_group': announcement.target_group,
+        'target_label': announcement_target_label(announcement),
+        'class_id': announcement.class_id,
+        'is_important': bool(announcement.is_important),
+        'sender_name': sender_name,
+    }
+
+
+def build_class_announcement_panel_payload(user, class_obj):
+    """Data for the class announcement modal (broadcast options + history)."""
+    broadcast_classes = get_broadcast_classes_for_user(user)
+    can_all_students = user.role in ['Director', 'School Administrator']
+    past = get_past_announcements_for_class_page(class_obj.id)
+
+    broadcast_options = []
+    if can_all_students:
+        broadcast_options.append({
+            'value': 'all_students',
+            'label': 'All students (school-wide)',
+            'description': 'Every enrolled student in the school',
+        })
+
+    for cls in broadcast_classes:
+        is_current = cls.id == class_obj.id
+        label = cls.name
+        if is_current:
+            label = f'This class · {cls.name}'
+        broadcast_options.append({
+            'value': f'class:{cls.id}',
+            'label': label,
+            'description': cls.subject or 'Class',
+            'class_id': cls.id,
+            'is_current': is_current,
+        })
+
+    default_broadcast = f'class:{class_obj.id}'
+    if not any(opt['value'] == default_broadcast for opt in broadcast_options):
+        default_broadcast = broadcast_options[0]['value'] if broadcast_options else default_broadcast
+
+    return {
+        'current_class': {'id': class_obj.id, 'name': class_obj.name},
+        'can_broadcast_all_students': can_all_students,
+        'default_broadcast': default_broadcast,
+        'broadcast_options': broadcast_options,
+        'past_announcements': [serialize_announcement_for_panel(a) for a in past],
+    }
+

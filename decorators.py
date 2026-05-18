@@ -114,6 +114,7 @@ _ASSIGNMENTS_GRADES_TOP_LEVEL_ENDPOINTS = frozenset({
     'management.classes.class_grades',
     'management.classes.class_grades_view',
     'management.review_extension_request',
+    'management.bulk_review_extension_requests',
     'management.view_extension_requests',
     'management.admin_grade_statistics',
     'management.admin_grade_history',

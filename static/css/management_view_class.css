@@ -1,0 +1,54 @@
+/* School admin / management class detail — three-column layout */
+
+.class-view-primary-row {
+    align-items: stretch;
+}
+
+.class-view-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.class-view-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.class-students-list-panel {
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 12rem;
+}
+
+.class-view-panel .btn-class-action-modern {
+    width: 100%;
+    justify-content: center;
+}
+
+@media (min-width: 1200px) {
+    .class-view-primary-row > [class*="col-"] {
+        display: flex;
+    }
+
+    .class-view-panel {
+        min-height: 28rem;
+    }
+
+    .class-view-panel-body {
+        max-height: calc(28rem - 5.5rem);
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .class-view-panel {
+        min-height: auto;
+    }
+
+    .class-view-panel-body {
+        max-height: 22rem;
+    }
+}

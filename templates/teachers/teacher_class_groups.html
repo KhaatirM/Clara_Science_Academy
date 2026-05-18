@@ -125,16 +125,14 @@
                                         {% endif %}
                                         <input type="hidden" name="student_id" value="{{ member.id }}">
                                         <button type="submit" class="btn btn-sm btn-outline-warning" 
-                                                title="Set as Group Leader"
-                                                onclick="return confirm('Set {{ member.first_name }} as group leader?');">
+                                                title="Set as Group Leader">
                                             <i class="bi bi-star"></i>
                                         </button>
                                     </form>
                                     {% endif %}
                                 </div>
                                 <form method="POST" action="{% if role_prefix %}{{ url_for('management.admin_manage_group', group_id=group.id) }}{% else %}{{ url_for('teacher.groups.remove_member', group_id=group.id, student_id=member.id) }}{% endif %}" 
-                                      style="display: inline;" 
-                                      onsubmit="return confirm('Remove {{ member.first_name }} from the group?');">
+                                      style="display: inline;">
                                     {% if role_prefix %}
                                     <input type="hidden" name="action" value="remove_student">
                                     <input type="hidden" name="student_id" value="{{ member.id }}">

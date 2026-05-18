@@ -621,6 +621,12 @@
     letter-spacing: -0.01em;
 }
 
+.grades-ba-meta .badge {
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.28rem 0.5rem;
+}
+
 .grades-ba-date-pill {
     display: inline-flex;
     align-items: center;
@@ -709,6 +715,26 @@
     color: #94a3b8;
     background: #f8fafc;
     border: 1px dashed #cbd5e1;
+}
+
+.grades-ba-avg-voided,
+.grades-ba-stat-muted {
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.grades-by-assignment-row-voided td {
+    background: #f8fafc !important;
+}
+
+.grades-by-assignment-row-voided:hover td {
+    background: #f1f5f9 !important;
+}
+
+.grades-by-assignment-row-voided .grades-ba-title {
+    color: #64748b;
 }
 
 .grades-ba-actions .grades-ba-btn {

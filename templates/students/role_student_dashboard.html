@@ -2,6 +2,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/students_role_student_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_assignment_view_modal.css') }}">
 <style>
 /* Custom Modal Backdrop - Lighter and more readable */
 .modal-backdrop {
@@ -172,42 +173,29 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         return;
     }
     
-    // Set assignment data
+    const savType = assignmentType === 'quiz' ? 'quiz' : (assignmentType === 'discussion' ? 'discussion' : 'pdf');
+    modalElement.classList.remove('sav-type--quiz', 'sav-type--discussion', 'sav-type--pdf', 'sav-type--paper');
+    modalElement.classList.add('sav-type--' + savType);
+
     document.getElementById('viewAssignmentTitle').textContent = assignmentTitle;
-    document.getElementById('viewAssignmentQuarter').textContent = `Q${assignmentQuarter}`;
-    
-    // Set assignment type badge with enhanced styling
+    document.getElementById('viewAssignmentQuarter').textContent = 'Q' + assignmentQuarter;
+
     const typeElement = document.getElementById('viewAssignmentType');
-    if (assignmentType === 'quiz') {
-        typeElement.className = 'badge fs-6 px-3 py-2';
-        typeElement.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
-        typeElement.style.color = 'white';
-        typeElement.innerHTML = '<i class="bi bi-question-circle me-1"></i>Interactive Quiz';
-    } else if (assignmentType === 'discussion') {
-        typeElement.className = 'badge fs-6 px-3 py-2';
-        typeElement.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-        typeElement.style.color = 'white';
-        typeElement.innerHTML = '<i class="bi bi-chat-dots me-1"></i>Group Discussion';
-    } else {
-        typeElement.className = 'badge fs-6 px-3 py-2';
-        typeElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        typeElement.style.color = 'white';
-        typeElement.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i>Document Assignment';
-    }
-    
-    // Set dynamic header based on assignment type
-    const modalHeader = document.getElementById('viewModalHeader');
+    const typeLabels = {
+        quiz: '<i class="bi bi-question-circle me-1"></i> Quiz',
+        discussion: '<i class="bi bi-chat-dots me-1"></i> Discussion',
+        pdf: '<i class="bi bi-file-earmark-text me-1"></i> Assignment'
+    };
+    typeElement.className = 'sav-chip';
+    typeElement.innerHTML = typeLabels[savType] || typeLabels.pdf;
+
     const assignmentIcon = document.getElementById('viewAssignmentIcon');
-    if (assignmentType === 'quiz') {
-        modalHeader.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
-        assignmentIcon.innerHTML = '<i class="bi bi-question-circle-fill"></i>';
-    } else if (assignmentType === 'discussion') {
-        modalHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-        assignmentIcon.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
-    } else {
-        modalHeader.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        assignmentIcon.innerHTML = '<i class="bi bi-file-earmark-text-fill"></i>';
-    }
+    const iconMap = {
+        quiz: 'bi-question-circle-fill',
+        discussion: 'bi-chat-dots-fill',
+        pdf: 'bi-file-earmark-text-fill'
+    };
+    assignmentIcon.innerHTML = '<i class="bi ' + (iconMap[savType] || iconMap.pdf) + '"></i>';
     
     // Set description with type-specific messaging and instructions
     const descriptionElement = document.getElementById('viewAssignmentDescription');
@@ -219,177 +207,73 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         descriptionElement.innerHTML = '<p class="mb-0 text-muted"><em>No specific instructions provided.</em></p>';
     }
     
-    // Add type-specific instructions
-    if (assignmentType === 'quiz') {
-        instructionsElement.innerHTML = `
-            <div class="alert alert-warning border-0" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
-                <h6 class="alert-heading"><i class="bi bi-lightbulb me-2"></i>Quiz Instructions</h6>
-                <ul class="mb-0">
-                    <li>Read each question carefully before answering</li>
-                    <li>You can review your answers before submitting</li>
-                    <li>Once submitted, you cannot change your answers</li>
-                    <li>Take your time - there's no rush!</li>
-                </ul>
-            </div>
-        `;
-    } else if (assignmentType === 'discussion') {
-        instructionsElement.innerHTML = `
-            <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
-                <h6 class="alert-heading"><i class="bi bi-people me-2"></i>Discussion Guidelines</h6>
-                <ul class="mb-0">
-                    <li>Share your thoughts and ideas respectfully</li>
-                    <li>Respond to your classmates' posts</li>
-                    <li>Ask questions to deepen the conversation</li>
-                    <li>Support your points with examples</li>
-                </ul>
-            </div>
-        `;
-    } else {
-        instructionsElement.innerHTML = `
-            <div class="alert alert-primary border-0" style="background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
-                <h6 class="alert-heading"><i class="bi bi-file-earmark-check me-2"></i>Submission Guidelines</h6>
-                <ul class="mb-0">
-                    <li>Review all requirements before starting</li>
-                    <li>Download and read the assignment file</li>
-                    <li>Follow the formatting guidelines provided</li>
-                    <li>Submit your work before the due date</li>
-                </ul>
-            </div>
-        `;
-    }
-    
-    // Set due date with enhanced formatting
+    const guidelineBlocks = {
+        quiz: { title: 'Quiz tips', icon: 'bi-lightbulb', items: ['Read each question carefully', 'Review answers before submitting', 'Once submitted, answers cannot be changed', 'Take your time — most quizzes are untimed'] },
+        discussion: { title: 'Discussion guidelines', icon: 'bi-people', items: ['Share ideas respectfully', 'Respond to classmates', 'Ask questions to deepen the conversation', 'Support points with examples'] },
+        pdf: { title: 'Submission checklist', icon: 'bi-file-earmark-check', items: ['Review all requirements', 'Download and read attached materials', 'Follow formatting guidelines', 'Submit before the due date'] }
+    };
+    const g = guidelineBlocks[savType] || guidelineBlocks.pdf;
+    instructionsElement.innerHTML = '<div class="sav-guidelines"><h6 class="sav-guidelines-title"><i class="bi ' + g.icon + ' me-2"></i>' + g.title + '</h6><ul>' + g.items.map(function(i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div>';
+
     const dueDateElement = document.getElementById('viewAssignmentDueDate');
-    dueDateElement.innerHTML = `
-        <span class="fs-5">${assignmentDueDate}</span>
-        <br><small class="opacity-75">Submit before this date and time</small>
-    `;
+    dueDateElement.innerHTML = assignmentDueDate + (isInactive
+        ? '<small>Assignment closed</small>'
+        : '<small>Submit before this date</small>');
+
+    calculateTimeRemaining(assignmentDueDate, isInactive);
     
-    // Calculate and display time remaining
-    calculateTimeRemaining(assignmentDueDate);
-    
-    // Set attachment info based on assignment type with enhanced styling
     const attachmentElement = document.getElementById('viewAssignmentAttachment');
-    const typeCardHeader = document.getElementById('viewTypeCardHeader');
     const typeCardTitle = document.getElementById('viewTypeCardTitle');
     const typeInstructions = document.getElementById('viewTypeInstructions');
-    
+    const quizDetailsCard = document.getElementById('quizDetailsCard');
+    const quizDetailsContainer = document.getElementById('quizDetailsContainer');
+
+    function savResourceBox(icon, title, desc, extraHtml) {
+        return '<div class="sav-resource-box"><i class="bi ' + icon + ' d-block"></i><h6>' + title + '</h6><p>' + desc + '</p>' + (extraHtml || '') + '</div>';
+    }
+
     if (assignmentType === 'quiz') {
-        typeCardHeader.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
-        typeCardTitle.innerHTML = '<i class="bi bi-question-circle me-2"></i>Quiz Information';
-        attachmentElement.innerHTML = `
-            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
-                <i class="bi bi-question-circle-fill fs-1 text-warning mb-2"></i>
-                <h6 class="text-dark mb-2">Interactive Quiz</h6>
-                <p class="text-dark mb-0 small">Questions will appear when you start the quiz</p>
-            </div>
-            <div id="quizDetailsContainer" class="mt-3">
-                <div class="text-center text-muted">
-                    <i class="bi bi-arrow-repeat spin"></i> Loading quiz details...
-                </div>
-            </div>
-        `;
-        typeInstructions.innerHTML = `
-            <div class="mt-3">
-                <h6 class="text-warning"><i class="bi bi-clock me-2"></i>Time Management</h6>
-                <p class="small text-muted">Most quizzes have no time limit, so take your time to think through each question carefully.</p>
-            </div>
-        `;
-        
-        // Fetch quiz details via AJAX and display in both the type card and details card
-        fetch(`/student/quiz-details/${assignmentId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
+        if (typeCardTitle) typeCardTitle.innerHTML = '<i class="bi bi-ui-checks"></i> Quiz';
+        attachmentElement.innerHTML = savResourceBox('bi-question-circle-fill', 'Interactive quiz', 'Questions appear when you start the quiz', '');
+        if (quizDetailsContainer) quizDetailsContainer.innerHTML = '<div class="text-center text-muted small py-2"><span class="spinner-border spinner-border-sm me-1"></span> Loading quiz details…</div>';
+        if (typeInstructions) typeInstructions.innerHTML = '<p class="small text-muted mb-0 mt-2"><i class="bi bi-clock me-1"></i> Most quizzes have no time limit.</p>';
+        if (quizDetailsCard) quizDetailsCard.style.display = 'block';
+        fetch('/student/quiz-details/' + assignmentId)
+            .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function(data) {
                 if (data.error) {
-                    console.error('Error fetching quiz details:', data.error);
-                    const errorMsg = '<div class="alert alert-warning"><small>Unable to load quiz details. Please try again later.</small></div>';
-                    const container = document.getElementById('quizDetailsContainer');
-                    if (container) container.innerHTML = errorMsg;
-                    const content = document.getElementById('quizDetailsContent');
-                    if (content) content.innerHTML = errorMsg;
+                    var err = '<div class="alert alert-warning py-2 mb-0"><small>Unable to load quiz details.</small></div>';
+                    if (quizDetailsContainer) quizDetailsContainer.innerHTML = err;
+                    var c = document.getElementById('quizDetailsContent');
+                    if (c) c.innerHTML = err;
                     return;
                 }
-                // Display in the type card
-                try {
-                    displayQuizDetails(data);
-                } catch (e) {
-                    console.error('Error in displayQuizDetails:', e);
-                }
-                // Also display in the dedicated quiz details card
-                try {
-                    displayQuizDetailsInCard(data);
-                } catch (e) {
-                    console.error('Error in displayQuizDetailsInCard:', e);
-                }
+                try { displayQuizDetails(data); } catch (e) { console.error(e); }
+                try { displayQuizDetailsInCard(data); } catch (e) { console.error(e); }
             })
-            .catch(error => {
-                console.error('Error fetching quiz details:', error);
-                const errorMsg = '<div class="alert alert-warning"><small>Unable to load quiz details. The quiz will still work normally.</small></div>';
-                const container = document.getElementById('quizDetailsContainer');
-                if (container) container.innerHTML = errorMsg;
-                const content = document.getElementById('quizDetailsContent');
-                if (content) content.innerHTML = errorMsg;
+            .catch(function() {
+                var err = '<div class="alert alert-warning py-2 mb-0"><small>Unable to load quiz details. The quiz will still work.</small></div>';
+                if (quizDetailsContainer) quizDetailsContainer.innerHTML = err;
             });
     } else if (assignmentType === 'discussion') {
-        typeCardHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-        typeCardTitle.innerHTML = '<i class="bi bi-chat-dots me-2"></i>Discussion Forum';
-        attachmentElement.innerHTML = `
-            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
-                <i class="bi bi-chat-dots-fill fs-1 text-info mb-2"></i>
-                <h6 class="text-dark mb-2">Discussion Board</h6>
-                <p class="text-dark mb-0 small">Join the conversation with your classmates</p>
-            </div>
-        `;
-        typeInstructions.innerHTML = `
-            <div class="mt-3">
-                <h6 class="text-info"><i class="bi bi-heart me-2"></i>Participation Tips</h6>
-                <p class="small text-muted">Engage actively by posting thoughtful responses and asking follow-up questions.</p>
-            </div>
-        `;
-        // Hide quiz details card for non-quiz assignments
-        const quizDetailsCard = document.getElementById('quizDetailsCard');
+        if (typeCardTitle) typeCardTitle.innerHTML = '<i class="bi bi-chat-dots"></i> Discussion';
+        attachmentElement.innerHTML = savResourceBox('bi-chat-dots-fill', 'Discussion board', 'Join the conversation with your classmates', '');
+        if (typeInstructions) typeInstructions.innerHTML = '<p class="small text-muted mb-0 mt-2"><i class="bi bi-heart me-1"></i> Post thoughtful responses and reply to classmates.</p>';
+        if (quizDetailsContainer) quizDetailsContainer.innerHTML = '';
         if (quizDetailsCard) quizDetailsCard.style.display = 'none';
     } else {
-        typeCardHeader.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        typeCardTitle.innerHTML = '<i class="bi bi-file-earmark me-2"></i>Assignment Files';
+        if (typeCardTitle) typeCardTitle.innerHTML = '<i class="bi bi-folder2-open"></i> Materials';
         if (assignmentAttachment && assignmentAttachment.trim()) {
-            console.log('Setting up PDF/Paper assignment attachment with ID:', assignmentId);
-            attachmentElement.innerHTML = `
-                <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
-                    <i class="bi bi-file-earmark-text-fill fs-1 text-primary mb-2"></i>
-                    <h6 class="text-dark mb-2">Assignment Materials</h6>
-                    <p class="text-dark mb-3 small">Download the assignment file to get started</p>
-                    <a href="/student/download-assignment-file/${assignmentId}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-download me-1"></i>Download File
-                    </a>
-                </div>
-            `;
+            attachmentElement.innerHTML = savResourceBox('bi-file-earmark-text-fill', 'Assignment file', 'Download the materials to get started',
+                '<a href="/student/download-assignment-file/' + assignmentId + '" class="sav-btn-download"><i class="bi bi-download"></i> Download</a>');
         } else {
-            attachmentElement.innerHTML = `
-                <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <i class="bi bi-info-circle-fill fs-1 text-muted mb-2"></i>
-                    <h6 class="text-dark mb-2">No Files Attached</h6>
-                    <p class="text-dark mb-0 small">This assignment doesn't require additional files</p>
-                </div>
-            `;
+            attachmentElement.innerHTML = savResourceBox('bi-info-circle', 'No file attached', 'This assignment does not include a downloadable file', '');
         }
-        typeInstructions.innerHTML = `
-            <div class="mt-3">
-                <h6 class="text-primary"><i class="bi bi-check-circle me-2"></i>Submission Checklist</h6>
-                <p class="small text-muted">Make sure to review all requirements and submit your work before the deadline.</p>
-            </div>
-        `;
-        // Hide quiz details card for non-quiz assignments
-        const quizDetailsCard = document.getElementById('quizDetailsCard');
+        if (typeInstructions) typeInstructions.innerHTML = '';
+        if (quizDetailsContainer) quizDetailsContainer.innerHTML = '';
         if (quizDetailsCard) quizDetailsCard.style.display = 'none';
     }
-    
-    // Set enhanced submission status with progress tracking
+
     const statusElement = document.getElementById('viewAssignmentStatus');
     const submissionStatusElement = document.getElementById('viewSubmissionStatus');
     const progressBar = document.getElementById('viewProgressBar');
@@ -399,48 +283,36 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
     const statusIcon = document.getElementById('viewAssignmentStatusIcon');
     const statusTitle = document.getElementById('viewAssignmentStatusTitle');
     const statusMessage = document.getElementById('viewAssignmentStatusMessage');
-    const submissionCardHeader = document.getElementById('viewSubmissionCardHeader');
-    
-    // Show/hide progress bar based on assignment type
+
     if (assignmentType === 'quiz' || assignmentType === 'discussion') {
         progressContainer.style.display = 'block';
     } else {
         progressContainer.style.display = 'none';
     }
-    
+
+    function setSavStatus(mode, pillHtml, title, message, progressHtml, submissionHtml) {
+        banner.className = 'sav-status-banner sav-status--' + mode;
+        statusIcon.innerHTML = mode === 'complete' ? '<i class="bi bi-check-circle-fill"></i>' : (mode === 'review' ? '<i class="bi bi-hourglass-split"></i>' : '<i class="bi bi-exclamation-circle-fill"></i>');
+        statusTitle.textContent = title;
+        statusMessage.textContent = message;
+        statusElement.className = 'sav-status-pill sav-pill--' + mode;
+        statusElement.innerHTML = pillHtml;
+        submissionStatusElement.innerHTML = submissionHtml;
+    }
+
     if (hasGrade) {
-        // Graded - Complete
-        statusElement.className = 'badge fs-6 px-3 py-2';
-        statusElement.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)';
-        statusElement.style.color = 'white';
-        statusElement.innerHTML = '<i class="bi bi-check-circle me-1"></i>Completed';
-        
-        banner.className = 'alert border-0 shadow-sm';
-        banner.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
-        statusIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-        statusTitle.textContent = 'Assignment Complete!';
-        statusMessage.textContent = 'Congratulations! Your work has been graded and reviewed.';
-        
-        submissionCardHeader.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)';
-        
-        submissionStatusElement.innerHTML = `
-            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
-                <i class="bi bi-trophy-fill fs-1 text-success mb-2"></i>
-                <h6 class="text-success mb-2">Great Job!</h6>
-                <p class="text-success mb-0 small">Your assignment has been successfully graded</p>
-            </div>
-        `;
-        
-        // Show Grade & Feedback card - scroll into view when there is written feedback
-        const gradeFeedbackCard = document.getElementById('viewGradeFeedbackCard');
-        const gradeDisplayEl = document.getElementById('viewGradeDisplay');
-        const gradeFeedbackEl = document.getElementById('viewGradeFeedback');
+        setSavStatus('complete', '<i class="bi bi-check-circle me-1"></i> Graded',
+            'Assignment complete', 'Your work has been graded and reviewed.',
+            null,
+            '<div class="sav-progress-state"><i class="bi bi-trophy-fill text-success"></i><h6 class="text-success">Great job!</h6><p>Your assignment has been graded.</p></div>');
+        var gradeFeedbackCard = document.getElementById('viewGradeFeedbackCard');
+        var gradeDisplayEl = document.getElementById('viewGradeDisplay');
+        var gradeFeedbackEl = document.getElementById('viewGradeFeedback');
         if (gradeFeedbackCard && gradeDisplayEl && gradeFeedbackEl) {
             gradeFeedbackCard.style.display = 'block';
             gradeDisplayEl.textContent = gradeDisplay && gradeDisplay.trim() ? gradeDisplay : 'Graded';
-            const feedbackText = gradeFeedback && gradeFeedback.trim() ? gradeFeedback.replace(/\\n/g, '\n') : '';
+            var feedbackText = gradeFeedback && gradeFeedback.trim() ? gradeFeedback.replace(/\\n/g, '\n') : '';
             gradeFeedbackEl.textContent = feedbackText || 'No written feedback.';
-            // Scroll feedback card into view when modal is shown (if there is feedback)
             if (feedbackText) {
                 modalElement.addEventListener('shown.bs.modal', function scrollToFeedback() {
                     gradeFeedbackCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -448,79 +320,37 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
                 }, { once: true });
             }
         }
-        
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
-            // Default complete state
             progressBar.style.width = '100%';
             progressBar.className = 'progress-bar bg-success';
-            progressText.textContent = 'Progress: 100% - Complete!';
+            progressText.textContent = 'Complete';
         }
-        
     } else if (hasSubmission) {
-        // Submitted but not graded - In Progress
-        const gradeFeedbackCard = document.getElementById('viewGradeFeedbackCard');
-        if (gradeFeedbackCard) gradeFeedbackCard.style.display = 'none';
-        statusElement.className = 'badge fs-6 px-3 py-2';
-        statusElement.style.background = 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)';
-        statusElement.style.color = 'dark';
-        statusElement.innerHTML = '<i class="bi bi-clock-history me-1"></i>Under Review';
-        
-        banner.className = 'alert border-0 shadow-sm';
-        banner.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)';
-        statusIcon.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i>';
-        statusTitle.textContent = 'Work Submitted!';
-        statusMessage.textContent = 'Your submission is being reviewed by your teacher.';
-        
-        submissionCardHeader.style.background = 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)';
-        
-        submissionStatusElement.innerHTML = `
-            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
-                <i class="bi bi-hourglass-split fs-1 text-warning mb-2"></i>
-                <h6 class="text-warning mb-2">Under Review</h6>
-                <p class="text-warning mb-0 small">Your teacher is reviewing your work</p>
-            </div>
-        `;
-        
+        var gfc = document.getElementById('viewGradeFeedbackCard');
+        if (gfc) gfc.style.display = 'none';
+        setSavStatus('review', '<i class="bi bi-hourglass-split me-1"></i> Under review',
+            'Work submitted', 'Your teacher is reviewing your submission.',
+            null,
+            '<div class="sav-progress-state"><i class="bi bi-hourglass-split text-warning"></i><h6 class="text-warning">Under review</h6><p>Waiting for your teacher to grade.</p></div>');
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
-            // Default submitted state
             progressBar.style.width = '75%';
             progressBar.className = 'progress-bar bg-warning';
-            progressText.textContent = 'Progress: 75% - Awaiting Grade';
+            progressText.textContent = 'Awaiting grade';
         }
-        
     } else {
-        // Not submitted - Pending
-        const gradeFeedbackCard = document.getElementById('viewGradeFeedbackCard');
-        if (gradeFeedbackCard) gradeFeedbackCard.style.display = 'none';
-        statusElement.className = 'badge fs-6 px-3 py-2';
-        statusElement.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
-        statusElement.style.color = 'white';
-        statusElement.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Pending';
-        
-        banner.className = 'alert border-0 shadow-sm';
-        banner.style.background = 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)';
-        statusIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger"></i>';
-        statusTitle.textContent = 'Ready to Start!';
-        statusMessage.textContent = 'This assignment is waiting for you to begin.';
-        
-        submissionCardHeader.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
-        
-        submissionStatusElement.innerHTML = `
-            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);">
-                <i class="bi bi-play-circle-fill fs-1 text-danger mb-2"></i>
-                <h6 class="text-danger mb-2">Ready to Begin</h6>
-                <p class="text-danger mb-0 small">Click the action button below to get started</p>
-            </div>
-        `;
-        
+        var gfc2 = document.getElementById('viewGradeFeedbackCard');
+        if (gfc2) gfc2.style.display = 'none';
+        setSavStatus('pending', '<i class="bi bi-circle me-1"></i> Not started',
+            'Ready to start', 'Use the actions below to begin this assignment.',
+            null,
+            '<div class="sav-progress-state"><i class="bi bi-play-circle text-danger"></i><h6 class="text-danger">Not started</h6><p>Choose an action below to get going.</p></div>');
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
-            // Default not started state
             progressBar.style.width = '25%';
             progressBar.className = 'progress-bar bg-danger';
-            progressText.textContent = 'Progress: 25% - Not Started';
+            progressText.textContent = 'Not started';
         }
     }
-    
+
     // Set enhanced action buttons based on assignment type (or inactive: read-only + Request Redo only)
     const actionButtonsElement = document.getElementById('viewActionButtons');
     if (actionButtonsElement) {
@@ -528,105 +358,44 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         
         if (isInactive) {
             actionButtonsElement.innerHTML = `
-                <div class="alert alert-secondary border-0 mb-2">
-                    <i class="bi bi-pause-circle me-2"></i><strong>Assignment is Inactive</strong><br>
-                    <small>This assignment is closed. You can view details but cannot submit. Use "Request Redo" to ask your teacher for another chance.</small>
-                </div>
-                <div class="d-grid gap-2 mt-2">
-                    <button type="button" class="btn btn-request-redo btn-sm" onclick="openRedoRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}')">
-                        <i class="bi bi-arrow-repeat me-1"></i>Request Redo
-                    </button>
-                </div>
+                <div class="sav-inline-alert"><i class="bi bi-pause-circle me-2"></i><strong>Assignment is inactive</strong><br><small>View only. Use Request Redo to ask your teacher for another chance.</small></div>
+                <button type="button" class="btn btn-request-redo btn-sm w-100" onclick="openRedoRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}')"><i class="bi bi-arrow-repeat me-1"></i>Request Redo</button>
             `;
         } else if (assignmentType === 'quiz') {
-            // Quiz-specific buttons with enhanced styling
             if (!hasSubmission) {
                 actionButtonsElement.innerHTML += `
-                    <button type="button" class="btn btn-lg text-white shadow" 
-                            style="background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);"
-                            onclick="takeQuiz(${assignmentId}, '${assignmentTitle}')">
-                        <i class="bi bi-play-circle-fill me-2"></i>Start Quiz
-                    </button>
-                    <div class="d-grid gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
-                            <i class="bi bi-clock-history me-1"></i>Request Extension
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showQuizHelp()">
-                            <i class="bi bi-question-circle me-1"></i>Quiz Help
-                        </button>
-                    </div>
-                `;
+                    <button type="button" class="btn btn-lg sav-btn-primary" onclick="takeQuiz(${assignmentId}, '${assignmentTitle}')"><i class="bi bi-play-circle-fill me-2"></i>Start Quiz</button>
+                    <div class="sav-btn-secondary-row">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')"><i class="bi bi-clock-history me-1"></i>Extension</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showQuizHelp()"><i class="bi bi-question-circle me-1"></i>Help</button>
+                    </div>`;
             } else if (!hasGrade) {
                 actionButtonsElement.innerHTML += `
-                    <div class="alert alert-warning border-0 mb-2" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
-                        <i class="bi bi-hourglass-split me-2"></i><strong>Quiz Submitted!</strong><br>
-                        <small>Your quiz is being reviewed by your teacher.</small>
-                    </div>
-                    <div class="d-grid gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
-                            <i class="bi bi-clock-history me-1"></i>Request Extension
-                        </button>
-                    </div>
-                `;
+                    <div class="sav-inline-alert"><i class="bi bi-hourglass-split me-2"></i><strong>Quiz submitted</strong><br><small>Your teacher is reviewing your answers.</small></div>
+                    <button type="button" class="btn btn-outline-warning btn-sm w-100" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')"><i class="bi bi-clock-history me-1"></i>Request Extension</button>`;
             } else {
-                actionButtonsElement.innerHTML += `
-                    <div class="alert alert-success border-0 mb-2" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
-                        <i class="bi bi-trophy-fill me-2"></i><strong>Quiz Complete!</strong><br>
-                        <small>Congratulations! Your quiz has been graded.</small>
-                    </div>
-                `;
+                actionButtonsElement.innerHTML += `<div class="sav-inline-alert"><i class="bi bi-trophy-fill me-2 text-success"></i><strong>Quiz complete</strong><br><small>Your quiz has been graded.</small></div>`;
             }
         } else if (assignmentType === 'discussion') {
-            // Discussion-specific buttons with enhanced styling
             actionButtonsElement.innerHTML += `
-                <button type="button" class="btn btn-lg text-white shadow" 
-                        style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"
-                        onclick="window.joinDiscussion(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}')">
-                    <i class="bi bi-chat-dots-fill me-2"></i>Join Discussion
-                </button>
-                <div class="d-grid gap-2 mt-2">
-                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
-                        <i class="bi bi-clock-history me-1"></i>Request Extension
-                    </button>
-                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showDiscussionHelp()">
-                        <i class="bi bi-people me-1"></i>Discussion Tips
-                    </button>
-                </div>
-            `;
+                <button type="button" class="btn btn-lg sav-btn-primary" onclick="window.joinDiscussion(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}')"><i class="bi bi-chat-dots-fill me-2"></i>Join Discussion</button>
+                <div class="sav-btn-secondary-row">
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')"><i class="bi bi-clock-history me-1"></i>Extension</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showDiscussionHelp()"><i class="bi bi-people me-1"></i>Tips</button>
+                </div>`;
         } else {
-            // PDF/Paper assignment buttons with enhanced styling
             if (!hasSubmission) {
                 actionButtonsElement.innerHTML += `
-                    <button type="button" class="btn btn-lg text-white shadow" 
-                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"
-                            onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', false)">
-                        <i class="bi bi-upload me-2"></i>Submit Assignment
-                    </button>
-                    <div class="d-grid gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
-                            <i class="bi bi-clock-history me-1"></i>Request Extension
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="showSubmissionHelp()">
-                            <i class="bi bi-info-circle me-1"></i>Submission Help
-                        </button>
-                    </div>
-                `;
+                    <button type="button" class="btn btn-lg sav-btn-primary" onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', false)"><i class="bi bi-upload me-2"></i>Submit Assignment</button>
+                    <div class="sav-btn-secondary-row">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')"><i class="bi bi-clock-history me-1"></i>Extension</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="showSubmissionHelp()"><i class="bi bi-info-circle me-1"></i>Help</button>
+                    </div>`;
             } else if (!hasGrade) {
                 actionButtonsElement.innerHTML += `
-                    <button type="button" class="btn btn-lg text-white shadow" 
-                            style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"
-                            onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', true)">
-                        <i class="bi bi-pencil-square me-2"></i>Resubmit Assignment
-                    </button>
-                    <div class="d-grid gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
-                            <i class="bi bi-clock-history me-1"></i>Request Extension
-                        </button>
-                    </div>
-                    <div class="alert alert-info border-0 mt-2" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
-                        <i class="bi bi-clock-history me-2"></i><small>Your submission is being reviewed.</small>
-                    </div>
-                `;
+                    <button type="button" class="btn btn-lg sav-btn-primary" onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', true)"><i class="bi bi-pencil-square me-2"></i>Resubmit</button>
+                    <div class="sav-inline-alert mt-2"><i class="bi bi-clock-history me-2"></i><small>Your submission is being reviewed.</small></div>
+                    <button type="button" class="btn btn-outline-warning btn-sm w-100 mt-2" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')"><i class="bi bi-clock-history me-1"></i>Request Extension</button>`;
             }
         }
     }
@@ -651,41 +420,40 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
     }
 };
 
-// Helper function to calculate time remaining
-function calculateTimeRemaining(dueDateString) {
+// Helper: time remaining (active) or Closed (inactive assignment)
+function calculateTimeRemaining(dueDateString, isInactive) {
     const timeElement = document.getElementById('viewTimeRemaining');
-    if (!timeElement || !dueDateString) return;
-    
+    if (!timeElement) return;
+
+    if (isInactive) {
+        timeElement.innerHTML = 'Closed<small>No longer accepting submissions</small>';
+        timeElement.classList.add('sav-time-closed');
+        return;
+    }
+
+    timeElement.classList.remove('sav-time-closed');
+    if (!dueDateString || dueDateString === 'No due date') {
+        timeElement.innerHTML = '—<small>No due date set</small>';
+        return;
+    }
+
     try {
         const dueDate = new Date(dueDateString);
         const now = new Date();
         const diffMs = dueDate - now;
-        
+
         if (diffMs < 0) {
-            timeElement.innerHTML = `
-                <span class="text-danger fw-bold">Overdue</span>
-                <br><small class="text-danger">Past due date</small>
-            `;
+            timeElement.innerHTML = 'Overdue<small>Past due date</small>';
         } else {
             const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
             const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            
             if (days > 0) {
-                timeElement.innerHTML = `
-                    <span class="text-success fw-bold">${days} day${days !== 1 ? 's' : ''}</span>
-                    <br><small class="text-success">${hours}h ${minutes}m remaining</small>
-                `;
+                timeElement.innerHTML = days + ' day' + (days !== 1 ? 's' : '') + '<small>' + hours + 'h ' + minutes + 'm left</small>';
             } else if (hours > 0) {
-                timeElement.innerHTML = `
-                    <span class="text-warning fw-bold">${hours}h ${minutes}m</span>
-                    <br><small class="text-warning">Less than a day left!</small>
-                `;
+                timeElement.innerHTML = hours + 'h ' + minutes + 'm<small>Less than a day left</small>';
             } else {
-                timeElement.innerHTML = `
-                    <span class="text-danger fw-bold">${minutes} minutes</span>
-                    <br><small class="text-danger">Due very soon!</small>
-                `;
+                timeElement.innerHTML = minutes + ' min<small>Due very soon</small>';
             }
         }
     } catch (error) {
@@ -1228,7 +996,7 @@ window.submitAssignmentFromTable = function(assignmentId, assignmentTitle, hasSu
     try {
         // Check if assignment is already submitted
         if (hasSubmission) {
-            const confirmResubmit = confirm(`Assignment "${assignmentTitle}" has already been submitted. Do you want to resubmit it?`);
+            const confirmResubmit = true;
             if (!confirmResubmit) {
                 return;
             }
@@ -1372,204 +1140,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
         {% include 'students/_student_assistant_dashboard_banner.html' %}
 
-        <div class="row g-3 g-md-4">
-            <!-- Left Column -->
-            <div class="col-12 col-lg-4">
-                <!-- Student Profile Card -->
-                <div class="student-profile-card mb-4">
-                    <div class="student-profile-header">
-                        <div class="student-profile-avatar">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                        <div class="student-profile-info">
-                            <h4 class="student-profile-name">{{ student.first_name }} {{ student.last_name }}</h4>
-                            <p class="student-profile-id">ID: {{ student.state_id or student.student_id or 'N/A' }}</p>
-                        </div>
-                    </div>
-                    <div class="student-profile-details">
-                        <div class="student-profile-item">
-                            <i class="bi bi-mortarboard me-2"></i>
-                            <span>Grade {{ student.grade_level | display_grade }}</span>
-                        </div>
-                        <div class="student-profile-item">
-                            <i class="bi bi-calendar3 me-2"></i>
-                            <span>{{ student.dob or 'N/A' }}</span>
-                        </div>
-                        <div class="student-profile-item">
-                            <i class="bi bi-envelope me-2"></i>
-                            <span>{{ student.email or 'N/A' }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Academic Goals Card -->
-                <div class="student-goals-card mb-4">
-                    <div class="student-goals-header">
-                        <h5 class="mb-0"><i class="bi bi-target me-2"></i>Academic Goals</h5>
-                    </div>
-                    <div class="student-goals-body">
-                        {% if student.enrollments %}
-                            {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
-                            {% for enrollment in active_enrollments[:5] %}
-                                {% set class = enrollment.class_info %}
-                                {% set goal = goals.get(class.id) %}
-                                {% set current_grade = grades.get(class.name, 0) %}
-                                <div class="mb-3">
-                                    <h6>{{ class.name }}</h6>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span>Current: {{ "%.1f"|format(current_grade) }}%</span>
-                                        {% if goal %}
-                                            <span>Goal: {{ "%.1f"|format(goal.target_grade) }}%</span>
-                                        {% endif %}
-                                    </div>
-                                    {% if goal %}
-                                        <div class="progress mb-2">
-                                            {% set progress = (current_grade / goal.target_grade * 100) if goal.target_grade > 0 else 0 %}
-                                            <div class="progress-bar {% if progress >= 100 %}bg-success{% elif progress >= 80 %}bg-warning{% else %}bg-danger{% endif %}" 
-                                                 style="width: {{ [progress, 100]|min }}%">
-                                                {{ "%.1f"|format(progress) }}%
-                                            </div>
-                                        </div>
-                                                        <form method="POST" action="{{ url_for('student.delete_goal', goal_id=goal.id) }}"
-                      style="display: inline;" onsubmit="return confirm('Delete this goal?')">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove Goal</button>
-                                        </form>
-                                    {% else %}
-                                        <form method="POST" action="{{ url_for('student.set_goal') }}" class="d-inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            <input type="hidden" name="class_id" value="{{ class.id }}">
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" name="target_grade" class="form-control" 
-                                                       placeholder="Target %" min="0" max="100" step="0.1" required>
-                                                <button type="submit" class="btn btn-outline-primary">Set Goal</button>
-                                            </div>
-                                        </form>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted">You are not yet enrolled in any classes.</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Right Column -->
-            <div class="col-12 col-lg-8">
-                <!-- Redo Opportunities Card -->
-                {% if redo_opportunities %}
-                <div class="student-redo-card mb-4">
-                    <div class="student-redo-header">
-                        <h5 class="mb-0">
-                            <i class="bi bi-arrow-repeat me-2"></i>Redo Opportunities
-                            <span class="badge bg-warning text-dark ms-2">{{ redo_opportunities|length }}</span>
-                        </h5>
-                    </div>
-                    <div class="student-redo-body">
-                        {% for redo in redo_opportunities %}
-                        <div class="student-redo-item">
-                            <div class="student-redo-icon">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </div>
-                            <div class="student-redo-info">
-                                <h6 class="student-redo-title">{{ redo.assignment.title }}</h6>
-                                <p class="student-redo-class mb-1">{{ redo.assignment.class_info.name if redo.assignment.class_info else 'N/A' }}</p>
-                                {% if redo.reason %}
-                                <p class="student-redo-reason"><i class="bi bi-info-circle me-1"></i>{{ redo.reason }}</p>
-                                {% endif %}
-                                {% if redo.original_grade %}
-                                <p class="student-redo-original-grade">
-                                    <i class="bi bi-graph-down me-1"></i>Original Grade: <strong>{{ redo.original_grade }}%</strong>
-                                </p>
-                                {% endif %}
-                            </div>
-                            <div class="student-redo-action">
-                                <div class="student-redo-deadline mb-2">
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-calendar-event me-1"></i>Due: {{ redo.redo_deadline.strftime('%m/%d/%Y') }}
-                                    </span>
-                                </div>
-                                <a href="{{ url_for('student.submit_assignment', assignment_id=redo.assignment_id, is_redo=1) }}" 
-                                   class="btn btn-sm btn-warning w-100">
-                                    <i class="bi bi-upload me-1"></i>Submit Redo
-                                </a>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-                
-                <!-- Upcoming Assignments & Notifications - Side by side -->
-                <div class="row g-3 g-md-4 mb-4">
-                    <div class="col-12 col-md-6">
-                        <div class="student-upcoming-card h-100">
-                            <div class="student-upcoming-header">
-                                <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Assignments</h5>
-                            </div>
-                            <div class="student-upcoming-body">
-                                {% if upcoming_assignments %}
-                                    {% for assignment in upcoming_assignments[:5] %}
-                                    <div class="student-assignment-item">
-                                        <div class="student-assignment-icon">
-                                            <i class="bi bi-journal-text"></i>
-                                        </div>
-                                        <div class="student-assignment-info">
-                                            <h6 class="student-assignment-title">{{ assignment.title }}</h6>
-                                            <p class="student-assignment-class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
-                                        </div>
-                                        <div class="student-assignment-due">
-                                            <span class="badge bg-warning">Due: {{ assignment.due_date.strftime('%m/%d') if assignment.due_date else 'N/A' }}</span>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted text-center py-3 mb-0">No upcoming assignments</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <div class="student-activity-card h-100">
-                            <div class="student-activity-header">
-                                <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
-                            </div>
-                            <div class="student-activity-body">
-                                <div class="student-activity-timeline">
-                                    {% if notifications and notifications|length > 0 %}
-                                {% for notification in notifications[:5] %}
-                                <div class="student-activity-item">
-                                    <div class="student-activity-dot"></div>
-                                    <div class="student-activity-content">
-                                        <h6 class="student-activity-title">{{ notification.title }}</h6>
-                                        <p class="student-activity-text">{{ notification.message }}</p>
-                                        <small class="student-activity-time">{{ notification.timestamp.strftime('%b %d, %I:%M %p') if notification.timestamp else 'Recently' }}</small>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% elif past_due_assignments %}
-                                {% for assignment in past_due_assignments[:5] %}
-                                <div class="student-activity-item">
-                                    <div class="student-activity-dot" style="background: #dc3545;"></div>
-                                    <div class="student-activity-content">
-                                        <h6 class="student-activity-title">Past Due: {{ assignment.title }}</h6>
-                                        <p class="student-activity-text">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
-                                        <small class="student-activity-time">Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'N/A' }}</small>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                                    {% else %}
-                                        <p class="text-muted text-center py-3 mb-0">No notifications</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {% include 'students/_student_home_main_content.html' %}
 
     {% elif section == 'classes' %}
         {% if not show_class_details %}
@@ -1616,6 +1187,13 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <p class="student-class-card-meta">
                                 <i class="bi bi-person me-2"></i>{{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}
                             </p>
+                            {% if class_groups_by_class_id is defined and class_groups_by_class_id.get(class.id) %}
+                            <p class="student-class-card-meta student-class-card-group">
+                                <i class="bi bi-people-fill me-2"></i>
+                                <span>Your group:</span>
+                                <strong>{{ class_groups_by_class_id[class.id].name }}</strong>
+                            </p>
+                            {% endif %}
                             {% if grades.get(class.name) %}
                             <div class="student-class-average">
                                 <span class="student-class-average-label">Current average</span>
@@ -2010,59 +1588,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         </div>
                         {% endif %}
 
-                        <!-- Class Information -->
-                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
-                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
-                                <h5 class="mb-0" style="font-weight: 600;">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    Class Details
-                                </h5>
-                            </div>
-                            <div class="card-body" style="padding: 1.5rem;">
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-book text-primary me-2 mt-1"></i>
-                                            <div>
-                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Class Name</strong>
-                                                <span>{{ class_obj.name }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-journal-text text-primary me-2 mt-1"></i>
-                                            <div>
-                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Subject</strong>
-                                                <span>{{ class_obj.subject }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-mortarboard text-primary me-2 mt-1"></i>
-                                            <div>
-                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Grade Level</strong>
-                                                <span>{{ class_obj.grade_level }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-calendar-year text-primary me-2 mt-1"></i>
-                                            <div>
-                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">School Year</strong>
-                                        {% if class_obj.school_year %}
-                                                    <span>{{ class_obj.school_year.name }}</span>
-                                        {% else %}
-                                            <span class="text-muted">Not specified</span>
-                                        {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        {% with show_empty_state=true %}
+                        {% include 'students/_student_class_group_panel.html' %}
+                        {% endwith %}
 
                         <!-- Enrolled Students -->
                         <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
@@ -2100,6 +1628,41 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
                     <!-- Right Column: Assignments & Announcements -->
                     <div class="col-lg-8">
+                        <!-- Recent Announcements -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
+                                <h5 class="mb-0" style="font-weight: 600;">
+                                    <i class="bi bi-megaphone me-2"></i>
+                                    Recent Announcements
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% if announcements %}
+                                    <div class="list-group list-group-flush">
+                                        {% for announcement in announcements %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ announcement.title }}</h6>
+                                                    <p class="mb-1 text-muted">{{ announcement.message }}</p>
+                                                    <small class="text-muted">
+                                                        {{ announcement.timestamp.strftime('%B %d, %Y at %I:%M %p') }}
+                                                    </small>
+                                                </div>
+                                                <span class="badge bg-secondary">New</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        No announcements for this class yet.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <!-- Recent Assignments -->
                         <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
                             <div class="card-header text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; padding: 1.25rem;">
@@ -2236,41 +1799,6 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         </div>
                                         <h6 class="text-muted mb-2" style="font-weight: 600;">No Assignments Yet</h6>
                                         <p class="text-muted mb-0" style="font-size: 0.9rem;">No assignments have been posted for this class yet.</p>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Recent Announcements -->
-                        <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
-                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
-                                <h5 class="mb-0" style="font-weight: 600;">
-                                    <i class="bi bi-megaphone me-2"></i>
-                                    Recent Announcements
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                {% if announcements %}
-                                    <div class="list-group list-group-flush">
-                                        {% for announcement in announcements %}
-                                        <div class="list-group-item">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">{{ announcement.title }}</h6>
-                                                    <p class="mb-1 text-muted">{{ announcement.message }}</p>
-                                                    <small class="text-muted">
-                                                        {{ announcement.timestamp.strftime('%B %d, %Y at %I:%M %p') }}
-                                                    </small>
-                                                </div>
-                                                <span class="badge bg-secondary">New</span>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="alert alert-info">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        No announcements for this class yet.
                                     </div>
                                 {% endif %}
                             </div>
@@ -3028,6 +2556,10 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <small class="text-muted d-block"><i class="bi bi-star-fill me-1"></i>Leader: {{ group_leader.student.first_name }} {{ group_leader.student.last_name }}</small>
                                 {% endif %}
                             </div>
+                            {% elif is_group %}
+                            <div class="mb-2 p-2 rounded bg-light border-start border-secondary border-2">
+                                <small class="text-muted d-block"><i class="bi bi-people me-1"></i>You are not assigned to a group for this assignment yet.</small>
+                            </div>
                             {% endif %}
                             <p class="student-assignment-class mb-2">
                                 <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
@@ -3233,6 +2765,10 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% if group_leader and group_leader.student %}
                                 <small class="text-muted d-block"><i class="bi bi-star-fill me-1"></i>Leader: {{ group_leader.student.first_name }} {{ group_leader.student.last_name }}</small>
                                 {% endif %}
+                            </div>
+                            {% elif is_group %}
+                            <div class="mb-2 p-2 rounded bg-light border-start border-secondary border-2">
+                                <small class="text-muted d-block"><i class="bi bi-people me-1"></i>You are not assigned to a group for this assignment yet.</small>
                             </div>
                             {% endif %}
                             <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
@@ -3496,6 +3032,10 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% if group_leader and group_leader.student %}
                                 <small class="text-muted d-block"><i class="bi bi-star-fill me-1"></i>Leader: {{ group_leader.student.first_name }} {{ group_leader.student.last_name }}</small>
                                 {% endif %}
+                            </div>
+                            {% elif is_group %}
+                            <div class="mb-2 p-2 rounded bg-light border-start border-secondary border-2">
+                                <small class="text-muted d-block"><i class="bi bi-people me-1"></i>You are not assigned to a group for this assignment yet.</small>
                             </div>
                             {% endif %}
                             <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
@@ -4297,7 +3837,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-secondary">Back to Groups</a>
                             {% if group and group.created_by != current_user.id %}
                                 <form method="POST" action="{{ url_for('student.student_leave_group', group_id=group.id) }}" 
-                                      onsubmit="return confirm('Are you sure you want to leave this group?')">
+>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="btn btn-outline-danger">Leave Group</button>
                                 </form>
@@ -4305,41 +3845,6 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-    {% elif section == 'announcements' %}
-        <!-- Announcements List View -->
-        <h2 class="mb-4">Announcements</h2>
-
-        <div class="card shadow-sm">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-megaphone-fill me-2"></i>All Announcements</h5>
-            </div>
-            <div class="card-body">
-                {% if announcements %}
-                    <div class="list-group list-group-flush">
-                        {% for announcement in announcements %}
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">{{ announcement.title }}</h6>
-                                        <small class="text-muted">From: {{ announcement.sender.username }}</small>
-                                        <p class="mb-1">{{ announcement.message }}</p>
-                                        <small class="text-muted">{{ announcement.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-                                    </div>
-                                    <div class="ms-2">
-                                        {% if announcement.is_important %}
-                                            <span class="badge bg-warning">Important</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-muted">No announcements to display.</p>
-                {% endif %}
             </div>
         </div>
 
@@ -5919,193 +5424,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
     }
     </script>
 
-    <!-- Assignment View Modal -->
-    <div class="modal fade" id="assignmentViewModal" tabindex="-1" aria-labelledby="assignmentViewModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-fullscreen-lg-down" style="max-width: 90vw; width: 90vw;">
-            <div class="modal-content border-0 shadow-lg">
-                <!-- Dynamic Header based on assignment type -->
-                <div class="modal-header text-white" id="viewModalHeader" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <div class="d-flex align-items-center w-100">
-                        <div class="me-3">
-                            <div id="viewAssignmentIcon" class="fs-1"></div>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h4 class="modal-title mb-1" id="assignmentViewModalLabel">
-                                <span id="viewAssignmentTitle"></span>
-                            </h4>
-                            <p class="mb-0 opacity-75" id="viewAssignmentSubtitle">Assignment Details & Instructions</p>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                </div>
-                
-                <div class="modal-body p-5" style="background-color: #ffffff; color: #212529;">
-                    <!-- Assignment Status Banner -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="alert border-0 shadow-sm" id="viewAssignmentBanner" role="alert">
-                                <div class="d-flex align-items-center">
-                                    <div class="me-3">
-                                        <div id="viewAssignmentStatusIcon" class="fs-4"></div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="alert-heading mb-1" id="viewAssignmentStatusTitle">Assignment Status</h6>
-                                        <p class="mb-0" id="viewAssignmentStatusMessage">Current status and next steps</p>
-                                    </div>
-                                    <div class="d-flex flex-wrap gap-1">
-                                        <span class="badge fs-6 px-3 py-2" id="viewAssignmentQuarter"></span>
-                                        <span class="badge fs-6 px-3 py-2" id="viewAssignmentType"></span>
-                                        <span class="badge fs-6 px-3 py-2" id="viewAssignmentStatus"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Content Grid -->
-                    <div class="row g-4">
-                        <!-- Left Column: Assignment Details -->
-                        <div class="col-12 col-lg-8 col-xl-7">
-                            <!-- Assignment Description Card -->
-                            <div class="card border-0 shadow-sm mb-4" id="viewDescriptionCard">
-                                <div class="card-header border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                                    <h5 class="mb-0 text-white">
-                                        <i class="bi bi-journal-text me-2"></i>Assignment Instructions
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="viewAssignmentDescription" class="fs-6"></div>
-                                    <div id="viewAssignmentInstructions" class="mt-3"></div>
-                                </div>
-                            </div>
-
-                            <!-- Progress & Timeline Card -->
-                            <div class="card border-0 shadow-sm" id="viewProgressCard">
-                                <div class="card-header border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                                    <h5 class="mb-0 text-white">
-                                        <i class="bi bi-clock-history me-2"></i>Timeline & Progress
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center p-3 rounded" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                                                <div class="me-3">
-                                                    <i class="bi bi-calendar-check fs-2 text-white"></i>
-                                                </div>
-                                                <div>
-                                                    <h6 class="text-white mb-1">Due Date</h6>
-                                                    <p class="text-white mb-0 fw-bold" id="viewAssignmentDueDate"></p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center p-3 rounded" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-                                                <div class="me-3">
-                                                    <i class="bi bi-speedometer2 fs-2 text-dark"></i>
-                                                </div>
-                                                <div>
-                                                    <h6 class="text-dark mb-1">Time Remaining</h6>
-                                                    <p class="text-dark mb-0 fw-bold" id="viewTimeRemaining">Calculating...</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column: Actions & Resources -->
-                        <div class="col-12 col-lg-4 col-xl-5">
-                            <!-- Assignment Type Specific Card -->
-                            <div class="card border-0 shadow-sm mb-4" id="viewTypeCard">
-                                <div class="card-header border-0" id="viewTypeCardHeader">
-                                    <h5 class="mb-0 text-white" id="viewTypeCardTitle">
-                                        <i class="bi bi-info-circle me-2"></i>Assignment Type
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="viewAssignmentAttachment"></div>
-                                    <div id="viewTypeInstructions" class="mt-3"></div>
-                                </div>
-                            </div>
-
-                            <!-- Submission Status Card -->
-                            <div class="card border-0 shadow-sm mb-4">
-                                <div class="card-header border-0" id="viewSubmissionCardHeader">
-                                    <h5 class="mb-0 text-white">
-                                        <i class="bi bi-person-check me-2"></i>Your Progress
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="viewSubmissionStatus"></div>
-                                    <div class="mt-3" id="viewProgressContainer">
-                                        <div class="progress" style="height: 8px;">
-                                            <div class="progress-bar" id="viewProgressBar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                        <small class="text-muted mt-2 d-block" id="viewProgressText">Progress: 0%</small>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Grade & Feedback Card (shown when assignment is graded) -->
-                            <div class="card border-0 shadow-sm mb-4" id="viewGradeFeedbackCard" style="display: none;">
-                                <div class="card-header border-0" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
-                                    <h5 class="mb-0 text-white">
-                                        <i class="bi bi-chat-square-text me-2"></i>Grade & Feedback
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-success fs-6 px-3 py-2 me-2" id="viewGradeDisplay">—</span>
-                                        <span class="text-muted small">from your teacher</span>
-                                    </div>
-                                    <div id="viewGradeFeedback" class="mt-2 p-2 rounded bg-light" style="white-space: pre-wrap; min-height: 2.5rem;">—</div>
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons Card -->
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-header border-0" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
-                                    <h5 class="mb-0 text-dark">
-                                        <i class="bi bi-lightning-charge me-2"></i>Quick Actions
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="viewActionButtons" class="d-grid gap-2">
-                                        <!-- Buttons will be dynamically added here -->
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Quiz Details Card (hidden by default, shown for quizzes) -->
-                            <div class="card border-0 shadow-sm mt-4" id="quizDetailsCard" style="display: none;">
-                                <div class="card-header border-0" style="background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);">
-                                    <h5 class="mb-0 text-white">
-                                        <i class="bi bi-info-circle me-2"></i>Quiz Details
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="quizDetailsContent">
-                                        <!-- Quiz details will be loaded here -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modal-footer border-0 bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i>Close
-                    </button>
-                    <button type="button" class="btn btn-primary" id="viewHelpButton" onclick="showAssignmentHelp()">
-                        <i class="bi bi-question-circle me-1"></i>Need Help?
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include 'students/_assignment_view_modal.html' %}
 
          <!-- Fallback Functions for Assignment Buttons -->
      <script>

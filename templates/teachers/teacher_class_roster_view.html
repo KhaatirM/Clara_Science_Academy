@@ -139,7 +139,7 @@
             <p class="teacher-class-card-subject">Latest Updates</p>
           </div>
         </div>
-        <div class="teacher-class-card-body teacher-class-announcements-body-tall flex-grow-1">
+        <div id="class-page-announcements-list" class="teacher-class-card-body teacher-class-announcements-body-tall flex-grow-1">
           {% if announcements %}
             <div class="teacher-class-announcements">
               {% for ann in announcements %}
@@ -196,6 +196,11 @@
                 <a href="{{ url_for('teacher.groups.class_groups', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-people me-1"></i>Manage Groups
                 </a>
+              </div>
+              <div class="col-12">
+                <button type="button" class="btn-teacher-class-action w-100 border-0" data-bs-toggle="modal" data-bs-target="#classAnnouncementModal">
+                  <i class="bi bi-megaphone me-1"></i>Announcements
+                </button>
               </div>
             </div>
           </div>
@@ -339,5 +344,9 @@
     </div>
   </div>
   {% endif %}
+
+  {% with announcement_class_id=class_item.id, announcement_class_name=class_item.name, announcement_enrolled_count=enrolled_students|length %}
+  {% include 'shared/class_announcement_modal.html' %}
+  {% endwith %}
 </div>
 {% endblock %}

@@ -1,0 +1,378 @@
+/* Add / edit teacher & staff form — school management */
+
+.stf-shell {
+  --stf-bg: linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #e8eef5 100%);
+  --stf-surface: rgba(255, 255, 255, 0.96);
+  --stf-border: rgba(15, 23, 42, 0.08);
+  --stf-text: #0f172a;
+  --stf-muted: #64748b;
+  --stf-accent: #0d9488;
+  --stf-accent-deep: #0f766e;
+  --stf-accent-soft: rgba(13, 148, 136, 0.12);
+  --stf-indigo: #4f46e5;
+  --stf-shadow: 0 4px 6px rgba(15, 23, 42, 0.04), 0 16px 36px rgba(15, 23, 42, 0.08);
+  --stf-radius: 18px;
+  padding-bottom: 2.5rem;
+}
+
+.stf-page-bg {
+  background: var(--stf-bg);
+  border-radius: 24px;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  margin: 0 -0.15rem;
+}
+
+.stf-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stf-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--stf-muted);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+}
+
+.stf-back:hover {
+  color: var(--stf-accent-deep);
+}
+
+.stf-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stf-muted);
+  margin: 0 0 0.35rem;
+}
+
+.stf-title {
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 800;
+  color: var(--stf-text);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+.stf-lead {
+  font-size: 0.95rem;
+  color: var(--stf-muted);
+  margin: 0;
+  max-width: 52ch;
+  line-height: 1.5;
+}
+
+.stf-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  background: var(--stf-accent-soft);
+  color: var(--stf-accent-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid rgba(13, 148, 136, 0.2);
+}
+
+.stf-card {
+  background: var(--stf-surface);
+  border: 1px solid var(--stf-border);
+  border-radius: var(--stf-radius);
+  box-shadow: var(--stf-shadow);
+  overflow: hidden;
+  height: 100%;
+}
+
+.stf-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(255, 255, 255, 0.95));
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.stf-card--portal .stf-card-header {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(255, 255, 255, 0.95));
+}
+
+.stf-card--portal {
+  border-left: 4px solid var(--stf-indigo);
+}
+
+.stf-card--warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.stf-section-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--stf-accent), #14b8a6);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+  flex-shrink: 0;
+}
+
+.stf-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--stf-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stf-card-title .bi-person-lock {
+  color: var(--stf-indigo);
+}
+
+.stf-card-body {
+  padding: 1.25rem;
+}
+
+.stf-form .form-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.35rem;
+}
+
+.stf-form .form-control,
+.stf-form .form-select {
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.92rem;
+}
+
+.stf-form .form-control:focus,
+.stf-form .form-select:focus {
+  border-color: var(--stf-accent);
+  box-shadow: 0 0 0 3px var(--stf-accent-soft);
+}
+
+.stf-form .form-text {
+  font-size: 0.78rem;
+  color: var(--stf-muted);
+}
+
+.stf-required {
+  color: #dc2626;
+}
+
+.stf-ssn-warning {
+  color: #b45309;
+  font-size: 0.78rem;
+}
+
+.stf-file-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #f8fafc;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.stf-file-zone:focus-within {
+  border-color: var(--stf-accent);
+  background: var(--stf-accent-soft);
+}
+
+.stf-file-zone .form-control {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.stf-file-zone-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--stf-muted);
+  margin-bottom: 0.5rem;
+}
+
+.stf-file-zone-label i {
+  color: var(--stf-accent);
+}
+
+.stf-photo-preview {
+  max-height: 140px;
+  border-radius: 10px;
+  margin-top: 0.75rem;
+  border: 1px solid #e2e8f0;
+  object-fit: cover;
+}
+
+.stf-choice-tile {
+  border-width: 2px !important;
+  border-radius: 12px !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.stf-choice-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.btn-check:checked + .stf-choice-tile.btn-outline-primary {
+  background: var(--stf-accent-soft);
+  border-color: var(--stf-accent) !important;
+  color: var(--stf-accent-deep);
+}
+
+.btn-check:checked + .stf-choice-tile.btn-outline-secondary {
+  background: #f1f5f9;
+  border-color: #64748b !important;
+}
+
+.stf-callout-inline {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+  color: #475569;
+  margin: 0;
+}
+
+.stf-permissions-box {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f0fdfa;
+  border: 1px solid rgba(13, 148, 136, 0.2);
+  margin-bottom: 1rem;
+}
+
+.stf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding: 1.15rem 1.25rem;
+  background: var(--stf-surface);
+  border: 1px solid var(--stf-border);
+  border-radius: var(--stf-radius);
+  box-shadow: var(--stf-shadow);
+}
+
+.stf-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.35rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--stf-accent), #14b8a6);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.stf-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.4);
+  color: #fff;
+}
+
+.stf-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.stf-btn-secondary:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+@media (max-width: 575.98px) {
+  .stf-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stf-btn-primary,
+  .stf-btn-secondary {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+/* Bootstrap card shells used in template */
+.stf-form .staff-card {
+  background: var(--stf-surface) !important;
+  border: 1px solid var(--stf-border) !important;
+  border-radius: var(--stf-radius) !important;
+  box-shadow: var(--stf-shadow) !important;
+  overflow: hidden;
+}
+
+.stf-form .staff-card.stf-card--portal {
+  border-left: 4px solid var(--stf-indigo) !important;
+}
+
+.stf-form .staff-card.stf-card--warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.stf-form .staff-card .card-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.25rem !important;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(255, 255, 255, 0.95)) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.stf-form .staff-card.stf-card--portal .card-header {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(255, 255, 255, 0.95)) !important;
+}
+
+.stf-form .staff-card .card-header h5 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--stf-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stf-form .staff-card .card-body {
+  padding: 1.25rem !important;
+}
+
+.stf-form .stf-section-num {
+  margin-right: 0;
+}

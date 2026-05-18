@@ -365,7 +365,6 @@ function viewBugReport(reportId) {
 }
 
 function updateStatus(reportId, newStatus) {
-    if (confirm(`Are you sure you want to mark bug report #${reportId} as ${newStatus.replace('_', ' ')}?`)) {
         const formData = new FormData();
         formData.append('status', newStatus);
         
@@ -400,7 +399,6 @@ function updateStatus(reportId, newStatus) {
             console.error('Error:', error);
             alert('An error occurred while updating the bug report status. Please try again.');
         });
-    }
 }
 
 function exportBugReports() {

@@ -655,7 +655,6 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
     }
     
     if (selectedCount < totalCount) {
-        if (!confirm(`You have only selected attendance for ${selectedCount} out of ${totalCount} students. Do you want to continue?`)) {
             e.preventDefault();
             return;
         }

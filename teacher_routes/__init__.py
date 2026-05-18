@@ -108,6 +108,14 @@ def review_extension_request(request_id):
     from .assignments import review_extension_request as review_extension_request_func
     return review_extension_request_func(request_id)
 
+@teacher_blueprint.route('/extension-requests/bulk-review', methods=['POST'], endpoint='bulk_review_extension_requests')
+@login_required
+@teacher_required
+def bulk_review_extension_requests():
+    """Bulk review extension requests - delegates to assignments module"""
+    from .assignments import bulk_review_extension_requests as bulk_review_extension_requests_func
+    return bulk_review_extension_requests_func()
+
 @teacher_blueprint.route('/redo-dashboard', endpoint='redo_dashboard')
 @login_required
 @teacher_required

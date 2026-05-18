@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import os
 
 # Core Flask imports
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, get_flashed_messages, request, jsonify, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFError
 
@@ -33,6 +33,41 @@ import pathlib
 from sqlalchemy import or_, func
 
 auth_blueprint = Blueprint('auth', __name__)
+
+
+def _login_success_message(user, *, via_google=False, google_given_name=None):
+    if via_google:
+        name = (getattr(user, 'first_name', None) or google_given_name or 'there')
+        return f'Welcome back, {name}! Logged in successfully with Google.'
+    return 'Logged in successfully.'
+
+
+def _defer_or_flash_login_success(user, message):
+    """Dual-dashboard staff pick Tech vs management first; show login toast on the chosen dashboard."""
+    from utils.user_roles import staff_must_choose_dashboard
+
+    if staff_must_choose_dashboard(user):
+        session['pending_login_success'] = message
+    else:
+        flash(message, 'success')
+
+
+def _consume_login_success_flashes_for_choose_page():
+    """Keep login success off the picker page (avoids themed-layout flash strip)."""
+    pending = session.get('pending_login_success')
+    for category, message in get_flashed_messages(with_categories=True):
+        if category == 'success' and 'logged in successfully' in message.lower():
+            if not pending:
+                session['pending_login_success'] = message
+            continue
+        flash(message, category)
+
+
+def _flash_pending_login_success_after_choose():
+    message = session.pop('pending_login_success', None)
+    if message:
+        flash(message, 'success')
+
 
 @auth_blueprint.route('/login', methods=['GET', 'POST'])
 def login():
@@ -237,7 +272,7 @@ def login():
                     flash('You are using a temporary password or this is your first login. Please change your password for security.', 'warning')
                     return redirect(url_for('auth.dashboard'))
                 else:
-                    flash('Logged in successfully.', 'success')
+                    _defer_or_flash_login_success(user, _login_success_message(user))
                     return redirect(url_for('auth.dashboard'))
             else:
                 print(f"DEBUG: Login failed - User: {user}, Password check: {user and check_password_hash(user.password_hash, password) if user else 'No user found'}")
@@ -271,6 +306,7 @@ def logout():
     )
     
     session.pop('staff_dashboard_target', None)
+    session.pop('pending_login_success', None)
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
@@ -303,12 +339,15 @@ def choose_staff_dashboard():
         choice = (request.form.get('target') or '').strip()
         if choice == 'tech' and user_has_tech_route_access(current_user):
             session['staff_dashboard_target'] = 'tech'
+            _flash_pending_login_success_after_choose()
             return redirect(url_for('auth.dashboard'))
         if choice == 'management' and user_has_management_entry_access(current_user):
             session['staff_dashboard_target'] = 'management'
+            _flash_pending_login_success_after_choose()
             return redirect(url_for('auth.dashboard'))
         flash('Please choose a valid dashboard.', 'warning')
 
+    _consume_login_success_flashes_for_choose_page()
     return render_template('shared/choose_staff_dashboard.html')
 
 
@@ -1023,12 +1062,15 @@ def google_callback():
                 except Exception as e:
                     current_app.logger.warning('Attendance on login failed: %s', e)
             
-            flash(f'Welcome back, {user.first_name or google_given_name}! Logged in successfully with Google.', 'success')
-            
+            _defer_or_flash_login_success(
+                user,
+                _login_success_message(user, via_google=True, google_given_name=google_given_name),
+            )
+
             # Clear the OAuth state and code_verifier from session
             session.pop('oauth_state', None)
             session.pop('oauth_code_verifier', None)
-            
+
             return redirect(url_for('auth.dashboard'))
         else:
             # User does not exist in the system
@@ -1090,7 +1132,10 @@ def google_callback():
         
         # If user is already logged in, redirect to dashboard (login succeeded)
         if current_user.is_authenticated:
-            flash('Logged in successfully with Google.', 'success')
+            _defer_or_flash_login_success(
+                current_user,
+                _login_success_message(current_user, via_google=True),
+            )
             return redirect(url_for('auth.dashboard'))
         
         # Otherwise, show error and redirect to login

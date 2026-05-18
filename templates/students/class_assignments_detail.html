@@ -67,6 +67,14 @@
         </div>
     </div>
 
+    {% if class_student_group is defined and class_student_group %}
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12 col-lg-5">
+            {% include 'students/_student_class_group_panel.html' %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Class Information Card -->
     <div class="row g-3 g-md-4 mb-4">
         <div class="col-12">

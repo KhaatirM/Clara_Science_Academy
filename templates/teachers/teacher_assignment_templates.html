@@ -178,9 +178,7 @@
 
 <script>
 function useTemplate(templateId) {
-  if (confirm('Use this template to create a new assignment? This will open the assignment creation form with template settings.')) {
     window.location.href = "{{ url_for('teacher.assignments.use_assignment_template', template_id=0) }}".replace('0', templateId);
-  }
 }
 
 function deleteTemplate(templateId) {

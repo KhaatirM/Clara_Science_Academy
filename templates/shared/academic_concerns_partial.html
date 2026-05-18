@@ -226,8 +226,14 @@
       alert('Academic details modal not found. Please refresh the page.');
       return;
     }
-    var modal = new bootstrap.Modal(modalElement);
+    var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
+    modalElement.addEventListener('hidden.bs.modal', function cleanupAcademicModalBackdrop() {
+      document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+    }, { once: true });
     {% for alert in at_risk_alerts %}
     if (typeof loadStudentAcademicDetails === 'function') {
       loadStudentAcademicDetails({{ alert.student_user_id }});

@@ -1,0 +1,80 @@
+{# Class announcement modal — include with announcement_class_id, announcement_class_name #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/class_announcement_modal.css') }}">
+
+<div class="modal fade class-announcement-modal" id="classAnnouncementModal" tabindex="-1" aria-labelledby="classAnnouncementModalLabel" aria-hidden="true"
+     data-class-id="{{ announcement_class_id }}"
+     data-class-name="{{ announcement_class_name }}">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="classAnnouncementModalLabel">
+          <i class="bi bi-megaphone-fill me-2"></i>Class Announcements
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="class-announcement-layout">
+          <section class="class-announcement-compose" aria-label="Compose announcement">
+            <form id="class-announcement-form" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="target_group" id="class-announcement-target-group" value="class">
+              <input type="hidden" name="class_id" id="class-announcement-class-id" value="{{ announcement_class_id }}">
+
+              <p class="class-announcement-section-label">Compose</p>
+
+              <div class="mb-3">
+                <label for="class-announcement-title" class="form-label">Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="class-announcement-title" name="title" maxlength="200" required placeholder="e.g. Homework reminder, field trip update">
+              </div>
+
+              <div class="mb-3">
+                <label for="class-announcement-message" class="form-label">Announcement <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="class-announcement-message" name="message" rows="6" required placeholder="Write the full message students will see..."></textarea>
+              </div>
+
+              <div class="mb-3">
+                <label for="class-announcement-broadcast" class="form-label">Broadcast to</label>
+                <select class="form-select" id="class-announcement-broadcast" required aria-describedby="class-announcement-broadcast-hint">
+                  <option value="" disabled selected>Loading options…</option>
+                </select>
+                <div id="class-announcement-broadcast-hint" class="class-announcement-broadcast-hint"></div>
+              </div>
+
+              <div class="mb-0">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="class-announcement-important" name="is_important" value="on">
+                  <label class="form-check-label" for="class-announcement-important">
+                    Mark as important
+                  </label>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section class="class-announcement-history" aria-label="Past announcements">
+            <div class="class-announcement-history-header">
+              <h6><i class="bi bi-clock-history me-1"></i>Past announcements</h6>
+              <span class="badge bg-light text-dark border" id="class-announcement-history-count">—</span>
+            </div>
+            <div id="class-announcement-history-panel">
+              <div class="class-announcement-loading">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Loading history…
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" id="class-announcement-submit" form="class-announcement-form">
+          <i class="bi bi-send me-1"></i><span id="class-announcement-submit-label">Send announcement</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/class_announcement.js') }}"></script>

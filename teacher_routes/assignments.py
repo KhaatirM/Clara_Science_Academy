@@ -796,6 +796,9 @@ def view_assignment(assignment_id):
     submission_rate = round((submissions_count / total_students * 100) if total_students > 0 else 0, 1)
     grading_rate = round((graded_count / total_students * 100) if total_students > 0 else 0, 1)
     pending_count = max(total_students - graded_count, 0)
+
+    from teacher_routes.assignment_utils import compute_assignment_void_scope
+    void_scope = compute_assignment_void_scope(assignment, enrolled_student_ids, voided_student_ids)
     
     return render_template('shared/view_assignment.html', 
                          assignment=assignment,
@@ -810,7 +813,8 @@ def view_assignment(assignment_id):
                          submission_rate=submission_rate,
                          grading_rate=grading_rate,
                          pending_count=pending_count,
-                         voided_student_ids=voided_student_ids)
+                         voided_student_ids=voided_student_ids,
+                         **void_scope)
 
 
 @bp.route('/discussion/thread/<int:thread_id>')
@@ -1252,105 +1256,131 @@ def view_extension_requests():
                          rejected_requests=rejected_requests,
                          total_count=len(extension_requests))
 
+def _extension_reviewer_id(teacher):
+    """TeacherStaff id used when recording who reviewed an extension."""
+    if is_admin() and getattr(current_user, 'teacher_staff_id', None):
+        return current_user.teacher_staff_id
+    return teacher.id if teacher else None
+
+
+def _parse_extension_request_ids():
+    raw_ids = request.form.getlist('request_ids[]') or request.form.getlist('request_ids')
+    if not raw_ids:
+        payload = request.get_json(silent=True) or {}
+        raw_ids = payload.get('request_ids') or []
+    try:
+        return [int(x) for x in raw_ids if str(x).strip()]
+    except (TypeError, ValueError):
+        return None
+
+
 @bp.route('/extension-request/<int:request_id>/review', methods=['POST'])
 @login_required
 @teacher_required
 def review_extension_request(request_id):
     """Approve or reject an extension request"""
-    from models import ExtensionRequest, AssignmentExtension
-    from datetime import datetime
-    
+    from models import ExtensionRequest
+    from teacher_routes.assignment_utils import (
+        apply_extension_request_review,
+        notify_extension_request_review,
+        teacher_can_review_extension_request,
+    )
+
     extension_request = ExtensionRequest.query.get_or_404(request_id)
-    assignment = extension_request.assignment
-    
-    # Authorization check
+
     teacher = get_teacher_or_admin()
     if not is_admin():
-        if teacher is None:
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-        if assignment.class_info.teacher_id != teacher.id:
+        if teacher is None or not teacher_can_review_extension_request(extension_request, teacher):
             return jsonify({'success': False, 'message': 'You are not authorized to review this request'}), 403
-    
-    action = request.form.get('action')  # 'approve' or 'reject'
+
+    action = request.form.get('action')
     review_notes = request.form.get('review_notes', '').strip()
-    
+
     if action not in ['approve', 'reject']:
         return jsonify({'success': False, 'message': 'Invalid action'}), 400
-    
+
     try:
-        if action == 'approve':
-            # Update extension request status
-            extension_request.status = 'Approved'
-            extension_request.reviewed_at = datetime.utcnow()
-            extension_request.reviewed_by = teacher.id if teacher else None
-            extension_request.review_notes = review_notes if review_notes else None
-            
-            # Create or update AssignmentExtension
-            existing_extension = AssignmentExtension.query.filter_by(
-                assignment_id=assignment.id,
-                student_id=extension_request.student_id,
-                is_active=True
-            ).first()
-            
-            if existing_extension:
-                # Update existing extension
-                existing_extension.extended_due_date = extension_request.requested_due_date
-                existing_extension.reason = review_notes if review_notes else 'Extension granted'
-            else:
-                # Create new extension
-                new_extension = AssignmentExtension(
-                    assignment_id=assignment.id,
-                    student_id=extension_request.student_id,
-                    extended_due_date=extension_request.requested_due_date,
-                    reason=review_notes if review_notes else 'Extension granted',
-                    granted_by=teacher.id if teacher else None,
-                    is_active=True
-                )
-                db.session.add(new_extension)
-            
-            message = f'Extension request approved. New due date: {extension_request.requested_due_date.strftime("%Y-%m-%d %I:%M %p")}'
-        else:
-            # Reject extension request
-            extension_request.status = 'Rejected'
-            extension_request.reviewed_at = datetime.utcnow()
-            extension_request.reviewed_by = teacher.id if teacher else None
-            extension_request.review_notes = review_notes if review_notes else 'Extension request rejected'
-
-            message = 'Extension request rejected'
-
+        message = apply_extension_request_review(
+            extension_request,
+            action,
+            review_notes,
+            _extension_reviewer_id(teacher),
+        )
         db.session.commit()
-
-        # Notify the student that their extension request was accepted or rejected (don't fail the request if this fails)
         try:
-            student_user = getattr(extension_request.student, 'user', None)
-            if student_user and student_user.id:
-                from app import create_notification
-                assign_title = extension_request.assignment.title
-                if action == 'approve':
-                    create_notification(
-                        student_user.id,
-                        'extension_request',
-                        'Extension request approved',
-                        f'Your extension request for "{assign_title}" was approved. New due date: {extension_request.requested_due_date.strftime("%B %d, %Y at %I:%M %p")}.',
-                        link=url_for('student.student_assignments')
-                    )
-                else:
-                    create_notification(
-                        student_user.id,
-                        'extension_request',
-                        'Extension request not approved',
-                        f'Your extension request for "{assign_title}" was not approved.' + (f' Note: {review_notes}' if review_notes else ''),
-                        link=url_for('student.student_assignments')
-                    )
+            notify_extension_request_review(extension_request, action, review_notes)
         except Exception as notify_err:
-            current_app.logger.warning(f"Could not create extension notification for student: {notify_err}")
-
+            current_app.logger.warning(f"Could not create extension notification: {notify_err}")
         return jsonify({'success': True, 'message': message})
-        
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error reviewing extension request: {str(e)}")
         return jsonify({'success': False, 'message': f'Error processing request: {str(e)}'}), 500
+
+
+@bp.route('/extension-requests/bulk-review', methods=['POST'])
+@login_required
+@teacher_required
+def bulk_review_extension_requests():
+    """Approve or reject multiple extension requests at once."""
+    from models import ExtensionRequest
+    from teacher_routes.assignment_utils import (
+        bulk_process_extension_reviews,
+        notify_extension_request_review,
+    )
+
+    action = (request.form.get('action') or '').strip().lower()
+    review_notes = request.form.get('review_notes', '').strip()
+    request_ids = _parse_extension_request_ids()
+
+    if action not in ('approve', 'reject'):
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+    if request_ids is None:
+        return jsonify({'success': False, 'message': 'Invalid request ids'}), 400
+    if not request_ids:
+        return jsonify({'success': False, 'message': 'No requests selected'}), 400
+
+    teacher = get_teacher_or_admin()
+    admin = is_admin()
+    reviewer_id = _extension_reviewer_id(teacher)
+    processed, failed = bulk_process_extension_reviews(
+        request_ids, action, review_notes, reviewer_id, teacher=teacher, admin=admin,
+    )
+
+    if not processed:
+        return jsonify({
+            'success': False,
+            'message': 'No requests could be processed.',
+            'processed_count': 0,
+            'failed': failed,
+        }), 400
+
+    try:
+        db.session.commit()
+        for ext_req in processed:
+            try:
+                notify_extension_request_review(ext_req, action, review_notes)
+            except Exception as notify_err:
+                current_app.logger.warning(f"Could not create extension notification: {notify_err}")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error bulk reviewing extension requests: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error processing requests: {str(e)}'}), 500
+
+    verb = 'approved' if action == 'approve' else 'rejected'
+    message = f'{len(processed)} extension request(s) {verb}.'
+    if failed:
+        message += f' {len(failed)} could not be processed.'
+
+    return jsonify({
+        'success': True,
+        'message': message,
+        'processed_count': len(processed),
+        'failed': failed,
+    })
 
 @bp.route('/assignment/grant-extensions', methods=['POST'])
 @login_required

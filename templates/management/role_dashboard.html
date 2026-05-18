@@ -2,312 +2,15 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_role_dashboard.css') }}">
+{% if section == 'home' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_home.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block dashboard_content %}
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
-        <!-- Home Dashboard -->
-        <div class="container-fluid px-2 px-md-4">
-            <!-- Modern Welcome Header -->
-            <div class="admin-home-header mb-4">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <h2 class="admin-home-title mb-1">
-                            <i class="bi bi-house-heart-fill me-2"></i>Welcome Back, {{ current_user.first_name if current_user.first_name else current_user.username }}!
-                        </h2>
-                        <p class="admin-home-subtitle mb-0">
-                            <i class="bi bi-calendar3 me-2"></i>Today's Administrative Dashboard
-                        </p>
-                    </div>
-                    <div class="admin-home-role-badge">
-                        {% if current_user.role == 'Director' %}
-                        <span class="badge badge-admin-director"><i class="bi bi-award-fill me-1"></i>Director</span>
-                        {% else %}
-                        <span class="badge badge-admin-regular"><i class="bi bi-shield-fill me-1"></i>Administrator</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistics Overview -->
-            <div class="row g-3 g-md-4 mb-4">
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="admin-stat-card">
-                        <div class="admin-stat-icon">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                        <div class="admin-stat-content">
-                            <h3 class="admin-stat-number">{{ stats.students if stats else 0 }}</h3>
-                            <p class="admin-stat-label">Total Students</p>
-                            <div class="admin-stat-trend">
-                                {% set change_percent = stats.students_change_percent if stats and stats.students_change_percent is defined else 0 %}
-                                {% if change_percent > 0 %}
-                                    <i class="bi bi-arrow-up text-success"></i>
-                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% elif change_percent < 0 %}
-                                    <i class="bi bi-arrow-down text-danger"></i>
-                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% else %}
-                                    <i class="bi bi-dash text-muted"></i>
-                                    <span class="text-muted">No change this month</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="admin-stat-card">
-                        <div class="admin-stat-icon">
-                            <i class="bi bi-person-badge-fill"></i>
-                        </div>
-                        <div class="admin-stat-content">
-                            <h3 class="admin-stat-number">{{ stats.teachers if stats else 0 }}</h3>
-                            <p class="admin-stat-label">Teachers & Staff</p>
-                            <div class="admin-stat-trend">
-                                {% set change_percent = stats.teachers_change_percent if stats and stats.teachers_change_percent is defined else 0 %}
-                                {% if change_percent > 0 %}
-                                    <i class="bi bi-arrow-up text-success"></i>
-                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% elif change_percent < 0 %}
-                                    <i class="bi bi-arrow-down text-danger"></i>
-                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% else %}
-                                    <i class="bi bi-dash text-muted"></i>
-                                    <span class="text-muted">No change this month</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="admin-stat-card">
-                        <div class="admin-stat-icon">
-                            <i class="bi bi-house-door-fill"></i>
-                        </div>
-                        <div class="admin-stat-content">
-                            <h3 class="admin-stat-number">{{ stats.classes if stats else 0 }}</h3>
-                            <p class="admin-stat-label">Total Classes</p>
-                            <div class="admin-stat-trend">
-                                {% set change_percent = stats.classes_change_percent if stats and stats.classes_change_percent is defined else 0 %}
-                                {% if change_percent > 0 %}
-                                    <i class="bi bi-arrow-up text-success"></i>
-                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% elif change_percent < 0 %}
-                                    <i class="bi bi-arrow-down text-danger"></i>
-                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% else %}
-                                    <i class="bi bi-dash text-muted"></i>
-                                    <span class="text-muted">No change this month</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="admin-stat-card">
-                        <div class="admin-stat-icon">
-                            <i class="bi bi-journal-check"></i>
-                        </div>
-                        <div class="admin-stat-content">
-                            <h3 class="admin-stat-number">{{ stats.active_assignments if stats else 0 }}</h3>
-                            <p class="admin-stat-label">Active Assignments</p>
-                            <div class="admin-stat-trend">
-                                {% set change_percent = stats.assignments_change_percent if stats and stats.assignments_change_percent is defined else 0 %}
-                                {% if change_percent > 0 %}
-                                    <i class="bi bi-arrow-up text-success"></i>
-                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% elif change_percent < 0 %}
-                                    <i class="bi bi-arrow-down text-danger"></i>
-                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
-                                {% else %}
-                                    <i class="bi bi-dash text-muted"></i>
-                                    <span class="text-muted">No change this month</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Profile Card & Quick Actions -->
-            <div class="row g-3 g-md-4 mb-4">
-                <div class="col-12 col-lg-4">
-                    <div class="admin-profile-card">
-                        <div class="admin-profile-header">
-                            <div class="admin-profile-avatar">
-                                {% if current_user.role == 'Director' %}
-                                <i class="bi bi-award-fill"></i>
-                                {% else %}
-                                <i class="bi bi-person-badge-fill"></i>
-                                {% endif %}
-                            </div>
-                            <div class="admin-profile-info">
-                                <h4 class="admin-profile-name">{{ current_user.first_name if current_user.first_name else current_user.username }}</h4>
-                                <p class="admin-profile-role">{{ current_user.role }}</p>
-                            </div>
-                        </div>
-                        <div class="admin-profile-details">
-                            <div class="admin-profile-item">
-                                <i class="bi bi-person-badge me-2"></i>
-                                <span>ID: {% if current_user.teacher_staff and current_user.teacher_staff.staff_id %}{{ current_user.teacher_staff.staff_id }}{% else %}STAFF-{{ current_user.id }}{% endif %}</span>
-                            </div>
-                            <div class="admin-profile-item">
-                                <i class="bi bi-envelope me-2"></i>
-                                <span>{{ current_user.email }}</span>
-                            </div>
-                            <div class="admin-profile-item">
-                                <i class="bi bi-calendar3 me-2"></i>
-                                <span>Last Login: Today</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-lg-8">
-                    <div class="admin-quick-actions">
-                        <h5 class="admin-section-title">
-                            <i class="bi bi-lightning-fill me-2"></i>Quick Actions
-                        </h5>
-                        <div class="admin-actions-grid">
-                            <a href="{{ url_for('management.add_student') }}" class="admin-action-btn">
-                                <i class="bi bi-person-plus-fill"></i>
-                                <span>Add Student</span>
-                            </a>
-                            <a href="{{ url_for('management.add_teacher_staff') }}" class="admin-action-btn">
-                                <i class="bi bi-person-badge"></i>
-                                <span>Add Staff</span>
-                            </a>
-                            <a href="{{ url_for('management.classes', open='create') }}" class="admin-action-btn">
-                                <i class="bi bi-house-door"></i>
-                                <span>Add Class</span>
-                            </a>
-                            <a href="{{ url_for('management.assignment_type_selector') }}" class="admin-action-btn">
-                                <i class="bi bi-journal-plus"></i>
-                                <span>Add Assignment</span>
-                            </a>
-                            <a href="{{ url_for('management.students') }}" class="admin-action-btn">
-                                <i class="bi bi-people"></i>
-                                <span>Manage Students</span>
-                            </a>
-                            <a href="{{ url_for('management.classes') }}" class="admin-action-btn">
-                                <i class="bi bi-chalkboard"></i>
-                                <span>Manage Classes</span>
-                            </a>
-                            <a href="{{ url_for('management.assignments_and_grades') }}" class="admin-action-btn">
-                                <i class="bi bi-clipboard-data"></i>
-                                <span>Grades & Assignments</span>
-                            </a>
-                            <a href="{{ url_for('management.unified_attendance') }}" class="admin-action-btn">
-                                <i class="bi bi-calendar-check"></i>
-                                <span>Attendance</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notifications & Recent Activity -->
-            <div class="row g-3 g-md-4">
-                <div class="col-12 col-lg-6">
-                    <div class="admin-notifications">
-                        <h5 class="admin-section-title">
-                            <i class="bi bi-bell-fill me-2"></i>Notifications
-                            {% if notifications %}
-                                <span class="badge bg-danger rounded-pill ms-2">{{ notifications|length }}</span>
-                            {% endif %}
-                            <small class="text-muted fw-normal ms-1">(last 7 days)</small>
-                        </h5>
-                        <div class="admin-notification-list">
-                            {% if notifications %}
-                                {% for notification in notifications %}
-                                <div class="admin-notification-item">
-                                    <div class="admin-notification-icon">
-                                        {% if notification.type == 'grade' %}
-                                            <i class="bi bi-clipboard-check-fill text-success"></i>
-                                        {% elif notification.type == 'assignment' %}
-                                            <i class="bi bi-journal-plus-fill text-primary"></i>
-                                        {% elif notification.type == 'attendance' %}
-                                            <i class="bi bi-calendar-check-fill text-info"></i>
-                                        {% elif notification.type == 'submission' %}
-                                            <i class="bi bi-file-earmark-check-fill text-warning"></i>
-                                        {% elif notification.type == 'extension_request' %}
-                                            <i class="bi bi-clock-history text-info"></i>
-                                        {% elif notification.type == 'alert' or notification.type == 'warning' %}
-                                            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                                        {% else %}
-                                            <i class="bi bi-bell-fill text-secondary"></i>
-                                        {% endif %}
-                                    </div>
-                                    <div class="admin-notification-content">
-                                        <h6 class="admin-notification-title">{{ notification.title }}</h6>
-                                        <p class="admin-notification-text">{{ notification.message }}</p>
-                                        <small class="admin-notification-time">
-                                            {{ notification.timestamp.strftime('%b %d, %I:%M %p') if notification.timestamp else 'Recently' }}
-                                        </small>
-                                        {% if notification.link %}
-                                        <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary mt-2">View</a>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="admin-notification-item text-center py-4">
-                                    <i class="bi bi-bell-slash text-muted" style="font-size: 2rem;"></i>
-                                    <p class="text-muted mt-2 mb-0">No new notifications</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-lg-6">
-                    <div class="admin-recent-activity">
-                        <h5 class="admin-section-title">
-                            <i class="bi bi-clock-history me-2"></i>Recent Activity
-                            <small class="text-muted fw-normal ms-1">(last 7 days)</small>
-                        </h5>
-                        <div class="admin-activity-timeline">
-                            {% if recent_activity %}
-                                {% for activity in recent_activity %}
-                                <div class="admin-activity-item">
-                                    <div class="admin-activity-dot"></div>
-                                    <div class="admin-activity-content">
-                                        <h6 class="admin-activity-title">
-                                            {% if activity.type == 'grade' %}
-                                                <i class="bi bi-clipboard-check text-success me-1"></i>
-                                            {% elif activity.type == 'assignment' %}
-                                                <i class="bi bi-journal-plus text-primary me-1"></i>
-                                            {% elif activity.type == 'submission' %}
-                                                <i class="bi bi-file-earmark-check text-warning me-1"></i>
-                                            {% elif activity.type == 'extension_request' %}
-                                                <i class="bi bi-clock-history text-info me-1"></i>
-                                            {% else %}
-                                                <i class="bi bi-circle-fill text-secondary me-1"></i>
-                                            {% endif %}
-                                            {{ activity.title }}
-                                        </h6>
-                                        <p class="admin-activity-text">{{ activity.description }}</p>
-                                        <small class="admin-activity-time">
-                                            {{ activity.timestamp.strftime('%b %d, %I:%M %p') if activity.timestamp else 'Recently' }}
-                                        </small>
-                                        {% if activity.link %}
-                                        <a href="{{ activity.link }}" class="btn btn-sm btn-outline-primary mt-2 d-inline-block">View</a>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="admin-activity-item text-center py-4">
-                                    <i class="bi bi-activity text-muted" style="font-size: 2rem;"></i>
-                                    <p class="text-muted mt-2 mb-0">No recent activity</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-        </div>
+        {% include 'management/_management_home.html' %}
 
     {% elif section == 'students' %}
         <!-- Students Management View -->
@@ -978,9 +681,6 @@
                         const any = !!document.querySelector('.student-select:checked');
                         if (!any) {
                             alert('Select at least one student first.');
-                            return;
-                        }
-                        if (!confirm('Mark selected students as repeating and bump graduation year by 1?')) {
                             return;
                         }
                         form.submit();
@@ -2312,27 +2012,27 @@
                             </h5>
                         </div>
                         <div class="attendance-reports-body">
-                            <a href="#" class="attendance-report-btn">
+                            <a href="{{ attendance_quick_links.daily }}" class="attendance-report-btn">
                                 <i class="bi bi-calendar-day me-2"></i>
                                 <span>Daily Report</span>
                                 <i class="bi bi-chevron-right ms-auto"></i>
                             </a>
-                            <a href="#" class="attendance-report-btn">
+                            <a href="{{ attendance_quick_links.weekly }}" class="attendance-report-btn">
                                 <i class="bi bi-calendar-week me-2"></i>
                                 <span>Weekly Report</span>
                                 <i class="bi bi-chevron-right ms-auto"></i>
                             </a>
-                            <a href="#" class="attendance-report-btn">
+                            <a href="{{ attendance_quick_links.monthly }}" class="attendance-report-btn">
                                 <i class="bi bi-calendar-month me-2"></i>
                                 <span>Monthly Report</span>
                                 <i class="bi bi-chevron-right ms-auto"></i>
                             </a>
-                            <a href="#" class="attendance-report-btn">
+                            <a href="{{ attendance_quick_links.reports }}" class="attendance-report-btn">
                                 <i class="bi bi-person-lines-fill me-2"></i>
-                                <span>Student Report</span>
+                                <span>All Reports</span>
                                 <i class="bi bi-chevron-right ms-auto"></i>
                             </a>
-                            <a href="#" class="attendance-report-btn">
+                            <a href="{{ attendance_quick_links.analytics }}" class="attendance-report-btn">
                                 <i class="bi bi-graph-up me-2"></i>
                                 <span>Analytics Dashboard</span>
                                 <i class="bi bi-chevron-right ms-auto"></i>
@@ -2971,8 +2671,46 @@
         }
     }
     
+    function cleanupModalBackdrops() {
+        document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    }
+
+    function getBootstrapModal(elementId) {
+        var el = document.getElementById(elementId);
+        if (!el || typeof bootstrap === 'undefined') return null;
+        return bootstrap.Modal.getOrCreateInstance(el);
+    }
+
+    function showProfileModalLoading(modalId, title) {
+        var labelId = modalId === 'profileEditModal' ? 'profileEditModalLabel' : 'profileViewModalLabel';
+        var bodyId = modalId === 'profileEditModal' ? 'profileEditModalBody' : 'profileViewModalBody';
+        var label = document.getElementById(labelId);
+        var body = document.getElementById(bodyId);
+        if (label) label.innerText = title || 'Loading…';
+        if (body) {
+            body.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">'
+                + '<div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>'
+                + '<p class="mb-0">Loading details…</p></div>';
+        }
+        var modal = getBootstrapModal(modalId);
+        if (modal) modal.show();
+        return modal;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        ['profileViewModal', 'profileEditModal'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('hidden.bs.modal', cleanupModalBackdrops);
+        });
+    });
+
     function viewStudent(studentId) {
-        console.log('viewStudent called with', studentId);
+        if (!studentId) return;
+        showProfileModalLoading('profileViewModal', 'Student Details');
         fetch(`/management/view-student/${studentId}`)
             .then(response => response.json())
             .then(data => {
@@ -3242,17 +2980,19 @@
                 
                 document.getElementById('profileViewModalLabel').innerText = 'Student Details';
                 document.getElementById('profileViewModalBody').innerHTML = html;
-                var modal = new bootstrap.Modal(document.getElementById('profileViewModal'));
-                modal.show();
             })
             .catch(error => {
                 console.error('Error fetching student details:', error);
+                cleanupModalBackdrops();
+                var viewModal = getBootstrapModal('profileViewModal');
+                if (viewModal) viewModal.hide();
                 alert('Could not load student details.');
             });
     }
 
     function viewTeacher(teacherId) {
-        console.log('viewTeacher called with', teacherId);
+        if (!teacherId) return;
+        showProfileModalLoading('profileViewModal', 'Staff Details');
         fetch(`/management/view-teacher/${teacherId}`)
             .then(response => response.json())
             .then(data => {
@@ -3613,8 +3353,6 @@
                 `;
                 document.getElementById('profileViewModalLabel').innerText = `${safeData.first_name} ${safeData.last_name} (Teacher/Staff)`;
                 document.getElementById('profileViewModalBody').innerHTML = html;
-                var modal = new bootstrap.Modal(document.getElementById('profileViewModal'));
-                modal.show();
                 
                 // Process department badges after modal is shown
                 setTimeout(() => {
@@ -3647,6 +3385,8 @@
     }
 
     function editStudent(studentId) {
+        if (!studentId) return;
+        showProfileModalLoading('profileEditModal', 'Edit Student');
         fetch(`/management/view-student/${studentId}`)
             .then(response => response.json())
             .then(data => {
@@ -3871,10 +3611,13 @@
                   })
                   .catch(() => showToast('Could not update student.', 'danger'));
                 };
-                var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
-                modal.show();
             })
-            .catch(() => showToast('Could not load student details.', 'danger'));
+            .catch(function () {
+                cleanupModalBackdrops();
+                var editModal = getBootstrapModal('profileEditModal');
+                if (editModal) editModal.hide();
+                showToast('Could not load student details.', 'danger');
+            });
     }
 
     function editTeacher(teacherId) {
@@ -4522,8 +4265,8 @@
                     })
                     .catch(() => showToast('Could not update teacher/staff.', 'danger'));
                 };
-                var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
-                modal.show();
+                var editModal = getBootstrapModal('profileEditModal');
+                if (editModal) editModal.show();
 
                 setTimeout(function () {
                     function toggleStaffPortalModal() {

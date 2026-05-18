@@ -1038,6 +1038,14 @@ def review_extension_request_route(request_id):
     from .assignments import review_extension_request as review_extension_request_func
     return review_extension_request_func(request_id)
 
+@management_blueprint.route('/extension-requests/bulk-review', methods=['POST'], endpoint='bulk_review_extension_requests')
+@login_required
+@management_required
+def bulk_review_extension_requests_route():
+    """Bulk review extension requests - delegates to assignments module"""
+    from .assignments import bulk_review_extension_requests as bulk_review_extension_requests_func
+    return bulk_review_extension_requests_func()
+
 # Add aliases for school year and academic period routes
 @management_blueprint.route('/school-year/edit/<int:year_id>', methods=['POST'], endpoint='edit_school_year')
 @login_required

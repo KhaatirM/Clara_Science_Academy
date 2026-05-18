@@ -1,0 +1,541 @@
+/* Student assignment view modal (Assignments → View) */
+
+#assignmentViewModal .modal-backdrop.show {
+    opacity: 0.45 !important;
+}
+
+#assignmentViewModal .sav-modal-dialog {
+    max-width: min(960px, 94vw);
+    margin: 1.25rem auto;
+}
+
+#assignmentViewModal .sav-modal-content {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
+    background: #f1f5f9;
+}
+
+/* Type accents via data attribute on modal root */
+#assignmentViewModal.sav-type--quiz { --sav-accent: #ea580c; --sav-accent-soft: #fff7ed; --sav-gradient: linear-gradient(125deg, #ea580c 0%, #f97316 45%, #fb923c 100%); }
+#assignmentViewModal.sav-type--discussion { --sav-accent: #0284c7; --sav-accent-soft: #f0f9ff; --sav-gradient: linear-gradient(125deg, #0369a1 0%, #0ea5e9 50%, #38bdf8 100%); }
+#assignmentViewModal.sav-type--pdf,
+#assignmentViewModal.sav-type--paper { --sav-accent: #4f46e5; --sav-accent-soft: #eef2ff; --sav-gradient: linear-gradient(125deg, #4f46e5 0%, #7c3aed 48%, #6366f1 100%); }
+
+#assignmentViewModal .sav-modal-header {
+    background: var(--sav-gradient, linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%));
+    color: #fff;
+    padding: 1.35rem 1.5rem;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+#assignmentViewModal .sav-modal-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.2) 0%, transparent 55%);
+    pointer-events: none;
+}
+
+#assignmentViewModal .sav-header-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+#assignmentViewModal .sav-header-icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+#assignmentViewModal .sav-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+#assignmentViewModal .sav-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.2rem;
+    line-height: 1.3;
+    color: #fff !important;
+}
+
+#assignmentViewModal .sav-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+
+#assignmentViewModal .sav-header-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+}
+
+#assignmentViewModal .sav-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+#assignmentViewModal .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+    margin: -0.25rem -0.25rem 0 0;
+}
+
+#assignmentViewModal .sav-modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* Status banner */
+#assignmentViewModal .sav-status-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    margin-bottom: 1.25rem;
+}
+
+#assignmentViewModal .sav-status-banner.sav-status--complete {
+    border-color: #bbf7d0;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+}
+
+#assignmentViewModal .sav-status-banner.sav-status--review {
+    border-color: #fde68a;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+#assignmentViewModal .sav-status-banner.sav-status--pending {
+    border-color: #fecaca;
+    background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%);
+}
+
+#assignmentViewModal .sav-status-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    background: var(--sav-accent-soft, #eef2ff);
+    color: var(--sav-accent, #4f46e5);
+}
+
+#assignmentViewModal .sav-status--complete .sav-status-icon { background: #dcfce7; color: #16a34a; }
+#assignmentViewModal .sav-status--review .sav-status-icon { background: #fef3c7; color: #d97706; }
+#assignmentViewModal .sav-status--pending .sav-status-icon { background: #fee2e2; color: #dc2626; }
+
+#assignmentViewModal .sav-status-heading {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.15rem;
+    color: #0f172a !important;
+}
+
+#assignmentViewModal .sav-status-message {
+    font-size: 0.85rem;
+    margin: 0;
+    color: #64748b !important;
+}
+
+#assignmentViewModal .sav-status-pill {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+#assignmentViewModal .sav-status-pill.sav-pill--complete { background: #16a34a; color: #fff; }
+#assignmentViewModal .sav-status-pill.sav-pill--review { background: #d97706; color: #fff; }
+#assignmentViewModal .sav-status-pill.sav-pill--pending { background: #dc2626; color: #fff; }
+
+/* Layout */
+#assignmentViewModal .sav-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+@media (max-width: 991px) {
+    #assignmentViewModal .sav-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+#assignmentViewModal .sav-panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.15rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+#assignmentViewModal .sav-panel:last-child {
+    margin-bottom: 0;
+}
+
+#assignmentViewModal .sav-panel-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin: 0 0 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+#assignmentViewModal .sav-panel-title i {
+    color: var(--sav-accent, #4f46e5);
+}
+
+#assignmentViewModal #viewAssignmentDescription {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #334155 !important;
+}
+
+#assignmentViewModal #viewAssignmentDescription p {
+    color: #334155 !important;
+}
+
+#assignmentViewModal .sav-guidelines {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    background: var(--sav-accent-soft, #eef2ff);
+    border-left: 3px solid var(--sav-accent, #4f46e5);
+}
+
+#assignmentViewModal .sav-guidelines-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.5rem;
+}
+
+#assignmentViewModal .sav-guidelines ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+#assignmentViewModal .sav-timeline-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+@media (max-width: 576px) {
+    #assignmentViewModal .sav-timeline-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+#assignmentViewModal .sav-timeline-card {
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+#assignmentViewModal .sav-timeline-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 0.35rem;
+}
+
+#assignmentViewModal #viewAssignmentDueDate,
+#assignmentViewModal #viewTimeRemaining {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0f172a !important;
+    margin: 0;
+}
+
+#assignmentViewModal #viewAssignmentDueDate small,
+#assignmentViewModal #viewTimeRemaining small {
+    display: block;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: #64748b !important;
+    margin-top: 0.2rem;
+}
+
+#assignmentViewModal #viewTimeRemaining.sav-time-closed {
+    color: #64748b !important;
+    font-weight: 700;
+}
+
+/* Type / attachment block */
+#assignmentViewModal .sav-resource-box {
+    text-align: center;
+    padding: 1.25rem 1rem;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+}
+
+#assignmentViewModal .sav-resource-box i {
+    font-size: 2rem;
+    color: var(--sav-accent, #4f46e5);
+    margin-bottom: 0.5rem;
+}
+
+#assignmentViewModal .sav-resource-box h6 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+    color: #0f172a !important;
+}
+
+#assignmentViewModal .sav-resource-box p {
+    font-size: 0.8rem;
+    color: #64748b !important;
+    margin: 0 0 0.75rem;
+}
+
+#assignmentViewModal .sav-btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 10px;
+    background: var(--sav-accent, #4f46e5);
+    color: #fff !important;
+    text-decoration: none;
+    border: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+#assignmentViewModal .sav-btn-download:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+}
+
+/* Progress card */
+#assignmentViewModal .sav-progress-state {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+#assignmentViewModal .sav-progress-state i {
+    font-size: 1.75rem;
+    display: block;
+    margin-bottom: 0.35rem;
+}
+
+#assignmentViewModal .sav-progress-state h6 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0 0 0.2rem;
+}
+
+#assignmentViewModal .sav-progress-state p {
+    font-size: 0.78rem;
+    margin: 0;
+    color: #64748b !important;
+}
+
+#assignmentViewModal .sav-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    margin-top: 0.85rem;
+}
+
+#assignmentViewModal .sav-progress .progress-bar {
+    border-radius: 999px;
+}
+
+#assignmentViewModal #viewProgressText {
+    font-size: 0.75rem;
+    color: #64748b !important;
+    margin-top: 0.4rem;
+    display: block;
+}
+
+/* Grade panel */
+#assignmentViewModal .sav-panel-grade {
+    border-color: #bbf7d0;
+    background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
+}
+
+#assignmentViewModal #viewGradeDisplay {
+    font-size: 1rem;
+    padding: 0.4rem 0.85rem;
+}
+
+#assignmentViewModal #viewGradeFeedback {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: #334155 !important;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    min-height: 2.5rem;
+    white-space: pre-wrap;
+}
+
+/* Actions */
+#assignmentViewModal .sav-panel-actions .sav-panel-title {
+    margin-bottom: 0.65rem;
+}
+
+#assignmentViewModal #viewActionButtons .btn-lg,
+#assignmentViewModal #viewActionButtons .sav-btn-primary {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: none;
+    color: #fff !important;
+    background: var(--sav-gradient, linear-gradient(125deg, #4f46e5, #7c3aed));
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.3);
+}
+
+#assignmentViewModal #viewActionButtons .btn-lg:hover {
+    transform: translateY(-1px);
+    color: #fff !important;
+}
+
+#assignmentViewModal #viewActionButtons .sav-btn-secondary-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+#assignmentViewModal #viewActionButtons .btn-outline-warning,
+#assignmentViewModal #viewActionButtons .btn-outline-info,
+#assignmentViewModal #viewActionButtons .btn-outline-primary,
+#assignmentViewModal #viewActionButtons .btn-outline-secondary {
+    font-size: 0.8rem;
+    border-radius: 10px;
+}
+
+#assignmentViewModal #viewActionButtons .sav-inline-alert {
+    padding: 0.75rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155 !important;
+}
+
+#assignmentViewModal #viewActionButtons .sav-inline-alert strong {
+    color: #0f172a !important;
+}
+
+/* Quiz details */
+#assignmentViewModal .quiz-details-section .small {
+    color: #64748b !important;
+}
+
+#assignmentViewModal #quizDetailsCard .sav-panel-title {
+    margin-bottom: 1rem;
+}
+
+/* Footer */
+#assignmentViewModal .sav-modal-footer {
+    padding: 0.85rem 1.5rem;
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    gap: 0.5rem;
+}
+
+#assignmentViewModal .sav-modal-footer .btn-outline-secondary {
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+#assignmentViewModal .sav-modal-footer .btn-sav-help {
+    border-radius: 10px;
+    font-weight: 600;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569 !important;
+}
+
+#assignmentViewModal .sav-modal-footer .btn-sav-help:hover {
+    background: #e2e8f0;
+    color: #0f172a !important;
+}
+
+@media (max-width: 768px) {
+    #assignmentViewModal .sav-modal-dialog {
+        max-width: 100%;
+        margin: 0;
+        min-height: 100%;
+    }
+
+    #assignmentViewModal .sav-modal-content {
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    #assignmentViewModal .sav-modal-body {
+        padding: 1rem;
+    }
+
+    #assignmentViewModal .sav-status-banner {
+        flex-wrap: wrap;
+    }
+
+    #assignmentViewModal .sav-status-pill {
+        margin-left: 0;
+        margin-top: 0.35rem;
+    }
+}

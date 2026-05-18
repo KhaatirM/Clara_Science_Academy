@@ -46,8 +46,11 @@ def management_dashboard():
             # Match Teachers & Staff "manage" list: exclude soft-deleted records
             'teachers': TeacherStaff.query.filter(TeacherStaff.is_deleted == False).count(),
             'classes': Class.query.count(),
-            'assignments': Assignment.query.count()
+            'assignments': Assignment.query.count(),
+            'active_assignments': Assignment.query.filter(Assignment.status == 'Active').count(),
         }
+
+        pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
         
         # Calculate monthly stats
         now = datetime.now()
@@ -197,10 +200,14 @@ def management_dashboard():
         recent_activity.sort(key=lambda x: x['timestamp'], reverse=True)
         recent_activity = recent_activity[:5]
 
+        home_display_date = now.strftime('%A, %B %d, %Y')
+
         return render_template('management/role_dashboard.html', 
                              stats=stats,
                              monthly_stats=monthly_stats,
                              weekly_stats=weekly_stats,
+                             pending_extension_count=pending_extension_count,
+                             home_display_date=home_display_date,
                              section='home',
                              active_tab='home',
                              notifications=notifications,
@@ -213,9 +220,11 @@ def management_dashboard():
         flash(f"Error loading dashboard: {str(e)}", 'danger')
         # Return minimal dashboard with error
         return render_template('management/role_dashboard.html', 
-                             stats={'students': 0, 'teachers': 0, 'classes': 0, 'assignments': 0},
+                             stats={'students': 0, 'teachers': 0, 'classes': 0, 'assignments': 0, 'active_assignments': 0},
                              monthly_stats={},
                              weekly_stats={},
+                             pending_extension_count=0,
+                             home_display_date=datetime.now().strftime('%A, %B %d, %Y'),
                              section='home',
                              active_tab='home',
                              notifications=[],

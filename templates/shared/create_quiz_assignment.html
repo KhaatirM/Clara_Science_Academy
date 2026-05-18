@@ -1302,7 +1302,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (delBtn) {
             delBtn.addEventListener('click', function() {
-                if (!confirm('Remove this section? Questions in it will become unsectioned (they will move above the next section).')) return;
                 const group = getSectionGroup(sectionEl);
                 // Remove the section header, keep questions by moving them into the container at the same position.
                 const sectionHeader = group[0];

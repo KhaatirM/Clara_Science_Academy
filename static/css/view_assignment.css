@@ -142,6 +142,43 @@
 .overview-metric.metric-pending { border-top: 3px solid #f59e0b; }
 .overview-metric.metric-students { border-top: 3px solid #7c3aed; }
 
+.overview-voided-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.overview-voided-banner i {
+    font-size: 1.15rem;
+    margin-top: 0.1rem;
+}
+
+.overview-partial-void-note {
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.overview-metric.metric-voided {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.overview-metric-value.overview-metric-voided {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.assignment-overview-card.all-voided .overview-header {
+    background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+}
+
 .overview-progress-wrap {
     background: #f8fafc;
     border: 1px solid #e2e8f0;

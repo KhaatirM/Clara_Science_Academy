@@ -158,10 +158,7 @@
 
 <script>
 function useTemplate(templateId) {
-  if (confirm('Use this template to create groups? This will create new groups based on the template settings.')) {
-    // Redirect to auto create with template parameters
     window.location.href = "{{ url_for('management.admin_auto_create_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.auto_create_groups', class_id=class_obj.id) }}?template_id=" + templateId;
-  }
 }
 
 function deleteTemplate(templateId) {

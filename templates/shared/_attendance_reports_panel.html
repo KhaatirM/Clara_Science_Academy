@@ -1,0 +1,239 @@
+{# Compact attendance reports panel — requires reports_* context from attendance routes #}
+<div class="attn-reports" id="attendance-reports-panel"
+     data-embed-tab="{{ '1' if reports_embed_tab else '0' }}">
+  {% if show_reports_page_header %}
+  <div class="attn-reports-page-header">
+    <div>
+      <h1 class="attn-reports-page-title">
+        <i class="bi bi-file-earmark-bar-graph me-2"></i>Attendance Reports
+      </h1>
+      <p class="attn-reports-range mb-0">
+        Class-period records · default last {{ default_range_days }} days
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if reports_back_url %}
+      <a href="{{ reports_back_url }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Attendance
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="attn-reports-shell">
+    <div class="attn-reports-toolbar">
+      <p class="attn-reports-range mb-0">
+        <i class="bi bi-calendar3 me-1"></i>
+        <strong>{{ selected_start_date }}</strong> → <strong>{{ selected_end_date }}</strong>
+        <span class="ms-1">· {{ summary_stats.total_records }} record{{ 's' if summary_stats.total_records != 1 else '' }}</span>
+      </p>
+      <div class="attn-reports-presets" role="group" aria-label="Date presets">
+        {% for preset in preset_urls %}
+        <a href="{{ preset.url }}"
+           class="attn-reports-preset{% if preset.label == '30 days' and not request.args.get('start_date') and not request.args.get('end_date') %} is-active{% endif %}">
+          {{ preset.label }}
+        </a>
+        {% endfor %}
+      </div>
+      {% if reports_embed_tab and reports_full_page_url %}
+      <a href="{{ reports_full_page_url }}" class="attn-reports-link ms-md-2">
+        <i class="bi bi-box-arrow-up-right me-1"></i>Full page
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="attn-reports-stats" aria-label="Summary counts">
+      <div class="attn-reports-stat">
+        <span class="attn-reports-stat-value">{{ summary_stats.total_records }}</span>
+        <span class="attn-reports-stat-label">Total</span>
+      </div>
+      <div class="attn-reports-stat attn-reports-stat--present">
+        <span class="attn-reports-stat-value">{{ summary_stats.present }}</span>
+        <span class="attn-reports-stat-label">Present</span>
+      </div>
+      <div class="attn-reports-stat attn-reports-stat--late">
+        <span class="attn-reports-stat-value">{{ summary_stats.late }}</span>
+        <span class="attn-reports-stat-label">Late</span>
+      </div>
+      <div class="attn-reports-stat attn-reports-stat--unexcused">
+        <span class="attn-reports-stat-value">{{ summary_stats.unexcused_absence }}</span>
+        <span class="attn-reports-stat-label">Unexcused</span>
+      </div>
+      <div class="attn-reports-stat attn-reports-stat--excused">
+        <span class="attn-reports-stat-value">{{ summary_stats.excused_absence }}</span>
+        <span class="attn-reports-stat-label">Excused</span>
+      </div>
+      <div class="attn-reports-stat attn-reports-stat--suspended">
+        <span class="attn-reports-stat-value">{{ summary_stats.suspended }}</span>
+        <span class="attn-reports-stat-label">Suspended</span>
+      </div>
+    </div>
+
+    <button class="attn-reports-filters-toggle" type="button"
+            data-bs-toggle="collapse" data-bs-target="#attnReportsFilters"
+            aria-expanded="false" aria-controls="attnReportsFilters">
+      <span><i class="bi bi-funnel me-2"></i>Filters</span>
+      <i class="bi bi-chevron-down"></i>
+    </button>
+
+    <div class="collapse{% if selected_student_ids or selected_class_ids or selected_status %} show{% endif %}" id="attnReportsFilters">
+      <div class="attn-reports-filters-body">
+        <form method="GET" action="{{ reports_form_action }}" class="attn-reports-filters-form"
+              data-embed-tab="{{ '1' if reports_embed_tab else '0' }}">
+          {% if reports_embed_tab %}
+          <input type="hidden" name="reports_tab" value="1">
+          {% endif %}
+          <div class="attn-reports-filters-grid">
+            <div>
+              <label for="attn_rpt_students">Students</label>
+              <select class="form-select" id="attn_rpt_students" name="student_ids" multiple>
+                {% for student in all_students %}
+                <option value="{{ student.id }}" {% if student.id in selected_student_ids %}selected{% endif %}>
+                  {{ student.last_name }}, {{ student.first_name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="attn_rpt_classes">Classes</label>
+              <select class="form-select" id="attn_rpt_classes" name="class_ids" multiple>
+                {% for class_item in all_classes %}
+                <option value="{{ class_item.id }}" {% if class_item.id in selected_class_ids %}selected{% endif %}>
+                  {{ class_item.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="attn_rpt_status">Status</label>
+              <select class="form-select" id="attn_rpt_status" name="status">
+                <option value="">All statuses</option>
+                {% for stat in all_statuses %}
+                <option value="{{ stat }}" {% if stat == selected_status %}selected{% endif %}>{{ stat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="attn_rpt_start">Start</label>
+              <input type="date" class="form-control" id="attn_rpt_start" name="start_date"
+                     value="{{ selected_start_date }}">
+            </div>
+            <div>
+              <label for="attn_rpt_end">End</label>
+              <input type="date" class="form-control" id="attn_rpt_end" name="end_date"
+                     value="{{ selected_end_date }}">
+            </div>
+          </div>
+          <div class="attn-reports-filters-actions">
+            <a href="{{ reports_reset_url }}" class="btn btn-outline-secondary btn-sm attn-reports-reset">Reset</a>
+            <button type="submit" class="btn btn-sm text-white" style="background: var(--attn-rpt-accent, #0d9488); border: none;">
+              <i class="bi bi-search me-1"></i>Apply
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="attn-reports-table-head">
+      <span><i class="bi bi-table me-1"></i>Records</span>
+      {% if pagination %}
+      <span>
+        Page {{ pagination.page }} of {{ pagination.pages or 1 }}
+        · showing {{ records|length }} of {{ pagination.total }}
+      </span>
+      {% endif %}
+    </div>
+
+    {% if records %}
+    <div class="attn-reports-table-wrap">
+      <table class="table table-sm table-hover attn-reports-table mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Student</th>
+            <th>Class</th>
+            <th>Status</th>
+            <th>Recorded by</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+          <tr>
+            <td>{{ record.date.strftime('%m/%d/%Y') }}</td>
+            <td>{{ record.student.last_name }}, {{ record.student.first_name }}</td>
+            <td>{{ record.class_info.name if record.class_info else '—' }}</td>
+            <td>
+              {% if record.status == 'Present' %}
+              <span class="badge bg-success">Present</span>
+              {% elif record.status == 'Unexcused Absence' %}
+              <span class="badge bg-secondary">Unexcused</span>
+              {% elif record.status == 'Excused Absence' %}
+              <span class="badge bg-warning text-dark">Excused</span>
+              {% elif record.status == 'Late' %}
+              <span class="badge text-white" style="background:#7c3aed;">Late</span>
+              {% elif record.status == 'Suspended' %}
+              <span class="badge bg-danger">Suspended</span>
+              {% else %}
+              <span class="badge bg-light text-dark">{{ record.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if record.teacher %}
+              {{ record.teacher.first_name }} {{ record.teacher.last_name }}
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td class="attn-rpt-notes" title="{{ record.notes or '' }}">{{ record.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="attn-reports-empty">
+      <i class="bi bi-inbox display-6 d-block mb-2 opacity-50"></i>
+      <p class="mb-0">No records match these filters. Try a wider date range or clear filters.</p>
+    </div>
+    {% endif %}
+
+    {% if pagination and pagination.pages > 1 %}
+    <div class="attn-reports-footer">
+      <span>{{ reports_per_page }} per page</span>
+      <nav aria-label="Report pagination">
+        <ul class="pagination pagination-sm attn-reports-pagination mb-0">
+          {% set ns = namespace(q='start_date=' ~ selected_start_date ~ '&end_date=' ~ selected_end_date) %}
+          {% if selected_status %}{% set ns.q = ns.q ~ '&status=' ~ (selected_status|urlencode) %}{% endif %}
+          {% for sid in selected_student_ids %}{% set ns.q = ns.q ~ '&student_ids=' ~ sid %}{% endfor %}
+          {% for cid in selected_class_ids %}{% set ns.q = ns.q ~ '&class_ids=' ~ cid %}{% endfor %}
+          {% if reports_embed_tab %}{% set ns.q = ns.q ~ '&reports_tab=1' %}{% endif %}
+
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ reports_form_action }}?{{ ns.q }}&page={{ pagination.prev_num }}"
+               {% if not pagination.has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>Prev</a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if p %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ reports_form_action }}?{{ ns.q }}&page={{ p }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ reports_form_action }}?{{ ns.q }}&page={{ pagination.next_num }}"
+               {% if not pagination.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% elif records %}
+    <div class="attn-reports-footer">
+      <span>All results on this page</span>
+    </div>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,234 @@
+{# Attendance analytics panel — loaded full-page or via AJAX #}
+<div class="attn-analytics" id="attendance-analytics-panel">
+  <div class="attn-analytics-shell">
+    <div class="attn-analytics-toolbar">
+      <p class="attn-analytics-range mb-0">
+        <i class="bi bi-calendar3 me-1"></i>
+        <strong>{{ selected_start_date }}</strong> → <strong>{{ selected_end_date }}</strong>
+        <span class="ms-1">· {{ days_analyzed }} day{{ 's' if days_analyzed != 1 else '' }}</span>
+      </p>
+      <div class="attn-analytics-presets" role="group" aria-label="Date presets">
+        {% for preset in preset_urls %}
+        <a href="{{ preset.url }}" class="attn-analytics-preset">{{ preset.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="attn-analytics-stats" aria-label="Summary">
+      <div class="attn-analytics-stat attn-analytics-stat--rate">
+        <span class="attn-analytics-stat-value">{{ overall_rate }}%</span>
+        <span class="attn-analytics-stat-label">Present rate</span>
+      </div>
+      <div class="attn-analytics-stat attn-analytics-stat--risk">
+        <span class="attn-analytics-stat-value">{{ at_risk_high + at_risk_medium }}</span>
+        <span class="attn-analytics-stat-label">At risk</span>
+      </div>
+      <div class="attn-analytics-stat">
+        <span class="attn-analytics-stat-value">{{ students_tracked }}</span>
+        <span class="attn-analytics-stat-label">Students</span>
+      </div>
+      <div class="attn-analytics-stat">
+        <span class="attn-analytics-stat-value">{{ total_records }}</span>
+        <span class="attn-analytics-stat-label">Records</span>
+      </div>
+      <div class="attn-analytics-stat attn-analytics-stat--present">
+        <span class="attn-analytics-stat-value">{{ status_counts.present }}</span>
+        <span class="attn-analytics-stat-label">Present</span>
+      </div>
+      <div class="attn-analytics-stat attn-analytics-stat--late">
+        <span class="attn-analytics-stat-value">{{ status_counts.late }}</span>
+        <span class="attn-analytics-stat-label">Late</span>
+      </div>
+      <div class="attn-analytics-stat attn-analytics-stat--absent">
+        <span class="attn-analytics-stat-value">{{ status_counts.unexcused }}</span>
+        <span class="attn-analytics-stat-label">Unexcused</span>
+      </div>
+    </div>
+
+    <button class="attn-analytics-filters-toggle" type="button"
+            data-bs-toggle="collapse" data-bs-target="#attnAnalyticsFilters"
+            aria-expanded="{% if risk_filter != 'all' %}true{% else %}false{% endif %}">
+      <span><i class="bi bi-sliders me-2"></i>Options</span>
+      <i class="bi bi-chevron-down"></i>
+    </button>
+
+    <div class="collapse{% if risk_filter != 'all' %} show{% endif %}" id="attnAnalyticsFilters">
+      <div class="attn-analytics-filters-body">
+        <form method="GET" action="{{ analytics_form_action }}" class="attn-analytics-filters-form row g-2 align-items-end">
+          <div class="col-6 col-md-3">
+            <label for="attn_an_start" class="form-label">Start</label>
+            <input type="date" class="form-control form-control-sm" id="attn_an_start" name="start_date"
+                   value="{{ selected_start_date }}">
+          </div>
+          <div class="col-6 col-md-3">
+            <label for="attn_an_end" class="form-label">End</label>
+            <input type="date" class="form-control form-control-sm" id="attn_an_end" name="end_date"
+                   value="{{ selected_end_date }}">
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="attn_an_risk" class="form-label">Risk level</label>
+            <select class="form-select form-select-sm" id="attn_an_risk" name="risk">
+              <option value="all" {% if risk_filter == 'all' %}selected{% endif %}>All concerns</option>
+              <option value="high" {% if risk_filter == 'high' %}selected{% endif %}>High only</option>
+              <option value="medium" {% if risk_filter == 'medium' %}selected{% endif %}>Medium only</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3 d-flex gap-2 justify-content-md-end">
+            <a href="{{ analytics_form_action }}" class="btn btn-outline-secondary btn-sm attn-analytics-reset">Reset</a>
+            <button type="submit" class="btn btn-sm btn-attn-analytics-apply">Apply</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="attn-analytics-body">
+      <div class="attn-analytics-side">
+        <div class="attn-analytics-card">
+          <h3 class="attn-analytics-card-title">
+            <i class="bi bi-bar-chart-line me-2"></i>Daily volume
+          </h3>
+          {% if total_records > 0 %}
+          <div class="attn-analytics-trend" role="img" aria-label="Daily attendance record volume">
+            {% for day in daily_trend %}
+            <div class="attn-analytics-trend-col" title="{{ day.date_label }}: {{ day.total }} records{% if day.rate is not none %}, {{ day.rate }}% present{% endif %}">
+              <div class="attn-analytics-trend-bar" style="height: {{ (day.total / trend_max * 100)|round|int }}%;"></div>
+              {% if loop.index0 % 7 == 0 or loop.last %}
+              <span class="attn-analytics-trend-label">{{ day.date.strftime('%m/%d') }}</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="attn-analytics-muted mb-0">No records in this range.</p>
+          {% endif %}
+        </div>
+
+        <div class="attn-analytics-card">
+          <h3 class="attn-analytics-card-title">
+            <i class="bi bi-pie-chart me-2"></i>Status mix
+          </h3>
+          <ul class="attn-analytics-status-list">
+            <li>
+              <span class="attn-analytics-status-dot attn-analytics-status-dot--present"></span>
+              Present <strong>{{ status_counts.present }}</strong>
+            </li>
+            <li>
+              <span class="attn-analytics-status-dot attn-analytics-status-dot--late"></span>
+              Late <strong>{{ status_counts.late }}</strong>
+            </li>
+            <li>
+              <span class="attn-analytics-status-dot attn-analytics-status-dot--unexcused"></span>
+              Unexcused <strong>{{ status_counts.unexcused }}</strong>
+            </li>
+            <li>
+              <span class="attn-analytics-status-dot attn-analytics-status-dot--excused"></span>
+              Excused <strong>{{ status_counts.excused }}</strong>
+            </li>
+            <li>
+              <span class="attn-analytics-status-dot attn-analytics-status-dot--suspended"></span>
+              Suspended <strong>{{ status_counts.suspended }}</strong>
+            </li>
+          </ul>
+          <div class="attn-analytics-risk-pills mt-3">
+            <span class="badge rounded-pill text-bg-danger">{{ at_risk_high }} high</span>
+            <span class="badge rounded-pill text-bg-warning text-dark">{{ at_risk_medium }} medium</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="attn-analytics-main">
+        <div class="attn-analytics-card attn-analytics-card--table h-100">
+          <div class="attn-analytics-table-head">
+            <h3 class="attn-analytics-card-title mb-0">
+              <i class="bi bi-exclamation-triangle me-2 text-danger"></i>Students with concerns
+            </h3>
+            <div class="attn-analytics-search-wrap">
+              <i class="bi bi-search"></i>
+              <input type="search" class="form-control form-control-sm attn-analytics-search"
+                     placeholder="Search students…" aria-label="Search at-risk students">
+            </div>
+          </div>
+
+          {% if at_risk_students %}
+          <div class="attn-analytics-table-wrap">
+            <table class="table table-sm table-hover attn-analytics-table mb-0"
+                   id="attnAnalyticsTable"
+                   data-export-start="{{ selected_start_date }}"
+                   data-export-end="{{ selected_end_date }}">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Grade</th>
+                  <th>Rate</th>
+                  <th>Present</th>
+                  <th>Absent</th>
+                  <th>Late</th>
+                  <th>Streak</th>
+                  <th>Risk</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in at_risk_students %}
+                <tr data-student-name="{{ item.student.last_name }} {{ item.student.first_name }}">
+                  <td>
+                    <span class="attn-analytics-student-name">{{ item.student.last_name }}, {{ item.student.first_name }}</span>
+                  </td>
+                  <td><span class="badge text-bg-light text-dark">{{ item.student.grade_level | display_grade }}</span></td>
+                  <td>
+                    {% if item.attendance_rate >= 90 %}
+                    <span class="badge text-bg-success">{{ item.attendance_rate }}%</span>
+                    {% elif item.attendance_rate >= 75 %}
+                    <span class="badge text-bg-warning text-dark">{{ item.attendance_rate }}%</span>
+                    {% else %}
+                    <span class="badge text-bg-danger">{{ item.attendance_rate }}%</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ item.pattern.present }}</td>
+                  <td><span class="text-danger fw-semibold">{{ item.pattern.absent }}</span></td>
+                  <td>{{ item.pattern.late }}</td>
+                  <td>
+                    {% if item.pattern.max_consecutive_absences >= 3 %}
+                    <span class="badge text-bg-danger">{{ item.pattern.max_consecutive_absences }}d</span>
+                    {% else %}
+                    {{ item.pattern.max_consecutive_absences }}d
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.risk_level == 'high' %}
+                    <span class="badge text-bg-danger">High</span>
+                    {% else %}
+                    <span class="badge text-bg-warning text-dark">Medium</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <a href="{{ url_for('management.view_student', student_id=item.student.id) }}"
+                       class="btn btn-sm btn-outline-primary py-0 px-2" title="View student">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="attn-analytics-empty">
+            <i class="bi bi-check-circle text-success display-6 d-block mb-2"></i>
+            <p class="mb-1 fw-semibold">No students match these criteria</p>
+            <p class="attn-analytics-muted mb-0 small">
+              {% if risk_filter != 'all' %}
+              Try clearing the risk filter or widening the date range.
+              {% elif total_records == 0 %}
+              No class-period attendance was recorded in this date range.
+              {% else %}
+              Everyone is within attendance thresholds for this period.
+              {% endif %}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

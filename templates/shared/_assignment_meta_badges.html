@@ -1,0 +1,32 @@
+{# Assignment scope (Solo/Group), type, and category — pill badges for compact rows (e.g. Grades View). #}
+{# Expects: assignment, item_type ('individual' | 'group') #}
+{% set _type = (assignment.assignment_type or '')|lower %}
+{% set _pill = 'badge rounded-pill border' %}
+{% set _pill_sm = 'font-size: 0.65rem;' %}
+
+<span class="{{ _pill }} {% if item_type == 'individual' %}bg-primary bg-opacity-15 text-primary-emphasis border-primary-subtle{% else %}bg-info bg-opacity-15 text-info-emphasis border-info-subtle{% endif %}" style="{{ _pill_sm }}">
+    {{ 'Solo' if item_type == 'individual' else 'Group' }}
+</span>
+
+{% if _type == 'quiz' %}
+    <span class="{{ _pill }} bg-primary bg-opacity-15 text-primary-emphasis border-primary-subtle" style="{{ _pill_sm }}"><i class="bi bi-question-circle me-1"></i>Quiz</span>
+    {% if item_type == 'individual' and assignment.quiz_authoring_is_draft %}
+    <span class="{{ _pill }} bg-secondary bg-opacity-15 text-secondary-emphasis border-secondary-subtle" style="{{ _pill_sm }}"><i class="bi bi-pencil me-1"></i>Draft</span>
+    {% endif %}
+{% elif _type == 'discussion' %}
+    <span class="{{ _pill }} bg-info bg-opacity-15 text-info-emphasis border-info-subtle" style="{{ _pill_sm }}"><i class="bi bi-chat-dots me-1"></i>Discussion</span>
+{% elif _type == 'project' %}
+    <span class="{{ _pill }} bg-warning bg-opacity-20 text-dark border-warning-subtle" style="{{ _pill_sm }}"><i class="bi bi-folder me-1"></i>Project</span>
+{% elif _type == 'worksheet' %}
+    <span class="{{ _pill }} bg-success bg-opacity-15 text-success-emphasis border-success-subtle" style="{{ _pill_sm }}"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Worksheet</span>
+{% elif _type in ['pdf_paper', 'pdf', 'paper'] %}
+    <span class="{{ _pill }} bg-secondary bg-opacity-15 text-secondary-emphasis border-secondary-subtle" style="{{ _pill_sm }}"><i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper</span>
+{% elif _type %}
+    <span class="{{ _pill }} bg-secondary bg-opacity-15 text-secondary-emphasis border-secondary-subtle" style="{{ _pill_sm }}"><i class="bi bi-journal-text me-1"></i>{{ _type|replace('_', ' ')|title }}</span>
+{% elif item_type == 'group' %}
+    <span class="{{ _pill }} bg-secondary bg-opacity-15 text-secondary-emphasis border-secondary-subtle" style="{{ _pill_sm }}"><i class="bi bi-people me-1"></i>Group work</span>
+{% endif %}
+
+{% if item_type == 'group' or (_type and _type not in ['quiz', 'discussion']) %}
+    <span class="{{ _pill }} bg-dark bg-opacity-10 text-dark border-secondary-subtle" style="{{ _pill_sm }}"><i class="bi bi-tag me-1"></i>{{ assignment.assignment_category or 'Uncategorized' }}</span>
+{% endif %}

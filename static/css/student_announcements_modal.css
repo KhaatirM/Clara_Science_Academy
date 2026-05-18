@@ -1,0 +1,385 @@
+/* Student announcements — View all & detail modals */
+
+.student-announcements-all-modal-content {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+    background: #f1f5f9;
+}
+
+.student-announcements-all-modal-header {
+    background: linear-gradient(125deg, #4f46e5 0%, #7c3aed 42%, #2563eb 100%);
+    color: #fff;
+    padding: 1.35rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.student-announcements-all-modal-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.22) 0%, transparent 55%),
+        radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.08) 0%, transparent 45%);
+    pointer-events: none;
+}
+
+.student-announcements-modal-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.student-announcements-modal-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.student-announcements-modal-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.92;
+    margin-top: 0.15rem;
+}
+
+.student-announcements-all-modal-header .modal-title {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.student-announcements-all-filters {
+    flex-shrink: 0;
+    padding: 1.35rem 1.5rem 1.15rem;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+.student-announcements-filter-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 0.4rem;
+}
+
+.student-announcements-input-wrap {
+    position: relative;
+}
+
+.student-announcements-input-icon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.student-announcements-filter-control {
+    padding-left: 2.5rem !important;
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.student-announcements-filter-control:focus {
+    border-color: #818cf8 !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.student-announcements-important-toggle {
+    display: block;
+    cursor: pointer;
+    margin: 0;
+}
+
+.student-announcements-important-toggle-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.student-announcements-important-toggle-ui {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.student-announcements-important-toggle-input:checked + .student-announcements-important-toggle-ui {
+    border-color: #fbbf24;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    color: #b45309;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
+}
+
+.student-announcements-filter-meta {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.student-announcements-filter-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+}
+
+.student-announcements-filter-count:empty {
+    display: none;
+}
+
+.student-home-announcements-list--all {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem 1.5rem !important;
+    gap: 0.85rem !important;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.student-announcements-all-modal .student-announcements-all-item {
+    position: relative;
+    padding: 1.15rem 2.75rem 1.15rem 4.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.student-announcements-all-modal .student-announcements-all-item::before {
+    content: '';
+    position: absolute;
+    left: 1.15rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.65rem;
+    height: 2.65rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+}
+
+.student-announcements-all-modal .student-announcements-all-item[data-filter-audience="schoolwide"]::before {
+    background: linear-gradient(135deg, #fde68a 0%, #fef3c7 100%);
+    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.2);
+}
+
+.student-announcements-all-modal .student-announcements-all-item.is-important {
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(90deg, #fffbeb 0%, #fff 12%);
+}
+
+.student-announcements-all-modal .student-announcements-all-item::after {
+    content: '\203A';
+    position: absolute;
+    right: 1.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.35rem;
+    font-weight: 300;
+    color: #cbd5e1;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.student-announcements-all-modal .student-announcements-all-item:hover {
+    transform: translateY(-2px);
+    border-color: #c7d2fe;
+    box-shadow: 0 12px 28px rgba(79, 70, 229, 0.12);
+}
+
+.student-announcements-all-modal .student-announcements-all-item:hover::after {
+    color: #6366f1;
+    transform: translateY(-50%) translateX(2px);
+}
+
+.student-announcements-all-modal .student-announcements-all-item .student-home-announcement-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.student-announcements-all-modal .student-announcements-all-item .student-home-announcement-time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+}
+
+.student-announcements-all-modal .student-announcements-all-item .student-home-announcement-preview {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.55;
+    margin-bottom: 0.65rem;
+}
+
+.student-announcements-all-empty {
+    text-align: center;
+    padding: 3.5rem 2rem;
+    margin: 1.25rem 1.5rem 1.5rem;
+    border-radius: 16px;
+    background: #fff;
+    border: 2px dashed #e2e8f0;
+}
+
+.student-announcements-all-empty-icon {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: #94a3b8;
+}
+
+.student-announcements-all-empty h6 {
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 0.35rem;
+}
+
+.student-announcements-all-empty p {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+/* Detail modal */
+.student-announcement-detail-modal .student-announcement-detail-content {
+    border: none;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+}
+
+.student-announcement-detail-modal .student-announcement-detail-header {
+    background: linear-gradient(125deg, #4f46e5 0%, #6366f1 100%);
+    color: #fff;
+    border: none;
+    padding: 1.25rem 1.5rem;
+}
+
+.student-announcement-detail-modal .student-announcement-detail-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
+
+.student-announcement-detail-modal .student-announcement-detail-body {
+    padding: 1.75rem 1.75rem 2rem;
+    background: #fff;
+}
+
+.student-announcement-detail-audience {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+}
+
+.student-announcement-detail-audience.is-schoolwide {
+    background: #fef3c7 !important;
+    color: #b45309 !important;
+}
+
+.student-announcement-detail-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+}
+
+.student-announcement-detail-time {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-bottom: 1.25rem;
+}
+
+.student-announcement-detail-message {
+    font-size: 1.02rem;
+    line-height: 1.65;
+    color: #334155;
+    white-space: pre-wrap;
+    padding: 1.15rem 1.25rem;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    margin: 0;
+}
+
+.student-announcements-all-modal-dialog {
+    max-width: min(1140px, 94vw);
+    width: 94vw;
+    margin: 1.5rem auto;
+}
+
+.student-announcements-all-modal-content {
+    min-height: min(82vh, 900px);
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.student-announcements-all-modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.student-announcements-all-item.d-none {
+    display: none !important;
+}
+
+@media (min-width: 992px) {
+    .student-announcements-all-modal-dialog {
+        max-width: min(1200px, 92vw);
+    }
+
+    .student-announcements-all-modal-content {
+        min-height: min(85vh, 960px);
+    }
+}

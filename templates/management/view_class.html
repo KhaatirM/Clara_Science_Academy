@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/assistant_approval.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_view_class.css') }}">
 {% endblock %}
 
 {% block dashboard_content %}
@@ -58,7 +59,7 @@
           <i class="bi bi-journal-text"></i>
         </div>
         <div class="classes-stat-content">
-          <div class="classes-stat-number">{{ assignments|length }}</div>
+          <div class="classes-stat-number">{{ assignment_count|default(assignments|length) }}</div>
           <div class="classes-stat-label">Assignments</div>
         </div>
       </div>
@@ -76,21 +77,62 @@
     </div>
   </div>
 
-  <div class="row g-4" style="align-items: start;">
-    <!-- Left Column: Class Info & Management -->
-    <div class="col-12 col-md-4">
-      <!-- Class Information Card -->
-      <div class="class-card-modern mb-4">
+  <div class="row g-4 align-items-stretch class-view-primary-row">
+    <div class="col-12 col-xl-4 d-flex">
+      <div class="class-card-modern h-100 w-100 class-view-panel">
+        <div class="class-card-header-modern">
+          <div class="class-card-icon-modern">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <div class="class-card-title-section-modern">
+            <h5 class="class-card-title-modern">Enrolled Students</h5>
+            <p class="class-card-subject-modern">{{ enrolled_students|length }} Students</p>
+          </div>
+        </div>
+        <div class="class-card-body-modern class-view-panel-body">
+          {% if enrolled_students %}
+            <div class="class-students-list class-students-list-panel">
+              {% for student in enrolled_students %}
+              <div class="class-student-item">
+                <div class="class-student-avatar">
+                  {% if student.photo_filename %}
+                    <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" alt="Student Photo">
+                  {% else %}
+                    <span>{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
+                  {% endif %}
+                </div>
+                <div class="class-student-info">
+                  <div class="class-student-name">{{ student.first_name }} {{ student.last_name }}</div>
+                  <div class="class-student-details">
+                    <span class="class-student-id">ID: {{ student.student_id or 'N/A' }}</span>
+                    <span class="class-student-grade">Grade: {{ student.grade_level }}</span>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="classes-empty-state">
+              <i class="bi bi-people"></i>
+              <p>No students are currently enrolled in this class.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-4 d-flex">
+      <div class="class-card-modern h-100 w-100 class-view-panel">
         <div class="class-card-header-modern">
           <div class="class-card-icon-modern">
             <i class="bi bi-info-circle"></i>
-            </div>
+          </div>
           <div class="class-card-title-section-modern">
             <h5 class="class-card-title-modern">Class Information</h5>
             <p class="class-card-subject-modern">Complete Details</p>
           </div>
         </div>
-        <div class="class-card-body-modern">
+        <div class="class-card-body-modern class-view-panel-body">
           <div class="class-card-detail-modern">
             <i class="bi bi-book"></i>
             <strong>Subject:</strong> {{ class_info.subject or 'N/A' }}
@@ -102,15 +144,15 @@
           <div class="class-card-detail-modern">
             <i class="bi bi-door-open"></i>
             <strong>Room:</strong> {{ class_info.room_number if class_info.room_number else 'N/A' }}
-              </div>
+          </div>
           <div class="class-card-detail-modern">
             <i class="bi bi-calendar-event"></i>
             <strong>Schedule:</strong> {{ class_info.schedule or 'TBD' }}
-            </div>
+          </div>
           <div class="class-card-detail-modern">
             <i class="bi bi-calendar-year"></i>
             <strong>School Year:</strong> {{ class_info.school_year.name if class_info.school_year else 'N/A' }}
-              </div>
+          </div>
           {% if teacher %}
             <div class="class-card-detail-modern">
               <i class="bi bi-person"></i>
@@ -132,269 +174,121 @@
           {% endif %}
         </div>
       </div>
-      
-      <!-- Class Management Card -->
-      <div class="class-card-modern mb-4">
+    </div>
+
+    <div class="col-12 col-xl-4 d-flex">
+      <div class="class-card-modern h-100 w-100 class-view-panel">
         <div class="class-card-header-modern">
           <div class="class-card-icon-modern">
             <i class="bi bi-tools"></i>
-            </div>
+          </div>
           <div class="class-card-title-section-modern">
             <h5 class="class-card-title-modern">Class Management</h5>
             <p class="class-card-subject-modern">Quick Actions</p>
           </div>
         </div>
-        <div class="class-card-body-modern">
-          <!-- Core Management Actions -->
+        <div class="class-card-body-modern class-view-panel-body">
           <div class="mb-4">
             <h6 class="class-management-section-title">
               <i class="bi bi-gear me-2"></i>Core Management
             </h6>
-              <div class="row g-2">
-                <div class="col-6 col-md-4">
+            <div class="row g-2">
+              <div class="col-12">
                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn-class-action-modern">
-                    <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.unified_attendance') }}" class="btn-class-action-modern">
-                    <i class="bi bi-clipboard-check me-1"></i>Attendance
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-clipboard-check me-1"></i>Attendance
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.manage_class_roster', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-people me-1"></i>Manage Roster
-                  </a>
+                  <i class="bi bi-people me-1"></i>Manage Roster
+                </a>
+              </div>
+              <div class="col-12">
+                <button type="button" class="btn-class-action-modern w-100 border-0" data-bs-toggle="modal" data-bs-target="#classAnnouncementModal">
+                  <i class="bi bi-megaphone me-1"></i>Announcements
+                </button>
               </div>
             </div>
           </div>
-          
-          <!-- Administrative Actions -->
           <div class="mb-4">
             <h6 class="class-management-section-title">
               <i class="bi bi-shield-check me-2"></i>Administrative
             </h6>
-              <div class="row g-2">
-                <div class="col-6 col-md-4">
+            <div class="row g-2">
+              <div class="col-12">
                 <a href="{{ url_for('management.class_grades_view', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-journal-plus me-1"></i>View Grades
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-journal-plus me-1"></i>View Grades
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.edit_class', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-pencil me-1"></i>Edit Class
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-pencil me-1"></i>Edit Class
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.admin_class_analytics', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-graph-up me-1"></i>Reports & Analytics
-                  </a>
+                  <i class="bi bi-graph-up me-1"></i>Reports & Analytics
+                </a>
               </div>
             </div>
           </div>
-          
-          <!-- Assessment & Feedback -->
           <div class="mb-4">
             <h6 class="class-management-section-title">
               <i class="bi bi-star me-2"></i>Assessment & Feedback
             </h6>
-              <div class="row g-2">
-                <div class="col-6 col-md-4">
+            <div class="row g-2">
+              <div class="col-12">
                 <a href="{{ url_for('management.admin_class_360_feedback', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.admin_class_reflection_journals', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-journal-text me-1"></i>Reflection Journals
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-journal-text me-1"></i>Reflection Journals
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.admin_class_conflicts', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
-                  </a>
+                  <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
+                </a>
               </div>
             </div>
           </div>
-          
-          <!-- Group Management -->
           <div class="mb-0">
             <h6 class="class-management-section-title">
               <i class="bi bi-people-fill me-2"></i>Group Management
             </h6>
-              <div class="row g-2">
-                <div class="col-6 col-md-4">
+            <div class="row g-2">
+              <div class="col-12">
                 <a href="{{ url_for('management.assignments_and_grades', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-journal-plus me-1"></i>Assignments & Grades
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-journal-plus me-1"></i>Assignments & Grades
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.admin_class_groups', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-people me-1"></i>Manage Groups
-                  </a>
-                </div>
-                <div class="col-6 col-md-4">
+                  <i class="bi bi-people me-1"></i>Manage Groups
+                </a>
+              </div>
+              <div class="col-12">
                 <a href="{{ url_for('management.admin_class_deadline_reminders', class_id=class_info.id) }}" class="btn-class-action-modern">
-                    <i class="bi bi-bell me-1"></i>Deadline Reminders
-                  </a>
-                </div>
+                  <i class="bi bi-bell me-1"></i>Deadline Reminders
+                </a>
               </div>
+            </div>
           </div>
         </div>
       </div>
-      
     </div>
+  </div>
 
-    <!-- Main Content: Students & assignments -->
-    <div class="col-12 col-md-8">
-      <div class="row g-4">
-        <!-- Enrolled Students Card -->
-        <div class="col-12">
-          <div class="class-card-modern h-100">
-            <div class="class-card-header-modern">
-              <div class="class-card-icon-modern">
-                <i class="bi bi-people-fill"></i>
-                </div>
-              <div class="class-card-title-section-modern">
-                <h5 class="class-card-title-modern">Enrolled Students</h5>
-                <p class="class-card-subject-modern">{{ enrolled_students|length }} Students</p>
-              </div>
-            </div>
-            <div class="class-card-body-modern">
-              {% if enrolled_students %}
-                <div class="class-students-list">
-                      {% for student in enrolled_students %}
-                    <div class="class-student-item">
-                      <div class="class-student-avatar">
-                        {% if student.photo_filename %}
-                          <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" alt="Student Photo">
-                        {% else %}
-                          <span>{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
-                        {% endif %}
-                            </div>
-                      <div class="class-student-info">
-                        <div class="class-student-name">{{ student.first_name }} {{ student.last_name }}</div>
-                        <div class="class-student-details">
-                          <span class="class-student-id">ID: {{ student.student_id or 'N/A' }}</span>
-                          <span class="class-student-grade">Grade: {{ student.grade_level }}</span>
-                              </div>
-                            </div>
-                          </div>
-                      {% endfor %}
-                </div>
-              {% else %}
-                <div class="classes-empty-state">
-                  <i class="bi bi-people"></i>
-                  <p>No students are currently enrolled in this class.</p>
-                </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- Class Assignments Section -->
-      <div class="class-card-modern mt-4">
-        <div class="class-card-header-modern">
-          <div class="class-card-icon-modern">
-            <i class="bi bi-journal-text"></i>
-              </div>
-          <div class="class-card-title-section-modern">
-            <h5 class="class-card-title-modern">Class Assignments</h5>
-            <p class="class-card-subject-modern">Complete Overview</p>
-          </div>
-          <a href="{{ url_for('management.assignment_type_selector') }}" class="btn-classes-add">
-            <i class="bi bi-plus-circle me-2"></i>Add Assignment
-          </a>
-        </div>
-        <div class="class-card-body-modern">
-          {% if all_assignments %}
-            <div class="class-assignments-table">
-              <div class="class-assignments-header">
-                <div class="class-assignments-col">Title</div>
-                <div class="class-assignments-col">Type</div>
-                <div class="class-assignments-col">Due Date</div>
-                <div class="class-assignments-col">Quarter</div>
-                <div class="class-assignments-col">Status</div>
-                <div class="class-assignments-col">Actions</div>
-              </div>
-              <div class="class-assignments-body">
-                  {% for assignment in all_assignments %}
-                  <div class="class-assignments-row">
-                    <div class="class-assignments-col">
-                      <div class="class-assignment-title">{{ assignment.title }}</div>
-                    </div>
-                    <div class="class-assignments-col">
-                      {% if assignment.assignment_type == 'group' %}
-                        <span class="badge bg-info">Group</span>
-                      {% else %}
-                        <span class="badge bg-primary">Individual</span>
-                      {% endif %}
-                    </div>
-                    <div class="class-assignments-col">
-                      {% if assignment.due_date %}
-                        <span class="class-assignment-due">{{ assignment.due_date.strftime('%Y-%m-%d') }}</span>
-                      {% else %}
-                        <span class="class-assignment-due-none">No Due Date</span>
-                      {% endif %}
-                    </div>
-                    <div class="class-assignments-col">
-                      {% if assignment.quarter %}
-                        <span class="class-assignment-quarter">Q{{ assignment.quarter }}</span>
-                      {% else %}
-                        <span class="class-assignment-quarter-none">N/A</span>
-                      {% endif %}
-                    </div>
-                    <div class="class-assignments-col">
-                      {% if assignment.graded_status == 'Graded' %}
-                        <span class="badge bg-success">✓ Graded</span>
-                      {% elif assignment.graded_status == 'Active' %}
-                        <span class="badge bg-primary">● Active</span>
-                      {% else %}
-                        <span class="badge bg-warning text-dark">⏳ Awaiting Grade</span>
-                      {% endif %}
-                    </div>
-                    <div class="class-assignments-col">
-                      <div class="class-assignment-actions">
-                        {% if assignment.assignment_type == 'group' %}
-                          <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
-                            <i class="bi bi-eye me-1"></i>View
-                          </a>
-                          <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
-                            <i class="bi bi-pencil-square me-1"></i>Grade
-                          </a>
-                        {% else %}
-                          <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
-                            <i class="bi bi-eye me-1"></i>View
-                          </a>
-                          <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm btn-success">
-                            <i class="bi bi-file-earmark-arrow-up me-1"></i>Submissions
-                          </a>
-                          <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
-                            <i class="bi bi-pencil me-1"></i>Edit
-                          </a>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </div>
-                  {% endfor %}
-              </div>
-            </div>
-          {% else %}
-            <div class="classes-empty-state">
-              <i class="bi bi-journal"></i>
-              <h6>No Assignments Created</h6>
-              <p>No assignments have been created for this class yet.</p>
-              <a href="{{ url_for('management.assignment_type_selector') }}" class="btn-classes-add">
-                <i class="bi bi-plus-circle me-1"></i>Create First Assignment
-              </a>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-
-      {% if student_assistants or assistant_action_logs %}
-      <!-- Student Assistant & Activity Log -->
-      <div class="class-card-modern mt-4">
+  {% if student_assistants or assistant_action_logs %}
+  <!-- Student Assistant & Activity Log -->
+  <div class="class-card-modern mt-4">
         <div class="class-card-header-modern">
           <div class="class-card-icon-modern">
             <i class="bi bi-person-badge"></i>
@@ -461,9 +355,11 @@
           <p class="text-muted mb-0">No assistant actions logged yet.</p>
           {% endif %}
         </div>
-      </div>
-      {% endif %}
-    </div>
   </div>
+  {% endif %}
+
+  {% with announcement_class_id=class_info.id, announcement_class_name=class_info.name, announcement_enrolled_count=enrolled_students|length %}
+  {% include 'shared/class_announcement_modal.html' %}
+  {% endwith %}
 </div>
-{% endblock %} 
+{% endblock %}

@@ -1,0 +1,69 @@
+{# Student's teacher-assigned class group. Expects class_student_group (StudentGroup or None). #}
+{% if class_student_group %}
+{% set group_leader = class_student_group.members|selectattr('is_leader')|first if class_student_group.members else None %}
+<div class="card border-0 shadow-sm {% if compact %}mb-0{% else %}mb-4{% endif %}" style="border-radius: 0.75rem; overflow: hidden;">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; padding: {% if compact %}1rem 1.25rem{% else %}1.25rem{% endif %};">
+        <h5 class="mb-0" style="font-weight: 600; font-size: {% if compact %}1rem{% else %}1.1rem{% endif %};">
+            <i class="bi bi-people-fill me-2"></i>
+            Your Class Group
+        </h5>
+    </div>
+    <div class="card-body" style="padding: {% if compact %}1rem 1.25rem{% else %}1.5rem{% endif %};">
+        <div class="d-flex align-items-start gap-3 mb-3">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="bi bi-collection text-white" style="font-size: 1.35rem;"></i>
+            </div>
+            <div>
+                <h6 class="mb-1 fw-bold" style="font-size: 1.1rem;">{{ class_student_group.name }}</h6>
+                {% if class_student_group.description %}
+                <p class="text-muted small mb-0">{{ class_student_group.description }}</p>
+                {% endif %}
+                {% if group_leader and group_leader.student %}
+                <p class="small mb-0 mt-2">
+                    <i class="bi bi-star-fill text-warning me-1"></i>
+                    <span class="text-muted">Leader:</span>
+                    <strong>{{ group_leader.student.first_name }} {{ group_leader.student.last_name }}</strong>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% if not compact %}
+        <div class="border-top pt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.04em;">Group members</span>
+                <span class="badge bg-light text-dark border">{{ class_student_group.members|length }} member{{ 's' if class_student_group.members|length != 1 else '' }}</span>
+            </div>
+            <div style="max-height: 220px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for member in class_student_group.members %}
+                    {% if member.student %}
+                    <div class="list-group-item px-0 py-2 d-flex align-items-center border-0 border-bottom">
+                        <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem;">
+                            <i class="bi bi-person text-white small"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <span class="fw-semibold">{{ member.student.first_name }} {{ member.student.last_name }}</span>
+                            {% if member.student_id == current_user.student_id %}
+                            <span class="badge bg-success ms-1" style="font-size: 0.7rem;">You</span>
+                            {% endif %}
+                            {% if member.is_leader %}
+                            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">Leader</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% elif show_empty_state %}
+<div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+    <div class="card-body text-center py-4">
+        <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
+        <p class="text-muted mb-0 mt-2 small">You are not assigned to a class group yet. Your teacher will place you in a group for group work and group assignments.</p>
+    </div>
+</div>
+{% endif %}

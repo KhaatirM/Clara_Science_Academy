@@ -18,7 +18,7 @@ from models import (
     # Assignment system
     Assignment, AssignmentAttachment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest, RedoRequest,
     # Group assignment system
-    GroupAssignment, GroupAssignmentExtension, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
+    GroupAssignment, GroupAssignmentExtension, GroupAssignmentMemberSnapshot, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
     QuizQuestion, QuizOption, QuizAnswer, QuizProgress,
     # Communication system
@@ -221,6 +221,101 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
     
     # Default status for active assignments
     return 'Un-Submitted'
+
+
+def get_student_class_group(student_id, class_id):
+    """Return the student's active class group with members loaded, or None."""
+    from sqlalchemy.orm import joinedload
+
+    membership = (
+        StudentGroupMember.query
+        .join(StudentGroup)
+        .filter(
+            StudentGroupMember.student_id == student_id,
+            StudentGroup.class_id == class_id,
+            StudentGroup.is_active == True,
+        )
+        .order_by(StudentGroupMember.id.desc())
+        .first()
+    )
+    if not membership:
+        return None
+    return (
+        StudentGroup.query
+        .options(joinedload(StudentGroup.members).joinedload(StudentGroupMember.student))
+        .get(membership.group_id)
+    )
+
+
+def get_student_class_groups_by_class_id(student_id, class_ids):
+    """Map class_id -> StudentGroup for classes where the student has an active group."""
+    if not class_ids:
+        return {}
+    from sqlalchemy.orm import joinedload
+
+    rows = (
+        db.session.query(StudentGroup.class_id, StudentGroupMember.group_id)
+        .select_from(StudentGroupMember)
+        .join(StudentGroup)
+        .filter(
+            StudentGroupMember.student_id == student_id,
+            StudentGroup.class_id.in_(class_ids),
+            StudentGroup.is_active == True,
+        )
+        .order_by(StudentGroupMember.id.desc())
+        .all()
+    )
+    group_ids_by_class = {}
+    for class_id, group_id in rows:
+        if class_id not in group_ids_by_class:
+            group_ids_by_class[class_id] = group_id
+    if not group_ids_by_class:
+        return {}
+    groups = StudentGroup.query.options(
+        joinedload(StudentGroup.members).joinedload(StudentGroupMember.student)
+    ).filter(StudentGroup.id.in_(group_ids_by_class.values())).all()
+    by_id = {g.id: g for g in groups}
+    return {
+        class_id: by_id[group_id]
+        for class_id, group_id in group_ids_by_class.items()
+        if group_id in by_id
+    }
+
+
+def resolve_student_group_for_group_assignment(student_id, group_assignment):
+    """Group for a specific assignment (snapshot first, then current class membership)."""
+    from sqlalchemy.orm import joinedload
+
+    snap = GroupAssignmentMemberSnapshot.query.filter_by(
+        group_assignment_id=group_assignment.id,
+        student_id=student_id,
+    ).first()
+    if snap and snap.group_id:
+        return StudentGroup.query.options(
+            joinedload(StudentGroup.members).joinedload(StudentGroupMember.student)
+        ).get(snap.group_id)
+
+    if group_assignment.selected_group_ids:
+        try:
+            selected_ids = json.loads(group_assignment.selected_group_ids)
+            for gid in selected_ids:
+                if StudentGroupMember.query.filter_by(student_id=student_id, group_id=gid).first():
+                    return StudentGroup.query.options(
+                        joinedload(StudentGroup.members).joinedload(StudentGroupMember.student)
+                    ).get(gid)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    else:
+        m = StudentGroupMember.query.join(StudentGroup).filter(
+            StudentGroupMember.student_id == student_id,
+            StudentGroup.class_id == group_assignment.class_id,
+            StudentGroup.is_active == True,
+        ).first()
+        if m:
+            return StudentGroup.query.options(
+                joinedload(StudentGroup.members).joinedload(StudentGroupMember.student)
+            ).get(m.group_id)
+    return None
 
 
 def get_student_group_assignment_status(group_assignment, group_submission, group_grade, student_id=None):
@@ -746,10 +841,20 @@ def student_dashboard():
     up_next_items = up_next_items[:5]  # Top 5 only
 
     # Announcements: all students, all, or for any of their classes
-    announcements = Announcement.query.filter(
-        (Announcement.target_group.in_(['all_students', 'all'])) |
-        ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
-    ).order_by(Announcement.timestamp.desc()).all()
+    from sqlalchemy.orm import joinedload
+    announcements = (
+        Announcement.query.options(
+            joinedload(Announcement.class_info),
+            joinedload(Announcement.sender),
+        )
+        .filter(
+            (Announcement.target_group.in_(['all_students', 'all']))
+            | ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
+        )
+        .order_by(Announcement.timestamp.desc())
+        .limit(100)
+        .all()
+    )
 
     # Classes where this student is the assigned assistant (take attendance, enter grades)
     assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
@@ -996,25 +1101,7 @@ def student_assignments():
     for group_assignment in group_assignments_list:
         if group_assignment.status == 'Voided':
             continue
-        # Find student's group for this assignment
-        student_group = None
-        if group_assignment.selected_group_ids:
-            try:
-                selected_ids = json.loads(group_assignment.selected_group_ids)
-                for gid in selected_ids:
-                    if StudentGroupMember.query.filter_by(student_id=student.id, group_id=gid).first():
-                        student_group = StudentGroup.query.get(gid)
-                        break
-            except (json.JSONDecodeError, TypeError):
-                pass
-        else:
-            m = StudentGroupMember.query.join(StudentGroup).filter(
-                StudentGroupMember.student_id == student.id,
-                StudentGroup.class_id == group_assignment.class_id,
-                StudentGroup.is_active == True
-            ).first()
-            if m:
-                student_group = StudentGroup.query.get(m.group_id)
+        student_group = resolve_student_group_for_group_assignment(student.id, group_assignment)
         group_submission = None
         if student_group:
             for gs in group_submissions_by_assignment.get(group_assignment.id) or []:
@@ -1141,11 +1228,14 @@ def class_assignments(class_id):
     ).all()
     redo_requests_by_assignment = {r.assignment_id: r for r in redo_requests}
     
+    class_student_group = get_student_class_group(student.id, class_id)
+
     return render_template('students/class_assignments_detail.html',
                          **create_template_context(student, 'assignments', 'assignments',
                              class_obj=class_obj,
                              assignments_with_status=assignments_with_status,
                              redo_requests_by_assignment=redo_requests_by_assignment,
+                             class_student_group=class_student_group,
                              today=datetime.now().date()))
 
 @student_blueprint.route('/classes')
@@ -1228,12 +1318,14 @@ def student_classes():
             all_grades.append(avg_grade)
     
     assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
+    class_groups_by_class_id = get_student_class_groups_by_class_id(student.id, [c.id for c in classes])
     return render_template('students/role_student_dashboard.html',
                           **create_template_context(student, 'classes', 'classes',
                               classes=classes,
                               my_classes=classes,
                               grades=grades,
-                              assistant_for_classes=assistant_for_classes))
+                              assistant_for_classes=assistant_for_classes,
+                              class_groups_by_class_id=class_groups_by_class_id))
 
 
 def _get_low_grade_data(student):
@@ -2250,6 +2342,7 @@ def view_class(class_id):
     
     assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
     is_assistant_for_this_class = any(c.id == class_id for c in assistant_for_classes)
+    class_student_group = get_student_class_group(student.id, class_id)
     
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes', 
@@ -2267,7 +2360,8 @@ def view_class(class_id):
                          show_class_details=True,
                          assistant_for_classes=assistant_for_classes,
                          is_assistant_for_this_class=is_assistant_for_this_class,
-                         class_assignment_status_by_id=class_assignment_status_by_id)
+                         class_assignment_status_by_id=class_assignment_status_by_id,
+                         class_student_group=class_student_group)
 
 
 @student_blueprint.route('/class/<int:class_id>/assignments')
@@ -4380,33 +4474,9 @@ def student_view_group(group_id):
 @login_required
 @student_required
 def student_announcements():
-    """View announcements relevant to the student."""
-    student = Student.query.get_or_404(current_user.student_id)
-    
-    # Get student's classes for filtering
-    classes = Class.query.all()  # Simplified - should filter by enrollment
-    class_ids = [c.id for c in classes]
-    
-    # Get announcements relevant to the student
-    announcements = Announcement.query.filter(
-        (Announcement.target_group.in_(['all_students', 'all'])) |
-        ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
-    ).order_by(Announcement.timestamp.desc()).all()
-    
-    return render_template('students/role_student_dashboard.html',
-                         **create_template_context(student, 'announcements', 'communications',
-                             grades={},
-                             attendance_summary={},
-                             gpa=0.0,
-                             grade_trends={},
-                             today_schedule=[],
-                             goals={},
-                             announcements=announcements,
-                             notifications=[],
-                             past_due_assignments=[],
-                             upcoming_assignments=[],
-                             recent_grades=[],
-                             get_letter_grade=get_letter_grade))
+    """Legacy URL — announcements are shown on the home dashboard modal."""
+    return redirect(url_for('student.student_dashboard'))
+
 
 # New routes for student messaging capabilities
 @student_blueprint.route('/communications/send-message', methods=['GET', 'POST'])

@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 9, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 15, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,55 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 9, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 15, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 9</strong> brings a polished <strong>class roster</strong> experience, clearer <strong>view class</strong> pages for teachers and admins, streamlined <strong>void assignment</strong> flows, <strong>profile photos</strong> for students and staff (including from leadership dashboards), and stronger <strong>report card</strong> tools for withdrawn students and historical class eligibility. <strong>May 6</strong> below still highlights <strong>quiz reliability</strong>, builder UX, and voiding accuracy in grade views.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 15</strong> delivers a redesigned <strong>management home</strong>, modern <strong>add student</strong> and <strong>add staff</strong> forms, a major <strong>attendance reports &amp; analytics</strong> refresh (compact layouts, in-place filters, at-risk insights), fixes for <strong>student profile modals</strong> and <strong>class period cards</strong>, plus continued <strong>report card</strong> improvements for withdrawn students. <strong>May 9</strong> below covers rosters, view class, photos, and more.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 15, 2026 - Management home, forms, attendance, modals -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-house-heart me-2"></i>Management Home, Enrollment Forms &amp; Attendance – May 15, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Management home (School Administrators &amp; Directors):</strong> Redesigned dashboard with a clearer hero, role badges, at-a-glance stats, quick actions, and recent activity—built for day-to-day leadership workflows.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Add student form:</strong> Sectioned card layout, photo upload with live preview, and improved spacing—same fields as before, easier to complete.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Add staff form:</strong> Matching modern layout with file upload zones, organized sections (employment, emergency contact, permissions), and a cleaner action bar for add/update.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student &amp; staff profile modals:</strong> Fixed a bug where viewing a student from the management dashboard left a grey overlay after closing; modals now reuse a single instance and clean up backdrops correctly.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Attendance → Reports:</strong> Compact redesign with date presets (Today, 7 / 30 / 90 days), collapsible filters, horizontal summary chips, scrollable table, and pagination (50 per page). Filters update in place without reloading the whole attendance page. Defaults to the last 30 days instead of loading every record.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Attendance analytics:</strong> New layout with daily volume chart, status breakdown, at-risk student table with search, risk-level filters, CSV export, and in-place date range updates. Quick report links from attendance now open the right date ranges.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Class Period cards:</strong> The Pending / Completed badge no longer overlaps long class names; titles wrap cleanly beside the status badge.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report cards (withdrawn students):</strong> Generation supports withdrawn students with class lists tied to school year and quarters; enrollment windows ensure only eligible classes appear, with matching server-side validation when saving.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Leadership has a clearer home base and smoother enrollment workflows; attendance reporting is faster to scan and filter; analytics highlights students who may need follow-up; and everyday UI bugs (modals, class cards) are resolved.</p>
+                        </div>
+                    </div>
+
                     <!-- May 9, 2026 - Rosters, class pages, void UX, photos, report cards -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-people me-2"></i>Class Rosters, View Class, Photos &amp; Report Cards – May 9, 2026</h6>
@@ -1756,11 +1798,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay9_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay15_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMay9_2026', 'true');
+            sessionStorage.setItem('updateModalShownMay15_2026', 'true');
         }, 500);
     }
 });

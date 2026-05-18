@@ -292,8 +292,7 @@ function sortAssignments(sortBy) {
 
 function changeAssignmentStatus(assignmentId, currentStatus) {
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
-    if (confirm(`Are you sure you want to change this assignment status to ${newStatus}?`)) {
-        fetch(`/management/assignment/change-status/${assignmentId}`, {
+    fetch(`/management/assignment/change-status/${assignmentId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -312,7 +311,6 @@ function changeAssignmentStatus(assignmentId, currentStatus) {
             console.error('Error:', error);
             alert('Error changing assignment status');
         });
-    }
 }
 
 function removeAssignment(assignmentId, assignmentTitle) {

@@ -386,15 +386,63 @@ body {
     min-height: 0; /* Important for flex scrolling */
 }
 
-.sidebar-nav {
-    flex: 1 1 auto;
-    min-height: 0; /* Allow flex item to shrink below content size */
-    overflow: visible; /* Let parent handle scrolling */
+/* Pinned header/toggle; scrollable nav; pinned logout (works at browser zoom). */
+.sidebar-top {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+}
+
+.sidebar-heading,
+.sidebar-school-tz,
+.sidebar-toggle {
+    flex-shrink: 0;
+}
+
+/* Scroll region: flex-basis 0 forces height cap so overflow scrolls at 150%+ zoom */
+.sidebar-nav-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.55) rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.7);
+    background-clip: padding-box;
+}
+
+.sidebar-nav-scroll .nav,
+.sidebar-nav-scroll .sidebar-nav {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
 }
 
 .logout-btn-container {
-    flex-shrink: 0; /* Don't shrink the logout button */
-    margin-top: auto;
+    flex-shrink: 0;
+    margin-top: 0;
     padding: 20px;
     background-color: #212529;
     border-top: 1px solid #343a40;
@@ -405,7 +453,9 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     position: fixed;
     top: 0;
     left: 0;
@@ -418,31 +468,7 @@ body {
     border-right: 1px solid #343a40;
     transition: width 0.3s ease;
     z-index: 1000;
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Custom scrollbar styling */
-    scrollbar-width: thin;
-    scrollbar-color: #6c757d #343a40;
-}
-
-/* Webkit scrollbar styling for Chrome/Safari/Edge */
-.sidebar::-webkit-scrollbar {
-    width: 8px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-    background: #343a40;
-    border-radius: 4px;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-    background: #6c757d;
-    border-radius: 4px;
-    transition: background 0.2s ease;
-}
-
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: #0d6efd;
+    overflow: hidden;
 }
 
 .sidebar-toggle {
@@ -581,11 +607,7 @@ body {
 }
 
 .sidebar .nav {
-    flex: 1 1 auto;
-    overflow-y: visible; /* Let parent sidebar handle scrolling */
-    overflow-x: hidden; /* Prevent horizontal scrolling */
     margin-bottom: 0;
-    min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .sidebar .nav-link {
@@ -642,8 +664,8 @@ body {
     width: 80px;
     max-width: 80px;
     max-height: 100vh;
-    overflow-y: auto;
-    overflow-x: hidden;
+    max-height: 100dvh;
+    overflow: hidden;
 }
 
 .sidebar.collapsed .sidebar-heading,
@@ -658,9 +680,15 @@ body {
     min-height: 36px;
 }
 
-.sidebar.collapsed .nav {
-    overflow-y: visible; /* Let parent handle scrolling */
-    min-height: 0; /* Allow flex item to shrink */
+.sidebar.collapsed .sidebar-nav-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar.collapsed .sidebar-nav-scroll .nav {
+    overflow: visible;
 }
 
 /* Collapsed sidebar scrollbar */
@@ -739,6 +767,16 @@ body {
         top: 0;
         left: 0;
         transform: none;
+        height: 100dvh;
+        max-height: 100dvh;
+        overflow: hidden;
+    }
+
+    .dashboard-flex-wrapper > .sidebar .sidebar-nav-scroll {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .dashboard-flex-wrapper > .main-content {
@@ -787,13 +825,13 @@ body {
         width: min(250px, 100vw);
         min-width: 0;
         max-height: 100vh;
+        max-height: 100dvh;
         height: 100vh;
         height: 100dvh;
         z-index: 1050;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
+        overflow: hidden !important;
         max-width: 100%;
         box-sizing: border-box;
     }
@@ -848,11 +886,17 @@ body {
         border-bottom: 1px solid #0d6efd;
     }
 
-    .sidebar .nav {
+    .sidebar .sidebar-nav-scroll {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         min-height: 0;
-        flex: 1 1 auto;
+        flex: 1 1 0 !important;
+        max-height: none;
+    }
+
+    .sidebar .sidebar-nav-scroll .nav {
+        flex: none !important;
+        overflow: visible !important;
     }
 
     .sidebar .nav-link {

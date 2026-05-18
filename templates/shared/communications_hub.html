@@ -61,7 +61,7 @@
                         </div>
                         {# Show leave button if user is not the creator #}
                         {% if group.created_by != current_user.id %}
-                        <form action="{{ url_for('shared_communications.leave_group', group_id=group.id) }}" method="POST" class="ms-2" onsubmit="return confirm('Are you sure you want to leave this group?');" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 1000;" onclick="event.stopPropagation();">
+                        <form action="{{ url_for('shared_communications.leave_group', group_id=group.id) }}" method="POST" class="ms-2" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 1000;" onclick="event.stopPropagation();">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-link text-danger p-0" title="Leave Group" style="font-size: 0.8rem; padding: 0.25rem 0.4rem !important; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;">
                                 <i class="fas fa-sign-out-alt"></i>
@@ -841,10 +841,6 @@ function showCreateGroupModal() {
 }
 
 function leaveGroup(groupId, groupName) {
-    if (!confirm(`Are you sure you want to leave "${groupName}"? You won't be able to see messages from this group anymore.`)) {
-        return;
-    }
-    
     const btn = event.target.closest('button');
     const originalHTML = btn.innerHTML;
     btn.disabled = true;

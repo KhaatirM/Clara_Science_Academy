@@ -6,9 +6,36 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import db, Student, SchoolDayAttendance, Class, Enrollment, Attendance
+from sqlalchemy.orm import joinedload
 
 
 bp = Blueprint('attendance', __name__)
+
+
+@bp.context_processor
+def attendance_template_context():
+    """Quick links for attendance reports (used in dashboard sidebars)."""
+    from datetime import datetime, timedelta
+
+    today = datetime.now().date()
+
+    def _reports_url(start, end):
+        return url_for(
+            'management.unified_attendance',
+            reports_tab=1,
+            start_date=start.strftime('%Y-%m-%d'),
+            end_date=end.strftime('%Y-%m-%d'),
+        )
+
+    return {
+        'attendance_quick_links': {
+            'daily': _reports_url(today, today),
+            'weekly': _reports_url(today - timedelta(days=6), today),
+            'monthly': _reports_url(today - timedelta(days=29), today),
+            'reports': url_for('management.unified_attendance', reports_tab=1),
+            'analytics': url_for('management.attendance_analytics'),
+        },
+    }
 
 
 # ============================================================
@@ -16,32 +43,92 @@ bp = Blueprint('attendance', __name__)
 # Function: attendance_analytics
 # ============================================================
 
-@bp.route('/attendance-analytics')
-@login_required
-@management_required
-def attendance_analytics():
-    """Attendance analytics and pattern tracking"""
+def _attendance_analytics_date_range(request):
+    """Parse analytics date range (default last 30 days)."""
+    from datetime import datetime, timedelta
+
+    today = datetime.now().date()
+    start_str = (request.args.get('start_date') or '').strip()
+    end_str = (request.args.get('end_date') or '').strip()
+
+    if start_str and end_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+    elif start_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = today
+        except ValueError:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+    elif end_str:
+        try:
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+            start_date = end_date - timedelta(days=30)
+        except ValueError:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+    else:
+        end_date = today
+        start_date = end_date - timedelta(days=30)
+
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    return start_date, end_date
+
+
+def _attendance_analytics_context(request):
+    """Build attendance analytics summary, trends, and at-risk student list."""
     from datetime import datetime, timedelta
     from collections import defaultdict
-    
-    # Get date range from request or default to last 30 days
-    end_date_str = request.args.get('end_date')
-    start_date_str = request.args.get('start_date')
-    
-    if end_date_str and start_date_str:
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    else:
-        end_date = datetime.now().date()
-        start_date = end_date - timedelta(days=30)
-    
-    # Get all attendance records in date range
-    attendance_records = Attendance.query.filter(
-        Attendance.date >= start_date,
-        Attendance.date <= end_date
-    ).all()
-    
-    # Analyze patterns per student
+    from urllib.parse import urlencode
+
+    start_date, end_date = _attendance_analytics_date_range(request)
+    today = datetime.now().date()
+    days_analyzed = (end_date - start_date).days + 1
+
+    risk_filter = (request.args.get('risk') or 'all').strip().lower()
+    if risk_filter not in ('all', 'high', 'medium'):
+        risk_filter = 'all'
+
+    attendance_records = (
+        Attendance.query.options(joinedload(Attendance.student))
+        .filter(Attendance.date >= start_date, Attendance.date <= end_date)
+        .order_by(Attendance.student_id, Attendance.date)
+        .all()
+    )
+
+    status_counts = {
+        'present': 0,
+        'late': 0,
+        'unexcused': 0,
+        'excused': 0,
+        'suspended': 0,
+        'other': 0,
+    }
+    daily_buckets = defaultdict(lambda: {'total': 0, 'present': 0})
+
+    for record in attendance_records:
+        daily_buckets[record.date]['total'] += 1
+        if record.status == 'Present':
+            status_counts['present'] += 1
+            daily_buckets[record.date]['present'] += 1
+        elif record.status == 'Late':
+            status_counts['late'] += 1
+        elif record.status == 'Unexcused Absence':
+            status_counts['unexcused'] += 1
+        elif record.status == 'Excused Absence':
+            status_counts['excused'] += 1
+        elif record.status == 'Suspended':
+            status_counts['suspended'] += 1
+        else:
+            status_counts['other'] += 1
+
     student_patterns = defaultdict(lambda: {
         'total_days': 0,
         'present': 0,
@@ -50,61 +137,142 @@ def attendance_analytics():
         'excused': 0,
         'consecutive_absences': 0,
         'max_consecutive_absences': 0,
-        'current_streak': 0
     })
-    
-    # Group records by student and analyze
+
+    records_by_student = defaultdict(list)
     for record in attendance_records:
-        student_id = record.student_id
+        records_by_student[record.student_id].append(record)
+
+    for student_id, records in records_by_student.items():
         pattern = student_patterns[student_id]
-        pattern['total_days'] += 1
-        
-        if record.status == 'Present':
-            pattern['present'] += 1
-            pattern['consecutive_absences'] = 0
-        elif record.status == 'Late':
-            pattern['late'] += 1
-            pattern['consecutive_absences'] = 0
-        elif record.status == 'Excused Absence':
-            pattern['excused'] += 1
-            pattern['consecutive_absences'] += 1
-        elif record.status in ['Unexcused Absence', 'Suspended']:
-            pattern['absent'] += 1
-            pattern['consecutive_absences'] += 1
-        
-        # Track max consecutive absences
-        if pattern['consecutive_absences'] > pattern['max_consecutive_absences']:
-            pattern['max_consecutive_absences'] = pattern['consecutive_absences']
-    
-    # Get students with concerns (3+ absences or 5+ late arrivals)
+        for record in sorted(records, key=lambda r: r.date):
+            pattern['total_days'] += 1
+            if record.status == 'Present':
+                pattern['present'] += 1
+                pattern['consecutive_absences'] = 0
+            elif record.status == 'Late':
+                pattern['late'] += 1
+                pattern['consecutive_absences'] = 0
+            elif record.status == 'Excused Absence':
+                pattern['excused'] += 1
+                pattern['consecutive_absences'] += 1
+            elif record.status in ('Unexcused Absence', 'Suspended'):
+                pattern['absent'] += 1
+                pattern['consecutive_absences'] += 1
+            if pattern['consecutive_absences'] > pattern['max_consecutive_absences']:
+                pattern['max_consecutive_absences'] = pattern['consecutive_absences']
+
     at_risk_students = []
     for student_id, pattern in student_patterns.items():
-        if pattern['absent'] >= 3 or pattern['late'] >= 5 or pattern['max_consecutive_absences'] >= 3:
-            student = Student.query.get(student_id)
-            if student:
-                attendance_rate = (pattern['present'] / pattern['total_days'] * 100) if pattern['total_days'] > 0 else 0
-                at_risk_students.append({
-                    'student': student,
-                    'pattern': pattern,
-                    'attendance_rate': round(attendance_rate, 1),
-                    'risk_level': 'high' if pattern['absent'] >= 5 else 'medium'
-                })
-    
-    # Sort by risk level
-    at_risk_students.sort(key=lambda x: (x['risk_level'] == 'high', x['pattern']['absent']), reverse=True)
-    
-    # Overall statistics
+        if pattern['absent'] < 3 and pattern['late'] < 5 and pattern['max_consecutive_absences'] < 3:
+            continue
+        student = records_by_student[student_id][0].student if records_by_student[student_id] else Student.query.get(student_id)
+        if not student:
+            continue
+        attendance_rate = (pattern['present'] / pattern['total_days'] * 100) if pattern['total_days'] > 0 else 0
+        risk_level = 'high' if pattern['absent'] >= 5 or pattern['max_consecutive_absences'] >= 5 else 'medium'
+        at_risk_students.append({
+            'student': student,
+            'pattern': pattern,
+            'attendance_rate': round(attendance_rate, 1),
+            'risk_level': risk_level,
+        })
+
+    at_risk_students.sort(
+        key=lambda x: (
+            x['risk_level'] != 'high',
+            -x['pattern']['absent'],
+            -x['pattern']['late'],
+            x['student'].last_name,
+        ),
+    )
+
+    at_risk_high = sum(1 for s in at_risk_students if s['risk_level'] == 'high')
+    at_risk_medium = sum(1 for s in at_risk_students if s['risk_level'] == 'medium')
+    if risk_filter != 'all':
+        at_risk_students = [s for s in at_risk_students if s['risk_level'] == risk_filter]
+
     total_records = len(attendance_records)
-    present_count = len([r for r in attendance_records if r.status == 'Present'])
+    present_count = status_counts['present']
     overall_rate = round((present_count / total_records * 100), 1) if total_records > 0 else 0
-    
-    return render_template('management/attendance_analytics.html',
-                         start_date=start_date,
-                         end_date=end_date,
-                         at_risk_students=at_risk_students,
-                         overall_rate=overall_rate,
-                         total_records=total_records,
-                         present_count=present_count)
+    students_tracked = len(student_patterns)
+
+    daily_trend = []
+    cursor = start_date
+    while cursor <= end_date:
+        bucket = daily_buckets.get(cursor, {'total': 0, 'present': 0})
+        rate = round((bucket['present'] / bucket['total'] * 100), 1) if bucket['total'] else None
+        daily_trend.append({
+            'date': cursor,
+            'date_label': cursor.strftime('%b %d'),
+            'total': bucket['total'],
+            'present': bucket['present'],
+            'rate': rate,
+        })
+        cursor += timedelta(days=1)
+
+    trend_max = max((d['total'] for d in daily_trend), default=1) or 1
+
+    form_action = url_for('management.attendance_analytics')
+    preset_defs = [
+        ('7 days', today - timedelta(days=6), today),
+        ('30 days', today - timedelta(days=29), today),
+        ('90 days', today - timedelta(days=89), today),
+        ('Year', today - timedelta(days=364), today),
+    ]
+    preset_urls = []
+    for label, p_start, p_end in preset_defs:
+        q = urlencode([
+            ('start_date', p_start.strftime('%Y-%m-%d')),
+            ('end_date', p_end.strftime('%Y-%m-%d')),
+        ])
+        if risk_filter != 'all':
+            q += '&' + urlencode([('risk', risk_filter)])
+        preset_urls.append({'label': label, 'url': f'{form_action}?{q}'})
+
+    return {
+        'selected_start_date': start_date.strftime('%Y-%m-%d'),
+        'selected_end_date': end_date.strftime('%Y-%m-%d'),
+        'days_analyzed': days_analyzed,
+        'risk_filter': risk_filter,
+        'analytics_form_action': form_action,
+        'preset_urls': preset_urls,
+        'analytics_back_url': url_for('management.unified_attendance'),
+        'analytics_reports_url': url_for(
+            'management.unified_attendance',
+            reports_tab=1,
+            start_date=start_date.strftime('%Y-%m-%d'),
+            end_date=end_date.strftime('%Y-%m-%d'),
+        ),
+        'at_risk_students': at_risk_students,
+        'overall_rate': overall_rate,
+        'total_records': total_records,
+        'present_count': present_count,
+        'students_tracked': students_tracked,
+        'at_risk_high': at_risk_high,
+        'at_risk_medium': at_risk_medium,
+        'status_counts': status_counts,
+        'daily_trend': daily_trend,
+        'trend_max': trend_max,
+    }
+
+
+def _wants_analytics_partial(request):
+    return (
+        request.method == 'GET'
+        and request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    )
+
+
+@bp.route('/attendance-analytics')
+@login_required
+@management_required
+def attendance_analytics():
+    """Attendance analytics and pattern tracking"""
+    ctx = _attendance_analytics_context(request)
+    if _wants_analytics_partial(request):
+        return render_template('management/_attendance_analytics_panel.html', **ctx)
+    return render_template('management/attendance_analytics.html', active_tab='attendance', **ctx)
 
 
 
@@ -246,7 +414,21 @@ def unified_attendance():
         return redirect(url_for('management.unified_attendance', date=attendance_date_str))
     
     # GET request - show unified attendance form
-    
+    if _wants_reports_partial(request):
+        reports_ctx = _attendance_reports_context(
+            request,
+            form_action=url_for('management.unified_attendance'),
+            embed_tab=True,
+        )
+        return render_template(
+            'shared/_attendance_reports_panel.html',
+            reports_tab_active=True,
+            show_reports_page_header=False,
+            **reports_ctx,
+        )
+
+    reports_tab_active = _reports_tab_active(request)
+
     # School Day Attendance Data
     selected_date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     try:
@@ -348,26 +530,12 @@ def unified_attendance():
     present_records = Attendance.query.filter_by(date=class_date, status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    # Attendance Reports Data
-    all_students = Student.query.all()
-    all_classes = Class.query.all()
-    all_statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
+    reports_ctx = _attendance_reports_context(
+        request,
+        form_action=url_for('management.unified_attendance'),
+        embed_tab=True,
+    )
 
-    # Query and filter attendance records
-    query = Attendance.query
-    # (Filters can be added here in the future)
-    records = query.all()
-
-    # Calculate summary stats from the database
-    summary_stats = {
-        'total_records': len(records),
-        'present': query.filter_by(status='Present').count(),
-        'late': query.filter_by(status='Late').count(),
-        'unexcused_absence': query.filter_by(status='Unexcused Absence').count(),
-        'excused_absence': query.filter_by(status='Excused Absence').count(),
-        'suspended': query.filter_by(status='Suspended').count()
-    }
-    
     return render_template('shared/unified_attendance.html',
                          students=students,
                          selected_date=selected_date,
@@ -379,12 +547,9 @@ def unified_attendance():
                          today_attendance_count=today_attendance_count,
                          pending_classes_count=pending_classes_count,
                          overall_attendance_rate=overall_attendance_rate,
-                         all_students=all_students,
-                         all_classes=all_classes,
-                         all_statuses=all_statuses,
-                         summary_stats=summary_stats,
-                         records=records,
-                         active_tab='attendance')
+                         active_tab='attendance',
+                         reports_tab_active=reports_tab_active,
+                         **reports_ctx)
 
 
 
@@ -573,6 +738,217 @@ def attendance():
 
 
 
+ATTENDANCE_REPORT_STATUSES = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
+ATTENDANCE_REPORTS_PER_PAGE = 50
+
+
+def _parse_id_list(values):
+    ids = []
+    for raw in values or []:
+        try:
+            ids.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    return ids
+
+
+def _has_reports_query_params(request):
+    """True when the request includes report filter/pagination params (not just defaults)."""
+    if request.args.get('reports_tab') == '1':
+        return True
+    if (request.args.get('start_date') or '').strip():
+        return True
+    if (request.args.get('end_date') or '').strip():
+        return True
+    if (request.args.get('status') or '').strip():
+        return True
+    if request.args.getlist('student_ids') or request.args.getlist('class_ids'):
+        return True
+    if request.args.get('student_id') or request.args.get('class_id'):
+        return True
+    if request.args.get('page', type=int):
+        return True
+    return False
+
+
+def _reports_tab_active(request):
+    return _has_reports_query_params(request)
+
+
+def _wants_reports_partial(request):
+    return (
+        request.method == 'GET'
+        and request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        and (
+            request.args.get('reports_partial') == '1'
+            or request.args.get('reports_tab') == '1'
+            or _has_reports_query_params(request)
+        )
+    )
+
+
+def _attendance_report_filters(start_date, end_date, student_ids, class_ids, status):
+    filters = [
+        Attendance.date >= start_date,
+        Attendance.date <= end_date,
+    ]
+    if student_ids:
+        filters.append(Attendance.student_id.in_(student_ids))
+    if class_ids:
+        filters.append(Attendance.class_id.in_(class_ids))
+    if status:
+        filters.append(Attendance.status == status)
+    return filters
+
+
+def _attendance_reports_context(request, form_action=None, embed_tab=False):
+    """Build filtered, paginated attendance report data (defaults to last 30 days)."""
+    from datetime import datetime, timedelta
+    from urllib.parse import urlencode
+
+    today = datetime.now().date()
+    start_str = (request.args.get('start_date') or '').strip()
+    end_str = (request.args.get('end_date') or '').strip()
+
+    if start_str and end_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+    elif start_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = today
+        except ValueError:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+    elif end_str:
+        try:
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+            start_date = end_date - timedelta(days=30)
+        except ValueError:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+    else:
+        end_date = today
+        start_date = end_date - timedelta(days=30)
+
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    student_ids = _parse_id_list(request.args.getlist('student_ids'))
+    if not student_ids and request.args.get('student_id'):
+        student_ids = _parse_id_list([request.args.get('student_id')])
+
+    class_ids = _parse_id_list(request.args.getlist('class_ids'))
+    if not class_ids and request.args.get('class_id'):
+        class_ids = _parse_id_list([request.args.get('class_id')])
+
+    status = (request.args.get('status') or '').strip()
+    page = max(1, request.args.get('page', 1, type=int))
+
+    filters = _attendance_report_filters(start_date, end_date, student_ids, class_ids, status)
+    base_query = Attendance.query.filter(*filters)
+
+    def _count_with_status(status_value):
+        q_filters = list(filters)
+        if status_value:
+            q_filters.append(Attendance.status == status_value)
+        return Attendance.query.filter(*q_filters).count()
+
+    summary_stats = {
+        'total_records': _count_with_status(None),
+        'present': _count_with_status('Present'),
+        'late': _count_with_status('Late'),
+        'unexcused_absence': _count_with_status('Unexcused Absence'),
+        'excused_absence': _count_with_status('Excused Absence'),
+        'suspended': _count_with_status('Suspended'),
+    }
+
+    def _paginate_reports(page_num):
+        return (
+            Attendance.query.filter(*filters)
+            .options(
+                joinedload(Attendance.student),
+                joinedload(Attendance.class_info),
+                joinedload(Attendance.teacher),
+            )
+            .order_by(Attendance.date.desc(), Attendance.id.desc())
+            .paginate(page=page_num, per_page=ATTENDANCE_REPORTS_PER_PAGE, error_out=False)
+        )
+
+    pagination = _paginate_reports(page)
+    if pagination.pages and page > pagination.pages:
+        page = 1
+        pagination = _paginate_reports(page)
+
+    all_students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    all_classes = Class.query.order_by(Class.name).all()
+
+    if not form_action:
+        form_action = url_for('management.unified_attendance')
+
+    def _build_query(extra=None):
+        params = [
+            ('start_date', start_date.strftime('%Y-%m-%d')),
+            ('end_date', end_date.strftime('%Y-%m-%d')),
+        ]
+        if status:
+            params.append(('status', status))
+        for sid in student_ids:
+            params.append(('student_ids', sid))
+        for cid in class_ids:
+            params.append(('class_ids', cid))
+        if embed_tab:
+            params.append(('reports_tab', '1'))
+        if extra:
+            params.extend(extra)
+        return urlencode(params)
+
+    preset_defs = [
+        ('Today', today, today),
+        ('7 days', today - timedelta(days=6), today),
+        ('30 days', today - timedelta(days=29), today),
+        ('90 days', today - timedelta(days=89), today),
+    ]
+    preset_urls = []
+    for label, p_start, p_end in preset_defs:
+        q = urlencode([
+            ('start_date', p_start.strftime('%Y-%m-%d')),
+            ('end_date', p_end.strftime('%Y-%m-%d')),
+        ] + ([('reports_tab', '1')] if embed_tab else []))
+        preset_urls.append({'label': label, 'url': f'{form_action}?{q}'})
+
+    full_page_base = url_for('management.attendance_reports')
+    reports_full_page_url = f'{full_page_base}?{_build_query()}'
+
+    reset_q = urlencode([('reports_tab', '1')] if embed_tab else [])
+    reports_reset_url = f'{form_action}?{reset_q}' if reset_q else form_action
+
+    return {
+        'reports_form_action': form_action,
+        'reports_reset_url': reports_reset_url,
+        'reports_embed_tab': embed_tab,
+        'reports_full_page_url': reports_full_page_url,
+        'preset_urls': preset_urls,
+        'all_students': all_students,
+        'all_classes': all_classes,
+        'all_statuses': ATTENDANCE_REPORT_STATUSES,
+        'selected_student_ids': student_ids,
+        'selected_class_ids': class_ids,
+        'selected_status': status,
+        'selected_start_date': start_date.strftime('%Y-%m-%d'),
+        'selected_end_date': end_date.strftime('%Y-%m-%d'),
+        'summary_stats': summary_stats,
+        'records': pagination.items,
+        'pagination': pagination,
+        'reports_per_page': ATTENDANCE_REPORTS_PER_PAGE,
+        'default_range_days': 30,
+    }
+
+
 # ============================================================
 # Route: /attendance/reports
 # Function: attendance_reports
@@ -582,36 +958,25 @@ def attendance():
 @login_required
 @management_required
 def attendance_reports():
-    all_students = Student.query.all()
-    all_classes = Class.query.all()
-    all_statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
-
-    # Query and filter attendance records
-    query = Attendance.query
-    # (Filters can be added here in the future)
-    records = query.all()
-
-    # Calculate summary stats from the database
-    summary_stats = {
-        'total_records': len(records),
-        'present': query.filter_by(status='Present').count(),
-        'late': query.filter_by(status='Late').count(),
-        'unexcused_absence': query.filter_by(status='Unexcused Absence').count(),
-        'excused_absence': query.filter_by(status='Excused Absence').count(),
-        'suspended': query.filter_by(status='Suspended').count()
-    }
-
-    return render_template('shared/attendance_report_view.html',
-                         all_students=all_students,
-                         all_classes=all_classes,
-                         all_statuses=all_statuses,
-                         selected_student_ids=[],
-                         selected_class_ids=[],
-                         selected_status='',
-                         selected_start_date='',
-                         selected_end_date='',
-                         summary_stats=summary_stats,
-                         records=records,
-                         section='attendance_reports',
-                         active_tab='attendance_reports')
+    ctx = _attendance_reports_context(
+        request,
+        form_action=url_for('management.attendance_reports'),
+        embed_tab=False,
+    )
+    if _wants_reports_partial(request):
+        return render_template(
+            'shared/_attendance_reports_panel.html',
+            reports_tab_active=True,
+            show_reports_page_header=True,
+            reports_back_url=url_for('management.unified_attendance', reports_tab='1'),
+            **ctx,
+        )
+    return render_template(
+        'shared/attendance_report_view.html',
+        section='attendance_reports',
+        active_tab='attendance_reports',
+        reports_back_url=url_for('management.unified_attendance', reports_tab='1'),
+        show_reports_page_header=True,
+        **ctx,
+    )
 

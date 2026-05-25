@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 15, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 25, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,129 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 15, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 15</strong> delivers a redesigned <strong>management home</strong>, modern <strong>add student</strong> and <strong>add staff</strong> forms, a major <strong>attendance reports &amp; analytics</strong> refresh (compact layouts, in-place filters, at-risk insights), fixes for <strong>student profile modals</strong> and <strong>class period cards</strong>, plus continued <strong>report card</strong> improvements for withdrawn students. <strong>May 9</strong> below covers rosters, view class, photos, and more.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 25</strong> ships the biggest release of the spring: a brand-new <strong>phased school-year-end workflow</strong> (1-week student window, 3-week teacher window, automatic Day-28 finalize, fail-safe extensions at the user, class, and year level), full redesigns of the <strong>report card generation form</strong>, <strong>report cards category page</strong>, and <strong>3rd-grade standards</strong> pages, a <strong>3rd-grade standards checklist</strong> database + editor with completeness tracking and per-student view, a new <strong>School Years</strong> management workspace with smarter next-year date suggestions, and a more reliable <strong>academic concerns popup</strong> with a 30-minute snooze.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 25, 2026 - Phased year-end, report cards, 3rd grade standards, school years -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-calendar-event me-2"></i>Phased School-Year-End Workflow – May 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Phased closure (replaces "Close school year"):</strong> Directors now schedule a closure date. The system runs a four-phase timeline automatically — <strong>Day 0</strong> notifies students (in-app + email), <strong>Day 7</strong> locks student submissions, <strong>Day 21</strong> locks teacher grading, <strong>Day 28</strong> auto-generates Q1–Q4 report cards, archives classes, promotes students one grade, and deactivates the year. No more sudden lockouts — everyone gets a clear window to wrap up.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Real-time closure dashboard:</strong> Live phase timeline with countdowns to each milestone, a pre-finalization checklist (classes with missing Q4 grades, students still pending), recent audit events, and one-click actions to pause, resume, postpone, advance, finalize now, or cancel a closure.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Fail-safe extensions:</strong> Grant a deadline extension <strong>per student</strong>, <strong>per teacher</strong>, <strong>per class</strong>, or <strong>per year</strong>, with optional reason and a custom expiration date. Extensions bypass the lockout for exactly the people who need it — without unlocking the whole year.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Hybrid archive for students &amp; teachers:</strong> Once a window closes, classes from that year disappear from the active "My Classes" list but remain accessible under a new <strong>Previous years</strong> section, with grades still viewable by year.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Restart-the-clock safety net:</strong> If a closure was scheduled with a past end date, milestones now anchor to today (never silently fast-forward), and Directors can "Restart clock" from the dashboard to reset the schedule from today forward without cancelling the closure.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report card auto-generation provenance:</strong> Year-end report cards generated by the system are now flagged with <code>is_auto_generated</code> and the actor that fired the run, so admins can tell at a glance which records came from the auto-finalize step vs. a manual run.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> The end of the school year is no longer a single risky button — it's a four-week, fully-audited workflow that handles the predictable cases automatically and gives Directors precise tools to handle the human ones.</p>
+                        </div>
+                    </div>
+
+                    <!-- May 25, 2026 - Start the next school year + School Years workspace -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-mortarboard-fill me-2"></i>Start-Next-Year Affordance &amp; School Years Workspace – May 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Smarter next-year date suggestions:</strong> Once a closure finalizes, the dashboard offers a "Start the next school year" panel. Suggested dates now <strong>add one calendar year</strong> to the closed year's start/end — preserving each school's typical first and last day pattern — instead of landing on the day after the end date (which is the start of summer break). Directors can still override either date.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School Years workspace redesign (<code>/management/school-years</code>):</strong> New hub-aesthetic page with an active-year spotlight, insight tiles (total years, periods configured, year length), live-filter table of every year past and present, side-by-side Quarter/Semester cards with per-period editing, and themed modals for adding, editing, and viewing each year.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>"Manage School Years" entrypoint in the Calendar tab:</strong> The School Calendar now has a prominent gradient CTA + button linking directly to the School Years workspace, so it's easy to find from the place you'd expect to find it.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Robust auto-generated academic periods:</strong> Quarter dates are now computed by dividing the total year days into four roughly-equal slices (Q4 absorbs any remainder), so years that start in any month produce sensible Q1–Q4 ranges and the <code>ValueError: month must be in 1..12</code> bug is gone.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Starting the new school year is now a one-form flow with smart defaults, and the School Years management page is finally a first-class workspace instead of a buried settings screen.</p>
+                        </div>
+                    </div>
+
+                    <!-- May 25, 2026 - Report cards + 3rd grade -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-mortarboard me-2"></i>Report Card Form Redesign &amp; 3rd-Grade Standards – May 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report Card generation form — full redesign:</strong> Brand-new hub-aesthetic form with a hero, grouped sections, sticky footer with the submit actions, no more double scrollbars or grey gap at the bottom, and the academic concerns popup now appears reliably on every step of the report-card flow.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report Cards category page redesign:</strong> Elementary / Middle / High School category pages now show a hero, insight tiles, searchable / sortable student cards with collapsible recent-reports lists, and clean empty states.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>3rd-grade report card — exact spec from the director:</strong> Page 1 fits everything from the provided design on a single page; pages 2 &amp; 3 are the Math and Language Arts standards checklists with quarter boxes sized to stay inside the page, larger description text, and a header repeated on every page.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>3rd-grade attendance auto-fill:</strong> When "Include attendance" is checked, excused / unexcused absence boxes are filled in for every quarter — including zeros — so a complete card always looks complete.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>3rd-grade standards checklist (new feature):</strong> New database model + dedicated teacher editor at <strong>Teacher → 3rd Grade Standards</strong> (also linked from each class's <em>Class Management</em> section). Per-student view, sticky section headers, dirty-state tracking, completeness percentage, and search — so the checklist is real data, not free-form notes, and feeds the report card automatically.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> The report-card workflow now matches the rest of the management hub aesthetic, and the 3rd-grade workflow finally has a system of record for standards instead of relying on grades alone.</p>
+                        </div>
+                    </div>
+
+                    <!-- May 25, 2026 - Academic concerns popup + bug fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-exclamation-triangle me-2"></i>Academic Concerns Popup &amp; Reliability Fixes – May 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Academic Concerns popup — correct role scoping:</strong> School Admin+ only see students with overall GPA &lt; 2.00; teachers only see students with GPA &lt; 2.00 <em>in their own classes</em>. Class names listed under each student now match the assignments needing attention.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Collapsible student cards with spacing:</strong> Each student card in the full concerns modal collapses individually with clear breathing room between cards.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>30-minute snooze:</strong> Dismissing the corner toast snoozes it for ~30 minutes (persisted in browser storage), then it reappears as a fresh reminder — and any underlying change to the at-risk list pops it sooner.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Reliable visibility &amp; dismissal:</strong> Fixed the popup getting stuck off-screen behind layered CSS animations and a bug where the "X" button silently failed inside the redesigned report-card form. Bootstrap's modal/toast lifecycle is now respected end-to-end.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Academic-risk alerts are accurate to each user's scope, appear consistently across every page, and can be dismissed (and reliably re-appear) without fighting the UI.</p>
+                        </div>
+                    </div>
+
                     <!-- May 15, 2026 - Management home, forms, attendance, modals -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-house-heart me-2"></i>Management Home, Enrollment Forms &amp; Attendance – May 15, 2026</h6>
@@ -1798,11 +1914,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay15_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay25_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMay15_2026', 'true');
+            sessionStorage.setItem('updateModalShownMay25_2026', 'true');
         }, 500);
     }
 });

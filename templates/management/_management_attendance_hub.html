@@ -1,0 +1,135 @@
+{# Class-period attendance hub (management /attendance) #}
+{% set is_director = sidebar_role_canonical == 'Director' %}
+
+<div class="mgmt-att container-fluid px-0 px-md-1">
+  <div class="mgmt-att-shell{% if is_director %} mgmt-att-shell--director{% endif %}">
+
+    <header class="mgmt-att-hero">
+      <div>
+        <p class="mgmt-att-eyebrow">Attendance</p>
+        <h1 class="mgmt-att-title">Attendance hub</h1>
+        <p class="mgmt-att-subtitle">
+          <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+          Take and manage attendance for all classes
+        </p>
+      </div>
+      <div class="mgmt-att-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        <span class="mgmt-att-date-badge"><i class="bi bi-calendar3"></i> {{ today_date }}</span>
+        <a href="{{ url_for('management.unified_attendance') }}" class="mgmt-att-btn mgmt-att-btn--primary">
+          <i class="bi bi-calendar-week"></i> Unified attendance
+        </a>
+      </div>
+    </header>
+
+    <div class="mgmt-att-insights" role="list">
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-house-door-fill"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ classes|length }}</div><div class="mgmt-att-insight-label">Classes</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-check-circle"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ today_attendance_count or 0 }}</div><div class="mgmt-att-insight-label">Completed today</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-clock"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ pending_classes_count or 0 }}</div><div class="mgmt-att-insight-label">Pending</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-percent"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ overall_attendance_rate or 0 }}%</div><div class="mgmt-att-insight-label">Rate</div></div>
+      </div>
+    </div>
+
+    <div class="mgmt-att-content">
+    {% if classes %}
+    <div class="row g-4">
+        {% for class_item in classes %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="attendance-class-card-modern">
+                <div class="attendance-card-header-modern">
+                    <div class="attendance-card-icon-modern">
+                        <i class="bi bi-book-fill"></i>
+                    </div>
+                    <div class="attendance-card-info-modern">
+                        <h6 class="attendance-card-title-modern">{{ class_item.name }}</h6>
+                        <p class="attendance-card-subject-modern">{{ class_item.subject or 'General' }}</p>
+                    </div>
+                    <div class="attendance-status-badge">
+                        {% if class_item.attendance_taken_today %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Taken
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-clock me-1"></i>Pending
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="attendance-card-body-modern">
+                    <div class="attendance-card-detail-modern">
+                        <i class="bi bi-people-fill me-2"></i>
+                        <span>Students: <strong>{{ class_item.enrollments|selectattr('is_active')|list|length }}</strong></span>
+                    </div>
+                    <div class="attendance-card-detail-modern">
+                        <i class="bi bi-person-badge me-2"></i>
+                        <span>Teacher: <strong>{{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</strong></span>
+                    </div>
+                    <div class="attendance-card-detail-modern">
+                        <i class="bi bi-calendar me-2"></i>
+                        <span>Grade: <strong>{{ class_item.get_grade_levels_display() if class_item.get_grade_levels_display() else 'N/A' }}</strong></span>
+                    </div>
+                    
+                    <div class="attendance-progress-modern">
+                        {% set student_count = class_item.enrollments|selectattr('is_active')|list|length %}
+                        <div class="attendance-progress-label">
+                            <small>Today's Attendance</small>
+                            <small>{% if class_item.attendance_taken_today %}{{ student_count }}/{{ student_count }}{% else %}0/{{ student_count }}{% endif %}</small>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            {% set progress_percentage = 100 if class_item.attendance_taken_today else 0 %}
+                            <div class="progress-bar {% if class_item.attendance_taken_today %}bg-success{% else %}bg-warning{% endif %}" 
+                                 role="progressbar" style="width: {{ progress_percentage }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="attendance-card-footer-modern">
+                    <a href="{% if can_calendar_admin_ui %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}" class="btn btn-attendance-action-modern w-100">
+                        <i class="bi bi-clipboard-check me-1"></i>
+                        {% if class_item.attendance_taken_today %}View/Edit Attendance{% else %}Take Attendance{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="attendance-empty-state">
+        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+        <h5 class="text-muted">No Classes Available</h5>
+        <p class="text-muted mb-3">There are no classes available to take attendance for.</p>
+        <a href="{{ url_for('management.management_dashboard') }}" class="mgmt-att-btn mgmt-att-btn--ghost">
+            <i class="bi bi-arrow-left"></i> Back to dashboard
+        </a>
+    </div>
+    {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function markAllClassesPresent() {
+    alert('Mark all classes present functionality will be implemented');
+}
+
+function viewAttendanceReports() {
+    alert('Attendance reports functionality will be implemented');
+}
+</script>

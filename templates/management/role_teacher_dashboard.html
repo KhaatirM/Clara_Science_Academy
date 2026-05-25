@@ -2,12 +2,17 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_role_teacher_dashboard.css') }}">
+{% if section == 'home' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">{% endif %}
 {% endblock %}
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
+        <div class="rh rh--teacher container-fluid px-0 px-md-1 py-2 mb-0">
+          <div class="rh-shell">
+            {% include 'teachers/_teacher_hub_home.html' %}
+            <div class="rh-content">
         <!-- Home Dashboard -->
         <!-- Welcome Header -->
         <div class="home-header mb-4">
@@ -275,6 +280,9 @@
                     </div>
                 </div>
             </div>
+        </div>
+            </div>
+          </div>
         </div>
 
     {% elif section == 'classes' %}

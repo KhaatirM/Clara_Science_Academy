@@ -1,0 +1,1520 @@
+/* Classes hub — matches management home / report cards */
+.mgmt-cls {
+  --mgmt-cls-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-cls-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-cls-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-cls-text: var(--hub-text, #0f172a);
+  --mgmt-cls-muted: var(--hub-muted, #64748b);
+  --mgmt-cls-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-cls-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-cls-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  --mgmt-cls-radius: 20px;
+  padding: 0 0 2rem;
+}
+.mgmt-cls-shell {
+  background: var(--mgmt-cls-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+.mgmt-cls-shell--director {
+  --mgmt-cls-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --mgmt-cls-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --mgmt-cls-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --mgmt-cls-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+.mgmt-cls-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.mgmt-cls-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mgmt-cls-muted);
+  margin: 0 0 0.35rem;
+}
+.mgmt-cls-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--mgmt-cls-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.mgmt-cls-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--mgmt-cls-muted);
+  margin: 0;
+}
+.mgmt-cls-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mgmt-cls-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.mgmt-cls-role-badge--director {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+.mgmt-cls-role-badge--admin {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+.mgmt-cls-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+.mgmt-cls-btn--ghost {
+  color: #334155;
+  background: var(--mgmt-cls-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+.mgmt-cls-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--mgmt-cls-accent);
+  color: var(--mgmt-cls-accent-deep);
+}
+.mgmt-cls-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--mgmt-cls-accent), var(--mgmt-cls-accent-deep));
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+}
+.mgmt-cls-btn--primary:hover {
+  color: #fff;
+  filter: brightness(1.05);
+}
+.mgmt-cls-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 768px) {
+  .mgmt-cls-insights { grid-template-columns: repeat(4, 1fr); }
+}
+.mgmt-cls-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--mgmt-cls-surface);
+  border: 1px solid var(--mgmt-cls-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.mgmt-cls-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--mgmt-cls-accent-soft);
+  color: var(--mgmt-cls-accent-deep);
+}
+.mgmt-cls-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mgmt-cls-text);
+  line-height: 1.2;
+}
+.mgmt-cls-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mgmt-cls-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+.mgmt-cls-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+
+CLASSES TAB STYLES ==================== */
+    
+    /* Classes Header */
+.mgmt-cls-content .classes-admin-header {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: #333;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+.mgmt-cls-content .classes-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+.mgmt-cls-content .classes-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+.mgmt-cls-content .btn-classes-add {
+        background: white;
+        color: #ffd700;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .btn-classes-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #ffd700;
+    }
+
+    /* Classes Statistics Cards */
+.mgmt-cls-content .classes-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+.mgmt-cls-content .classes-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-cls-content .classes-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-cls-content .classes-stat-card:nth-child(1) .classes-stat-icon {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+.mgmt-cls-content .classes-stat-card:nth-child(2) .classes-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #0f766e);
+    }
+
+.mgmt-cls-content .classes-stat-card:nth-child(3) .classes-stat-icon {
+        background: linear-gradient(45deg, #f093fb, #f5576c);
+    }
+
+.mgmt-cls-content .classes-stat-card:nth-child(4) .classes-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #14b8a6);
+    }
+
+.mgmt-cls-content .classes-stat-content {
+        flex: 1;
+    }
+
+.mgmt-cls-content .classes-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+.mgmt-cls-content .classes-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Classes Grid Header */
+.mgmt-cls-content .classes-grid-header {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border-left: 4px solid #ffd700;
+    }
+
+.mgmt-cls-content .classes-grid-header h5 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    /* Class Cards */
+.mgmt-cls-content .class-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+.mgmt-cls-content .class-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-cls-content .class-card-header {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+.mgmt-cls-content .class-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: #ffd700;
+        flex-shrink: 0;
+    }
+
+.mgmt-cls-content .class-card-title-section {
+        flex: 1;
+    }
+
+.mgmt-cls-content .class-card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+    }
+
+.mgmt-cls-content .class-card-subject {
+        font-size: 0.85rem;
+        color: rgba(0,0,0,0.7);
+        margin: 0.25rem 0 0 0;
+    }
+
+.mgmt-cls-content .class-card-body {
+        padding: 1.5rem;
+        flex: 1;
+    }
+
+.mgmt-cls-content .class-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+.mgmt-cls-content .class-card-detail:last-child {
+        border-bottom: none;
+    }
+
+.mgmt-cls-content .class-card-detail i {
+        color: #ffd700;
+        width: 24px;
+    }
+
+.mgmt-cls-content .class-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+.mgmt-cls-content .btn-class-action {
+        flex: 1;
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #333;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .btn-class-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        color: #333;
+    }
+
+    /* Classes Empty State */
+.mgmt-cls-content .classes-empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    /* Responsive Design for Classes Tab */
+    @media (max-width: 768px) {
+.mgmt-cls-content .classes-admin-title {
+            font-size: 2rem;
+        }
+        
+.mgmt-cls-content .classes-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+
+    /* ==================== ASSIGNMENTS TAB STYLES ==================== */
+    
+    /* Assignments Header */
+.mgmt-cls-content .assignments-admin-header {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+.mgmt-cls-content .assignments-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+.mgmt-cls-content .assignments-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+.mgmt-cls-content .btn-assignments-add {
+        background: white;
+        color: #0d9488;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .btn-assignments-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #0d9488;
+    }
+
+    /* Assignments Statistics Cards */
+.mgmt-cls-content .assignments-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+.mgmt-cls-content .assignments-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-cls-content .assignments-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-cls-content .assignments-stat-card:nth-child(1) .assignments-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #0f766e);
+    }
+
+.mgmt-cls-content .assignments-stat-card:nth-child(2) .assignments-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+.mgmt-cls-content .assignments-stat-card:nth-child(3) .assignments-stat-icon {
+        background: linear-gradient(45deg, #fa709a, #fee140);
+    }
+
+.mgmt-cls-content .assignments-stat-card:nth-child(4) .assignments-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #14b8a6);
+    }
+
+.mgmt-cls-content .assignments-stat-content {
+        flex: 1;
+    }
+
+.mgmt-cls-content .assignments-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+.mgmt-cls-content .assignments-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Assignments Table Card */
+.mgmt-cls-content .assignments-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+.mgmt-cls-content .assignments-table-header {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+.mgmt-cls-content .assignments-table-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+.mgmt-cls-content .assignments-table-view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+.mgmt-cls-content .btn-assignments-view {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 0.375rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-assignments-view:hover,
+.mgmt-cls-content .btn-assignments-view.active {
+        background: white;
+        color: #0d9488;
+    }
+
+.mgmt-cls-content .assignments-table-body {
+        padding: 1.5rem;
+    }
+
+.mgmt-cls-content .assignments-table-body .table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        border-bottom: 2px solid #0d9488;
+        padding: 1rem;
+    }
+
+.mgmt-cls-content .assignments-table-body .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .assignments-table-body .table tbody tr:hover {
+        background: #f8f9fa;
+        transform: scale(1.01);
+    }
+
+    /* Assignments Cards View */
+.mgmt-cls-content .assignments-cards-body {
+        padding: 1.5rem;
+    }
+
+.mgmt-cls-content .assignment-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+.mgmt-cls-content .assignment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-cls-content .assignment-card-header {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+.mgmt-cls-content .assignment-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: #0d9488;
+    }
+
+.mgmt-cls-content .assignment-card-body {
+        padding: 1.5rem;
+        flex: 1;
+    }
+
+.mgmt-cls-content .assignment-card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+
+.mgmt-cls-content .assignment-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+.mgmt-cls-content .assignment-card-detail:last-child {
+        border-bottom: none;
+    }
+
+.mgmt-cls-content .assignment-card-detail i {
+        color: #0d9488;
+        width: 24px;
+    }
+
+.mgmt-cls-content .assignment-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+.mgmt-cls-content .btn-assignment-action {
+        flex: 1;
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .btn-assignment-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+.mgmt-cls-content .btn-assignment-action-delete {
+        flex: 1;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .btn-assignment-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Assignments Empty State */
+.mgmt-cls-content .assignments-empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    /* Responsive Design for Assignments Tab */
+    @media (max-width: 768px) {
+.mgmt-cls-content .assignments-admin-title {
+            font-size: 2rem;
+        }
+        
+.mgmt-cls-content .assignments-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+.mgmt-cls-content .assignments-table-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    /* ==================== ATTENDANCE TAB STYLES ==================== */
+    
+    /* Attendance Header */
+.mgmt-cls-content .attendance-admin-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+.mgmt-cls-content .attendance-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+.mgmt-cls-content .attendance-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+.mgmt-cls-content .btn-attendance-unified {
+        background: white;
+        color: #f093fb;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .btn-attendance-unified:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #f093fb;
+    }
+
+    /* Attendance Statistics Cards */
+.mgmt-cls-content .attendance-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+.mgmt-cls-content .attendance-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-cls-content .attendance-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-cls-content .attendance-stat-card:nth-child(1) .attendance-stat-icon {
+        background: linear-gradient(45deg, #f093fb, #f5576c);
+    }
+
+.mgmt-cls-content .attendance-stat-card:nth-child(2) .attendance-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+.mgmt-cls-content .attendance-stat-card:nth-child(3) .attendance-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #14b8a6);
+    }
+
+.mgmt-cls-content .attendance-stat-card:nth-child(4) .attendance-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #0f766e);
+    }
+
+.mgmt-cls-content .attendance-stat-content {
+        flex: 1;
+    }
+
+.mgmt-cls-content .attendance-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+.mgmt-cls-content .attendance-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Attendance Classes Card */
+.mgmt-cls-content .attendance-classes-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+    }
+
+.mgmt-cls-content .attendance-classes-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+    }
+
+.mgmt-cls-content .attendance-classes-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+.mgmt-cls-content .attendance-classes-body {
+        padding: 1.5rem;
+    }
+
+.mgmt-cls-content .attendance-classes-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+.mgmt-cls-content .attendance-class-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px solid transparent;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .attendance-class-item:hover {
+        background: white;
+        border-color: #f093fb;
+        transform: translateX(5px);
+        box-shadow: 0 5px 20px rgba(240, 147, 251, 0.2);
+    }
+
+.mgmt-cls-content .attendance-class-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-cls-content .attendance-class-info {
+        flex: 1;
+    }
+
+.mgmt-cls-content .attendance-class-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0 0 0.25rem 0;
+    }
+
+.mgmt-cls-content .attendance-class-subject {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin: 0 0 0.5rem 0;
+    }
+
+.mgmt-cls-content .attendance-class-meta {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+.mgmt-cls-content .attendance-class-action {
+        font-size: 1.5rem;
+        color: #f093fb;
+    }
+
+.mgmt-cls-content .attendance-empty-message {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    /* Attendance Reports Card */
+.mgmt-cls-content .attendance-reports-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+    }
+
+.mgmt-cls-content .attendance-reports-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+    }
+
+.mgmt-cls-content .attendance-reports-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+.mgmt-cls-content .attendance-reports-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+.mgmt-cls-content .attendance-report-btn {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        background: #f8f9fa;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-cls-content .attendance-report-btn:hover {
+        background: white;
+        border-color: #43e97b;
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(67, 233, 123, 0.2);
+        color: #43e97b;
+    }
+
+.mgmt-cls-content .attendance-report-btn i:first-child {
+        color: #43e97b;
+    }
+
+.mgmt-cls-content .attendance-report-btn i:last-child {
+        color: #43e97b;
+    }
+
+    /* Responsive Design for Attendance Tab */
+    @media (max-width: 768px) {
+.mgmt-cls-content .attendance-admin-title {
+            font-size: 2rem;
+        }
+        
+.mgmt-cls-content .attendance-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+
+.mgmt-cls-content .toast {
+    min-width: 300px;
+  }
+  
+.mgmt-cls-content .student-details-placeholder {
+    min-height: 200px;
+  }
+  
+  /* Enhanced Edit Modal Form Styles */
+  #profileEditModal .form-control:focus,
+.mgmt-cls-content #profileEditModal .form-select:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    outline: none;
+  }
+
+.mgmt-cls-content #profileEditModal .form-check:hover {
+    border-color: #0d9488 !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+  }
+
+.mgmt-cls-content #profileEditModal .form-check-input:checked {
+    background-color: #0d9488;
+    border-color: #0d9488;
+  }
+
+.mgmt-cls-content #profileEditModal .form-check-input:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  }
+
+.mgmt-cls-content #profileEditModal .card {
+    transition: all 0.3s ease;
+  }
+
+.mgmt-cls-content #profileEditModal .card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  }
+
+  /* Grade Checkbox Box Styles */
+.mgmt-cls-content #profileEditModal .grade-checkbox-box {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+.mgmt-cls-content #profileEditModal .grade-checkbox-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+
+.mgmt-cls-content #profileEditModal .grade-checkbox-box:active {
+    transform: translateY(0);
+  }
+
+  @keyframes fadeOutRight {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100px);
+    }
+  }
+
+/* ===== ENHANCED_CLASSES STYLES ===== */
+/* Extracted from: templates\management\enhanced_classes.html */
+
+/* Google Classroom Status Badge */
+.mgmt-cls-content .google-status-badge-modern {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.mgmt-cls-content .google-status-badge-modern .badge {
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Google Classroom action buttons — pill style (matches View/Edit/Roster/Grades) */
+.mgmt-cls-content .btn-google-open-modern,
+.mgmt-cls-content .btn-google-link-modern,
+.mgmt-cls-content .btn-google-create-modern,
+.mgmt-cls-content .btn-google-unlink-modern {
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-height: 36px;
+    padding: 0.45rem 0.85rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: none;
+}
+
+.mgmt-cls-content .btn-google-open-modern,
+.mgmt-cls-content .btn-google-link-modern,
+.mgmt-cls-content .btn-google-create-modern {
+    background: #fff;
+    color: var(--mgmt-cls-accent-deep);
+    border: 1px solid rgba(13, 148, 136, 0.4);
+}
+
+.mgmt-cls-content .btn-google-open-modern:hover,
+.mgmt-cls-content .btn-google-link-modern:hover,
+.mgmt-cls-content .btn-google-create-modern:hover {
+    background: var(--mgmt-cls-accent-soft);
+    color: var(--mgmt-cls-accent-deep);
+    border-color: var(--mgmt-cls-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(13, 148, 136, 0.15);
+}
+
+.mgmt-cls-content .btn-google-unlink-modern {
+    background: #fff;
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.mgmt-cls-content .btn-google-unlink-modern:hover {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #f87171;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.12);
+}
+
+/* ===== Class cards — management hub palette (overrides global yellow) ===== */
+
+.mgmt-cls-content .enhanced-filters .card {
+  background: var(--mgmt-cls-surface);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.mgmt-cls-content .enhanced-filters .form-control,
+.mgmt-cls-content .enhanced-filters .form-select,
+.mgmt-cls-content .enhanced-filters .input-group-text {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.mgmt-cls-content .enhanced-filters .btn-primary {
+  background: linear-gradient(135deg, var(--mgmt-cls-accent), var(--mgmt-cls-accent-deep));
+  border-color: var(--mgmt-cls-accent-deep);
+}
+
+.mgmt-cls-content .classes-grid-header {
+  background: var(--mgmt-cls-surface);
+  border: 1px solid var(--mgmt-cls-border);
+  border-left: 4px solid var(--mgmt-cls-accent);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.mgmt-cls-content .classes-grid-header h5 {
+  color: var(--mgmt-cls-text);
+  font-weight: 700;
+}
+
+.mgmt-cls-content .mgmt-cls-grid > .class-card,
+.mgmt-cls-content .mgmt-cls-grid > .mgmt-cls-grid-item {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: default;
+  padding: 0;
+}
+
+.mgmt-cls-content .mgmt-cls-grid > .class-card:hover,
+.mgmt-cls-content .mgmt-cls-grid > .mgmt-cls-grid-item:hover {
+  transform: none;
+  box-shadow: none !important;
+}
+
+.mgmt-cls-content .class-card-modern {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  height: auto;
+  overflow: hidden;
+}
+
+.mgmt-cls-content .class-card-modern:hover {
+  transform: translateY(-3px);
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.mgmt-cls-content .class-card-header-modern {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.14) 0%, rgba(20, 184, 166, 0.08) 100%);
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.12);
+}
+
+.mgmt-cls .class-card-header-modern::before,
+.mgmt-cls .class-card-header-modern::after {
+  display: none !important;
+  content: none !important;
+}
+
+.mgmt-cls-content .class-card-icon-modern {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--mgmt-cls-accent-soft);
+  color: var(--mgmt-cls-accent-deep);
+  box-shadow: none;
+  font-size: 1.15rem;
+}
+
+.mgmt-cls-content .class-card-title-modern {
+  color: var(--mgmt-cls-text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-shadow: none;
+  line-height: 1.3;
+}
+
+.mgmt-cls-content .class-card-subject-modern {
+  color: var(--mgmt-cls-muted);
+  font-size: 0.82rem;
+}
+
+.mgmt-cls-content .class-card-body-modern {
+  padding: 1rem 1.25rem 1.1rem;
+  background: #fff;
+  gap: 0.5rem;
+}
+
+.mgmt-cls-content .class-card-detail-modern {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid var(--mgmt-cls-accent);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.mgmt-cls-content .class-card-detail-modern:hover {
+  background: #f1f5f9;
+  transform: none;
+}
+
+.mgmt-cls-content .class-card-detail-modern i {
+  color: var(--mgmt-cls-accent);
+  width: 1.1rem;
+  margin-top: 0.1rem;
+}
+
+.mgmt-cls-content .google-status-badge-modern {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+}
+
+.mgmt-cls-content .google-status-badge-modern .badge {
+  animation: none;
+}
+
+.mgmt-cls-content .class-card-footer-modern {
+  padding: 0.85rem 1.25rem 1rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.mgmt-cls-content .btn-class-action-modern {
+  background: var(--mgmt-cls-surface);
+  color: var(--mgmt-cls-accent-deep);
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: none;
+  min-height: 36px;
+}
+
+.mgmt-cls-content .btn-class-action-modern:hover {
+  background: var(--mgmt-cls-accent-soft);
+  color: var(--mgmt-cls-accent-deep);
+  border-color: var(--mgmt-cls-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.15);
+}
+
+.mgmt-cls-content .btn-class-action-delete {
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.mgmt-cls-content .btn-class-action-delete:hover {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #f87171;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.12);
+}
+
+.mgmt-cls-content .classes-empty-state {
+  background: var(--mgmt-cls-surface);
+  border: 1px solid var(--mgmt-cls-border);
+  border-radius: 18px;
+}
+
+/* Director: purple accent on cards */
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-modern:hover {
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.1);
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-header-modern {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%);
+  border-bottom-color: rgba(124, 58, 237, 0.12);
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-icon-modern,
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-detail-modern i {
+  color: #6d28d9;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-icon-modern {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-detail-modern {
+  border-left-color: #7c3aed;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .classes-grid-header {
+  border-left-color: #7c3aed;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .btn-class-action-modern {
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.35);
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .btn-class-action-modern:hover {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: #7c3aed;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.12);
+}
+
+/* Grid & card spacing */
+.mgmt-cls-content .mgmt-cls-grid {
+  --bs-gutter-x: 1.75rem;
+  --bs-gutter-y: 1.75rem;
+}
+
+.mgmt-cls-content .mgmt-cls-grid > .class-card {
+  margin-bottom: 0;
+}
+
+.mgmt-cls-content .mgmt-cls-grid .class-card-modern {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.mgmt-cls-content .class-card-body-modern {
+  padding: 1.25rem 1.35rem 1.35rem !important;
+  gap: 0.65rem !important;
+}
+
+.mgmt-cls-content .class-card-detail-modern {
+  margin-bottom: 0 !important;
+  padding: 0.65rem 0.85rem !important;
+}
+
+.mgmt-cls-content .class-card-footer-modern {
+  padding: 1.1rem 1.35rem 1.35rem !important;
+  margin-top: auto;
+}
+
+.mgmt-cls-content .class-card-footer-modern .row {
+  --bs-gutter-x: 0.75rem;
+  --bs-gutter-y: 0.75rem;
+}
+
+.mgmt-cls-content .mgmt-cls-badge-unlinked {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+}
+
+/* Force hub palette over global components.css (yellow) */
+.mgmt-cls .mgmt-cls-content .class-card-header-modern {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.14) 0%, rgba(20, 184, 166, 0.08) 100%) !important;
+  overflow: hidden;
+}
+
+.mgmt-cls .mgmt-cls-content .class-card-icon-modern {
+  background: var(--mgmt-cls-accent-soft) !important;
+  color: var(--mgmt-cls-accent-deep) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Students + assignments stat boxes */
+.mgmt-cls-content .mgmt-cls-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.mgmt-cls-content .mgmt-cls-mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.mgmt-cls-content .mgmt-cls-mini-stat-icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mgmt-cls-accent-soft);
+  color: var(--mgmt-cls-accent-deep);
+  font-size: 0.95rem;
+}
+
+.mgmt-cls-content .mgmt-cls-mini-stat-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--mgmt-cls-text);
+  line-height: 1.1;
+}
+
+.mgmt-cls-content .mgmt-cls-mini-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--mgmt-cls-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.1rem;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .mgmt-cls-mini-stat-icon {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
+.mgmt-cls .mgmt-cls-content .class-card-detail-modern {
+  border-left-color: var(--mgmt-cls-accent) !important;
+}
+
+.mgmt-cls .mgmt-cls-content .class-card-detail-modern i {
+  color: var(--mgmt-cls-accent) !important;
+}
+
+.mgmt-cls .mgmt-cls-content .btn-class-action-modern,
+.mgmt-cls .mgmt-cls-content button.btn-class-action-modern {
+  background: #fff !important;
+  color: var(--mgmt-cls-accent-deep) !important;
+  border: 1px solid rgba(13, 148, 136, 0.4) !important;
+  box-shadow: none !important;
+}
+
+.mgmt-cls .mgmt-cls-content .btn-class-action-modern:hover,
+.mgmt-cls .mgmt-cls-content button.btn-class-action-modern:hover {
+  background: var(--mgmt-cls-accent-soft) !important;
+  color: var(--mgmt-cls-accent-deep) !important;
+  border-color: var(--mgmt-cls-accent) !important;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .class-card-header-modern {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%) !important;
+}
+
+.mgmt-cls .mgmt-cls-content .btn-google-open-modern,
+.mgmt-cls .mgmt-cls-content .btn-google-link-modern,
+.mgmt-cls .mgmt-cls-content .btn-google-create-modern {
+  background: #fff !important;
+  color: var(--mgmt-cls-accent-deep) !important;
+  border: 1px solid rgba(13, 148, 136, 0.4) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+.mgmt-cls .mgmt-cls-content .btn-google-unlink-modern {
+  background: #fff !important;
+  color: #b91c1c !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .btn-google-open-modern,
+.mgmt-cls-shell--director .mgmt-cls-content .btn-google-link-modern,
+.mgmt-cls-shell--director .mgmt-cls-content .btn-google-create-modern {
+  color: #6d28d9 !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+}
+
+.mgmt-cls-shell--director .mgmt-cls-content .btn-google-open-modern:hover,
+.mgmt-cls-shell--director .mgmt-cls-content .btn-google-link-modern:hover,
+.mgmt-cls-shell--director .mgmt-cls-content .btn-google-create-modern:hover {
+  background: rgba(124, 58, 237, 0.1) !important;
+  border-color: #7c3aed !important;
+}

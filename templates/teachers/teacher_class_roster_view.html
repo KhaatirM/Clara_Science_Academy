@@ -4,6 +4,18 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/assistant_approval.css') }}">
 {% endblock %}
 
+{# 3rd grade standards eligibility — mirrors role_classes.html #}
+{% set _g3_levels = class_item.get_grade_levels() or [] %}
+{% set _g3_subject = (class_item.subject or '')|lower %}
+{% set _g3_eligible = (3 in _g3_levels)
+    and (('math' in _g3_subject)
+         or ('language' in _g3_subject)
+         or ('reading' in _g3_subject)
+         or ('english' in _g3_subject)
+         or ('ela' in _g3_subject)
+         or ('literacy' in _g3_subject)) %}
+{% set _g3_available = _g3_eligible and ('teacher.grade3_standards.grade3_standards_editor' in current_app.view_functions) %}
+
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
   <!-- Modern Header -->
@@ -197,6 +209,13 @@
                   <i class="bi bi-people me-1"></i>Manage Groups
                 </a>
               </div>
+              {% if _g3_available %}
+              <div class="col-12">
+                <a href="{{ url_for('teacher.grade3_standards.grade3_standards_editor', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                  <i class="bi bi-check2-square me-1"></i>3rd Grade Standards
+                </a>
+              </div>
+              {% endif %}
               <div class="col-12">
                 <button type="button" class="btn-teacher-class-action w-100 border-0" data-bs-toggle="modal" data-bs-target="#classAnnouncementModal">
                   <i class="bi bi-megaphone me-1"></i>Announcements

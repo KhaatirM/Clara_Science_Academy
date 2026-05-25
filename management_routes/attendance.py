@@ -326,7 +326,7 @@ def mark_all_present(class_id):
 
         db.session.commit()
         flash('All students marked as present!', 'success')
-        return redirect(url_for('management.unified_attendance', date=date_str))
+        return redirect(url_for('management.unified_attendance', class_date=date_str, date=date_str))
 
     except ValueError:
         flash("Invalid date format.", "danger")
@@ -359,8 +359,8 @@ def unified_attendance():
         
         attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
         
-        # Get all students
-        students = Student.query.all()
+        from utils.student_roster import active_roster_students_query
+        students = active_roster_students_query(require_active_enrollment=True).all()
         
         # Process attendance records
         updated_count = 0
@@ -437,8 +437,12 @@ def unified_attendance():
         selected_date = datetime.now().date()
         selected_date_str = selected_date.strftime('%Y-%m-%d')
     
-    # Get all students
-    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    from utils.student_roster import active_roster_students_query
+    students = (
+        active_roster_students_query(require_active_enrollment=True)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     
     # End-of-day automark: if viewing today and it's >= 3:30 PM (school time), mark unrecorded students as Unexcused Absence
     try:
@@ -573,8 +577,8 @@ def school_day_attendance():
         
         attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
         
-        # Get all students
-        students = Student.query.all()
+        from utils.student_roster import active_roster_students_query
+        students = active_roster_students_query(require_active_enrollment=True).all()
         
         # Process attendance records
         updated_count = 0
@@ -635,8 +639,12 @@ def school_day_attendance():
         selected_date = datetime.now().date()
         selected_date_str = selected_date.strftime('%Y-%m-%d')
     
-    # Get all students
-    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    from utils.student_roster import active_roster_students_query
+    students = (
+        active_roster_students_query(require_active_enrollment=True)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     
     # Get existing attendance records for the selected date
     existing_records = {}
@@ -884,7 +892,12 @@ def _attendance_reports_context(request, form_action=None, embed_tab=False):
         page = 1
         pagination = _paginate_reports(page)
 
-    all_students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    from utils.student_roster import active_roster_students_query
+    all_students = (
+        active_roster_students_query(require_active_enrollment=True)
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
     all_classes = Class.query.order_by(Class.name).all()
 
     if not form_action:

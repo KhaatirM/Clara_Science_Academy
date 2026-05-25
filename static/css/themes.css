@@ -1,6 +1,7 @@
 /* ===== SITE THEMES =====
  * Applied via body class: theme-default, theme-light, theme-dark, theme-snowy, etc.
  * Tech can set site_theme_override so everyone sees the same theme.
+ * Hub layouts (management, teacher, student, schedule, calendar) use tokens in hub_themes.css.
  */
 
 /* ---------------------------------------------------------------------------

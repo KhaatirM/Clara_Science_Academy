@@ -1,0 +1,31 @@
+{# Renders one subject standards table (Language Arts or Math). The page wrapper is owned by the parent template. #}
+{% macro render_grade3_standards_table(subject, marks, quarter_columns) %}
+<h2 class="grade3-subject-title">{{ subject.title }}</h2>
+<table class="rc-table rc-table--compact rc-standards-table">
+  <thead>
+    <tr>
+      <th class="rc-standards-desc-col">Standard Description</th>
+      <th>1st Q</th>
+      <th>2nd Q</th>
+      <th>3rd Q</th>
+      <th>4th Q</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for section in subject.sections %}
+    <tr class="rc-standards-section{% if not section.title %} rc-standards-section--blank{% endif %}">
+      <td colspan="5">{% if section.title %}{{ section.title }}{% endif %}&nbsp;</td>
+    </tr>
+    {% for std in section.standards %}
+    {% set std_marks = marks.get(std.id, {}) if marks else {} %}
+    <tr>
+      <td>{{ std.text }}</td>
+      {% for q in quarter_columns %}
+      <td class="rc-center">{{ std_marks.get(q, '') }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}

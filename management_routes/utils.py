@@ -348,22 +348,55 @@ def calculate_student_gpa(student_id):
         return 0.0
 
 def add_academic_periods_for_year(school_year_id):
-    """Create default academic periods for a school year"""
+    """
+    Create default Q1–Q4 academic periods for a school year.
+
+    Divides the span from ``start_date`` to ``end_date`` into four roughly
+    equal quarters. Each quarter starts the day after the previous quarter
+    ends, except Q1 which begins on ``start_date``. Q4 always ends exactly
+    on ``end_date`` (so any rounding remainder lands in Q4).
+
+    Works for ANY start/end month — previously this assumed ``start_date.month``
+    was ≤ 3 (which crashed for August/September starts on Q2's invalid month).
+    """
+    from datetime import date, timedelta
     from models import AcademicPeriod, SchoolYear, db
-    
-    # Get the school year to extract start and end dates
+
     school_year = SchoolYear.query.get(school_year_id)
-    if not school_year:
+    if not school_year or not school_year.start_date or not school_year.end_date:
         return
-    
-    # Create quarters (Q1, Q2, Q3, Q4)
+
+    sy_start = school_year.start_date
+    sy_end = school_year.end_date
+
+    total_days = (sy_end - sy_start).days
+    if total_days < 4:
+        # Year span too short to chop into four — give up and let the admin
+        # add periods by hand from Settings.
+        return
+
+    # Quarter length is total_days // 4, with the remainder absorbed by Q4.
+    quarter_len = total_days // 4
+
+    q1_start = sy_start
+    q1_end = sy_start + timedelta(days=quarter_len - 1)
+
+    q2_start = q1_end + timedelta(days=1)
+    q2_end = q2_start + timedelta(days=quarter_len - 1)
+
+    q3_start = q2_end + timedelta(days=1)
+    q3_end = q3_start + timedelta(days=quarter_len - 1)
+
+    q4_start = q3_end + timedelta(days=1)
+    q4_end = sy_end  # absorb the rounding remainder
+
     quarters = [
-        ('Q1', date(school_year.start_date.year, school_year.start_date.month, 1), date(school_year.start_date.year, school_year.start_date.month + 2, 28)),
-        ('Q2', date(school_year.start_date.year, school_year.start_date.month + 3, 1), date(school_year.start_date.year, school_year.start_date.month + 5, 30)),
-        ('Q3', date(school_year.start_date.year, school_year.start_date.month + 6, 1), date(school_year.start_date.year, school_year.start_date.month + 8, 30)),
-        ('Q4', date(school_year.start_date.year, school_year.start_date.month + 9, 1), date(school_year.end_date.year, school_year.end_date.month, school_year.end_date.day))
+        ('Q1', q1_start, q1_end),
+        ('Q2', q2_start, q2_end),
+        ('Q3', q3_start, q3_end),
+        ('Q4', q4_start, q4_end),
     ]
-    
+
     for name, start_date, end_date in quarters:
         period = AcademicPeriod(
             school_year_id=school_year_id,
@@ -371,10 +404,10 @@ def add_academic_periods_for_year(school_year_id):
             period_type='quarter',
             start_date=start_date,
             end_date=end_date,
-            is_active=True
+            is_active=True,
         )
         db.session.add(period)
-    
+
     db.session.commit()
 
 

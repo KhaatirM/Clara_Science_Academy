@@ -1,6 +1,55 @@
 /* ===== MODERN CALENDAR STYLES ===== */
 /* Complete redesign with modern UI, gradients, and enhanced interactions */
 
+/* Hub shells: calendar grid accents follow hub_themes.css (--hub-cal-accent on body / .rh / .sch) */
+.mgmt-cal .calendar-header {
+  border-bottom-color: var(--mgmt-cal-accent, var(--hub-cal-accent, #0d9488)) !important;
+}
+
+.rh .calendar-header {
+  border-bottom-color: var(--hub-cal-accent, #0d9488) !important;
+}
+
+.mgmt-cal .calendar-day-today .day-number {
+  color: var(--mgmt-cal-accent-deep, var(--hub-cal-accent-deep, #0f766e)) !important;
+}
+
+.rh .calendar-day-today .day-number {
+  color: var(--hub-cal-accent-deep, #0f766e) !important;
+}
+
+.mgmt-cal .calendar-day-today .cal-day-today-pill {
+  background: linear-gradient(
+    135deg,
+    var(--mgmt-cal-accent, var(--hub-cal-accent, #0d9488)) 0%,
+    var(--mgmt-cal-accent-deep, var(--hub-cal-accent-deep, #0f766e)) 100%
+  ) !important;
+}
+
+.rh .calendar-day-today .cal-day-today-pill {
+  background: linear-gradient(
+    135deg,
+    var(--hub-cal-accent, #0d9488) 0%,
+    var(--hub-cal-accent-deep, #0f766e) 100%
+  ) !important;
+}
+
+#eventDetailsModal .modal-header.cal-modal-header-themed {
+  background: linear-gradient(
+    135deg,
+    var(--hub-cal-accent, #667eea) 0%,
+    var(--hub-cal-accent-deep, #764ba2) 100%
+  ) !important;
+}
+
+#eventDetailsModal .cal-modal-badge-themed {
+  background: linear-gradient(
+    135deg,
+    var(--hub-cal-accent, #667eea) 0%,
+    var(--hub-cal-accent-deep, #764ba2) 100%
+  ) !important;
+}
+
 .bg-gradient-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }

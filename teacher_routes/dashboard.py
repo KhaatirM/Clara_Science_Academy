@@ -462,14 +462,14 @@ def my_classes():
                 current_app.logger.error(f"Error calculating enrollment count for class {class_obj.id}: {e}")
                 class_obj.active_student_count = 0
     
-        return render_template('management/role_classes.html', classes=classes, teacher=teacher)
+        return render_template('management/role_classes.html', classes=classes, teacher=teacher, use_teacher_hub=True)
     
     except Exception as e:
         current_app.logger.error(f"Error in my_classes route: {e}")
         import traceback
         current_app.logger.error(traceback.format_exc())
         flash("An error occurred while loading your classes.", "danger")
-        return render_template('management/role_classes.html', classes=[], teacher=None)
+        return render_template('management/role_classes.html', classes=[], teacher=None, use_teacher_hub=True)
 
 @bp.route('/deadline-reminders')
 @login_required
@@ -692,7 +692,10 @@ def my_students():
     
     # Directors and School Administrators see all students, teachers only see students in their classes
     if is_admin():
-        students = list(Student.query.all())
+        from utils.student_roster import active_roster_students_query
+        students = list(
+            active_roster_students_query(require_active_enrollment=True).all()
+        )
         students.sort(key=lambda s: ((s.last_name or '').lower(), (s.first_name or '').lower()))
     else:
         # Check if teacher object exists
@@ -1485,6 +1488,7 @@ def resources():
 def calendar():
     """Display the school calendar (same design and data as students/admins)."""
     from management_routes.calendar import get_academic_dates_for_calendar
+    from models import SchoolYear
 
     month = request.args.get('month', datetime.now().month, type=int)
     year = request.args.get('year', datetime.now().year, type=int)
@@ -1524,6 +1528,8 @@ def calendar():
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
         calendar_data['weeks'].append(week_data)
 
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+
     return render_template('shared/calendar.html',
                          calendar_data=calendar_data,
                          prev_month=prev_month,
@@ -1531,6 +1537,7 @@ def calendar():
                          month_name=month_name,
                          year=year,
                          month=month,
+                         active_school_year=active_school_year,
                          work_days=[],
                          breaks=[],
                          open_modal='',
@@ -1571,51 +1578,22 @@ def teacher_schedule():
                     classes.append(c)
                     all_class_ids.add(c.id)
     
-    # Get full weekly schedule (Monday=0 to Sunday=6)
-    weekly_schedule = {}
-    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    
-    for day_num in range(7):
-        day_schedules = []
-        for class_obj in classes:
-            schedule = ClassSchedule.query.filter_by(
-                class_id=class_obj.id,
-                day_of_week=day_num
-            ).first()
-            
-            if schedule:
-                # Count enrolled students
-                from models import Enrollment
-                student_count = Enrollment.query.filter_by(
-                    class_id=class_obj.id,
-                    is_active=True
-                ).count()
-                
-                day_schedules.append({
-                    'class': class_obj,
-                    'start_time': schedule.start_time,
-                    'end_time': schedule.end_time,
-                    'time_str': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
-                    'room': schedule.room or 'TBD',
-                    'student_count': student_count
-                })
-        
-        # Sort by start time
-        day_schedules.sort(key=lambda x: x['start_time'])
-        weekly_schedule[day_num] = {
-            'day_name': day_names[day_num],
-            'schedules': day_schedules
-        }
-    
-    # Get today's weekday for highlighting
+    from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
+
+    weekly_schedule = build_weekly_schedule(classes, role='teacher')
+    weekly_schedule, today_weekday, schedule_insights, schedule_grid = finalize_schedule_view(weekly_schedule)
     today = datetime.now()
-    today_weekday = today.weekday()
-    
-    return render_template('shared/schedule.html',
-                         weekly_schedule=weekly_schedule,
-                         today_weekday=today_weekday,
-                         schedule_role='teacher',
-                         teacher=teacher)
+
+    return render_template(
+        'shared/schedule.html',
+        weekly_schedule=weekly_schedule,
+        today_weekday=today_weekday,
+        schedule_insights=schedule_insights,
+        schedule_grid=schedule_grid,
+        schedule_role='teacher',
+        teacher=teacher,
+        today_date_display=today.strftime('%A, %B %d, %Y'),
+    )
 
 
 # ===== GOOGLE CLASSROOM LINKING ROUTES =====
@@ -1816,6 +1794,13 @@ def view_student_details_data(student_id):
         if not student:
             print(f"[Teacher Details] Student {student_id} not found")
             return jsonify({'success': False, 'error': 'Student not found'}), 404
+
+        from utils.student_roster import student_is_on_active_roster
+        if not student_is_on_active_roster(student):
+            return jsonify({
+                'success': False,
+                'error': 'This student is no longer on the active school roster.',
+            }), 404
         
         print(f"[Teacher Details] Found student: {student.first_name} {student.last_name}")
         

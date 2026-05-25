@@ -1,106 +1,206 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block title %}{% if schedule_role == 'teacher' %}My schedule{% else %}My schedule{% endif %}{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/students_role_student_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_schedule.css') }}?v=2">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <!-- Schedule Header - same idea for teachers and students -->
-    <div class="student-schedule-header mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <h2 class="student-schedule-title mb-1">
-                    <i class="bi bi-calendar-week-fill me-2"></i>
-                    {% if schedule_role == 'teacher' %}My Weekly Schedule{% else %}My Schedule{% endif %}
-                </h2>
-                <p class="student-schedule-subtitle mb-0">
-                    <i class="bi bi-clock me-2"></i>
-                    {% if schedule_role == 'teacher' %}
-                    Your class times — set in Classes → Edit class → Schedule.
-                    {% else %}
-                    Your class times — set by your school in the class schedule.
-                    {% endif %}
-                </p>
-            </div>
+{% set is_teacher = schedule_role == 'teacher' %}
+{% set today_data = weekly_schedule[today_weekday] if weekly_schedule and today_weekday in weekly_schedule else none %}
+{% set today_label = today_data.day_name if today_data else 'Today' %}
+{% set has_any = schedule_insights.total_blocks > 0 if schedule_insights is defined else false %}
+
+<div class="sch sch--{{ schedule_role }} container-fluid px-0 px-md-1 py-2">
+  <div class="sch-shell">
+    <header class="sch-hero">
+      <div>
+        <p class="sch-eyebrow">Weekly planner</p>
+        <h1 class="sch-title">{% if is_teacher %}My weekly schedule{% else %}My schedule{% endif %}</h1>
+        <p class="sch-subtitle">
+          <i class="bi bi-calendar-week" aria-hidden="true"></i>
+          {% if is_teacher %}
+          Class times for every day of the week — set by your school in each class profile.
+          {% if teacher and teacher.first_name %}
+          <span class="d-block mt-1" style="font-size:0.85rem;">{{ teacher.first_name }} {{ teacher.last_name }}</span>
+          {% endif %}
+          {% else %}
+          Your enrolled classes, times, rooms, and teachers for the full week.
+          {% endif %}
+        </p>
+      </div>
+      <div class="sch-hero-actions">
+        <span class="sch-role-badge sch-role-badge--{{ schedule_role }}">
+          <i class="bi bi-{% if is_teacher %}mortarboard-fill{% else %}person-badge-fill{% endif %}"></i>
+          {% if is_teacher %}Teacher{% else %}Student{% endif %}
+        </span>
+        {% if is_teacher %}
+        <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="sch-btn sch-btn--ghost">
+          <i class="bi bi-collection"></i> My classes
+        </a>
+        {% else %}
+        <a href="{{ url_for('student.student_school_calendar') }}" class="sch-btn sch-btn--ghost">
+          <i class="bi bi-calendar-event"></i> School calendar
+        </a>
+        {% endif %}
+      </div>
+    </header>
+
+    {% if has_any %}
+    <div class="sch-insights" role="list">
+      <div class="sch-insight" role="listitem">
+        <span class="sch-insight-icon"><i class="bi bi-sun"></i></span>
+        <div>
+          <div class="sch-insight-value">{{ schedule_insights.today_blocks }}</div>
+          <div class="sch-insight-label">Classes today</div>
         </div>
+      </div>
+      <div class="sch-insight" role="listitem">
+        <span class="sch-insight-icon"><i class="bi bi-calendar-check"></i></span>
+        <div>
+          <div class="sch-insight-value">{{ schedule_insights.total_blocks }}</div>
+          <div class="sch-insight-label">Blocks this week</div>
+        </div>
+      </div>
+      <div class="sch-insight" role="listitem">
+        <span class="sch-insight-icon"><i class="bi bi-calendar3"></i></span>
+        <div>
+          <div class="sch-insight-value">{{ schedule_insights.active_days }}</div>
+          <div class="sch-insight-label">Days with classes</div>
+        </div>
+      </div>
+      <div class="sch-insight" role="listitem">
+        <span class="sch-insight-icon"><i class="bi bi-book"></i></span>
+        <div>
+          <div class="sch-insight-value">{{ schedule_insights.unique_classes }}</div>
+          <div class="sch-insight-label">{% if is_teacher %}Classes teaching{% else %}Enrolled classes{% endif %}</div>
+        </div>
+      </div>
     </div>
 
-    {% if weekly_schedule %}
-    <div class="schedule-container">
-        <div class="row g-3">
-            {% for day_num in range(7) %}
-            {% set day_data = weekly_schedule[day_num] %}
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="schedule-day-card {% if day_num == today_weekday %}today{% endif %}">
-                    <div class="schedule-day-header">
-                        <h5 class="mb-0">
-                            <i class="bi bi-calendar3 me-2"></i>{{ day_data.day_name }}
-                            {% if day_num == today_weekday %}
-                            <span class="badge bg-primary ms-2">Today</span>
-                            {% endif %}
-                        </h5>
-                    </div>
-                    <div class="schedule-day-body">
-                        {% if day_data.schedules %}
-                            {% for schedule_item in day_data.schedules %}
-                            <div class="schedule-item">
-                                <div class="schedule-item-header">
-                                    <h6 class="mb-1">
-                                        <i class="bi bi-book-fill me-2"></i>{{ schedule_item.class.name }}
-                                    </h6>
-                                    <span class="badge bg-info">{{ schedule_item.class.subject or 'General' }}</span>
-                                </div>
-                                <div class="schedule-item-details">
-                                    <div class="schedule-detail">
-                                        <i class="bi bi-clock me-2"></i>
-                                        <span>{{ schedule_item.time_str }}</span>
-                                    </div>
-                                    <div class="schedule-detail">
-                                        <i class="bi bi-geo-alt me-2"></i>
-                                        <span>Room: {{ schedule_item.room }}</span>
-                                    </div>
-                                    {% if schedule_role == 'teacher' %}
-                                    <div class="schedule-detail">
-                                        <i class="bi bi-people-fill me-2"></i>
-                                        <span>{{ schedule_item.student_count }} student{{ 's' if schedule_item.student_count != 1 else '' }}</span>
-                                    </div>
-                                    <div class="schedule-detail mt-2">
-                                        <a href="{{ url_for('teacher.dashboard.view_class', class_id=schedule_item.class.id) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-eye me-1"></i>View Class
-                                        </a>
-                                    </div>
-                                    {% else %}
-                                    <div class="schedule-detail">
-                                        <i class="bi bi-person-fill me-2"></i>
-                                        <span>Teacher: {{ schedule_item.teacher_name or 'TBD' }}</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="schedule-empty">
-                                <i class="bi bi-calendar-x me-2"></i>No classes scheduled
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+    <div class="sch-content">
+      <section class="sch-sheet" aria-labelledby="schSheetTitle">
+        <div class="sch-sheet-toolbar">
+          <h2 id="schSheetTitle"><i class="bi bi-table"></i> Weekly timetable</h2>
+          <span class="sch-sheet-meta">{{ today_date_display or '' }} · Today: <strong>{{ today_label }}</strong></span>
         </div>
+
+        <div class="sch-table-scroll" tabindex="0" role="region" aria-label="Weekly class schedule grid">
+          <table class="sch-grid">
+            <thead>
+              <tr>
+                <th class="sch-grid-corner" scope="col">Time</th>
+                {% for day_num in range(7) %}
+                {% set day_data = weekly_schedule[day_num] %}
+                <th scope="col" class="sch-grid-day-head{% if day_num == today_weekday %} sch-grid-day-head--today{% endif %}">
+                  <span class="sch-grid-day-name">{{ day_data.day_name }}</span>
+                  {% if day_num == today_weekday %}<span class="sch-tag sch-tag--today">Today</span>{% endif %}
+                </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in schedule_grid %}
+              <tr>
+                <th scope="row" class="sch-grid-time">{{ row.time_label }}</th>
+                {% for day_num in range(7) %}
+                {% set cell_items = row.cells[day_num] %}
+                <td class="sch-grid-cell{% if day_num == today_weekday %} sch-grid-cell--today{% endif %}{% if not cell_items %} sch-grid-cell--empty{% endif %}">
+                  {% if cell_items %}
+                    {% for item in cell_items %}
+                    <div class="sch-cell-entry{% if item.is_now %} sch-cell-entry--now{% endif %}">
+                      <div class="sch-cell-class">{{ item.class.name }}</div>
+                      <div class="sch-cell-sub">{{ item.class.subject or 'General' }}</div>
+                      <div class="sch-cell-meta">
+                        <span><i class="bi bi-geo-alt"></i> {{ item.room }}</span>
+                        {% if is_teacher %}
+                        <span><i class="bi bi-people"></i> {{ item.student_count }}</span>
+                        {% else %}
+                        <span><i class="bi bi-person"></i> {{ item.teacher_name or 'TBD' }}</span>
+                        {% endif %}
+                      </div>
+                      {% if item.is_now %}<span class="sch-tag sch-tag--live">Now</span>{% endif %}
+                      {% if is_teacher %}
+                      <a href="{{ url_for('teacher.dashboard.view_class', class_id=item.class.id) }}" class="sch-cell-link">Open</a>
+                      {% endif %}
+                    </div>
+                    {% endfor %}
+                  {% else %}
+                    <span class="sch-cell-dash" aria-hidden="true">—</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sch-list-section" aria-labelledby="schListTitle">
+        <h2 id="schListTitle" class="sch-list-heading"><i class="bi bi-list-ul"></i> All blocks (list view)</h2>
+        <div class="sch-table-scroll">
+          <table class="sch-list">
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col">Time</th>
+                <th scope="col">Class</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Room</th>
+                <th scope="col">{% if is_teacher %}Students{% else %}Teacher{% endif %}</th>
+                {% if is_teacher %}<th scope="col"></th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for day_num in range(7) %}
+              {% set day_data = weekly_schedule[day_num] %}
+              {% for item in day_data.schedules %}
+              <tr class="{% if day_num == today_weekday %}sch-list-row--today{% endif %}{% if item.is_now %} sch-list-row--now{% endif %}">
+                <td>
+                  {{ day_data.day_name }}
+                  {% if day_num == today_weekday %}<span class="sch-tag sch-tag--today">Today</span>{% endif %}
+                </td>
+                <td class="sch-list-time">{{ item.time_str }}</td>
+                <td class="sch-list-class">{{ item.class.name }}</td>
+                <td>{{ item.class.subject or 'General' }}</td>
+                <td>{{ item.room }}</td>
+                <td>
+                  {% if is_teacher %}
+                  {{ item.student_count }}
+                  {% else %}
+                  {{ item.teacher_name or 'TBD' }}
+                  {% endif %}
+                </td>
+                {% if is_teacher %}
+                <td class="sch-list-action">
+                  <a href="{{ url_for('teacher.dashboard.view_class', class_id=item.class.id) }}" class="sch-link-btn">View</a>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
+
     {% else %}
-    <div class="alert alert-info">
-        <h5><i class="bi bi-info-circle me-2"></i>No Schedule Available</h5>
-        <p>
-            {% if schedule_role == 'teacher' %}
-            You don't have any scheduled classes yet. Ask an administrator to set your class schedule in Classes → Edit class → Schedule.
-            {% else %}
-            No class times are set for your classes yet. Your school will set the schedule in the class settings.
-            {% endif %}
-        </p>
+    <div class="sch-empty-state">
+      <i class="bi bi-calendar-x d-block"></i>
+      <h3>No schedule yet</h3>
+      <p>
+        {% if is_teacher %}
+        You don’t have any class times on file. Ask an administrator to set schedules under <strong>Classes → Edit class → Schedule</strong>.
+        {% else %}
+        No class times are set for your enrolled classes yet. Check back soon or ask the office if something looks wrong.
+        {% endif %}
+      </p>
     </div>
     {% endif %}
+  </div>
 </div>
+
 {% endblock %}

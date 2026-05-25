@@ -1,635 +1,859 @@
 {% extends "shared/dashboard_layout.html" %}
 
-{% block title %}Academic Calendar Management{% endblock %}
+{% block title %}School Years{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_school_years.css') }}?v=1">
+{% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-        <h3 class="mb-2 mb-md-0"><i class="bi bi-calendar-range-fill me-2"></i>Academic Calendar Management</h3>
-        <div class="d-flex gap-2">
-            <button class="btn" style="border-color: #2E8B57; color: #2E8B57;" data-bs-toggle="modal" data-bs-target="#uploadCalendarModal">
-                <i class="bi bi-upload me-2"></i>Upload PDF Calendar
-            </button>
-            <button class="btn text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" data-bs-toggle="modal" data-bs-target="#addSchoolYearModal">
-                <i class="bi bi-plus-circle me-2"></i>Add School Year
-            </button>
-        </div>
-    </div>
+<div class="mgmt-sy">
+  <div class="mgmt-sy-shell">
 
-    <!-- PDF Calendar Upload Modal -->
-    <div class="modal fade" id="uploadCalendarModal" tabindex="-1" aria-labelledby="uploadCalendarModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-                    <h5 class="modal-title" id="uploadCalendarModalLabel">
-                        <i class="bi bi-file-earmark-pdf me-2"></i>Upload School Calendar PDF
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>How it works:</strong> Upload your official school calendar PDF and our system will automatically extract important dates including:
-                        <ul class="mb-0 mt-2">
-                            <li>School year start/end dates</li>
-                            <li>Quarter start/end dates</li>
-                            <li>Holidays and breaks</li>
-                            <li>Professional development days</li>
-                            <li>Parent-teacher conference dates</li>
-                        </ul>
-                    </div>
-                    
-                    <form method="POST" action="{{ url_for('management.upload_calendar_pdf') }}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="mb-3">
-                            <label for="calendar_pdf" class="form-label">Select Calendar PDF <span class="text-danger">*</span></label>
-                            <input type="file" class="form-control" id="calendar_pdf" name="calendar_pdf" accept=".pdf" required>
-                            <div class="form-text">Upload the official school calendar PDF document.</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="school_year" class="form-label">School Year <span class="text-danger">*</span></label>
-                            <select class="form-select" id="school_year" name="school_year" required>
-                                <option value="">Select a school year...</option>
-                                {% for year in school_years %}
-                                    <option value="{{ year.id }}">{{ year.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <div class="form-text">Select which school year this calendar applies to.</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="calendar_name" class="form-label">Calendar Name</label>
-                            <input type="text" class="form-control" id="calendar_name" name="calendar_name" placeholder="e.g., 2024-2025 Official School Calendar">
-                            <div class="form-text">Optional: Give this calendar a descriptive name.</div>
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-upload me-2"></i>Upload & Process Calendar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    {# ───────────── Hero ───────────── #}
+    <header class="mgmt-sy-hero">
+      <div>
+        <p class="mgmt-sy-eyebrow">Academic calendar</p>
+        <h1 class="mgmt-sy-title">
+          <i class="bi bi-mortarboard-fill" aria-hidden="true"></i>
+          School Years
+        </h1>
+        <p class="mgmt-sy-subtitle">
+          Create, activate, and edit school years and their quarters /
+          semesters. Only one year can be active at a time — that's the year
+          everything else in the system filters by.
+        </p>
+      </div>
+      <div class="mgmt-sy-hero-actions">
+        <a href="{{ url_for('management.calendar') }}" class="mgmt-sy-btn mgmt-sy-btn--ghost">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Calendar
+        </a>
+        <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost"
+                data-bs-toggle="modal" data-bs-target="#uploadCalendarModal">
+          <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Upload PDF
+        </button>
+        <button type="button" class="mgmt-sy-btn mgmt-sy-btn--primary"
+                data-bs-toggle="modal" data-bs-target="#addSchoolYearModal">
+          <i class="bi bi-plus-circle" aria-hidden="true"></i> Add school year
+        </button>
+      </div>
+    </header>
 
-    <!-- Add School Year Modal -->
-    <div class="modal fade" id="addSchoolYearModal" tabindex="-1" aria-labelledby="addSchoolYearModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="addSchoolYearModalLabel">
-                        <i class="bi bi-plus-circle me-2"></i>Add New School Year
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" action="{{ url_for('management.school_years') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">Year Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="name" name="name" placeholder="e.g., 2024-2025" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="is_active" class="form-label">Status</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="true">
-                                        <label class="form-check-label" for="is_active">
-                                            Set as active upon creation
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="auto_generate_quarters" class="form-label">Quarter Management</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="auto_generate_quarters" name="auto_generate_quarters" value="true" checked>
-                                <label class="form-check-label" for="auto_generate_quarters">
-                                    Automatically generate quarters and semesters
-                                </label>
-                            </div>
-                            <div class="form-text">This will create Q1-Q4 and S1-S2 periods based on the school year dates.</div>
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-plus-circle me-2"></i>Create School Year
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    {# ───────────── Insight tiles ───────────── #}
+    {% set total_years = school_years|length if school_years else 0 %}
+    {% set active_total_periods = (active_school_year.academic_periods|length) if (active_school_year and active_school_year.academic_periods) else 0 %}
+    {% set inactive_count = (school_years|rejectattr('is_active')|list|length) if school_years else 0 %}
 
-    <!-- Main Content -->
-    <div class="row g-3 g-md-4">
-        <!-- Active School Year Overview -->
-        {% if active_school_year %}
-        <div class="col-12">
-            <div class="card shadow-sm border-success">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-star-fill me-2"></i>Active School Year: {{ active_school_year.name }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <div class="text-center p-3 border rounded">
-                                <div class="h4 text-success mb-1">{{ active_school_year.start_date.strftime('%b %d, %Y') }}</div>
-                                <small class="text-muted">Start Date</small>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#editSchoolYearModal">
-                                        <i class="bi bi-pencil me-1"></i>Edit
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center p-3 border rounded">
-                                <div class="h4 text-danger mb-1">{{ active_school_year.end_date.strftime('%b %d, %Y') }}</div>
-                                <small class="text-muted">End Date</small>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#editSchoolYearModal">
-                                        <i class="bi bi-pencil me-1"></i>Edit
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center p-3 border rounded">
-                                <div class="h4 text-primary mb-1">{{ active_school_year.total_days if active_school_year.total_days else 'N/A' }}</div>
-                                <small class="text-muted">Total Days</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center p-3 border rounded">
-                                <div class="h4 text-info mb-1">{{ active_school_year.academic_periods|length if active_school_year.academic_periods else 0 }}</div>
-                                <small class="text-muted">Academic Periods</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <section class="mgmt-sy-tiles">
+      <div class="mgmt-sy-tile mgmt-sy-tile--success">
+        <p class="mgmt-sy-tile-label">Active year</p>
+        <p class="mgmt-sy-tile-value">{{ active_school_year.name if active_school_year else '—' }}</p>
+        <p class="mgmt-sy-tile-sub">
+          {% if active_school_year %}
+            Currently in use across the system
+          {% else %}
+            No year is currently active
+          {% endif %}
+        </p>
+      </div>
+      <div class="mgmt-sy-tile">
+        <p class="mgmt-sy-tile-label">Total years</p>
+        <p class="mgmt-sy-tile-value">{{ total_years }}</p>
+        <p class="mgmt-sy-tile-sub">{{ inactive_count }} archived / inactive</p>
+      </div>
+      <div class="mgmt-sy-tile mgmt-sy-tile--info">
+        <p class="mgmt-sy-tile-label">Periods this year</p>
+        <p class="mgmt-sy-tile-value">{{ active_total_periods }}</p>
+        <p class="mgmt-sy-tile-sub">Quarters &amp; semesters configured</p>
+      </div>
+      <div class="mgmt-sy-tile mgmt-sy-tile--warn">
+        <p class="mgmt-sy-tile-label">Year length</p>
+        <p class="mgmt-sy-tile-value">
+          {% if active_school_year and active_school_year.total_days %}{{ active_school_year.total_days }}d{% else %}—{% endif %}
+        </p>
+        <p class="mgmt-sy-tile-sub">From start to end (calendar days)</p>
+      </div>
+    </section>
+
+    {# ───────────── Active year spotlight ───────────── #}
+    {% if active_school_year %}
+    <section class="mgmt-sy-active">
+      <div class="mgmt-sy-active-head">
+        <div>
+          <h2 class="mgmt-sy-active-name">
+            <i class="bi bi-star-fill" aria-hidden="true"></i>
+            {{ active_school_year.name }}
+          </h2>
+          <p class="mgmt-sy-section-desc">The year every dashboard, gradebook, and roster currently points at.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="mgmt-sy-active-badge">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i> Active
+          </span>
+          <button type="button" class="mgmt-sy-btn mgmt-sy-btn--outline mgmt-sy-btn--sm"
+                  data-bs-toggle="modal" data-bs-target="#editSchoolYearModal">
+            <i class="bi bi-pencil" aria-hidden="true"></i> Edit dates
+          </button>
+        </div>
+      </div>
+
+      <div class="mgmt-sy-active-grid">
+        <div class="mgmt-sy-active-stat">
+          <span class="mgmt-sy-active-stat-label">Start date</span>
+          <span class="mgmt-sy-active-stat-value mgmt-sy-active-stat-value--start">
+            <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+            {{ active_school_year.start_date.strftime('%b %d, %Y') if active_school_year.start_date else 'Not set' }}
+          </span>
+        </div>
+        <div class="mgmt-sy-active-stat">
+          <span class="mgmt-sy-active-stat-label">End date</span>
+          <span class="mgmt-sy-active-stat-value mgmt-sy-active-stat-value--end">
+            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+            {{ active_school_year.end_date.strftime('%b %d, %Y') if active_school_year.end_date else 'Not set' }}
+          </span>
+        </div>
+        <div class="mgmt-sy-active-stat">
+          <span class="mgmt-sy-active-stat-label">Total days</span>
+          <span class="mgmt-sy-active-stat-value mgmt-sy-active-stat-value--days">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i>
+            {{ active_school_year.total_days if active_school_year.total_days else '—' }}
+          </span>
+        </div>
+        <div class="mgmt-sy-active-stat">
+          <span class="mgmt-sy-active-stat-label">Periods</span>
+          <span class="mgmt-sy-active-stat-value mgmt-sy-active-stat-value--periods">
+            <i class="bi bi-collection" aria-hidden="true"></i>
+            {{ active_total_periods }}
+          </span>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ───────────── Quarters & semesters of the active year ───────────── #}
+    {% if active_school_year and active_school_year.academic_periods %}
+    <section class="mgmt-sy-section">
+      <div class="mgmt-sy-section-head">
+        <div>
+          <h2 class="mgmt-sy-section-title">
+            <i class="bi bi-calendar-week" aria-hidden="true"></i>
+            Academic periods — {{ active_school_year.name }}
+          </h2>
+          <p class="mgmt-sy-section-desc">Quarters drive grading; semesters power transcripts.</p>
+        </div>
+        <form method="POST" action="{{ url_for('management.generate_academic_periods', year_id=active_school_year.id) }}"
+              onsubmit="return confirm('Regenerate all periods for {{ active_school_year.name }}? Existing dates will be overwritten.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--outline mgmt-sy-btn--sm">
+            <i class="bi bi-magic" aria-hidden="true"></i> Regenerate periods
+          </button>
+        </form>
+      </div>
+
+      <div class="mgmt-sy-periods">
+        <div>
+          <h3 class="mgmt-sy-period-head"><i class="bi bi-square-half" aria-hidden="true"></i> Quarters</h3>
+          <div class="mgmt-sy-period-cards">
+            {% for period in active_school_year.academic_periods if period.period_type == 'quarter' %}
+            <div class="mgmt-sy-period-card mgmt-sy-period-card--quarter">
+              <p class="mgmt-sy-period-card-name">{{ period.name }}</p>
+              <p class="mgmt-sy-period-card-dates">
+                {{ period.start_date.strftime('%b %d') if period.start_date else 'TBD' }}
+                –
+                {{ period.end_date.strftime('%b %d') if period.end_date else 'TBD' }}
+              </p>
+              <div class="mgmt-sy-period-card-actions">
+                <button type="button" class="mgmt-sy-icon-btn mgmt-sy-icon-btn--info"
+                        title="Edit dates"
+                        data-bs-toggle="modal" data-bs-target="#editPeriodModal{{ period.id }}">
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
+            {% else %}
+            <p class="mgmt-sy-section-desc">No quarters defined yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <h3 class="mgmt-sy-period-head"><i class="bi bi-grid-3x2" aria-hidden="true"></i> Semesters</h3>
+          <div class="mgmt-sy-period-cards">
+            {% for period in active_school_year.academic_periods if period.period_type == 'semester' %}
+            <div class="mgmt-sy-period-card mgmt-sy-period-card--semester">
+              <p class="mgmt-sy-period-card-name">{{ period.name }}</p>
+              <p class="mgmt-sy-period-card-dates">
+                {{ period.start_date.strftime('%b %d') if period.start_date else 'TBD' }}
+                –
+                {{ period.end_date.strftime('%b %d') if period.end_date else 'TBD' }}
+              </p>
+              <div class="mgmt-sy-period-card-actions">
+                <button type="button" class="mgmt-sy-icon-btn mgmt-sy-icon-btn--success"
+                        title="Edit dates"
+                        data-bs-toggle="modal" data-bs-target="#editPeriodModal{{ period.id }}">
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            {% else %}
+            <p class="mgmt-sy-section-desc">No semesters defined yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ───────────── Calendar events extracted from a PDF ───────────── #}
+    {% if active_school_year and active_school_year.calendar_events %}
+    <section class="mgmt-sy-section">
+      <div class="mgmt-sy-section-head">
+        <div>
+          <h2 class="mgmt-sy-section-title">
+            <i class="bi bi-calendar-event" aria-hidden="true"></i>
+            Events parsed from the calendar PDF
+          </h2>
+          <p class="mgmt-sy-section-desc">Holidays, breaks, and other dates pulled in by the calendar upload.</p>
+        </div>
+      </div>
+
+      <div class="mgmt-sy-events">
+        {% set holidays = active_school_year.calendar_events | selectattr('event_type', 'equalto', 'holiday') | list %}
+        {% if holidays %}
+        <div class="mgmt-sy-event-group">
+          <div class="mgmt-sy-event-group-head">
+            <span><i class="bi bi-calendar-x me-2" aria-hidden="true"></i>Holidays</span>
+            <span class="count">{{ holidays|length }}</span>
+          </div>
+          {% for ev in holidays %}
+          <div class="mgmt-sy-event-row">
+            <strong>{{ ev.name }}</strong>
+            <span class="date">{{ ev.start_date.strftime('%b %d, %Y') if ev.start_date else 'TBD' }}</span>
+          </div>
+          {% endfor %}
         </div>
         {% endif %}
 
-        <!-- Academic Periods Management -->
-        {% if active_school_year and active_school_year.academic_periods %}
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-calendar-week me-2"></i>Academic Periods - {{ active_school_year.name }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <!-- Quarters -->
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-3">Quarters</h6>
-                            <div class="row g-2">
-                                {% for period in active_school_year.academic_periods if period.period_type == 'quarter' %}
-                                <div class="col-6">
-                                    <div class="border rounded p-3 text-center">
-                                        <h6 class="text-primary mb-2">{{ period.name }}</h6>
-                                        <div class="small text-muted mb-1">Start: {{ period.start_date.strftime('%b %d') }}</div>
-                                        <div class="small text-muted mb-2">End: {{ period.end_date.strftime('%b %d') }}</div>
-                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editPeriodModal{{ period.id }}">
-                                            <i class="bi bi-pencil me-1"></i>Edit
-                                        </button>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <!-- Semesters -->
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-3">Semesters</h6>
-                            <div class="row g-2">
-                                {% for period in active_school_year.academic_periods if period.period_type == 'semester' %}
-                                <div class="col-6">
-                                    <div class="border rounded p-3 text-center">
-                                        <h6 class="text-success mb-2">{{ period.name }}</h6>
-                                        <div class="small text-muted mb-1">Start: {{ period.start_date.strftime('%b %d') }}</div>
-                                        <div class="small text-muted mb-2">End: {{ period.end_date.strftime('%b %d') }}</div>
-                                        <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#editPeriodModal{{ period.id }}">
-                                            <i class="bi bi-pencil me-1"></i>Edit
-                                        </button>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        {% set breaks = active_school_year.calendar_events | selectattr('event_type', 'equalto', 'break') | list %}
+        {% if breaks %}
+        <div class="mgmt-sy-event-group">
+          <div class="mgmt-sy-event-group-head">
+            <span><i class="bi bi-calendar-minus me-2" aria-hidden="true"></i>School breaks</span>
+            <span class="count">{{ breaks|length }}</span>
+          </div>
+          {% for ev in breaks %}
+          <div class="mgmt-sy-event-row">
+            <strong>{{ ev.name }}</strong>
+            <span class="date">
+              {% if ev.start_date and ev.end_date and ev.start_date != ev.end_date %}
+                {{ ev.start_date.strftime('%b %d') }} – {{ ev.end_date.strftime('%b %d, %Y') }}
+              {% elif ev.start_date %}
+                {{ ev.start_date.strftime('%b %d, %Y') }}
+              {% else %}TBD{% endif %}
+            </span>
+          </div>
+          {% endfor %}
         </div>
         {% endif %}
 
-        <!-- Calendar Events Overview -->
-        {% if active_school_year and active_school_year.calendar_events %}
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-calendar-event me-2"></i>Calendar Events from PDF
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <!-- Holidays -->
-                        {% set holidays = active_school_year.calendar_events | selectattr('event_type', 'equalto', 'holiday') | list %}
-                        {% if holidays %}
-                        <div class="col-md-6">
-                            <h6 class="text-danger mb-3">
-                                <i class="bi bi-calendar-x me-2"></i>Holidays ({{ holidays|length }})
-                            </h6>
-                            <div class="row g-2">
-                                {% for event in holidays %}
-                                <div class="col-12">
-                                    <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ event.name }}</strong>
-                                            <div class="small text-muted">{{ event.start_date.strftime('%b %d, %Y') }}</div>
-                                        </div>
-                                        <span class="badge bg-danger">Holiday</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Breaks -->
-                        {% set breaks = active_school_year.calendar_events | selectattr('event_type', 'equalto', 'break') | list %}
-                        {% if breaks %}
-                        <div class="col-md-6">
-                            <h6 class="text-warning mb-3">
-                                <i class="bi bi-calendar-minus me-2"></i>School Breaks ({{ breaks|length }})
-                            </h6>
-                            <div class="row g-2">
-                                {% for event in breaks %}
-                                <div class="col-12">
-                                    <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ event.name }}</strong>
-                                            <div class="small text-muted">
-                                                {{ event.start_date.strftime('%b %d') }} - {{ event.end_date.strftime('%b %d, %Y') }}
-                                            </div>
-                                        </div>
-                                        <span class="badge bg-warning">Break</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Professional Development -->
-                        {% set pd_days = active_school_year.calendar_events | selectattr('event_type', 'equalto', 'professional_development') | list %}
-                        {% if pd_days %}
-                        <div class="col-md-6">
-                            <h6 class="text-primary mb-3">
-                                <i class="bi bi-person-workspace me-2"></i>Professional Development ({{ pd_days|length }})
-                            </h6>
-                            <div class="row g-2">
-                                {% for event in pd_days %}
-                                <div class="col-12">
-                                    <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ event.name }}</strong>
-                                            <div class="small text-muted">{{ event.start_date.strftime('%b %d, %Y') }}</div>
-                                        </div>
-                                        <span class="badge bg-primary">PD Day</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Other Events -->
-                        {% set other_events = active_school_year.calendar_events | rejectattr('event_type', 'in', ['holiday', 'break', 'professional_development']) | list %}
-                        {% if other_events %}
-                        <div class="col-md-6">
-                            <h6 class="text-secondary mb-3">
-                                <i class="bi bi-calendar-plus me-2"></i>Other Events ({{ other_events|length }})
-                            </h6>
-                            <div class="row g-2">
-                                {% for event in other_events %}
-                                <div class="col-12">
-                                    <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ event.name }}</strong>
-                                            <div class="small text-muted">
-                                                {% if event.end_date and event.end_date != event.start_date %}
-                                                    {{ event.start_date.strftime('%b %d') }} - {{ event.end_date.strftime('%b %d, %Y') }}
-                                                {% else %}
-                                                    {{ event.start_date.strftime('%b %d, %Y') }}
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <span class="badge bg-secondary">{{ event.event_type|title }}</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+        {% set pd_days = active_school_year.calendar_events | selectattr('event_type', 'equalto', 'professional_development') | list %}
+        {% if pd_days %}
+        <div class="mgmt-sy-event-group">
+          <div class="mgmt-sy-event-group-head">
+            <span><i class="bi bi-person-workspace me-2" aria-hidden="true"></i>Professional development</span>
+            <span class="count">{{ pd_days|length }}</span>
+          </div>
+          {% for ev in pd_days %}
+          <div class="mgmt-sy-event-row">
+            <strong>{{ ev.name }}</strong>
+            <span class="date">{{ ev.start_date.strftime('%b %d, %Y') if ev.start_date else 'TBD' }}</span>
+          </div>
+          {% endfor %}
         </div>
         {% endif %}
 
-        <!-- All School Years -->
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-calendar-range me-2"></i>All School Years
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if school_years %}
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Year Name</th>
-                                    <th>Start Date</th>
-                                    <th>End Date</th>
-                                    <th>Status</th>
-                                    <th>Academic Periods</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for year in school_years %}
-                                <tr>
-                                    <td><strong>{{ year.name }}</strong></td>
-                                    <td>{{ year.start_date.strftime('%Y-%m-%d') }}</td>
-                                    <td>{{ year.end_date.strftime('%Y-%m-%d') }}</td>
-                                    <td>
-                                        {% if year.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ year.academic_periods|length if year.academic_periods else 0 }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            {% if not year.is_active %}
-                                            <form method="POST" action="{{ url_for('management.set_active_school_year', year_id=year.id) }}" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-outline-success" title="Set as Active">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            </form>
-                                            {% endif %}
-                                            <button class="btn btn-outline-primary" title="Manage Periods" data-bs-toggle="modal" data-bs-target="#managePeriodsModal{{ year.id }}">
-                                                <i class="bi bi-calendar-week"></i>
-                                            </button>
-                                            <button class="btn btn-outline-info" title="View Details" data-bs-toggle="modal" data-bs-target="#viewYearModal{{ year.id }}">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        No school years have been created yet. Add one using the "Add School Year" button above.
-                    </div>
+        {% set other_events = active_school_year.calendar_events | rejectattr('event_type', 'in', ['holiday', 'break', 'professional_development']) | list %}
+        {% if other_events %}
+        <div class="mgmt-sy-event-group">
+          <div class="mgmt-sy-event-group-head">
+            <span><i class="bi bi-calendar-plus me-2" aria-hidden="true"></i>Other events</span>
+            <span class="count">{{ other_events|length }}</span>
+          </div>
+          {% for ev in other_events %}
+          <div class="mgmt-sy-event-row">
+            <strong>{{ ev.name }}</strong>
+            <span class="date">
+              {% if ev.start_date and ev.end_date and ev.start_date != ev.end_date %}
+                {{ ev.start_date.strftime('%b %d') }} – {{ ev.end_date.strftime('%b %d, %Y') }}
+              {% elif ev.start_date %}
+                {{ ev.start_date.strftime('%b %d, %Y') }}
+              {% else %}TBD{% endif %}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {# ───────────── All school years (searchable table) ───────────── #}
+    <section class="mgmt-sy-section">
+      <div class="mgmt-sy-section-head">
+        <div>
+          <h2 class="mgmt-sy-section-title">
+            <i class="bi bi-calendar-range" aria-hidden="true"></i>
+            All school years
+          </h2>
+          <p class="mgmt-sy-section-desc">Activate any inactive year to switch the system over to it.</p>
+        </div>
+      </div>
+
+      <div class="mgmt-sy-table-wrap">
+        <div class="mgmt-sy-toolbar">
+          <div class="mgmt-sy-search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" id="mgmt-sy-year-filter"
+                   placeholder="Filter years by name or year number…" autocomplete="off">
+          </div>
+          <span class="mgmt-sy-toolbar-meta" id="mgmt-sy-result-count">
+            {{ total_years }} year{{ 's' if total_years != 1 else '' }}
+          </span>
+        </div>
+
+        {% if school_years %}
+        <div class="table-responsive">
+          <table class="mgmt-sy-table" id="mgmt-sy-year-table">
+            <thead>
+              <tr>
+                <th>Year name</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Length</th>
+                <th>Status</th>
+                <th>Periods</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for year in school_years %}
+              <tr class="{{ 'is-active' if year.is_active else '' }}"
+                  data-year-name="{{ year.name|lower }}">
+                <td>
+                  <span class="mgmt-sy-year-name">
+                    {{ year.name }}
+                    {% if year.is_active %}
+                    <span class="mgmt-sy-pill mgmt-sy-pill--active">
+                      <i class="bi bi-star-fill" aria-hidden="true"></i> Active
+                    </span>
                     {% endif %}
-                </div>
-            </div>
+                  </span>
+                </td>
+                <td>{{ year.start_date.strftime('%b %d, %Y') if year.start_date else '—' }}</td>
+                <td>{{ year.end_date.strftime('%b %d, %Y') if year.end_date else '—' }}</td>
+                <td>
+                  {% if year.total_days %}
+                    {{ year.total_days }}d
+                  {% else %}—{% endif %}
+                </td>
+                <td>
+                  {% if year.is_active %}
+                    <span class="mgmt-sy-pill mgmt-sy-pill--active">Active</span>
+                  {% else %}
+                    <span class="mgmt-sy-pill mgmt-sy-pill--inactive">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="mgmt-sy-pill mgmt-sy-pill--periods">
+                    {{ year.academic_periods|length if year.academic_periods else 0 }}
+                  </span>
+                </td>
+                <td style="text-align: right;">
+                  <div class="mgmt-sy-row-actions">
+                    {% if not year.is_active %}
+                    <form method="POST"
+                          action="{{ url_for('management.set_active_school_year', year_id=year.id) }}"
+                          style="display: inline;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="mgmt-sy-icon-btn mgmt-sy-icon-btn--success"
+                              title="Set as active year"
+                              onclick="return confirm('Make {{ year.name }} the active school year? All other years will be deactivated.');">
+                        <i class="bi bi-check-circle" aria-hidden="true"></i>
+                      </button>
+                    </form>
+                    {% endif %}
+                    <button type="button" class="mgmt-sy-icon-btn mgmt-sy-icon-btn--info"
+                            title="Manage academic periods"
+                            data-bs-toggle="modal" data-bs-target="#managePeriodsModal{{ year.id }}">
+                      <i class="bi bi-calendar-week" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="mgmt-sy-icon-btn mgmt-sy-icon-btn--warn"
+                            title="Edit year dates"
+                            data-bs-toggle="modal" data-bs-target="#editYearModal{{ year.id }}">
+                      <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="mgmt-sy-icon-btn"
+                            title="View details"
+                            data-bs-toggle="modal" data-bs-target="#viewYearModal{{ year.id }}">
+                      <i class="bi bi-eye" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-    </div>
+        {% else %}
+        <div class="mgmt-sy-empty">
+          <i class="bi bi-calendar-x" aria-hidden="true"></i>
+          <h4>No school years yet</h4>
+          <p>
+            Click <strong>Add school year</strong> above to create your first one.
+            You can also activate it on creation so the whole system starts using
+            its dates immediately.
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+  </div>
 </div>
 
-<!-- Edit Period Modals -->
-{% if active_school_year and active_school_year.academic_periods %}
-    {% for period in active_school_year.academic_periods %}
-    <div class="modal fade" id="editPeriodModal{{ period.id }}" tabindex="-1" aria-labelledby="editPeriodModalLabel{{ period.id }}" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="editPeriodModalLabel{{ period.id }}">
-                        Edit {{ period.name }} ({{ period.period_type|title }})
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" action="{{ url_for('management.edit_academic_period', period_id=period.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="mb-3">
-                            <label for="start_date_{{ period.id }}" class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="start_date_{{ period.id }}" name="start_date" value="{{ period.start_date.strftime('%Y-%m-%d') }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="end_date_{{ period.id }}" class="form-label">End Date</label>
-                            <input type="date" class="form-control" id="end_date_{{ period.id }}" name="end_date" value="{{ period.end_date.strftime('%Y-%m-%d') }}" required>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
+{# ───────────────────────────── Modals ───────────────────────────── #}
+
+<!-- Add School Year Modal -->
+<div class="modal fade mgmt-sy-modal" id="addSchoolYearModal" tabindex="-1"
+     aria-labelledby="addSchoolYearModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addSchoolYearModalLabel">
+          <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add a new school year
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.school_years') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="add-name" class="form-label">Year name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="add-name" name="name"
+                     placeholder="e.g., 2026-2027" required>
+              <div class="form-text">Use the YYYY-YYYY convention so the closure flow can auto-suggest the next year later.</div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Status</label>
+              <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="add-is-active" name="is_active" value="true">
+                <label class="form-check-label" for="add-is-active">
+                  Set as active immediately
+                </label>
+              </div>
+              <div class="form-text">All other years will be deactivated when you check this.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="add-start-date" class="form-label">Start date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="add-start-date" name="start_date" required>
+            </div>
+            <div class="col-md-6">
+              <label for="add-end-date" class="form-label">End date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="add-end-date" name="end_date" required>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="add-auto-q" name="auto_generate_quarters" value="true" checked>
+                <label class="form-check-label" for="add-auto-q">
+                  Auto-generate Q1–Q4 and S1–S2 periods
+                </label>
+              </div>
+              <div class="form-text">Splits the date range evenly into 4 quarters and 2 semesters.</div>
+            </div>
+          </div>
         </div>
+        <div class="modal-footer">
+          <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--primary">
+            <i class="bi bi-plus-circle" aria-hidden="true"></i> Create school year
+          </button>
+        </div>
+      </form>
     </div>
-    {% endfor %}
+  </div>
+</div>
+
+<!-- PDF Calendar Upload Modal -->
+<div class="modal fade mgmt-sy-modal" id="uploadCalendarModal" tabindex="-1"
+     aria-labelledby="uploadCalendarModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadCalendarModalLabel">
+          <i class="bi bi-file-earmark-pdf me-2" aria-hidden="true"></i> Upload calendar PDF
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.upload_calendar_pdf') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+            We'll extract year start/end dates, quarters, holidays, breaks, PD days, and conferences automatically.
+          </div>
+          <div class="mb-3">
+            <label for="calendar_pdf" class="form-label">Calendar PDF <span class="text-danger">*</span></label>
+            <input type="file" class="form-control" id="calendar_pdf" name="calendar_pdf" accept=".pdf" required>
+          </div>
+          <div class="mb-3">
+            <label for="upload-school-year" class="form-label">Apply to school year <span class="text-danger">*</span></label>
+            <select class="form-select" id="upload-school-year" name="school_year" required>
+              <option value="">Select a school year…</option>
+              {% for year in school_years %}
+              <option value="{{ year.id }}">{{ year.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="calendar_name" class="form-label">Calendar name (optional)</label>
+            <input type="text" class="form-control" id="calendar_name" name="calendar_name"
+                   placeholder="e.g., 2026-2027 Official School Calendar">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--primary">
+            <i class="bi bi-upload" aria-hidden="true"></i> Upload &amp; process
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Active School Year Modal -->
+{% if active_school_year %}
+<div class="modal fade mgmt-sy-modal" id="editSchoolYearModal" tabindex="-1"
+     aria-labelledby="editSchoolYearModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editSchoolYearModalLabel">
+          <i class="bi bi-pencil me-2" aria-hidden="true"></i> Edit {{ active_school_year.name }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.edit_active_school_year') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="active_start_date" class="form-label">Start date</label>
+            <input type="date" class="form-control" id="active_start_date" name="start_date"
+                   value="{{ active_school_year.start_date.strftime('%Y-%m-%d') if active_school_year.start_date else '' }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="active_end_date" class="form-label">End date</label>
+            <input type="date" class="form-control" id="active_end_date" name="end_date"
+                   value="{{ active_school_year.end_date.strftime('%Y-%m-%d') if active_school_year.end_date else '' }}" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--success">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}
 
-<!-- Manage Periods Modal for each year -->
+<!-- Per-year edit / view / manage-periods modals -->
 {% for year in school_years %}
-<div class="modal fade" id="managePeriodsModal{{ year.id }}" tabindex="-1" aria-labelledby="managePeriodsModalLabel{{ year.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="managePeriodsModalLabel{{ year.id }}">
-                    Manage Academic Periods - {{ year.name }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <h6 class="text-muted">Quarters</h6>
-                        {% if year.academic_periods %}
-                            {% for period in year.academic_periods if period.period_type == 'quarter' %}
-                            <div class="border rounded p-2 mb-2">
-                                <strong>{{ period.name }}</strong>: {{ period.start_date.strftime('%b %d') }} - {{ period.end_date.strftime('%b %d') }}
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted">No quarters defined</p>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-muted">Semesters</h6>
-                        {% if year.academic_periods %}
-                            {% for period in year.academic_periods if period.period_type == 'semester' %}
-                            <div class="border rounded p-2 mb-2">
-                                <strong>{{ period.name }}</strong>: {{ period.start_date.strftime('%b %d') }} - {{ period.end_date.strftime('%b %d') }}
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted">No semesters defined</p>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="mt-3">
-                    <form method="POST" action="{{ url_for('management.generate_academic_periods', year_id=year.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-magic me-2"></i>Generate/Regenerate Academic Periods
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
 
-<!-- View Year Details Modal -->
-{% for year in school_years %}
-<div class="modal fade" id="viewYearModal{{ year.id }}" tabindex="-1" aria-labelledby="viewYearModalLabel{{ year.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-secondary text-white">
-                <h5 class="modal-title" id="viewYearModalLabel{{ year.id }}">
-                    School Year Details - {{ year.name }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <h6 class="text-muted">Basic Information</h6>
-                        <p><strong>Name:</strong> {{ year.name }}</p>
-                        <p><strong>Start Date:</strong> {{ year.start_date.strftime('%B %d, %Y') }}</p>
-                        <p><strong>End Date:</strong> {{ year.end_date.strftime('%B %d, %Y') }}</p>
-                        <p><strong>Status:</strong> 
-                            {% if year.is_active %}
-                                <span class="badge bg-success">Active</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-muted">Academic Periods</h6>
-                        {% if year.academic_periods %}
-                            <p><strong>Total Periods:</strong> {{ year.academic_periods|length }}</p>
-                            <p><strong>Quarters:</strong> {{ year.academic_periods|selectattr('period_type', 'equalto', 'quarter')|list|length }}</p>
-                            <p><strong>Semesters:</strong> {{ year.academic_periods|selectattr('period_type', 'equalto', 'semester')|list|length }}</p>
-                        {% else %}
-                            <p class="text-muted">No academic periods defined</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+  <!-- Edit year dates -->
+  <div class="modal fade mgmt-sy-modal" id="editYearModal{{ year.id }}" tabindex="-1"
+       aria-labelledby="editYearModalLabel{{ year.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editYearModalLabel{{ year.id }}">
+            <i class="bi bi-pencil me-2" aria-hidden="true"></i> Edit {{ year.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <form method="POST" action="{{ url_for('management.edit_school_year', year_id=year.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="edit-start-{{ year.id }}" class="form-label">Start date</label>
+              <input type="date" class="form-control" id="edit-start-{{ year.id }}" name="start_date"
+                     value="{{ year.start_date.strftime('%Y-%m-%d') if year.start_date else '' }}" required>
+            </div>
+            <div class="mb-3">
+              <label for="edit-end-{{ year.id }}" class="form-label">End date</label>
+              <input type="date" class="form-control" id="edit-end-{{ year.id }}" name="end_date"
+                     value="{{ year.end_date.strftime('%Y-%m-%d') if year.end_date else '' }}" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--primary">Save changes</button>
+          </div>
+        </form>
+      </div>
     </div>
-</div>
-{% endfor %}
+  </div>
 
-<!-- Edit School Year Modal -->
-<div class="modal fade" id="editSchoolYearModal" tabindex="-1" aria-labelledby="editSchoolYearModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="editSchoolYearModalLabel">
-                    Edit School Year Dates - {{ active_school_year.name if active_school_year else 'School Year' }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form method="POST" action="{{ url_for('management.edit_school_year', year_id=active_school_year.id) if active_school_year else '#' }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <div class="mb-3">
-                        <label for="edit_start_date" class="form-label">Start Date</label>
-                        <input type="date" class="form-control" id="edit_start_date" name="start_date" 
-                               value="{{ active_school_year.start_date.strftime('%Y-%m-%d') if active_school_year else '' }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_end_date" class="form-label">End Date</label>
-                        <input type="date" class="form-control" id="edit_end_date" name="end_date" 
-                               value="{{ active_school_year.end_date.strftime('%Y-%m-%d') if active_school_year else '' }}" required>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
-            </div>
+  <!-- View year details -->
+  <div class="modal fade mgmt-sy-modal" id="viewYearModal{{ year.id }}" tabindex="-1"
+       aria-labelledby="viewYearModalLabel{{ year.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="viewYearModalLabel{{ year.id }}">
+            <i class="bi bi-eye me-2" aria-hidden="true"></i> {{ year.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6 class="text-uppercase small text-muted">Basics</h6>
+              <p class="mb-1"><strong>Name:</strong> {{ year.name }}</p>
+              <p class="mb-1"><strong>Start:</strong> {{ year.start_date.strftime('%B %d, %Y') if year.start_date else 'Not set' }}</p>
+              <p class="mb-1"><strong>End:</strong> {{ year.end_date.strftime('%B %d, %Y') if year.end_date else 'Not set' }}</p>
+              <p class="mb-1">
+                <strong>Status:</strong>
+                {% if year.is_active %}
+                  <span class="mgmt-sy-pill mgmt-sy-pill--active">Active</span>
+                {% else %}
+                  <span class="mgmt-sy-pill mgmt-sy-pill--inactive">Inactive</span>
+                {% endif %}
+              </p>
+              {% if year.total_days %}
+              <p class="mb-1"><strong>Length:</strong> {{ year.total_days }} days</p>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-uppercase small text-muted">Academic periods</h6>
+              {% if year.academic_periods %}
+                {% for period in year.academic_periods %}
+                <div class="mgmt-sy-event-row">
+                  <strong>{{ period.name }}</strong>
+                  <span class="date">
+                    {{ period.start_date.strftime('%b %d') if period.start_date else 'TBD' }}
+                    –
+                    {{ period.end_date.strftime('%b %d') if period.end_date else 'TBD' }}
+                  </span>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted small mb-0">No academic periods defined for this year.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
+
+  <!-- Manage academic periods -->
+  <div class="modal fade mgmt-sy-modal" id="managePeriodsModal{{ year.id }}" tabindex="-1"
+       aria-labelledby="managePeriodsModalLabel{{ year.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="managePeriodsModalLabel{{ year.id }}">
+            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>
+            Periods — {{ year.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <h6 class="text-uppercase small text-muted">Quarters</h6>
+              {% set qs = year.academic_periods | selectattr('period_type', 'equalto', 'quarter') | list if year.academic_periods else [] %}
+              {% if qs %}
+                {% for period in qs %}
+                <div class="mgmt-sy-event-row">
+                  <strong>{{ period.name }}</strong>
+                  <span class="date">
+                    {{ period.start_date.strftime('%b %d') if period.start_date else 'TBD' }}
+                    –
+                    {{ period.end_date.strftime('%b %d') if period.end_date else 'TBD' }}
+                  </span>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted small mb-0">No quarters defined.</p>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-uppercase small text-muted">Semesters</h6>
+              {% set ss = year.academic_periods | selectattr('period_type', 'equalto', 'semester') | list if year.academic_periods else [] %}
+              {% if ss %}
+                {% for period in ss %}
+                <div class="mgmt-sy-event-row">
+                  <strong>{{ period.name }}</strong>
+                  <span class="date">
+                    {{ period.start_date.strftime('%b %d') if period.start_date else 'TBD' }}
+                    –
+                    {{ period.end_date.strftime('%b %d') if period.end_date else 'TBD' }}
+                  </span>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted small mb-0">No semesters defined.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <form method="POST" action="{{ url_for('management.generate_academic_periods', year_id=year.id) }}"
+                onsubmit="return confirm('Regenerate all periods for {{ year.name }}? Existing dates will be overwritten.');"
+                class="mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--outline mgmt-sy-btn--sm">
+              <i class="bi bi-magic" aria-hidden="true"></i> Regenerate Q1–Q4 / S1–S2 from year dates
+            </button>
+          </form>
+
+          <h6 class="text-uppercase small text-muted">Add a single period</h6>
+          <form method="POST" action="{{ url_for('management.add_academic_period', year_id=year.id) }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-6">
+              <label class="form-label" for="np-name-{{ year.id }}">Period name</label>
+              <input type="text" class="form-control" id="np-name-{{ year.id }}" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="np-type-{{ year.id }}">Type</label>
+              <select class="form-select" id="np-type-{{ year.id }}" name="period_type" required>
+                <option value="">Select…</option>
+                <option value="quarter">Quarter</option>
+                <option value="semester">Semester</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="np-start-{{ year.id }}">Start date</label>
+              <input type="date" class="form-control" id="np-start-{{ year.id }}" name="start_date" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="np-end-{{ year.id }}">End date</label>
+              <input type="date" class="form-control" id="np-end-{{ year.id }}" name="end_date" required>
+            </div>
+            <div class="col-12 text-end">
+              <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--primary mgmt-sy-btn--sm">
+                <i class="bi bi-plus-circle" aria-hidden="true"></i> Add period
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit individual period dates -->
+  {% if year.academic_periods %}
+    {% for period in year.academic_periods %}
+    <div class="modal fade mgmt-sy-modal" id="editPeriodModal{{ period.id }}" tabindex="-1"
+         aria-labelledby="editPeriodModalLabel{{ period.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editPeriodModalLabel{{ period.id }}">
+              <i class="bi bi-pencil me-2" aria-hidden="true"></i>
+              Edit {{ period.name }} ({{ period.period_type|title }})
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form method="POST" action="{{ url_for('management.edit_academic_period', period_id=period.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label" for="ep-start-{{ period.id }}">Start date</label>
+                <input type="date" class="form-control" id="ep-start-{{ period.id }}" name="start_date"
+                       value="{{ period.start_date.strftime('%Y-%m-%d') if period.start_date else '' }}" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="ep-end-{{ period.id }}">End date</label>
+                <input type="date" class="form-control" id="ep-end-{{ period.id }}" name="end_date"
+                       value="{{ period.end_date.strftime('%Y-%m-%d') if period.end_date else '' }}" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="mgmt-sy-btn mgmt-sy-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="mgmt-sy-btn mgmt-sy-btn--primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+{% endfor %}
 
 <script>
-// Auto-calculate end date when start date changes
-document.getElementById('start_date').addEventListener('change', function() {
-    const startDate = new Date(this.value);
-    const endDate = new Date(startDate);
-    endDate.setFullYear(endDate.getFullYear() + 1);
-    endDate.setMonth(5); // June
-    endDate.setDate(30); // 30th day
-    
-    document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
-});
+(function () {
+  // Live filter the years table.
+  var input = document.getElementById('mgmt-sy-year-filter');
+  var counter = document.getElementById('mgmt-sy-result-count');
+  var table = document.getElementById('mgmt-sy-year-table');
+  if (!input || !table) return;
 
-// Validate date ranges
-document.querySelectorAll('form').forEach(form => {
-    form.addEventListener('submit', function(e) {
-        const startDate = new Date(this.querySelector('input[name="start_date"]')?.value);
-        const endDate = new Date(this.querySelector('input[name="end_date"]')?.value);
-        
-        if (startDate && endDate && startDate >= endDate) {
-            e.preventDefault();
-            alert('End date must be after start date.');
-        }
+  var rows = Array.prototype.slice.call(table.tBodies[0].rows);
+  var totalLabel = (rows.length === 1) ? '1 year' : rows.length + ' years';
+
+  input.addEventListener('input', function () {
+    var q = (input.value || '').trim().toLowerCase();
+    var visible = 0;
+    rows.forEach(function (row) {
+      var name = row.getAttribute('data-year-name') || '';
+      var match = !q || name.indexOf(q) !== -1;
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
     });
-});
+    if (counter) {
+      counter.textContent = q
+        ? visible + ' of ' + totalLabel + ' shown'
+        : totalLabel;
+    }
+  });
+
+  // Auto-suggest end date when start date is entered in the add-year modal.
+  var addStart = document.getElementById('add-start-date');
+  var addEnd = document.getElementById('add-end-date');
+  if (addStart && addEnd) {
+    addStart.addEventListener('change', function () {
+      if (addEnd.value) return; // don't clobber user-entered end date
+      var d = new Date(addStart.value);
+      if (isNaN(d.getTime())) return;
+      d.setFullYear(d.getFullYear() + 1);
+      d.setMonth(5);  // June
+      d.setDate(15);
+      addEnd.value = d.toISOString().split('T')[0];
+    });
+  }
+
+  // Block obviously-bad date ranges on any form in this page.
+  document.querySelectorAll('.mgmt-sy form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      var s = form.querySelector('input[name="start_date"]');
+      var n = form.querySelector('input[name="end_date"]');
+      if (!s || !n || !s.value || !n.value) return;
+      if (new Date(s.value) >= new Date(n.value)) {
+        e.preventDefault();
+        alert('End date must be after start date.');
+      }
+    });
+  });
+})();
 </script>
-{% endblock %} 
+{% endblock %}

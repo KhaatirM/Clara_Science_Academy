@@ -1,0 +1,85 @@
+{# Director layout — all sections below must fit on page 1 (wrapper is in parent template) #}
+  <p class="report-period-line">
+    <strong>Report Period:</strong>
+    {{ report_period_label or (report_card.quarter ~ ' - ' ~ (generated_date.strftime('%B %d, %Y') if generated_date else 'N/A')) }}
+  </p>
+
+  <table class="rc-table rc-table--compact rc-table--attendance">
+    <thead>
+      <tr class="rc-header-dark">
+        <th>ATTENDANCE</th>
+        <th>1st Q</th>
+        <th>2nd Q</th>
+        <th>3rd Q</th>
+        <th>4th Q</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in attendance_rows|default([]) %}
+      <tr>
+        <td>{{ row.label }}</td>
+        {% for val in row.quarter_counts %}
+        <td class="rc-center">{{ val }}</td>
+        {% endfor %}
+      </tr>
+      {% else %}
+      <tr><td>Excused Absences</td><td></td><td></td><td></td><td></td></tr>
+      <tr><td>Unexcused Absences</td><td></td><td></td><td></td><td></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="academic-standards-block">
+    <p><strong>Academic Standards:</strong> The Clara Science Academy (CSA) reports student performance quarterly. This 3rd grade progress report lists the skills outlined by the NC Department of Education Standards. This framework provides guidance about what a 3rd grade student should know or be able to do. The K12 curriculum is the core set of courses used by CSA to help 3rd grade students meet these standards. Individualized goals are set for each student. The teacher and learning coach determine the percentage of course completion necessary to meet the academic goals for the third-grade student based on the standards and anchors. The year-to-date course progress reflects the progress towards meeting standards as well as academic goals related to course completion. The decision to promote a student to the next level is determined by the teacher.</p>
+  </div>
+
+  <table class="rc-table rc-table--compact rc-table--course-progress">
+    <thead>
+      <tr class="rc-header-dark">
+        <th colspan="2">Year-to-date course progress</th>
+      </tr>
+      <tr class="rc-subheader">
+        <th>Course</th>
+        <th>Comment(s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if course_progress_rows %}
+        {% for row in course_progress_rows %}
+        <tr>
+          <td>{{ row.course }}</td>
+          <td>{{ row.comment }}</td>
+        </tr>
+        {% endfor %}
+      {% elif class_objects %}
+        {% for class_obj in class_objects %}
+        {% set class_grade = grades.get(class_obj.id, {}) if grades else {} %}
+        {% set letter = class_grade.get('letter', 'N/A') if class_grade is mapping else 'N/A' %}
+        <tr>
+          <td>{{ class_obj.name }}</td>
+          <td>{% if letter and letter != 'N/A' %}{% set tier = 'Not on Target' if letter|upper in ['F','E'] else ('Exceeds Target' if letter|upper in ['A','A+'] else ('Above Target' if letter|upper == 'B+' else 'On Target')) %}{{ tier }} ({{ letter|upper }}){% endif %}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="2" class="rc-center">No grade data available</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <table class="rc-table rc-table--compact standards-legend-grid">
+    <thead>
+      <tr class="rc-header-dark">
+        <th colspan="2">Standards Checklist:</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>M</strong>: Met academic standard</td>
+        <td><strong>NA</strong>: <span class="rc-underline">Not Assessed</span> during this semester</td>
+      </tr>
+      <tr>
+        <td><strong>W</strong>: Working towards meeting academic standard</td>
+        <td><strong>UA</strong>: <span class="rc-underline">Unable to Assess</span> during this semester</td>
+      </tr>
+    </tbody>
+  </table>

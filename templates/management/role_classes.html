@@ -2,6 +2,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_role_classes.css') }}">
+{% if use_teacher_hub %}<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">{% endif %}
 {% endblock %}
 
 {% set TEACHER_ROLES = [
@@ -17,9 +18,43 @@
 ] %}
 
 {% block dashboard_content %}
-
-
-<div class="container-fluid px-2 px-md-4">
+{% if use_teacher_hub %}
+{% set enroll_total = namespace(n=0) %}
+{% for c in classes %}{% set enroll_total.n = enroll_total.n + (c.active_student_count|default(0)) %}{% endfor %}
+<div class="rh rh--teacher container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    <header class="rh-hero">
+      <div>
+        <p class="rh-eyebrow">Teaching</p>
+        <h1 class="rh-title">My classes</h1>
+        <p class="rh-subtitle"><i class="bi bi-house-door"></i> Classes you teach and Google Classroom links</p>
+      </div>
+      <div class="rh-hero-actions">
+        <span class="rh-role-badge rh-role-badge--teacher"><i class="bi bi-mortarboard-fill"></i> Teacher</span>
+        <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-grid"></i> Home</a>
+      </div>
+    </header>
+    <div class="rh-insights" role="list">
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-house-door-fill"></i></span>
+        <div><div class="rh-insight-value">{{ classes|length }}</div><div class="rh-insight-label">Classes</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-people-fill"></i></span>
+        <div><div class="rh-insight-value">{{ enroll_total.n }}</div><div class="rh-insight-label">Students</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-google"></i></span>
+        <div><div class="rh-insight-value">{{ classes|selectattr('google_classroom_id')|list|length }}</div><div class="rh-insight-label">Linked</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-journal-check"></i></span>
+        <div><div class="rh-insight-value">{{ classes|map(attribute='assignments')|map('list')|map('length')|sum }}</div><div class="rh-insight-label">Assignments</div></div>
+      </div>
+    </div>
+    <div class="rh-content">
+{% endif %}
+<div class="container-fluid px-2 px-md-4{% if use_teacher_hub %} px-0{% endif %}">
     <!-- Enhanced Header -->
     <div class="classes-header">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
@@ -38,6 +73,15 @@
     <div class="row g-4">
         {% for class in classes %}
         <div class="col-12 col-sm-6 col-xl-4">
+            {% set _g3_levels = class.get_grade_levels() or [] %}
+            {% set _g3_subject = (class.subject or '')|lower %}
+            {% set _g3_eligible = (3 in _g3_levels)
+                and (('math' in _g3_subject)
+                     or ('language' in _g3_subject)
+                     or ('reading' in _g3_subject)
+                     or ('english' in _g3_subject)
+                     or ('ela' in _g3_subject)
+                     or ('literacy' in _g3_subject)) %}
             <div class="class-card">
                 <div class="class-card-header d-flex justify-content-between align-items-center">
                     <h5 class="class-card-title">{{ class.name }}</h5>
@@ -133,6 +177,11 @@
                                     <i class="bi bi-journal-check action-btn-icon"></i><span class="action-btn-text">View Grades</span>
                                 </a>
                             </div>
+                            {% if _g3_eligible and 'teacher.grade3_standards.grade3_standards_editor' in current_app.view_functions %}
+                                <a href="{{ url_for('teacher.grade3_standards.grade3_standards_editor', class_id=class.id) }}" class="action-btn btn-grades mb-2">
+                                    <i class="bi bi-check2-square action-btn-icon"></i><span class="action-btn-text">3rd Grade Standards</span>
+                                </a>
+                            {% endif %}
                             
                             <!-- Google Classroom Actions for Admins -->
                             {% if class.google_classroom_id %}
@@ -174,6 +223,11 @@
                                     <i class="bi bi-plus-circle-fill action-btn-icon"></i><span class="action-btn-text">Assignment</span>
                                 </a>
                             </div>
+                            {% if _g3_eligible and 'teacher.grade3_standards.grade3_standards_editor' in current_app.view_functions %}
+                                <a href="{{ url_for('teacher.grade3_standards.grade3_standards_editor', class_id=class.id) }}" class="action-btn btn-view mb-2">
+                                    <i class="bi bi-check2-square action-btn-icon"></i><span class="action-btn-text">3rd Grade Standards</span>
+                                </a>
+                            {% endif %}
                             
                             <!-- Google Classroom Actions -->
                             {% if class.google_classroom_id %}
@@ -257,4 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+{% if use_teacher_hub %}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %} 

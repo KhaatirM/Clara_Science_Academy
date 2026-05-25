@@ -1,0 +1,241 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_school_year_closure.css') }}?v=1">
+{% endblock %}
+
+{% block dashboard_content %}
+{% set is_director = current_user.role == 'Director' %}
+{% set has_active = active_closures and (active_closures|length > 0) %}
+
+<div class="mgmt-syc container-fluid px-0 px-md-1">
+  <div class="mgmt-syc-shell{% if is_director %} mgmt-syc-shell--director{% endif %}">
+
+    <header class="mgmt-syc-hero">
+      <div>
+        <p class="mgmt-syc-eyebrow">End of school year</p>
+        <h1 class="mgmt-syc-title">Schedule school-year closure</h1>
+        <p class="mgmt-syc-subtitle">
+          <i class="bi bi-calendar-event" aria-hidden="true"></i>
+          Phased Day&nbsp;0 → Day&nbsp;7 → Day&nbsp;21 → Day&nbsp;28 workflow
+        </p>
+      </div>
+      <div class="mgmt-syc-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-syc-role-badge mgmt-syc-role-badge--director">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> Director
+        </span>
+        {% else %}
+        <span class="mgmt-syc-role-badge mgmt-syc-role-badge--admin">
+          <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
+        </span>
+        {% endif %}
+        <a href="{{ url_for('management.report_cards') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> Report cards
+        </a>
+      </div>
+    </header>
+
+    {% if has_active %}
+    <section class="mgmt-syc-active-banner">
+      <div>
+        <h2 class="mgmt-syc-active-title">
+          <i class="bi bi-clock-history" aria-hidden="true"></i>
+          {{ active_closures|length }} active closure{{ 's' if active_closures|length != 1 else '' }}
+        </h2>
+        <p class="mgmt-syc-active-sub">
+          A school year already has a closure in progress. You can open the dashboard
+          to monitor progress, grant extensions, or postpone milestones.
+        </p>
+      </div>
+      <div class="mgmt-syc-active-list">
+        {% for sy_id, c in active_closures.items() %}
+        <a class="mgmt-syc-active-link" href="{{ url_for('school_year_closure.dashboard', closure_id=c.id) }}">
+          <span class="mgmt-syc-active-year">{{ c.school_year.name if c.school_year else 'Year #' ~ sy_id }}</span>
+          <span class="mgmt-syc-active-phase">{{ c.phase|replace('_', ' ')|title }}</span>
+          <span class="mgmt-syc-active-cta">Open <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="mgmt-syc-explainer" aria-labelledby="mgmtSycExplainerTitle">
+      <h2 id="mgmtSycExplainerTitle" class="mgmt-syc-section-title">
+        <i class="bi bi-info-circle-fill" aria-hidden="true"></i> What this workflow does
+      </h2>
+      <p class="mgmt-syc-section-desc">
+        Schedule one Day&nbsp;0 date (typically the Q4 end or the official school-year
+        end). The system then handles every milestone automatically — no report cards
+        generate on Day&nbsp;0, no classes archive, no students are promoted until
+        Day&nbsp;28. You can pause, postpone, cancel, or grant per-user extensions at
+        any point.
+      </p>
+
+      <ol class="mgmt-syc-timeline-preview">
+        <li class="mgmt-syc-tlp-step mgmt-syc-tlp-step--day0">
+          <span class="mgmt-syc-tlp-day">Day 0</span>
+          <div>
+            <h3 class="mgmt-syc-tlp-title">Closure date</h3>
+            <p>Students receive an in-app notification + no-reply email: "You have one week to submit any outstanding work and contact your teachers." Grades stay editable for everyone.</p>
+          </div>
+        </li>
+        <li class="mgmt-syc-tlp-step mgmt-syc-tlp-step--day7">
+          <span class="mgmt-syc-tlp-day">Day 7</span>
+          <div>
+            <h3 class="mgmt-syc-tlp-title">Student lockout</h3>
+            <p>Students' current-year classes move to read-only and disappear from "My Classes" (they stay visible under "Previous years"). Teachers get a reminder that they have two more weeks to finalize grades.</p>
+          </div>
+        </li>
+        <li class="mgmt-syc-tlp-step mgmt-syc-tlp-step--day21">
+          <span class="mgmt-syc-tlp-day">Day 21</span>
+          <div>
+            <h3 class="mgmt-syc-tlp-title">Teacher lockout</h3>
+            <p>Teachers lose write access to that year's gradebooks. Directors/Admins receive a pre-finalize warning with the unfinished-work checklist. Admins can still grant per-teacher extensions for special cases.</p>
+          </div>
+        </li>
+        <li class="mgmt-syc-tlp-step mgmt-syc-tlp-step--day28">
+          <span class="mgmt-syc-tlp-day">Day 28</span>
+          <div>
+            <h3 class="mgmt-syc-tlp-title">Auto-finalize</h3>
+            <p>The system generates official Q1–Q4 report cards (marked as auto-generated), archives the year's classes/enrollments, promotes students one grade level (skipping anyone flagged as repeating and 12th graders), and deactivates the school year.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="mgmt-syc-failsafes">
+        <h3 class="mgmt-syc-failsafes-title"><i class="bi bi-shield-check" aria-hidden="true"></i> Failsafes</h3>
+        <ul>
+          <li><strong>Pause</strong> — freeze all transitions and notifications without changing the dates.</li>
+          <li><strong>Postpone</strong> — slide every milestone forward by N days (snow days, last-minute curriculum changes).</li>
+          <li><strong>Cancel</strong> — abort the workflow entirely; the school year continues as normal.</li>
+          <li><strong>Manual advance</strong> — push to the next phase before its automatic date.</li>
+          <li><strong>Finalize now</strong> — run the Day&nbsp;28 archival ahead of schedule.</li>
+          <li><strong>Per-teacher / per-student / per-class extensions</strong> — give specific people more time without slowing everyone else down.</li>
+          <li><strong>Reopen</strong> — undo a finalize after the fact for grade-book corrections.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="mgmt-syc-form-wrap" aria-labelledby="mgmtSycFormTitle">
+      <h2 id="mgmtSycFormTitle" class="mgmt-syc-section-title">
+        <i class="bi bi-pencil-square" aria-hidden="true"></i> Schedule a new closure
+      </h2>
+
+      <form method="POST" action="{{ url_for('school_year_closure.schedule') }}" class="mgmt-syc-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mgmt-syc-form-row">
+          <label class="mgmt-syc-label" for="school_year_id">School year</label>
+          <select name="school_year_id" id="school_year_id" class="mgmt-syc-input" required>
+            <option value="">— Select a school year —</option>
+            {% for sy in school_years %}
+            <option value="{{ sy.id }}"
+                    {% if suggested_year_id == sy.id %}selected{% endif %}
+                    data-end-date="{{ sy.end_date.isoformat() if sy.end_date else '' }}"
+                    data-active="{{ '1' if sy.is_active else '0' }}"
+                    data-has-active-closure="{{ '1' if active_closures and (sy.id in active_closures) else '0' }}">
+              {{ sy.name }}{% if sy.is_active %} (active){% endif %}{% if active_closures and (sy.id in active_closures) %} — closure already in progress{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mgmt-syc-form-row">
+          <label class="mgmt-syc-label" for="closure_date">Day 0 — closure date</label>
+          <input type="date" name="closure_date" id="closure_date"
+                 class="mgmt-syc-input"
+                 value="{{ suggested_date.isoformat() if suggested_date else '' }}"
+                 required>
+          <p class="mgmt-syc-help">Usually the last day of Q4 or the official school-year end date. Notifications go out at midnight on this day.</p>
+        </div>
+
+        <div class="mgmt-syc-form-row">
+          <label class="mgmt-syc-label" for="notes">Internal notes (optional)</label>
+          <textarea name="notes" id="notes" rows="3" class="mgmt-syc-input"
+                    placeholder="e.g. End-of-year 2025–2026 closure scheduled by Director on signing day."></textarea>
+        </div>
+
+        <div class="mgmt-syc-preview-wrap" aria-live="polite">
+          <h3 class="mgmt-syc-preview-title">Timeline preview</h3>
+          <div class="mgmt-syc-preview" id="mgmt-syc-preview">
+            <div class="mgmt-syc-preview-card mgmt-syc-preview-card--day0">
+              <span class="mgmt-syc-preview-day">Day 0</span>
+              <span class="mgmt-syc-preview-date" data-offset="0">—</span>
+              <span class="mgmt-syc-preview-label">Notify students</span>
+            </div>
+            <div class="mgmt-syc-preview-card mgmt-syc-preview-card--day7">
+              <span class="mgmt-syc-preview-day">Day 7</span>
+              <span class="mgmt-syc-preview-date" data-offset="7">—</span>
+              <span class="mgmt-syc-preview-label">Lock students</span>
+            </div>
+            <div class="mgmt-syc-preview-card mgmt-syc-preview-card--day21">
+              <span class="mgmt-syc-preview-day">Day 21</span>
+              <span class="mgmt-syc-preview-date" data-offset="21">—</span>
+              <span class="mgmt-syc-preview-label">Lock teachers</span>
+            </div>
+            <div class="mgmt-syc-preview-card mgmt-syc-preview-card--day28">
+              <span class="mgmt-syc-preview-day">Day 28</span>
+              <span class="mgmt-syc-preview-date" data-offset="28">—</span>
+              <span class="mgmt-syc-preview-label">Auto-finalize</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mgmt-syc-confirm">
+          <label class="mgmt-syc-label" for="confirm">
+            Type <code>SCHEDULE CLOSURE</code> to confirm
+          </label>
+          <input type="text" name="confirm" id="confirm" class="mgmt-syc-input"
+                 autocomplete="off" placeholder="SCHEDULE CLOSURE" required>
+        </div>
+
+        <div class="mgmt-syc-actions">
+          <a href="{{ url_for('management.report_cards') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">Cancel</a>
+          <button type="submit" class="mgmt-syc-btn mgmt-syc-btn--primary">
+            <i class="bi bi-calendar-check" aria-hidden="true"></i> Schedule closure
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+(function() {
+  const dateInput = document.getElementById('closure_date');
+  const cards = document.querySelectorAll('#mgmt-syc-preview .mgmt-syc-preview-date');
+  const fmt = (d) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  function refresh() {
+    if (!dateInput.value) {
+      cards.forEach(c => c.textContent = '—');
+      return;
+    }
+    const base = new Date(dateInput.value + 'T00:00:00');
+    cards.forEach(c => {
+      const offset = parseInt(c.getAttribute('data-offset') || '0', 10);
+      const d = new Date(base);
+      d.setDate(d.getDate() + offset);
+      c.textContent = fmt(d);
+    });
+  }
+  dateInput && dateInput.addEventListener('change', refresh);
+  refresh();
+
+  // When the user switches school years, suggest the year's end_date if available.
+  const syc_sy = document.getElementById('school_year_id');
+  syc_sy && syc_sy.addEventListener('change', () => {
+    const opt = syc_sy.options[syc_sy.selectedIndex];
+    if (!opt) return;
+    const end = opt.getAttribute('data-end-date');
+    if (end) {
+      dateInput.value = end;
+      refresh();
+    }
+    if (opt.getAttribute('data-has-active-closure') === '1') {
+      alert('This school year already has a closure in progress. Cancel or finalize it first before scheduling another.');
+    }
+  });
+})();
+</script>
+{% endblock %}

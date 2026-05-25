@@ -1,450 +1,441 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/management_report_card_generate_form.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_report_card_form.css') }}?v=5">
 {% endblock %}
 
+{% set is_director = current_user.role == 'Director' %}
+
 {% block dashboard_content %}
-<div class="container-fluid py-4">
-  <!-- Header Section -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <h2 class="mb-1 fw-bold">
-            <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Generate Report Card PDF
-          </h2>
-          <p class="text-muted mb-0">Fill out all the required information below to generate a downloadable PDF report card</p>
+<div class="mgmt-rcf container-fluid px-0 px-md-1">
+  <div class="mgmt-rcf-shell{% if is_director %} mgmt-rcf-shell--director{% endif %}">
+
+    {# ===== Hero ===== #}
+    <header class="mgmt-rcf-hero">
+      <div>
+        <div class="mgmt-rcf-breadcrumb">
+          <a href="{{ url_for('management.report_cards') }}">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Report cards
+          </a>
         </div>
-        <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
-          <i class="bi bi-arrow-left me-1"></i>Back to Report Cards
+        <p class="mgmt-rcf-eyebrow">Academic reporting</p>
+        <h1 class="mgmt-rcf-title">Generate report card</h1>
+        <p class="mgmt-rcf-subtitle">
+          <i class="bi bi-file-earmark-pdf-fill" aria-hidden="true"></i>
+          Build a printable PDF report card by selecting student, classes, and term details.
+        </p>
+      </div>
+      <div class="mgmt-rcf-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-rcf-role-badge">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> Director
+        </span>
+        {% else %}
+        <span class="mgmt-rcf-role-badge">
+          <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
+        </span>
+        {% endif %}
+        <a href="{{ url_for('management.report_cards') }}" class="mgmt-rcf-btn mgmt-rcf-btn--ghost">
+          <i class="bi bi-house-door" aria-hidden="true"></i> Hub
         </a>
       </div>
-    </div>
-  </div>
+    </header>
 
-  <!-- Form Card -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow-lg border-0">
-        <div class="card-header bg-gradient-primary text-white py-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
-          <h4 class="mb-0">
-            <i class="bi bi-file-earmark-pdf-fill me-2"></i>Report Card Information
-          </h4>
-        </div>
-        <div class="card-body p-4 p-md-5">
-          <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" class="needs-validation" novalidate target="_blank">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            
-            <!-- Step 1: Student Info -->
-            <div class="form-section mb-5">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-person-circle"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">1. Student Information</h5>
-                  <p class="text-muted mb-0 small">Report card will be generated for this student</p>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-8 mx-auto">
-                  {% if pre_selected_student %}
-                    <!-- Student pre-selected from category page -->
-                    <input type="hidden" id="student_id" name="student_id" value="{{ pre_selected_student }}">
-                    <div class="alert alert-info border-0 shadow-sm mb-0">
-                      <div class="d-flex align-items-center">
-                        <div class="student-icon me-3">
-                          <i class="bi bi-person-circle"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          {% set selected_student = students|selectattr('id', 'equalto', pre_selected_student)|first %}
-                          <h5 class="mb-1">{{ selected_student.first_name }} {{ selected_student.last_name }}</h5>
-                          <p class="text-muted mb-0">
-                            Grade {{ selected_student.grade_level }} 
-                            {% if selected_student.student_id %} | ID: {{ selected_student.student_id }}{% endif %}
-                          </p>
-                        </div>
-                        <a href="{{ url_for('management.report_cards') }}" class="btn btn-sm btn-outline-secondary">
-                          <i class="bi bi-arrow-repeat me-1"></i>Change Student
-                        </a>
-                      </div>
-                    </div>
-                  {% else %}
-                    <!-- Manual student selection -->
-                    <div class="mb-4">
-                      <label for="student_id" class="form-label fw-semibold">
-                        <i class="bi bi-person me-2"></i>Student <span class="text-danger">*</span>
-                      </label>
-                      <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="showWithdrawnStudents">
-                        <label class="form-check-label" for="showWithdrawnStudents">
-                          Show withdrawn students
-                        </label>
-                      </div>
-                      <select class="form-select form-select-lg" id="student_id" name="student_id" required>
-                        <option value="">Choose a student...</option>
-                        {% for student in students %}
-                          <option value="{{ student.id }}">
-                            {{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}
-                            {% if student.student_id %} (ID: {{ student.student_id }}){% endif %}
-                            {% if student.is_active is defined and not student.is_active %} (Withdrawn){% endif %}
-                          </option>
-                        {% endfor %}
-                      </select>
-                      <div class="invalid-feedback">Please select a student.</div>
-                    </div>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-
-            <hr class="my-5">
-
-            <!-- Step 1.5: Confirm Student & School Information -->
-            <div class="form-section mb-5" id="confirmation-section" style="display: none;">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-check-circle"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">2. Confirm Information</h5>
-                  <p class="text-muted mb-0 small">These values are synced from the student profile to keep report cards accurate.</p>
-                </div>
-              </div>
-              <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                  <div class="alert alert-warning border-0 shadow-sm mb-4">
-                    <i class="bi bi-exclamation-circle me-2"></i>
-                    Missing fields here must be completed in the student profile before generating a report card.
-                  </div>
-                  <div class="row g-4">
-                    <!-- Student Information -->
-                    <div class="col-md-6">
-                      <h6 class="fw-bold mb-3 text-primary">
-                        <i class="bi bi-person me-2"></i>Student Information
-                      </h6>
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student First & Last Name</label>
-                          <input type="text" class="form-control" id="confirm_first_name" name="confirm_first_name" readonly>
-                          <input type="text" class="form-control mt-2" id="confirm_last_name" name="confirm_last_name" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student ID</label>
-                          <input type="text" class="form-control" id="confirm_student_id" name="confirm_student_id" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student Gender</label>
-                          <input type="text" class="form-control" id="confirm_gender" name="confirm_gender" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student Grade</label>
-                          <input type="text" class="form-control" id="confirm_grade" name="confirm_grade" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student Address</label>
-                          <textarea class="form-control" id="confirm_address" name="confirm_address" rows="3" readonly></textarea>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student DOB</label>
-                          <input type="text" class="form-control" id="confirm_dob" name="confirm_dob" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Student State ID</label>
-                          <input type="text" class="form-control" id="confirm_state_id" name="confirm_state_id" readonly>
-                        </div>
-                      </div>
-                    </div>
-                    <!-- School Information -->
-                    <div class="col-md-6">
-                      <h6 class="fw-bold mb-3 text-primary">
-                        <i class="bi bi-building me-2"></i>School Information
-                      </h6>
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Entrance School Year</label>
-                          <input type="text" class="form-control" id="confirm_entrance_date" name="confirm_entrance_date" readonly>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold">Expected to Graduate Date</label>
-                          <input type="text" class="form-control" id="confirm_expected_grad_date" name="confirm_expected_grad_date" readonly>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <hr class="my-5" id="confirmation-separator" style="display: none;">
-
-            <!-- Step 2: Select Classes -->
-            <div class="form-section mb-5">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-book"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">3. Select Classes</h5>
-                  <p class="text-muted mb-0 small">Choose one or more classes to include in the report card</p>
-                </div>
-              </div>
-              <div id="loading-classes" class="text-center py-5" style="display: none;">
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3 text-muted">Loading classes for selected student...</p>
-              </div>
-              <div id="classes-container" style="display: none;">
-                <div class="row g-3 mb-4" id="classes-list">
-                  <!-- Classes will be dynamically loaded here -->
-                </div>
-                <div class="alert alert-info border-0 shadow-sm">
-                  <i class="bi bi-info-circle me-2"></i>
-                  <strong>Tip:</strong> Select at least one class to continue. You can choose multiple classes for a comprehensive report card.
-                </div>
-              </div>
-              <div id="no-classes-message" class="alert alert-warning border-0" style="display: none;">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                Please select a student first to see their enrolled classes.
-              </div>
-            </div>
-
-            <hr class="my-5">
-
-            <!-- Step 3: Select School Year and Quarters -->
-            <div class="form-section mb-5">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-calendar3"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">4. Select School Year & Quarters</h5>
-                  <p class="text-muted mb-0 small">Choose the school year and which quarters to include in the report card</p>
-                </div>
-              </div>
-              <div class="row g-4">
-                <div class="col-md-12">
-                  <div class="form-floating">
-                    <select class="form-select" id="school_year_id" name="school_year_id" required>
-                      {% for year in school_years %}
-                        <option value="{{ year.id }}" {% if year.is_active %}selected{% endif %}>{{ year.name }}</option>
-                      {% endfor %}
-                    </select>
-                    <label for="school_year_id">
-                      <i class="bi bi-calendar3 me-2"></i>School Year <span class="text-danger">*</span>
-                    </label>
-                    <small class="text-muted mt-1 d-block">Current year is pre-selected. Change to generate historical report cards.</small>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Quarter Selection -->
-              <div class="mt-4">
-                <label class="form-label fw-bold mb-3">
-                  <i class="bi bi-calendar-range me-2"></i>Select Quarters to Include <span class="text-danger">*</span>
-                </label>
-                <div class="row g-3" id="quarters-container">
-                  <div class="col-md-3">
-                    <div class="form-check form-check-lg p-3 border rounded">
-                      <input class="form-check-input" type="checkbox" name="quarters" value="Q1" id="quarter_q1" checked>
-                      <label class="form-check-label fw-semibold" for="quarter_q1">
-                        <i class="bi bi-1-circle me-2"></i>Quarter 1 (Q1)
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-md-3">
-                    <div class="form-check form-check-lg p-3 border rounded">
-                      <input class="form-check-input" type="checkbox" name="quarters" value="Q2" id="quarter_q2" checked>
-                      <label class="form-check-label fw-semibold" for="quarter_q2">
-                        <i class="bi bi-2-circle me-2"></i>Quarter 2 (Q2)
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-md-3">
-                    <div class="form-check form-check-lg p-3 border rounded">
-                      <input class="form-check-input" type="checkbox" name="quarters" value="Q3" id="quarter_q3" checked>
-                      <label class="form-check-label fw-semibold" for="quarter_q3">
-                        <i class="bi bi-3-circle me-2"></i>Quarter 3 (Q3)
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-md-3">
-                    <div class="form-check form-check-lg p-3 border rounded">
-                      <input class="form-check-input" type="checkbox" name="quarters" value="Q4" id="quarter_q4" checked>
-                      <label class="form-check-label fw-semibold" for="quarter_q4">
-                        <i class="bi bi-4-circle me-2"></i>Quarter 4 (Q4)
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <small class="text-muted mt-2 d-block">
-                  <i class="bi bi-info-circle me-1"></i>
-                  Select one or more quarters. The report period will reflect the selected quarters. Quarters without posted grades will show "N/A".
-                </small>
-              </div>
-            </div>
-
-            <hr class="my-5">
-
-            <!-- Step 4: Select Options -->
-            <div class="form-section mb-5">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-gear"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">5. Select Options</h5>
-                  <p class="text-muted mb-0 small">Configure report card settings and additional information</p>
-                </div>
-              </div>
-
-              <div class="card border-0 shadow-sm mt-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <div class="card-body p-4">
-                  <h6 class="mb-4 fw-bold">
-                    <i class="bi bi-toggle-on me-2 text-primary"></i>Additional Options
-                  </h6>
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <div class="option-card">
-                        <label class="form-label fw-bold mb-3">
-                          <i class="bi bi-file-earmark-text me-2 text-primary"></i>Report Card Type <span class="text-danger">*</span>
-                        </label>
-                        <div class="form-check mb-2">
-                          <input class="form-check-input" type="radio" name="report_type" id="official_report" value="official" checked required>
-                          <label class="form-check-label" for="official_report">
-                            <strong>Official</strong>
-                            <small class="text-muted d-block">Official report card for official records</small>
-                          </label>
-                        </div>
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="report_type" id="unofficial_report" value="unofficial" required>
-                          <label class="form-check-label" for="unofficial_report">
-                            <strong>Unofficial</strong>
-                            <small class="text-muted d-block">Unofficial report card with watermark</small>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="option-card">
-                        <div class="form-check form-switch form-switch-lg">
-                          <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
-                          <label class="form-check-label" for="include_attendance">
-                            <div class="d-flex align-items-center">
-                              <div class="option-icon me-3">
-                                <i class="bi bi-calendar-check"></i>
-                              </div>
-                              <div>
-                                <strong>Include Attendance</strong>
-                                <small class="text-muted d-block">Show a summary table on page 1 (4th–8th report cards)</small>
-                              </div>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="row g-3 mt-2">
-                    <div class="col-md-6">
-                      <div class="option-card">
-                        <div class="form-check form-switch form-switch-lg">
-                          <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments" checked>
-                          <label class="form-check-label" for="include_comments">
-                            <div class="d-flex align-items-center">
-                              <div class="option-icon me-3">
-                                <i class="bi bi-chat-text"></i>
-                              </div>
-                              <div>
-                                <strong>Include Comments</strong>
-                                <small class="text-muted d-block">Pull saved teacher comments (and allow overrides below)</small>
-                              </div>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <hr class="my-5">
-
-            <!-- Step 6: Teacher Comments (optional) -->
-            <div class="form-section mb-5" id="comments-section" style="display: none;">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-chat-dots"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">6. Teacher Comments (Optional)</h5>
-                  <p class="text-muted mb-0 small">Saved comments will be auto-filled. You can override before generating.</p>
-                </div>
-              </div>
-              <div id="comments-container" class="alert alert-info border-0 shadow-sm">
-                <i class="bi bi-info-circle me-2"></i>
-                Select a student and classes first to load comment boxes.
-              </div>
-              <div class="form-check mt-3">
-                <input class="form-check-input" type="checkbox" id="persist_comment_overrides" name="persist_comment_overrides">
-                <label class="form-check-label" for="persist_comment_overrides">
-                  Save overrides back to teacher comments (management)
-                </label>
-                <div class="form-text">If checked, your overrides will be stored for future report generations too.</div>
-              </div>
-            </div>
-
-            <!-- Step 7: Additional Comments (optional) -->
-            <div class="form-section mb-5" id="additional-comments-section">
-              <div class="section-header mb-4">
-                <div class="section-icon">
-                  <i class="bi bi-chat-square-text"></i>
-                </div>
-                <div>
-                  <h5 class="fw-bold mb-1">7. Additional Comments (Optional)</h5>
-                  <p class="text-muted mb-0 small">This will appear in the “Additional Comment/Concern” box on the PDF.</p>
-                </div>
-              </div>
-
-              <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                  <label for="additional_comments" class="form-label fw-semibold">Additional Comment/Concern</label>
-                  <textarea
-                    class="form-control"
-                    id="additional_comments"
-                    name="additional_comments"
-                    rows="4"
-                    placeholder="Type any additional notes to include on the report card..."></textarea>
-                </div>
-              </div>
-            </div>
-
-            <!-- Generate Button -->
-            <div class="text-center mt-5 pt-4 border-top">
-              <button type="submit" class="btn btn-success btn-lg px-5 py-3" id="generateBtn">
-                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Report Card PDF
-              </button>
-              <p class="text-muted mt-3 small">
-                <i class="bi bi-info-circle me-1"></i>
-                The PDF will be generated and displayed in a new window for download.
-              </p>
-            </div>
-          </form>
-          
-          <!-- Hidden iframe for PDF display -->
-          <iframe id="pdfFrame" name="pdfFrame" style="display: none;"></iframe>
-        </div>
+    {# ===== Stepper ===== #}
+    <nav class="mgmt-rcf-stepper" id="rcfStepper" aria-label="Form progress">
+      <div class="mgmt-rcf-step" data-step="student">
+        <span class="mgmt-rcf-step-num"><span>1</span></span>
+        <span class="mgmt-rcf-step-label">Student</span>
       </div>
+      <div class="mgmt-rcf-step" data-step="confirm">
+        <span class="mgmt-rcf-step-num"><span>2</span></span>
+        <span class="mgmt-rcf-step-label">Confirm</span>
+      </div>
+      <div class="mgmt-rcf-step" data-step="classes">
+        <span class="mgmt-rcf-step-num"><span>3</span></span>
+        <span class="mgmt-rcf-step-label">Classes</span>
+      </div>
+      <div class="mgmt-rcf-step" data-step="period">
+        <span class="mgmt-rcf-step-num"><span>4</span></span>
+        <span class="mgmt-rcf-step-label">Period</span>
+      </div>
+      <div class="mgmt-rcf-step" data-step="options">
+        <span class="mgmt-rcf-step-num"><span>5</span></span>
+        <span class="mgmt-rcf-step-label">Options</span>
+      </div>
+    </nav>
+
+    <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" novalidate target="_blank">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+      {# =========================================================
+         Step 1 — Student
+         ========================================================= #}
+      <section class="mgmt-rcf-section" data-step="student">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num">1</span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Student</h2>
+            <p class="mgmt-rcf-section-helper">Pick the student this report card is for.</p>
+          </div>
+          <span class="mgmt-rcf-section-meta" id="rcf-meta-student">Not selected</span>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          {% if pre_selected_student %}
+            {% set selected_student = students|selectattr('id', 'equalto', pre_selected_student)|first %}
+            <input type="hidden" id="student_id" name="student_id" value="{{ pre_selected_student }}">
+            <div class="mgmt-rcf-student-pill">
+              <span class="mgmt-rcf-student-pill-avatar"><i class="bi bi-person-fill"></i></span>
+              <div class="mgmt-rcf-student-pill-body">
+                <p class="mgmt-rcf-student-pill-name">{{ selected_student.first_name }} {{ selected_student.last_name }}</p>
+                <p class="mgmt-rcf-student-pill-meta">
+                  Grade {{ selected_student.grade_level }}
+                  {% if selected_student.student_id %} · ID {{ selected_student.student_id }}{% endif %}
+                </p>
+              </div>
+              <a href="{{ url_for('management.report_cards') }}" class="mgmt-rcf-btn mgmt-rcf-btn--ghost">
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Change
+              </a>
+            </div>
+          {% else %}
+            <div class="mgmt-rcf-field">
+              <label for="student_id" class="mgmt-rcf-label">
+                Student <span class="mgmt-rcf-required" aria-hidden="true">*</span>
+              </label>
+              <label class="mgmt-rcf-inline-check">
+                <input type="checkbox" id="showWithdrawnStudents">
+                Show withdrawn students
+              </label>
+              <select class="mgmt-rcf-select" id="student_id" name="student_id" required>
+                <option value="">Choose a student…</option>
+                {% for student in students %}
+                  <option value="{{ student.id }}">
+                    {{ student.first_name }} {{ student.last_name }} — Grade {{ student.grade_level }}
+                    {% if student.student_id %} (ID: {{ student.student_id }}){% endif %}
+                    {% if student.is_active is defined and not student.is_active %} (Withdrawn){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              <p class="mgmt-rcf-helper">The form below populates automatically once a student is chosen.</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      {# =========================================================
+         Step 2 — Confirm synced student/school info (readonly)
+         ========================================================= #}
+      <section class="mgmt-rcf-section" id="confirmation-section" data-step="confirm" style="display: none;">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num">2</span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Confirm synced details</h2>
+            <p class="mgmt-rcf-section-helper">Pulled from the student profile. Missing fields must be updated there before generating.</p>
+          </div>
+          <span class="mgmt-rcf-section-meta" id="rcf-meta-confirm">Awaiting</span>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          <div class="mgmt-rcf-confirm-banner">
+            <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+            <span>If any required field below is empty, open the student profile and update it before continuing.</span>
+          </div>
+
+          <div class="mgmt-rcf-confirm-grid">
+            <div>
+              <p class="mgmt-rcf-confirm-block-title"><i class="bi bi-person"></i> Student</p>
+
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">First name</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_first_name" name="confirm_first_name" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Last name</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_last_name" name="confirm_last_name" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Student ID</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_student_id" name="confirm_student_id" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Gender</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_gender" name="confirm_gender" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Grade</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_grade" name="confirm_grade" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Address</label>
+                <textarea class="mgmt-rcf-textarea mgmt-rcf-readonly" id="confirm_address" name="confirm_address" rows="2" readonly></textarea>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Date of birth</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_dob" name="confirm_dob" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">State ID</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_state_id" name="confirm_state_id" readonly>
+              </div>
+            </div>
+
+            <div>
+              <p class="mgmt-rcf-confirm-block-title"><i class="bi bi-building"></i> School</p>
+
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Entrance school year</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_entrance_date" name="confirm_entrance_date" readonly>
+              </div>
+              <div class="mgmt-rcf-field">
+                <label class="mgmt-rcf-label">Expected to graduate</label>
+                <input type="text" class="mgmt-rcf-input mgmt-rcf-readonly" id="confirm_expected_grad_date" name="confirm_expected_grad_date" readonly>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {# =========================================================
+         Step 3 — Classes
+         ========================================================= #}
+      <section class="mgmt-rcf-section" data-step="classes">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num">3</span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Classes</h2>
+            <p class="mgmt-rcf-section-helper">Pick one or more classes to include on the report card.</p>
+          </div>
+          <span class="mgmt-rcf-section-meta" id="rcf-meta-classes">No classes</span>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          <div id="loading-classes" class="mgmt-rcf-loading" style="display: none;">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading…</span>
+            </div>
+            <p>Loading classes for selected student…</p>
+          </div>
+
+          <div id="classes-container" style="display: none;">
+            <div class="mgmt-rcf-class-grid" id="classes-list">
+              <!-- Class cards rendered by JS -->
+            </div>
+            <p class="mgmt-rcf-helper" style="margin-top: 0.75rem;">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              Tip: at least one class is required. Selecting more classes builds a more complete report card.
+            </p>
+          </div>
+
+          <div id="no-classes-message" class="mgmt-rcf-empty" style="display: none;">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span>Please select a student first to see their enrolled classes.</span>
+          </div>
+        </div>
+      </section>
+
+      {# =========================================================
+         Step 4 — School Year + Quarters
+         ========================================================= #}
+      <section class="mgmt-rcf-section" data-step="period">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num">4</span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Reporting period</h2>
+            <p class="mgmt-rcf-section-helper">Choose the school year and which quarters to include.</p>
+          </div>
+          <span class="mgmt-rcf-section-meta is-ok" id="rcf-meta-period">Q1–Q4</span>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          <div class="mgmt-rcf-field">
+            <label for="school_year_id" class="mgmt-rcf-label">
+              <i class="bi bi-calendar3" aria-hidden="true"></i> School year <span class="mgmt-rcf-required" aria-hidden="true">*</span>
+            </label>
+            <select class="mgmt-rcf-select" id="school_year_id" name="school_year_id" required>
+              {% for year in school_years %}
+                <option value="{{ year.id }}" {% if year.is_active %}selected{% endif %}>{{ year.name }}</option>
+              {% endfor %}
+            </select>
+            <p class="mgmt-rcf-helper">Current year is pre-selected. Switch to generate historical report cards.</p>
+          </div>
+
+          <div class="mgmt-rcf-divider-soft"></div>
+
+          <div class="mgmt-rcf-field">
+            <label class="mgmt-rcf-label">
+              <i class="bi bi-calendar-range" aria-hidden="true"></i> Quarters to include <span class="mgmt-rcf-required" aria-hidden="true">*</span>
+            </label>
+            <div class="mgmt-rcf-quarter-grid" id="quarters-container">
+              <label class="mgmt-rcf-quarter">
+                <input type="checkbox" name="quarters" value="Q1" id="quarter_q1" checked>
+                <span><i class="bi bi-1-circle" aria-hidden="true"></i> Quarter 1</span>
+              </label>
+              <label class="mgmt-rcf-quarter">
+                <input type="checkbox" name="quarters" value="Q2" id="quarter_q2" checked>
+                <span><i class="bi bi-2-circle" aria-hidden="true"></i> Quarter 2</span>
+              </label>
+              <label class="mgmt-rcf-quarter">
+                <input type="checkbox" name="quarters" value="Q3" id="quarter_q3" checked>
+                <span><i class="bi bi-3-circle" aria-hidden="true"></i> Quarter 3</span>
+              </label>
+              <label class="mgmt-rcf-quarter">
+                <input type="checkbox" name="quarters" value="Q4" id="quarter_q4" checked>
+                <span><i class="bi bi-4-circle" aria-hidden="true"></i> Quarter 4</span>
+              </label>
+            </div>
+            <p class="mgmt-rcf-helper">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              The report period reflects your selection. Quarters with no posted grades show "N/A".
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {# =========================================================
+         Step 5 — Options (report type + attendance + comments)
+         ========================================================= #}
+      <section class="mgmt-rcf-section" data-step="options">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num">5</span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Options</h2>
+            <p class="mgmt-rcf-section-helper">Choose copy type and toggle attendance / comments.</p>
+          </div>
+          <span class="mgmt-rcf-section-meta is-ok" id="rcf-meta-options">Official</span>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          <div class="mgmt-rcf-options-grid">
+            {# Report type radio group #}
+            <div class="mgmt-rcf-option-card">
+              <p class="mgmt-rcf-option-card-title">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Report card type
+                <span class="mgmt-rcf-required" aria-hidden="true">*</span>
+              </p>
+              <label class="mgmt-rcf-radio">
+                <input type="radio" name="report_type" id="official_report" value="official" checked required>
+                <span class="mgmt-rcf-radio-body">
+                  <span class="mgmt-rcf-radio-title">Official</span>
+                  <span class="mgmt-rcf-radio-desc">For official records and transcripts.</span>
+                </span>
+              </label>
+              <label class="mgmt-rcf-radio">
+                <input type="radio" name="report_type" id="unofficial_report" value="unofficial" required>
+                <span class="mgmt-rcf-radio-body">
+                  <span class="mgmt-rcf-radio-title">Unofficial</span>
+                  <span class="mgmt-rcf-radio-desc">Includes a watermark; for previews.</span>
+                </span>
+              </label>
+            </div>
+
+            {# Attendance toggle #}
+            <div class="mgmt-rcf-option-card">
+              <p class="mgmt-rcf-option-card-title">
+                <i class="bi bi-calendar-check" aria-hidden="true"></i> Attendance
+              </p>
+              <label class="mgmt-rcf-toggle">
+                <input type="checkbox" id="include_attendance" name="include_attendance">
+                <span class="mgmt-rcf-toggle-switch" aria-hidden="true"></span>
+                <span class="mgmt-rcf-toggle-body">
+                  <span class="mgmt-rcf-toggle-title">Include attendance summary</span>
+                  <span class="mgmt-rcf-toggle-desc">Adds a summary table on page 1 (grades 4–8).</span>
+                </span>
+              </label>
+            </div>
+
+            {# Comments toggle #}
+            <div class="mgmt-rcf-option-card">
+              <p class="mgmt-rcf-option-card-title">
+                <i class="bi bi-chat-text" aria-hidden="true"></i> Comments
+              </p>
+              <label class="mgmt-rcf-toggle">
+                <input type="checkbox" id="include_comments" name="include_comments" checked>
+                <span class="mgmt-rcf-toggle-switch" aria-hidden="true"></span>
+                <span class="mgmt-rcf-toggle-body">
+                  <span class="mgmt-rcf-toggle-title">Include teacher comments</span>
+                  <span class="mgmt-rcf-toggle-desc">Pulls saved comments; you can override below.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {# =========================================================
+         Per-class teacher comments (revealed when toggle on)
+         ========================================================= #}
+      <section class="mgmt-rcf-section" id="comments-section" style="display: none;">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num"><i class="bi bi-chat-dots-fill"></i></span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Teacher comments</h2>
+            <p class="mgmt-rcf-section-helper">Saved comments are auto-filled — edit any of them before generating.</p>
+          </div>
+          <span class="mgmt-rcf-section-meta" id="rcf-meta-comments">—</span>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          <div id="comments-container" class="mgmt-rcf-empty">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>Select a student, classes, and quarters to load comment boxes.</span>
+          </div>
+          <label class="mgmt-rcf-inline-check" style="margin-top: 1rem;">
+            <input type="checkbox" id="persist_comment_overrides" name="persist_comment_overrides">
+            Save overrides back to teacher comments for future report generations.
+          </label>
+        </div>
+      </section>
+
+      {# =========================================================
+         Additional comments (free text)
+         ========================================================= #}
+      <section class="mgmt-rcf-section">
+        <header class="mgmt-rcf-section-head">
+          <span class="mgmt-rcf-section-num"><i class="bi bi-pencil-square"></i></span>
+          <div class="mgmt-rcf-section-title-wrap">
+            <h2 class="mgmt-rcf-section-title">Additional comment / concern</h2>
+            <p class="mgmt-rcf-section-helper">Optional. Appears in the "Additional Comment / Concern" area of the PDF.</p>
+          </div>
+        </header>
+        <div class="mgmt-rcf-section-body">
+          <div class="mgmt-rcf-field">
+            <textarea class="mgmt-rcf-textarea"
+                      id="additional_comments"
+                      name="additional_comments"
+                      rows="4"
+                      placeholder="Notes about this student or term to include on the report card…"></textarea>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    {# Hidden iframe used by some workflows #}
+    <iframe id="pdfFrame" name="pdfFrame" style="display: none;"></iframe>
+
+    {# ===== Sticky footer action bar (inside shell, respects sidebar) ===== #}
+    <div class="mgmt-rcf-footer" id="rcfFooter">
+      <div class="mgmt-rcf-footer-chips" id="rcfChips">
+        <span class="mgmt-rcf-chip" id="rcf-chip-student"><i class="bi bi-person"></i><span>No student</span></span>
+        <span class="mgmt-rcf-chip" id="rcf-chip-classes"><i class="bi bi-book"></i><span>0 classes</span></span>
+        <span class="mgmt-rcf-chip is-accent" id="rcf-chip-quarters"><i class="bi bi-calendar-range"></i><span>4 quarters</span></span>
+        <span class="mgmt-rcf-chip is-ok" id="rcf-chip-type"><i class="bi bi-file-earmark-text"></i><span>Official</span></span>
+      </div>
+      <div class="mgmt-rcf-footer-actions">
+        <button type="reset" class="mgmt-rcf-btn mgmt-rcf-btn--ghost" form="reportCardForm">
+          <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset
+        </button>
+        <button type="submit" class="mgmt-rcf-btn mgmt-rcf-btn--success" id="generateBtn" form="reportCardForm">
+          <i class="bi bi-file-earmark-pdf-fill" aria-hidden="true"></i> Generate PDF
+        </button>
+      </div>
+      <span class="mgmt-rcf-footer-note">
+        <i class="bi bi-info-circle me-1"></i>
+        The PDF opens in a new tab when generation completes.
+      </span>
     </div>
   </div>
 </div>
 
-
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // -----------------------------------------------------------
+  // Element references (preserve all IDs the backend expects)
+  // -----------------------------------------------------------
   const form = document.getElementById('reportCardForm');
   const studentSelect = document.getElementById('student_id');
   const showWithdrawnToggle = document.getElementById('showWithdrawnStudents');
@@ -456,11 +447,136 @@ document.addEventListener('DOMContentLoaded', function() {
   const includeCommentsToggle = document.getElementById('include_comments');
   const commentsSection = document.getElementById('comments-section');
   const commentsContainer = document.getElementById('comments-container');
-
   const confirmationSection = document.getElementById('confirmation-section');
-  const confirmationSeparator = document.getElementById('confirmation-separator');
 
-  // Load classes and student details when student is selected (or on page load if pre-selected)
+  // Stepper + footer chip elements
+  const stepperSteps = document.querySelectorAll('#rcfStepper .mgmt-rcf-step');
+  const sectionsByStep = {
+    student: document.querySelector('section[data-step="student"]'),
+    confirm: document.querySelector('section[data-step="confirm"]'),
+    classes: document.querySelector('section[data-step="classes"]'),
+    period: document.querySelector('section[data-step="period"]'),
+    options: document.querySelector('section[data-step="options"]'),
+  };
+  const meta = {
+    student: document.getElementById('rcf-meta-student'),
+    confirm: document.getElementById('rcf-meta-confirm'),
+    classes: document.getElementById('rcf-meta-classes'),
+    period: document.getElementById('rcf-meta-period'),
+    options: document.getElementById('rcf-meta-options'),
+    comments: document.getElementById('rcf-meta-comments'),
+  };
+  const chip = {
+    student: document.getElementById('rcf-chip-student'),
+    classes: document.getElementById('rcf-chip-classes'),
+    quarters: document.getElementById('rcf-chip-quarters'),
+    type: document.getElementById('rcf-chip-type'),
+  };
+
+  function setChip(el, label, ok) {
+    if (!el) return;
+    const span = el.querySelector('span');
+    if (span) span.textContent = label;
+    el.classList.toggle('is-ok', !!ok);
+  }
+
+  function setStepStatus(step, status) {
+    // status: 'complete' | 'active' | 'idle'
+    const node = document.querySelector(`#rcfStepper .mgmt-rcf-step[data-step="${step}"]`);
+    if (!node) return;
+    node.classList.remove('is-active', 'is-complete');
+    if (status === 'complete') node.classList.add('is-complete');
+    else if (status === 'active') node.classList.add('is-active');
+  }
+
+  function recomputeProgress() {
+    // Student
+    const studentId = studentSelect && studentSelect.value;
+    if (studentId) {
+      // Label
+      let label = 'Selected';
+      if (studentSelect.tagName === 'SELECT') {
+        const opt = studentSelect.selectedOptions[0];
+        if (opt) label = (opt.textContent || '').split('—')[0].trim();
+      } else {
+        const pillName = document.querySelector('.mgmt-rcf-student-pill-name');
+        if (pillName) label = pillName.textContent.trim();
+      }
+      if (meta.student) { meta.student.textContent = label; meta.student.classList.add('is-ok'); }
+      setChip(chip.student, label, true);
+      setStepStatus('student', 'complete');
+    } else {
+      if (meta.student) { meta.student.textContent = 'Not selected'; meta.student.classList.remove('is-ok'); }
+      setChip(chip.student, 'No student', false);
+      setStepStatus('student', 'active');
+    }
+
+    // Confirm
+    const confirmedGender = (document.getElementById('confirm_gender')?.value || '').trim();
+    const confirmedEntrance = (document.getElementById('confirm_entrance_date')?.value || '').trim();
+    const confirmVisible = confirmationSection && confirmationSection.style.display !== 'none';
+    if (confirmVisible) {
+      if (confirmedGender && confirmedEntrance) {
+        if (meta.confirm) { meta.confirm.textContent = 'Looks good'; meta.confirm.classList.remove('is-warn'); meta.confirm.classList.add('is-ok'); }
+        setStepStatus('confirm', 'complete');
+      } else {
+        if (meta.confirm) { meta.confirm.textContent = 'Missing fields'; meta.confirm.classList.add('is-warn'); meta.confirm.classList.remove('is-ok'); }
+        setStepStatus('confirm', 'active');
+      }
+    } else {
+      if (meta.confirm) { meta.confirm.textContent = 'Awaiting'; meta.confirm.classList.remove('is-warn', 'is-ok'); }
+      setStepStatus('confirm', 'idle');
+    }
+
+    // Classes
+    const selectedClasses = classesList.querySelectorAll('input[name="class_ids"]:checked');
+    const classCount = selectedClasses.length;
+    if (classCount > 0) {
+      if (meta.classes) { meta.classes.textContent = `${classCount} selected`; meta.classes.classList.add('is-ok'); }
+      setChip(chip.classes, `${classCount} class${classCount === 1 ? '' : 'es'}`, true);
+      setStepStatus('classes', 'complete');
+    } else {
+      const noClasses = classesContainer.style.display === 'none';
+      if (meta.classes) { meta.classes.textContent = noClasses ? 'Pick a student' : 'None selected'; meta.classes.classList.remove('is-ok'); }
+      setChip(chip.classes, '0 classes', false);
+      setStepStatus('classes', studentId ? 'active' : 'idle');
+    }
+
+    // Quarters
+    const quarters = Array.from(document.querySelectorAll('input[name="quarters"]:checked')).map(x => x.value);
+    if (meta.period) {
+      if (quarters.length === 0) {
+        meta.period.textContent = 'No quarters';
+        meta.period.classList.remove('is-ok');
+        meta.period.classList.add('is-warn');
+      } else if (quarters.length === 4) {
+        meta.period.textContent = 'Q1–Q4';
+        meta.period.classList.add('is-ok');
+        meta.period.classList.remove('is-warn');
+      } else {
+        meta.period.textContent = quarters.join(' · ');
+        meta.period.classList.add('is-ok');
+        meta.period.classList.remove('is-warn');
+      }
+    }
+    setChip(chip.quarters, `${quarters.length} quarter${quarters.length === 1 ? '' : 's'}`, quarters.length > 0);
+    setStepStatus('period', quarters.length > 0 ? 'complete' : 'active');
+
+    // Options (type + attendance/comments)
+    const reportType = (document.querySelector('input[name="report_type"]:checked')?.value || 'official');
+    const includeAttendance = document.getElementById('include_attendance')?.checked;
+    const includeComments = document.getElementById('include_comments')?.checked;
+    const optParts = [reportType === 'unofficial' ? 'Unofficial' : 'Official'];
+    if (includeAttendance) optParts.push('attendance');
+    if (includeComments) optParts.push('comments');
+    if (meta.options) { meta.options.textContent = optParts.join(' · '); meta.options.classList.add('is-ok'); }
+    setChip(chip.type, optParts[0], true);
+    setStepStatus('options', 'complete');
+  }
+
+  // -----------------------------------------------------------
+  // Student details + class loading
+  // -----------------------------------------------------------
   if (studentSelect) {
     studentSelect.addEventListener('change', function() {
       if (this.value) {
@@ -468,18 +584,16 @@ document.addEventListener('DOMContentLoaded', function() {
         loadStudentClasses(this.value);
       } else {
         confirmationSection.style.display = 'none';
-        confirmationSeparator.style.display = 'none';
         classesContainer.style.display = 'none';
-        noClassesMessage.style.display = 'block';
-        noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Please select a student first to see their enrolled classes.';
+        noClassesMessage.style.display = 'flex';
         classesList.innerHTML = '';
       }
+      recomputeProgress();
     });
   }
 
-  // Best-effort withdrawn filter: hide options that include "(Withdrawn)" in label.
-  // (We label withdrawn students in the backend option text once wired; until then, this is harmless.)
-  if (showWithdrawnToggle && studentSelect) {
+  // Best-effort withdrawn filter for the <select> (does nothing for pre-selected pill)
+  if (showWithdrawnToggle && studentSelect && studentSelect.tagName === 'SELECT') {
     const applyWithdrawnFilter = function() {
       const showAll = !!this.checked;
       Array.from(studentSelect.options).forEach(opt => {
@@ -489,65 +603,61 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       if (studentSelect.selectedOptions.length && studentSelect.selectedOptions[0].hidden) {
         studentSelect.value = '';
+        recomputeProgress();
       }
     };
-
     showWithdrawnToggle.addEventListener('change', applyWithdrawnFilter);
-    // Apply once on load so withdrawn students are hidden by default.
     applyWithdrawnFilter.call(showWithdrawnToggle);
   }
-  
-  // Auto-load student details and classes if student is pre-selected
-  const studentIdField = document.getElementById('student_id');
-  if (studentIdField && studentIdField.value) {
-    loadStudentDetails(studentIdField.value);
-    loadStudentClasses(studentIdField.value);
+
+  // Auto-load if pre-selected
+  if (studentSelect && studentSelect.value) {
+    loadStudentDetails(studentSelect.value);
+    loadStudentClasses(studentSelect.value);
   }
 
   function loadStudentDetails(studentId) {
     fetch(`/management/api/student/${studentId}/details`)
-      .then(response => response.json())
+      .then(r => r.json())
       .then(data => {
         if (data.success && data.student) {
-          const student = data.student;
-          
-          // Populate readonly fields
-          document.getElementById('confirm_first_name').value = student.first_name || '';
-          document.getElementById('confirm_last_name').value = student.last_name || '';
-          document.getElementById('confirm_student_id').value = student.student_id || 'N/A';
-          document.getElementById('confirm_grade').value = student.grade_level || '';
-          document.getElementById('confirm_state_id').value = student.state_id || 'N/A';
-          document.getElementById('confirm_expected_grad_date').value = student.expected_grad_date || '';
-          
-          // Populate editable fields
-          document.getElementById('confirm_gender').value = student.gender || '';
-          document.getElementById('confirm_address').value = student.address || '';
-          document.getElementById('confirm_dob').value = student.dob || '';
-          document.getElementById('confirm_entrance_date').value = student.entrance_date || '';
-          
-          // Show confirmation section
-          confirmationSection.style.display = 'block';
-          confirmationSeparator.style.display = 'block';
+          const s = data.student;
+          document.getElementById('confirm_first_name').value = s.first_name || '';
+          document.getElementById('confirm_last_name').value  = s.last_name  || '';
+          document.getElementById('confirm_student_id').value = s.student_id || 'N/A';
+          document.getElementById('confirm_grade').value      = s.grade_level || '';
+          document.getElementById('confirm_state_id').value   = s.state_id   || 'N/A';
+          document.getElementById('confirm_expected_grad_date').value = s.expected_grad_date || '';
+          document.getElementById('confirm_gender').value     = s.gender   || '';
+          document.getElementById('confirm_address').value    = s.address  || '';
+          document.getElementById('confirm_dob').value        = s.dob      || '';
+          document.getElementById('confirm_entrance_date').value = s.entrance_date || '';
+
+          // Highlight empty required fields visually
+          ['confirm_gender', 'confirm_entrance_date'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('is-empty', !(el.value || '').trim());
+          });
+
+          confirmationSection.style.display = '';
         } else {
-          console.error('Failed to load student details');
           confirmationSection.style.display = 'none';
-          confirmationSeparator.style.display = 'none';
         }
+        recomputeProgress();
       })
-      .catch(error => {
-        console.error('Error loading student details:', error);
+      .catch(err => {
+        console.error('Error loading student details:', err);
         confirmationSection.style.display = 'none';
-        confirmationSeparator.style.display = 'none';
+        recomputeProgress();
       });
   }
 
   function loadStudentClasses(studentId) {
-    loadingClasses.style.display = 'block';
+    loadingClasses.style.display = '';
     classesContainer.style.display = 'none';
     noClassesMessage.style.display = 'none';
     classesList.innerHTML = '';
 
-    // Load eligible classes based on selected school year + selected quarters.
     const schoolYearId = (document.getElementById('school_year_id')?.value || '').trim();
     const quarters = Array.from(document.querySelectorAll('input[name="quarters"]:checked')).map(x => x.value);
     const params = new URLSearchParams();
@@ -555,101 +665,63 @@ document.addEventListener('DOMContentLoaded', function() {
     (quarters.length ? quarters : ['Q1','Q2','Q3','Q4']).forEach(q => params.append('quarters', q));
 
     fetch(`/management/api/student/${studentId}/classes?${params.toString()}`)
-      .then(response => response.json())
+      .then(r => r.json())
       .then(data => {
         loadingClasses.style.display = 'none';
-        
         if (data.success && data.classes.length > 0) {
           classesList.innerHTML = '';
-          data.classes.forEach(classItem => {
-            const classCard = document.createElement('div');
-            classCard.className = 'col-md-6';
-            classCard.innerHTML = `
-              <div class="class-card" data-class-id="${classItem.id}">
-                <div class="form-check d-flex align-items-center">
-                  <input class="form-check-input" type="checkbox" name="class_ids" value="${classItem.id}" id="class_${classItem.id}" checked>
-                  <label class="form-check-label flex-grow-1 class-card-content" for="class_${classItem.id}">
-                    <h6>${classItem.name}</h6>
-                    <small class="text-muted d-block">${classItem.subject} • ${classItem.teacher_name}</small>
-                  </label>
-                </div>
-              </div>
+          data.classes.forEach(c => {
+            const wrapper = document.createElement('label');
+            wrapper.className = 'mgmt-rcf-class-card is-selected';
+            wrapper.dataset.classId = c.id;
+            wrapper.innerHTML = `
+              <input class="form-check-input" type="checkbox" name="class_ids" value="${c.id}" id="class_${c.id}" checked>
+              <span class="mgmt-rcf-class-card-body">
+                <span class="mgmt-rcf-class-card-name">${escapeHtml(c.name)}</span>
+                <span class="mgmt-rcf-class-card-meta">${escapeHtml(c.subject || '')} • ${escapeHtml(c.teacher_name || 'Unassigned')}</span>
+              </span>
             `;
-            classesList.appendChild(classCard);
-            
-            // Add click handler
-            const card = classCard.querySelector('.class-card');
-            card.addEventListener('click', function(e) {
-              if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
-                const checkbox = card.querySelector('input[type="checkbox"]');
-                checkbox.checked = !checkbox.checked;
-                updateClassSelection();
-              }
-            });
+            classesList.appendChild(wrapper);
           });
-          
-          classesList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', updateClassSelection);
-          });
-          
-          classesContainer.style.display = 'block';
-          // Select all classes by default
-          updateClassSelection();
 
-          // Load comment boxes after classes render (if enabled)
+          classesList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', updateClassSelection);
+          });
+          classesContainer.style.display = '';
+          updateClassSelection();
           loadCommentsBoxes();
         } else {
-          noClassesMessage.style.display = 'block';
-          noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>No classes found for this student.';
+          noClassesMessage.style.display = 'flex';
+          noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle"></i><span>No classes found for this student.</span>';
+          recomputeProgress();
         }
       })
-      .catch(error => {
+      .catch(err => {
         loadingClasses.style.display = 'none';
-        classesList.innerHTML = '<div class="alert alert-danger">Error loading classes. Please try again.</div>';
-        console.error('Error:', error);
+        classesList.innerHTML = '<div class="mgmt-rcf-empty"><i class="bi bi-x-circle"></i><span>Error loading classes. Please try again.</span></div>';
+        console.error('Error:', err);
       });
   }
 
   function updateClassSelection() {
-    classesList.querySelectorAll('.class-card').forEach(card => {
-      const checkbox = card.querySelector('input[type="checkbox"]');
-      if (checkbox.checked) {
-        card.classList.add('selected');
-      } else {
-        card.classList.remove('selected');
-      }
+    classesList.querySelectorAll('.mgmt-rcf-class-card').forEach(card => {
+      const cb = card.querySelector('input[type="checkbox"]');
+      card.classList.toggle('is-selected', !!(cb && cb.checked));
     });
-
-    // Refresh comment boxes when class selection changes
     loadCommentsBoxes();
+    recomputeProgress();
   }
 
-  function getSelectedStudentId() {
-    const el = document.getElementById('student_id');
-    return el && el.value ? el.value : null;
-  }
-
-  function getSelectedSchoolYearId() {
-    const el = document.getElementById('school_year_id');
-    return el && el.value ? el.value : null;
-  }
-
-  function getSelectedQuarters() {
-    return Array.from(document.querySelectorAll('input[name="quarters"]:checked')).map(x => x.value);
-  }
-
-  function getSelectedClassIds() {
-    return Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked')).map(x => x.value);
-  }
+  function getSelectedStudentId() { return document.getElementById('student_id')?.value || null; }
+  function getSelectedSchoolYearId() { return document.getElementById('school_year_id')?.value || null; }
+  function getSelectedQuarters() { return Array.from(document.querySelectorAll('input[name="quarters"]:checked')).map(x => x.value); }
+  function getSelectedClassIds() { return Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked')).map(x => x.value); }
 
   function loadCommentsBoxes() {
     if (!commentsSection || !commentsContainer) return;
     const enabled = includeCommentsToggle && includeCommentsToggle.checked;
-    if (!enabled) {
-      commentsSection.style.display = 'none';
-      return;
-    }
-    commentsSection.style.display = 'block';
+    if (!enabled) { commentsSection.style.display = 'none'; if (meta.comments) meta.comments.textContent = 'Off'; return; }
+    commentsSection.style.display = '';
 
     const studentId = getSelectedStudentId();
     const schoolYearId = getSelectedSchoolYearId();
@@ -657,8 +729,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const classIds = getSelectedClassIds();
 
     if (!studentId || !schoolYearId || quarters.length === 0 || classIds.length === 0) {
-      commentsContainer.className = 'alert alert-info border-0 shadow-sm';
-      commentsContainer.innerHTML = '<i class="bi bi-info-circle me-2"></i>Select student, quarters, and classes to load comments.';
+      commentsContainer.className = 'mgmt-rcf-empty';
+      commentsContainer.innerHTML = '<i class="bi bi-info-circle"></i><span>Select a student, classes, and quarters to load comment boxes.</span>';
+      if (meta.comments) meta.comments.textContent = 'Pending';
       return;
     }
 
@@ -668,163 +741,143 @@ document.addEventListener('DOMContentLoaded', function() {
     quarters.forEach(q => params.append('quarters', q));
     classIds.forEach(cid => params.append('class_ids', cid));
 
-    commentsContainer.className = 'text-center py-4';
-    commentsContainer.innerHTML = '<div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted">Loading comments...</div>';
+    commentsContainer.className = 'mgmt-rcf-loading';
+    commentsContainer.innerHTML = '<div class="spinner-border" role="status"></div><p>Loading comments…</p>';
 
     fetch(`/management/api/report-card/comments?${params.toString()}`)
       .then(r => r.json())
       .then(data => {
         if (!data || !data.success) {
-          commentsContainer.className = 'alert alert-warning border-0 shadow-sm';
-          commentsContainer.textContent = 'Could not load comments.';
+          commentsContainer.className = 'mgmt-rcf-empty';
+          commentsContainer.innerHTML = '<i class="bi bi-x-circle"></i><span>Could not load comments.</span>';
+          if (meta.comments) meta.comments.textContent = 'Error';
           return;
         }
         const byClass = data.comments_by_class || {};
         const classMap = data.class_map || {};
 
-        let html = '';
-        html += `<div class="card border-0 shadow-sm"><div class="card-body">`;
+        let html = '<div class="mgmt-rcf-comments-grid">';
         classIds.forEach(cid => {
           const name = (classMap[cid] || `Class ${cid}`);
           const text = (byClass[cid]) ? byClass[cid] : '';
-          const fieldName = `comment_${cid}`;
           html += `
-            <div class="mb-3">
-              <label class="form-label fw-semibold">${name}</label>
-              <textarea class="form-control" name="${fieldName}" rows="3" placeholder="Comment for ${name}...">${(text || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</textarea>
+            <div class="mgmt-rcf-comment-card">
+              <p class="mgmt-rcf-comment-card-label"><i class="bi bi-chat-text"></i> ${escapeHtml(name)}</p>
+              <textarea class="mgmt-rcf-textarea" name="comment_${cid}" rows="3" placeholder="Comment for ${escapeHtml(name)}…">${escapeHtml(text || '')}</textarea>
             </div>
           `;
         });
-        html += `</div></div>`;
+        html += '</div>';
         commentsContainer.className = '';
         commentsContainer.innerHTML = html;
+        if (meta.comments) meta.comments.textContent = `${classIds.length} class${classIds.length === 1 ? '' : 'es'}`;
       })
       .catch(() => {
-        commentsContainer.className = 'alert alert-warning border-0 shadow-sm';
-        commentsContainer.textContent = 'Could not load comments.';
+        commentsContainer.className = 'mgmt-rcf-empty';
+        commentsContainer.innerHTML = '<i class="bi bi-x-circle"></i><span>Could not load comments.</span>';
       });
   }
 
-  // Form validation and submission
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  // -----------------------------------------------------------
+  // Submit validation
+  // -----------------------------------------------------------
   form.addEventListener('submit', function(e) {
-    console.log('Form submit event triggered');
-    
-    // First validate the form
-    if (!form.checkValidity()) {
-      console.log('Form validation failed');
-      e.preventDefault();
-      e.stopPropagation();
-      form.classList.add('was-validated');
-      
-      // Scroll to first invalid field
-      const firstInvalid = form.querySelector(':invalid');
-      if (firstInvalid) {
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        firstInvalid.focus();
-      }
-      
-      return false;
-    }
-    
-    // Check if student is selected
     const studentIdValue = document.getElementById('student_id').value;
     if (!studentIdValue) {
-      console.log('No student selected');
       e.preventDefault();
       alert('Please select a student first.');
+      sectionsByStep.student.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }
-    
-    // Check if at least one quarter is selected
-    const selectedQuarters = Array.from(document.querySelectorAll('input[name="quarters"]:checked'));
-    console.log('Selected quarters count:', selectedQuarters.length);
-    
+    const selectedQuarters = document.querySelectorAll('input[name="quarters"]:checked');
     if (selectedQuarters.length === 0) {
-      console.log('No quarters selected');
       e.preventDefault();
       alert('Please select at least one quarter to include in the report card.');
-      document.getElementById('quarters-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      sectionsByStep.period.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }
-    
-    // Check if at least one class is selected
-    const selectedClasses = Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked'));
-    console.log('Selected classes count:', selectedClasses.length);
-    
+    const selectedClasses = classesList.querySelectorAll('input[type="checkbox"]:checked');
     if (selectedClasses.length === 0) {
-      // Check if classes section is visible (student selected and classes loaded)
+      e.preventDefault();
       if (classesContainer.style.display !== 'none' && classesList.innerHTML.trim() !== '') {
-        console.log('Classes loaded but none selected');
-        e.preventDefault();
         alert('Please select at least one class to include in the report card.');
-        classesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return false;
       } else {
-        // Classes might still be loading or student has no classes
-        console.log('Classes not loaded or student has no classes');
-        e.preventDefault();
         alert('Please wait for classes to load, or the student may not be enrolled in any classes.');
-        return false;
       }
+      sectionsByStep.classes.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
     }
 
-    // Enforce synced student confirmation fields required by policy.
     const confirmGender = (document.getElementById('confirm_gender')?.value || '').trim();
     const confirmEntrance = (document.getElementById('confirm_entrance_date')?.value || '').trim();
     if (!confirmGender || !confirmEntrance) {
       e.preventDefault();
       alert('Student profile is missing required confirmation fields (Gender and/or Entrance School Year). Please update the student profile first.');
-      confirmationSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      sectionsByStep.confirm.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }
-    
-    // All validation passed
-    console.log('All validation passed, submitting form...');
-    console.log('Selected classes:', selectedClasses.map(cb => cb.value));
-    console.log('Student ID:', studentIdValue);
-    console.log('School Year:', document.getElementById('school_year_id').value);
-    
-    // Ensure form target is set to open in new window
+
     form.target = '_blank';
-    
-    // Disable button and show loading state
     generateBtn.disabled = true;
-    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating PDF...';
-    
-    // Allow form to submit normally (don't prevent default)
-    // Browser will open PDF in new window/tab
-    // Re-enable button after a delay in case of errors
+    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating…';
     setTimeout(() => {
       generateBtn.disabled = false;
-      generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Report Card PDF';
+      generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill" aria-hidden="true"></i> Generate PDF';
     }, 10000);
-    
-    console.log('Form submission allowed');
-    return true; // Allow form submission
+    return true;
   });
 
-  // Update button text on form validation
-  form.addEventListener('input', function() {
-    if (form.checkValidity()) {
-      generateBtn.disabled = false;
-    }
-  });
-
-  // Reload eligible classes when quarter or school year changes (report-card context changed).
+  // -----------------------------------------------------------
+  // Wire up reactive updates
+  // -----------------------------------------------------------
   document.querySelectorAll('input[name="quarters"]').forEach(cb => cb.addEventListener('change', function() {
     const sid = getSelectedStudentId();
     if (sid) loadStudentClasses(sid);
+    recomputeProgress();
   }));
+
   const schoolYearSelect = document.getElementById('school_year_id');
   if (schoolYearSelect) schoolYearSelect.addEventListener('change', function() {
     const sid = getSelectedStudentId();
     if (sid) loadStudentClasses(sid);
+    recomputeProgress();
   });
 
-  // Keep comment boxes in sync with toggles/quarters/year changes
-  if (includeCommentsToggle) includeCommentsToggle.addEventListener('change', loadCommentsBoxes);
-  document.querySelectorAll('input[name="quarters"]').forEach(cb => cb.addEventListener('change', loadCommentsBoxes));
-  if (schoolYearSelect) schoolYearSelect.addEventListener('change', loadCommentsBoxes);
+  if (includeCommentsToggle) includeCommentsToggle.addEventListener('change', function() {
+    loadCommentsBoxes();
+    recomputeProgress();
+  });
+  document.getElementById('include_attendance')?.addEventListener('change', recomputeProgress);
+  document.querySelectorAll('input[name="report_type"]').forEach(r => r.addEventListener('change', recomputeProgress));
+
+  // Clean up JS-managed sections on form reset
+  form.addEventListener('reset', function() {
+    setTimeout(() => {
+      if (studentSelect && studentSelect.tagName === 'SELECT') {
+        studentSelect.value = '';
+      }
+      confirmationSection.style.display = 'none';
+      classesContainer.style.display = 'none';
+      classesList.innerHTML = '';
+      noClassesMessage.style.display = 'flex';
+      commentsSection.style.display = 'none';
+      commentsContainer.className = 'mgmt-rcf-empty';
+      commentsContainer.innerHTML = '<i class="bi bi-info-circle"></i><span>Select a student, classes, and quarters to load comment boxes.</span>';
+      recomputeProgress();
+    }, 0);
+  });
+
+  // Initial render
+  recomputeProgress();
 });
 </script>
 {% endblock %}

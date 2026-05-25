@@ -1,0 +1,971 @@
+{# Students hub — administrators & directors #}
+{% set is_director = sidebar_role_canonical == 'Director' %}
+{% set without_accounts = total_students - students_with_accounts %}
+
+<div class="mgmt-stu container-fluid px-0 px-md-1">
+  <div class="mgmt-stu-shell{% if is_director %} mgmt-stu-shell--director{% endif %}">
+
+    <header class="mgmt-stu-hero">
+      <div>
+        <p class="mgmt-stu-eyebrow">Student records</p>
+        <h1 class="mgmt-stu-title">Students</h1>
+        <p class="mgmt-stu-subtitle">
+          <i class="bi bi-people-fill" aria-hidden="true"></i>
+          Manage enrollments, accounts, and academic records
+        </p>
+      </div>
+      <div class="mgmt-stu-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-stu-role-badge mgmt-stu-role-badge--director">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> Director
+        </span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-stu-role-badge mgmt-stu-role-badge--admin">
+          <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
+        </span>
+        {% endif %}
+        <a href="{{ url_for('management.add_student') }}" class="mgmt-stu-btn mgmt-stu-btn--primary">
+          <i class="bi bi-plus-circle" aria-hidden="true"></i> Add student
+        </a>
+        <a href="{{ url_for('management.management_dashboard') }}" class="mgmt-stu-btn mgmt-stu-btn--ghost">
+          <i class="bi bi-house-door" aria-hidden="true"></i> Dashboard
+        </a>
+      </div>
+    </header>
+
+    <div class="mgmt-stu-insights" role="list">
+      <div class="mgmt-stu-insight" role="listitem">
+        <span class="mgmt-stu-insight-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stu-insight-value">{{ total_students }}</div>
+          <div class="mgmt-stu-insight-label">Total students</div>
+        </div>
+      </div>
+      <div class="mgmt-stu-insight" role="listitem">
+        <span class="mgmt-stu-insight-icon"><i class="bi bi-person-check-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stu-insight-value">{{ students_with_accounts }}</div>
+          <div class="mgmt-stu-insight-label">With accounts</div>
+        </div>
+      </div>
+      <div class="mgmt-stu-insight" role="listitem">
+        <span class="mgmt-stu-insight-icon"><i class="bi bi-person-x-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stu-insight-value">{{ without_accounts }}</div>
+          <div class="mgmt-stu-insight-label">Without accounts</div>
+        </div>
+      </div>
+      <div class="mgmt-stu-insight" role="listitem">
+        <span class="mgmt-stu-insight-icon"><i class="bi bi-funnel" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stu-insight-value">{{ students|length }}</div>
+          <div class="mgmt-stu-insight-label">On this page</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mgmt-stu-content">
+<!-- Search & Filter Section -->
+<div class="students-search-card mb-4">
+    <div class="students-search-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">
+            <i class="bi bi-search me-2"></i>Search & Filter Students
+        </h5>
+        <div class="students-account-legend small text-muted">
+            <span class="me-2 fw-semibold">Account status</span>
+            <span class="d-inline-flex align-items-center gap-1 me-2">
+                <span class="legend-dot legend-dot-danger"></span>
+                Removed / No account
+            </span>
+            <span class="d-inline-flex align-items-center gap-1 me-2">
+                <span class="legend-dot legend-dot-warning"></span>
+                Too young / Not yet
+            </span>
+            <span class="d-inline-flex align-items-center gap-1">
+                <span class="legend-dot legend-dot-success"></span>
+                Grade 3+ Active
+            </span>
+        </div>
+    </div>
+    <div class="students-search-body">
+    <form method="GET" action="{{ url_for('management.students') }}" class="row g-3" id="studentsFilterForm">
+        <input type="hidden" name="page" value="1">
+        <!-- Search Query -->
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search Term</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="search" 
+                   name="search" 
+                   value="{{ search_query or '' }}" 
+                   placeholder="Enter search term..."
+                   autocomplete="off">
+        </div>
+        
+        <!-- Search Type -->
+        <div class="col-md-2">
+            <label for="search_type" class="form-label">Search In</label>
+            <select class="form-select" id="search_type" name="search_type">
+                <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                <option value="name" {% if search_type == 'name' %}selected{% endif %}>Student Name</option>
+                <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                <option value="phone" {% if search_type == 'phone' %}selected{% endif %}>Phone Numbers</option>
+                <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                <option value="parents" {% if search_type == 'parents' %}selected{% endif %}>Parent Names</option>
+            </select>
+        </div>
+        
+        <!-- Grade Level Filter -->
+        <div class="col-md-2">
+            <label for="grade_level" class="form-label">Grade Level</label>
+            <select class="form-select" id="grade_level" name="grade_level">
+                <option value="">All Grades</option>
+                <option value="0" {% if grade_filter == '0' %}selected{% endif %}>Kindergarten</option>
+                <option value="1" {% if grade_filter == '1' %}selected{% endif %}>1st Grade</option>
+                <option value="2" {% if grade_filter == '2' %}selected{% endif %}>2nd Grade</option>
+                <option value="3" {% if grade_filter == '3' %}selected{% endif %}>3rd Grade</option>
+                <option value="4" {% if grade_filter == '4' %}selected{% endif %}>4th Grade</option>
+                <option value="5" {% if grade_filter == '5' %}selected{% endif %}>5th Grade</option>
+                <option value="6" {% if grade_filter == '6' %}selected{% endif %}>6th Grade</option>
+                <option value="7" {% if grade_filter == '7' %}selected{% endif %}>7th Grade</option>
+                <option value="8" {% if grade_filter == '8' %}selected{% endif %}>8th Grade</option>
+                <option value="9" {% if grade_filter == '9' %}selected{% endif %}>9th Grade</option>
+                <option value="10" {% if grade_filter == '10' %}selected{% endif %}>10th Grade</option>
+                <option value="11" {% if grade_filter == '11' %}selected{% endif %}>11th Grade</option>
+                <option value="12" {% if grade_filter == '12' %}selected{% endif %}>12th Grade</option>
+            </select>
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="col-md-2">
+            <label for="status" class="form-label">Account Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All Students</option>
+                <option value="has_account" {% if status_filter == 'has_account' %}selected{% endif %}>Has Account</option>
+                <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
+                {% if can_student_admin_ui %}
+                <option value="former" {% if status_filter == 'former' %}selected{% endif %}>Former (Removed)</option>
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All (Current + Former)</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <!-- Academic Alert Filter -->
+        <div class="col-md-2">
+            <label for="alert_filter" class="form-label">Academic Alert</label>
+            <select class="form-select" id="alert_filter" name="alert_filter">
+                <option value="">All Students</option>
+                <option value="critical" {% if request.args.get('alert_filter') == 'critical' %}selected{% endif %}>Critical (&lt;2.0 GPA)</option>
+                <option value="warning" {% if request.args.get('alert_filter') == 'warning' %}selected{% endif %}>Warning (2.0-2.9 GPA)</option>
+                <option value="good" {% if request.args.get('alert_filter') == 'good' %}selected{% endif %}>Good Standing (3.0+)</option>
+            </select>
+        </div>
+        
+        <!-- Sort Options -->
+        <div class="col-md-2">
+            <label for="sort" class="form-label">Sort By</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                <option value="grade" {% if sort_by == 'grade' %}selected{% endif %}>Grade Level</option>
+                <option value="id" {% if sort_by == 'id' %}selected{% endif %}>Student ID</option>
+                <option value="gpa" {% if sort_by == 'gpa' %}selected{% endif %}>GPA (Low to High)</option>
+                <option value="gpa_desc" {% if sort_by == 'gpa_desc' %}selected{% endif %}>GPA (High to Low)</option>
+            </select>
+        </div>
+        
+        <!-- View Mode -->
+        <div class="col-md-2">
+            <label for="view_mode" class="form-label">View Mode</label>
+            <select class="form-select" id="view_mode" name="view_mode" onchange="applyViewMode(this.value)">
+                <option value="list" {% if request.args.get('view_mode') == 'list' or not request.args.get('view_mode') %}selected{% endif %}>All Students</option>
+                <option value="grouped" {% if request.args.get('view_mode') == 'grouped' %}selected{% endif %}>Grouped by Grade</option>
+                <option value="alerts_only" {% if request.args.get('view_mode') == 'alerts_only' %}selected{% endif %}>Alerts Only</option>
+            </select>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-students-search">
+                    <i class="bi bi-search me-2"></i>Search
+                </button>
+                <a href="{{ url_for('management.students') }}" class="btn btn-students-reset">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                </a>
+                <button type="button" class="btn btn-students-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                    <i class="bi bi-info-circle me-2"></i>Search Tips
+                </button>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Search Tips -->
+    <div class="collapse mt-3" id="searchTips">
+        <div class="students-info-box">
+            <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
+            <ul class="mb-0">
+                <li><strong>All Fields:</strong> Search across student names, contact info, addresses, and parent information</li>
+                <li><strong>Student Name:</strong> Search by first or last name</li>
+                <li><strong>Contact Info:</strong> Search by student or parent email addresses</li>
+                <li><strong>Phone Numbers:</strong> Search by parent or emergency contact phone numbers</li>
+                <li><strong>Address:</strong> Search by street, city, state, or zip code</li>
+                <li><strong>Parent Names:</strong> Search by parent first or last names</li>
+            </ul>
+        </div>
+    </div>
+    </div>
+</div>
+
+{% if can_student_admin_ui %}
+<!-- Repeat Grade (Bulk) -->
+<div class="students-csv-card mb-4">
+    <div class="students-csv-header">
+        <h5 class="mb-0">
+            <i class="bi bi-arrow-repeat me-2"></i>Repeat Grade (Bulk Update)
+        </h5>
+    </div>
+    <div class="students-csv-body">
+        <p class="text-muted small mb-2">
+            Select students below, then mark them as repeating. This will set <code>is_repeating</code> and bump <code>grad_year</code> by 1 (when grad year is known).
+        </p>
+        <button type="button" class="btn btn-warning btn-sm" onclick="submitRepeatGrade()">
+            <i class="bi bi-arrow-repeat me-1"></i>Mark Selected as Repeating
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- CSV Import/Export Section -->
+<div class="students-csv-card mb-4">
+    <div class="students-csv-header">
+        <h5 class="mb-0">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>CSV Import/Export
+        </h5>
+    </div>
+    <div class="students-csv-body">
+    <div class="row g-3">
+        <!-- Download CSV -->
+        <div class="col-md-4">
+            <h6><i class="bi bi-download me-2"></i>Export Students</h6>
+            <p class="text-muted small mb-2">Download all student data as a CSV file</p>
+            <a href="{{ url_for('management.download_students_csv') }}" class="btn btn-success btn-sm">
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>Download CSV
+            </a>
+        </div>
+        
+        <!-- Download Template -->
+        <div class="col-md-4">
+            <h6><i class="bi bi-file-earmark-text me-2"></i>CSV Template</h6>
+            <p class="text-muted small mb-2">Download a template with example data</p>
+            <a href="{{ url_for('management.download_students_template') }}" class="btn btn-info btn-sm">
+                <i class="bi bi-file-earmark-text me-1"></i>Download Template
+            </a>
+        </div>
+        
+        <!-- Upload CSV -->
+        <div class="col-md-4">
+            <h6><i class="bi bi-upload me-2"></i>Import Students</h6>
+            <p class="text-muted small mb-2">Upload a CSV file to add/update students</p>
+            <form method="POST" action="{{ url_for('management.upload_students_csv') }}" enctype="multipart/form-data" class="d-inline">
+                <div class="input-group input-group-sm">
+                    <input type="file" class="form-control" name="csv_file" accept=".csv" required>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i>Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- CSV Upload Instructions -->
+    <div class="mt-3">
+        <div class="students-info-box mb-0">
+            <h6><i class="bi bi-info-circle me-2"></i>CSV Upload Instructions:</h6>
+            <ul class="mb-0 small">
+                <li><strong>Download the template</strong> to see the required format and example data</li>
+                <li><strong>Required fields:</strong> First Name and Last Name</li>
+                <li><strong>Student ID:</strong> Leave blank to auto-generate (requires State and Date of Birth)</li>
+                <li><strong>Date format:</strong> MM/DD/YYYY (e.g., 01/15/2010)</li>
+                <li><strong>Update existing students:</strong> Match by Student ID or by First Name + Last Name + Date of Birth</li>
+                <li><strong>Add new students:</strong> Simply omit Student ID or provide a unique one</li>
+            </ul>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- Search Results Info -->
+{% if search_query or grade_filter or status_filter or alert_filter %}
+<div class="students-results-banner mb-4">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Search Results:</strong> Found {{ total_students }} student(s)
+    {% if search_query %} matching "{{ search_query }}"{% endif %}
+    {% if grade_filter %} in grade {{ grade_filter }}{% endif %}
+    {% if status_filter == 'has_account' %} with accounts{% endif %}
+    {% if status_filter == 'no_account' %} without accounts{% endif %}
+    {% if status_filter == 'former' %} (former/removed){% endif %}
+    {% if status_filter == 'all' %} (including former/removed){% endif %}
+</div>
+{% endif %}
+
+<!-- Students Table -->
+<div class="students-table-card">
+    {% if pagination is defined and pagination.pages > 1 %}
+    <p class="text-muted small px-3 pt-3 mb-0">
+        <i class="bi bi-info-circle me-1"></i>List and card views show <strong>{{ pagination.per_page }}</strong> students per page.
+        Grouped-by-grade uses only the current page.
+    </p>
+    {% endif %}
+    <div class="students-table-header">
+        <h5 class="mb-0">
+            <i class="bi bi-table me-2"></i>Student Records
+            <span class="badge bg-primary ms-2">{{ students|length }} on this page</span>
+            {% if pagination is defined and pagination.total is defined %}
+            <span class="badge bg-secondary ms-1">{{ pagination.total }} matching</span>
+            {% endif %}
+        </h5>
+        <div class="students-table-view-toggle">
+            <button class="btn btn-sm btn-students-view active" onclick="switchStudentsView('table')">
+                <i class="bi bi-table"></i> Table
+            </button>
+            <button class="btn btn-sm btn-students-view" onclick="switchStudentsView('cards')">
+                <i class="bi bi-grid-3x3-gap-fill"></i> Cards
+            </button>
+            <button class="btn btn-sm btn-students-view" onclick="switchStudentsView('grouped')">
+                <i class="bi bi-grid"></i> By Grade
+            </button>
+        </div>
+    </div>
+    <div class="students-table-body" id="tableView">
+    <div class="table-responsive">
+        <form method="POST" action="{{ url_for('management.students.mark_students_repeating') }}" id="repeatGradeForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    {% if can_student_admin_ui %}
+                    <th style="width: 38px;">
+                        <input class="form-check-input" type="checkbox" id="selectAllStudents" onclick="toggleSelectAllStudents(this)">
+                    </th>
+                    {% endif %}
+                    <th>Name</th>
+                    <th>Grade Level</th>
+                    <th>Student ID</th>
+                    <th>GPA</th>
+                    <th>Academic Status</th>
+                    <th>Account</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                    {% set alert_level = 'none' %}
+                    {% if student.gpa is not none %}
+                        {% if student.gpa < 2.0 %}
+                            {% set alert_level = 'critical' %}
+                        {% elif student.gpa < 3.0 %}
+                            {% set alert_level = 'warning' %}
+                        {% elif student.gpa >= 3.5 %}
+                            {% set alert_level = 'excellent' %}
+                        {% endif %}
+                    {% endif %}
+                    <tr class="student-row student-alert-{{ alert_level }}">
+                        {% if can_student_admin_ui %}
+                        <td>
+                            <input class="form-check-input student-select" type="checkbox" name="student_ids" value="{{ student.id }}">
+                        </td>
+                        {% endif %}
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="student-avatar-mini">
+                                    {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
+                                </div>
+                                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-20 text-dark border">
+                                Grade {{ student.grade_level | display_grade }}
+                            </span>
+                        </td>
+                        <td>
+                            <code class="student-id-code">{{ student.student_id or 'N/A' }}</code>
+                        </td>
+                        <td>
+                            {% if student.gpa is not none %}
+                                <div class="gpa-display">
+                                    <span class="gpa-badge gpa-{{ alert_level }}">
+                                        {{ "%.2f"|format(student.gpa) }}
+                                    </span>
+                                    <div class="gpa-progress-bar">
+                                        <div class="gpa-progress-fill gpa-progress-{{ alert_level }}" style="width: {{ (student.gpa / 4.0 * 100)|round }}%"></div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.gpa is not none %}
+                                {% if student.gpa >= 3.5 %}
+                                    <span class="badge text-bg-success">
+                                        <i class="bi bi-trophy-fill me-1"></i>Honors
+                                    </span>
+                                {% elif student.gpa >= 3.0 %}
+                                    <span class="badge text-bg-primary">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Good Standing
+                                    </span>
+                                {% elif student.gpa >= 2.0 %}
+                                    <span class="badge text-bg-warning">
+                                        <i class="bi bi-exclamation-circle-fill me-1"></i>Needs Improvement
+                                    </span>
+                                {% else %}
+                                    <span class="badge text-bg-danger">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>At Risk
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge text-bg-secondary">No Data</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.is_deleted %}
+                                <span class="badge bg-danger text-white border border-danger" style="font-weight: 500;">
+                                    <i class="bi bi-archive me-1"></i>Removed
+                                </span>
+                            {% elif student.user %}
+                                {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                    <span class="badge bg-warning text-dark border border-warning" style="font-weight:500;">
+                                        <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success text-white border border-success" style="font-weight: 500;">
+                                        <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                    <span class="badge bg-warning text-dark border border-warning" style="font-weight: 500;">
+                                        <i class="bi bi-hourglass-split me-1"></i>No account yet
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger text-white border border-danger" style="font-weight: 500;">
+                                        <i class="bi bi-x-circle me-1"></i>No Account
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-students-action-view" onclick="viewStudent({{ student.id }})" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-students-action-edit" onclick="editStudent({{ student.id }})" title="Edit Student">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-students-action-delete" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')" title="Remove Student">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="{% if can_student_admin_ui %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                            No students found.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </form>
+    </div>
+    </div>
+
+    <!-- Cards View (Hidden by default) -->
+    <div class="students-cards-body" id="cardsView" style="display: none;">
+        <div class="row g-3">
+            {% for student in students %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="student-card">
+                    <div class="student-card-header">
+                        <div class="student-card-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="student-card-info">
+                            <h6 class="student-card-name">{{ student.first_name }} {{ student.last_name }}</h6>
+                            <p class="student-card-id">ID: {{ student.student_id or 'N/A' }}</p>
+                        </div>
+                    </div>
+                    <div class="student-card-body">
+                        <div class="student-card-detail">
+                            <i class="bi bi-mortarboard me-2"></i>
+                            <span>Grade: {{ student.grade_level | display_grade }}</span>
+                        </div>
+                        <div class="student-card-detail">
+                            <i class="bi bi-calendar3 me-2"></i>
+                            <span>DOB: {{ student.dob or 'N/A' }}</span>
+                        </div>
+                        <div class="student-card-detail">
+                            <i class="bi bi-trophy me-2"></i>
+                            <span>GPA: 
+                                {% if student.gpa is not none %}
+                                    <span class="badge {% if student.gpa >= 3.5 %}bg-success{% elif student.gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ "%.2f"|format(student.gpa) }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">N/A</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="student-card-detail">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span>Account: 
+                                {% if student.user %}
+                                    {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                    <span class="badge text-white" style="background-color:#fd7e14;">{{ student.user.username }}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">{{ student.user.username }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning">No Account</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="student-card-footer">
+                        <button type="button" class="btn btn-sm btn-students-card-action" onclick="viewStudent({{ student.id }})">
+                            <i class="bi bi-eye me-1"></i>View
+                        </button>
+                        <button type="button" class="btn btn-sm btn-students-card-action" onclick="editStudent({{ student.id }})">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-students-card-action-delete" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                            <i class="bi bi-trash me-1"></i>Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                <p class="text-muted">No students found.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Grouped View (By Grade Level) -->
+    <div class="students-grouped-body" id="groupedView" style="display: none;">
+        {% set students_by_grade = {} %}
+        {% for student in students %}
+            {% set grade = student.grade_level or 0 %}
+            {% if grade not in students_by_grade %}
+                {% set _ = students_by_grade.update({grade: []}) %}
+            {% endif %}
+            {% set _ = students_by_grade[grade].append(student) %}
+        {% endfor %}
+        
+        {% for grade in students_by_grade.keys()|sort %}
+            <div class="grade-group-section mb-4">
+                <div class="grade-group-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="grade-group-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ 'Grade %d'|format(grade) if grade > 0 else 'Unassigned Grade' }}</h5>
+                            <small class="text-muted">{{ students_by_grade[grade]|length }} Student{{ 's' if students_by_grade[grade]|length != 1 else '' }}</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleGradeGroup({{ grade }})">
+                        <i class="bi bi-chevron-down" id="gradeChevron{{ grade }}"></i>
+                    </button>
+                </div>
+                <div class="grade-group-body" id="gradeGroup{{ grade }}">
+                    <div class="row g-3">
+                        {% for student in students_by_grade[grade]|sort(attribute='last_name') %}
+                            {% set alert_level = 'none' %}
+                            {% if student.gpa is not none %}
+                                {% if student.gpa < 2.0 %}
+                                    {% set alert_level = 'critical' %}
+                                {% elif student.gpa < 3.0 %}
+                                    {% set alert_level = 'warning' %}
+                                {% elif student.gpa >= 3.5 %}
+                                    {% set alert_level = 'excellent' %}
+                                {% endif %}
+                            {% endif %}
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                                <div class="student-grouped-card student-card-alert-{{ alert_level }}">
+                                    <div class="student-grouped-header">
+                                        <div class="student-grouped-avatar">
+                                            {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
+                                        </div>
+                                        <div class="student-grouped-info">
+                                            <h6 class="mb-0">{{ student.first_name }} {{ student.last_name }}</h6>
+                                            <small class="text-muted">ID: {{ student.student_id or 'N/A' }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="student-grouped-stats">
+                                        <div class="grouped-stat-item">
+                                            <div class="grouped-stat-icon">
+                                                <i class="bi bi-trophy"></i>
+                                            </div>
+                                            <div>
+                                                <div class="grouped-stat-value">
+                                                    {% if student.gpa is not none %}
+                                                        {{ "%.2f"|format(student.gpa) }}
+                                                    {% else %}
+                                                        N/A
+                                                    {% endif %}
+                                                </div>
+                                                <div class="grouped-stat-label">GPA</div>
+                                            </div>
+                                        </div>
+                                        <div class="grouped-stat-item">
+                                            <div class="grouped-stat-icon">
+                                                <i class="bi bi-person-badge"></i>
+                                            </div>
+                                            <div>
+                                                <div class="grouped-stat-value">
+                                                    {% if student.user %}
+                                                        {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                                        <i class="bi bi-check-circle" style="color:#fd7e14;"></i>
+                                                        {% else %}
+                                                        <i class="bi bi-check-circle text-success"></i>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <i class="bi bi-x-circle text-danger"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="grouped-stat-label">Account</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="student-grouped-footer">
+                                        <button type="button" class="btn btn-sm btn-primary w-100" onclick="viewStudent({{ student.id }})">
+                                            <i class="bi bi-eye me-1"></i>View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        
+        {% if students_by_grade|length == 0 %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+            <p class="text-muted">No students found.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleSelectAllStudents(cb) {
+            const boxes = document.querySelectorAll('.student-select');
+            boxes.forEach(b => { b.checked = cb.checked; });
+        }
+        function submitRepeatGrade() {
+            const form = document.getElementById('repeatGradeForm');
+            if (!form) return;
+            const any = !!document.querySelector('.student-select:checked');
+            if (!any) {
+                alert('Select at least one student first.');
+                return;
+            }
+            form.submit();
+        }
+    </script>
+
+    {% if pagination is defined and pagination.pages > 1 %}
+    <div class="students-table-footer border-top px-3 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 bg-light bg-opacity-50">
+        <div class="text-muted small">
+            Page {{ pagination.page }} of {{ pagination.pages }}
+            · Showing
+            {% if pagination.total == 0 %}0{% else %}{{ (pagination.page - 1) * pagination.per_page + 1 }}{% endif %}–
+            {{ [pagination.page * pagination.per_page, pagination.total]|min }}
+            of {{ pagination.total }}
+        </div>
+        <nav aria-label="Students pagination">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('management.students', page=pagination.prev_num, search=search_query or '', search_type=search_type, grade_level=grade_filter or '', status=status_filter or '', alert_filter=alert_filter or '', sort=sort_by, order=sort_order, view_mode=request.args.get('view_mode', '')) if pagination.has_prev else '#' }}">Prev</a>
+                </li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('management.students', page=p, search=search_query or '', search_type=search_type, grade_level=grade_filter or '', status=status_filter or '', alert_filter=alert_filter or '', sort=sort_by, order=sort_order, view_mode=request.args.get('view_mode', '')) }}">{{ p }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('management.students', page=pagination.next_num, search=search_query or '', search_type=search_type, grade_level=grade_filter or '', status=status_filter or '', alert_filter=alert_filter or '', sort=sort_by, order=sort_order, view_mode=request.args.get('view_mode', '')) if pagination.has_next else '#' }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- View Student Modal -->
+<div class="modal fade" id="viewStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content student-modal">
+            <div class="modal-header student-modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-circle me-2"></i>Student Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body student-modal-body">
+                <!-- Student Avatar Section -->
+                <div class="student-modal-avatar-section">
+                    <div class="student-modal-avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="student-modal-name-section">
+                        <h4 id="viewStudentName" class="student-modal-name">Student Name</h4>
+                        <p id="viewStudentId" class="student-modal-id">ID: N/A</p>
+                    </div>
+                </div>
+
+                <!-- Student Information Grid -->
+                <div class="student-info-grid">
+                    <div class="student-info-card">
+                        <div class="student-info-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <div class="student-info-content">
+                            <label>Grade Level</label>
+                            <span id="viewStudentGrade">N/A</span>
+                        </div>
+                    </div>
+                    <div class="student-info-card">
+                        <div class="student-info-icon">
+                            <i class="bi bi-calendar3"></i>
+                        </div>
+                        <div class="student-info-content">
+                            <label>Date of Birth</label>
+                            <span id="viewStudentDob">N/A</span>
+                        </div>
+                    </div>
+                    <div class="student-info-card">
+                        <div class="student-info-icon">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div class="student-info-content">
+                            <label>GPA</label>
+                            <span id="viewStudentGpa">N/A</span>
+                        </div>
+                    </div>
+                    <div class="student-info-card">
+                        <div class="student-info-icon">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <div class="student-info-content">
+                            <label>Username</label>
+                            <span id="viewStudentUsername">N/A</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="student-details-section">
+                    <h6 class="student-details-title">
+                        <i class="bi bi-envelope-fill me-2"></i>Contact Information
+                    </h6>
+                    <div class="student-details-grid">
+                        <div class="student-detail-item">
+                            <label>Email</label>
+                            <span id="viewStudentEmail">N/A</span>
+                        </div>
+                        <div class="student-detail-item">
+                            <label>Phone</label>
+                            <span id="viewStudentPhone">N/A</span>
+                        </div>
+                        <div class="student-detail-item">
+                            <label>Address</label>
+                            <span id="viewStudentAddress">N/A</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parent Information -->
+                <div class="student-details-section">
+                    <h6 class="student-details-title">
+                        <i class="bi bi-people-fill me-2"></i>Parent/Guardian Information
+                    </h6>
+                    <div class="student-details-grid">
+                        <div class="student-detail-item">
+                            <label>Parent Name</label>
+                            <span id="viewParentName">N/A</span>
+                        </div>
+                        <div class="student-detail-item">
+                            <label>Parent Email</label>
+                            <span id="viewParentEmail">N/A</span>
+                        </div>
+                        <div class="student-detail-item">
+                            <label>Parent Phone</label>
+                            <span id="viewParentPhone">N/A</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Academic Status -->
+                <div class="student-details-section">
+                    <h6 class="student-details-title">
+                        <i class="bi bi-book-fill me-2"></i>Academic Status
+                    </h6>
+                    <div id="viewStudentClasses" class="student-classes-list">
+                        <!-- Classes will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer student-modal-footer">
+                <button type="button" class="btn btn-student-edit" onclick="openEditFromView()">
+                    <i class="bi bi-pencil me-2"></i>Edit Student
+                </button>
+                <button type="button" class="btn btn-student-close" data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content student-modal">
+            <div class="modal-header student-modal-header-edit">
+                <h5 class="modal-title">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Student
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editStudentForm">
+                <div class="modal-body student-modal-body">
+                    <input type="hidden" id="editStudentIdHidden" name="student_id">
+                    
+                    <!-- Personal Information -->
+                    <div class="edit-section">
+                        <h6 class="edit-section-title">
+                            <i class="bi bi-person-fill me-2"></i>Personal Information
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control student-input" id="editFirstName" name="first_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control student-input" id="editLastName" name="last_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control student-input" id="editDob" name="dob">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Grade Level</label>
+                                <select class="form-select student-input" id="editGradeLevel" name="grade_level">
+                                    <option value="">Select Grade</option>
+                                    <option value="0">Kindergarten</option>
+                                    <option value="1">1st Grade</option>
+                                    <option value="2">2nd Grade</option>
+                                    <option value="3">3rd Grade</option>
+                                    <option value="4">4th Grade</option>
+                                    <option value="5">5th Grade</option>
+                                    <option value="6">6th Grade</option>
+                                    <option value="7">7th Grade</option>
+                                    <option value="8">8th Grade</option>
+                                    <option value="9">9th Grade</option>
+                                    <option value="10">10th Grade</option>
+                                    <option value="11">11th Grade</option>
+                                    <option value="12">12th Grade</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Student ID</label>
+                                <input type="text" class="form-control student-input" id="editStudentIdDisplay" name="student_id" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="edit-section">
+                        <h6 class="edit-section-title">
+                            <i class="bi bi-envelope-fill me-2"></i>Contact Information
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Personal Email</label>
+                                <input type="email" class="form-control student-input" id="editEmail" name="email">
+                                <small class="text-muted">For parent contact and personal communications</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Google Workspace Email
+                                    <i class="bi bi-google text-primary ms-1" data-bs-toggle="tooltip" title="For Google Sign-In authentication"></i>
+                                </label>
+                                <input type="email" class="form-control student-input" id="editGoogleWorkspaceEmail" name="google_workspace_email" placeholder="Leave blank to auto-fill from roster">
+                                <small class="text-muted">For Google Sign-In. Leave blank to set the school email automatically (same format as Google Workspace / Directory). Override only if the account uses a different primary address.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control student-input" id="editPhone" name="phone">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-control student-input" id="editAddress" name="address" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parent Information -->
+                    <div class="edit-section">
+                        <h6 class="edit-section-title">
+                            <i class="bi bi-people-fill me-2"></i>Parent/Guardian Information
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Parent First Name</label>
+                                <input type="text" class="form-control student-input" id="editParentFirstName" name="parent_first_name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Parent Last Name</label>
+                                <input type="text" class="form-control student-input" id="editParentLastName" name="parent_last_name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Parent Email</label>
+                                <input type="email" class="form-control student-input" id="editParentEmail" name="parent_email">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Parent Phone</label>
+                                <input type="tel" class="form-control student-input" id="editParentPhone" name="parent_phone">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer student-modal-footer">
+                    <button type="button" class="btn btn-student-cancel" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-student-save">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    </div>
+  </div>
+</div>

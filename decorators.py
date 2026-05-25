@@ -95,6 +95,19 @@ def user_can_manage_assignments_and_grades(user):
     return has_permission(user, 'assignments_grades:manage')
 
 
+def user_can_manage_student_assistants(user):
+    """
+    Who may assign or view student assistants on a class: Director or School Administrator
+    (primary or secondary role, including DB aliases like Administrator/admin), or staff
+    with ``classes:manage``. Do not compare ``current_user.role`` to literal strings.
+    """
+    if not user:
+        return False
+    if user_has_management_entry_access(user):
+        return True
+    return has_permission(user, 'classes:manage')
+
+
 # Top-level ``management.*`` route names that mirror nested ``management.assignments.*``
 # (registered on the parent blueprint for URL compatibility). Permission-only admins with
 # ``assignments_grades:manage`` must reach these without hitting ``abort(403)``.
@@ -251,7 +264,11 @@ def management_required(f):
                 'classes.classes': ['classes:manage'],
                 'classes.manage_class': ['classes:manage'],
                 'classes.edit_class': ['classes:manage'],
+                'management.edit_class': ['classes:manage'],
                 'classes.add_class': ['classes:manage'],
+                'management.add_class': ['classes:manage'],
+                'management.view_class': ['classes:manage'],
+                'classes.view_class': ['classes:manage'],
 
                 # Attendance
                 'management.unified_attendance': ['attendance:manage'],

@@ -4,7 +4,7 @@ Classes routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required, is_teacher_role, has_permission
+from decorators import management_required, is_teacher_role, has_permission, user_can_manage_student_assistants
 from models import (
     db,
     Class,
@@ -40,6 +40,12 @@ from management_routes.student_assistant_utils import (
 from datetime import datetime
 import json
 from utils.grade_helpers import get_points_earned
+from utils.attendance_status import (
+    VALID_ATTENDANCE_STATUSES,
+    normalize_attendance_status,
+    attendance_status_form_value,
+    count_class_attendance_stats,
+)
 from .utils import allowed_file
 from services.class_google_group import try_provision_class_google_group
 
@@ -521,7 +527,7 @@ def edit_class(class_id):
                         class_obj.additional_teachers.append(teacher)
             
             # Student Assistants — max 2 per class; grade eligibility; max 2 classes per student
-            if current_user.role in ['School Administrator', 'Director']:
+            if user_can_manage_student_assistants(current_user):
                 raw_ids = request.form.getlist('student_assistant_ids')
                 new_ids = []
                 for x in raw_ids:
@@ -584,7 +590,7 @@ def edit_class(class_id):
     eligible_assistant_students = []
     current_student_assistants = []
     max_assistants_per_class = MAX_ASSISTANTS_PER_CLASS
-    if current_user.role in ['School Administrator', 'Director']:
+    if user_can_manage_student_assistants(current_user):
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
         enrolled_students = [e.student for e in enrollments if e.student]
         enrolled_ids = {e.student_id for e in enrollments}
@@ -1881,25 +1887,21 @@ def take_class_attendance(class_id):
             school_day_attendance = SchoolDayAttendance.query.filter_by(date=attendance_date).all()
             school_day_records = {record.student_id: record for record in school_day_attendance}
         
-        # Calculate attendance statistics
         total_students = len(students)
-        present_count = sum(1 for record in existing_records.values() if record.status == "Present")
-        late_count = sum(1 for record in existing_records.values() if record.status == "Late")
-        absent_count = sum(1 for record in existing_records.values() if record.status in ["Unexcused Absence", "Excused Absence"])
-        suspended_count = sum(1 for record in existing_records.values() if record.status == "Suspended")
-        
-        attendance_stats = {
-            'total': total_students,
-            'present': present_count,
-            'late': late_count,
-            'absent': absent_count,
-            'suspended': suspended_count,
-            'present_percentage': round((present_count / total_students * 100) if total_students > 0 else 0, 1)
+        selected_rows = list(existing_records.values())
+        attendance_stats = count_class_attendance_stats(selected_rows, total_students)
+        attendance_stats['total'] = total_students
+        attendance_stats['suspended'] = sum(
+            1 for record in selected_rows if (record.status or '').strip().lower() == 'suspended'
+        )
+        existing_form_status = {
+            sid: attendance_status_form_value(rec.status)
+            for sid, rec in existing_records.items()
         }
 
         if request.method == 'POST':
             attendance_saved = False
-            valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
+            valid_statuses = list(VALID_ATTENDANCE_STATUSES)
             
             # Get current user's teacher staff record if they are management
             teacher = None
@@ -1913,18 +1915,8 @@ def take_class_attendance(class_id):
                 
                 if not status:
                     continue
-                
-                # Convert lowercase status to proper format (template sends lowercase)
-                status_map = {
-                    'present': 'Present',
-                    'late': 'Late',
-                    'unexcused absence': 'Unexcused Absence',
-                    'excused absence': 'Excused Absence',
-                    'suspended': 'Suspended'
-                }
-                status = status_map.get(status.lower(), status)
-                    
-                # Validate status
+
+                status = normalize_attendance_status(status)
                 if status not in valid_statuses:
                     flash(f"Invalid attendance status for {student.first_name} {student.last_name}.", "warning")
                     continue
@@ -1986,6 +1978,7 @@ def take_class_attendance(class_id):
             attendance_date_str=attendance_date_str,
             statuses=statuses,
             existing_records=existing_records,
+            existing_form_status=existing_form_status,
             school_day_records=school_day_records,
             attendance_stats=attendance_stats
         )
@@ -2056,7 +2049,7 @@ def view_class(class_id):
     # Student assistants and activity log (teacher and School Admin/Director can view)
     student_assistants = []
     assistant_action_logs = []
-    if current_user.role in ['School Administrator', 'Director'] or is_current_user_teacher:
+    if user_can_manage_student_assistants(current_user) or is_current_user_teacher:
         for sa in StudentAssistant.query.filter_by(class_id=class_id).all():
             if sa.student:
                 student_assistants.append(sa.student)

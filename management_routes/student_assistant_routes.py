@@ -17,6 +17,7 @@ from models import (
 import json
 from utils.school_timezone import get_school_timezone_name
 from utils.grade_helpers import numeric_score_from_grade_dict
+from utils.attendance_status import attendance_status_form_value, count_class_attendance_stats
 
 bp = Blueprint('student_assistant', __name__, url_prefix='/assistant')
 
@@ -135,14 +136,15 @@ def take_attendance(class_id):
             school_day_records[r.student_id] = r
 
     total = len(students)
-    present_count = sum(1 for r in existing_records.values() if r.status == 'Present')
-    attendance_stats = {
-        'total': total,
-        'present': present_count,
-        'late': sum(1 for r in existing_records.values() if r.status == 'Late'),
-        'absent': sum(1 for r in existing_records.values() if r.status in ['Unexcused Absence', 'Excused Absence']),
-        'suspended': sum(1 for r in existing_records.values() if r.status == 'Suspended'),
-        'present_percentage': round((present_count / total * 100) if total else 0, 1)
+    selected_rows = list(existing_records.values())
+    attendance_stats = count_class_attendance_stats(selected_rows, total)
+    attendance_stats['total'] = total
+    attendance_stats['suspended'] = sum(
+        1 for r in selected_rows if (r.status or '').strip().lower() == 'suspended'
+    )
+    existing_form_status = {
+        sid: attendance_status_form_value(rec.status)
+        for sid, rec in existing_records.items()
     }
 
     if request.method == 'POST':
@@ -223,6 +225,7 @@ def take_attendance(class_id):
         attendance_date_str=date_str,
         statuses=statuses,
         existing_records=existing_records,
+        existing_form_status=existing_form_status,
         school_day_records=school_day_records,
         attendance_stats=attendance_stats,
         is_student_assistant=True,

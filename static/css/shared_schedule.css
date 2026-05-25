@@ -1,0 +1,524 @@
+/* Weekly schedule hub — teachers & students */
+
+.sch {
+  --sch-bg: var(--hub-schedule-bg, linear-gradient(165deg, #eef2ff 0%, #e8eef8 45%, #e2eaf5 100%));
+  --sch-surface: var(--hub-surface, rgba(255, 255, 255, 0.96));
+  --sch-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --sch-text: var(--hub-text, #0f172a);
+  --sch-muted: var(--hub-muted, #64748b);
+  --sch-accent: var(--hub-schedule-accent, #4f46e5);
+  --sch-accent-deep: var(--hub-schedule-accent-deep, #4338ca);
+  --sch-accent-soft: var(--hub-schedule-accent-soft, rgba(79, 70, 229, 0.12));
+  --sch-warm: #f59e0b;
+  padding: 0 0 2rem;
+}
+
+.sch--teacher {
+  --sch-bg: var(--hub-teacher-bg, linear-gradient(165deg, #ecfdf5 0%, #e0f2f1 45%, #d8ebe8 100%));
+  --sch-accent: var(--hub-teacher-accent, #0d9488);
+  --sch-accent-deep: var(--hub-teacher-accent-deep, #0f766e);
+  --sch-accent-soft: var(--hub-teacher-accent-soft, rgba(13, 148, 136, 0.14));
+}
+
+.sch--student {
+  --sch-bg: var(--hub-student-bg, linear-gradient(165deg, #f5f3ff 0%, #ede9fe 45%, #e8e4f8 100%));
+  --sch-accent: var(--hub-student-accent, #7c3aed);
+  --sch-accent-deep: var(--hub-student-accent-deep, #6d28d9);
+  --sch-accent-soft: var(--hub-student-accent-soft, rgba(124, 58, 237, 0.12));
+}
+
+.sch-shell {
+  background: var(--sch-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+
+.sch-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.sch-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sch-muted);
+  margin: 0 0 0.35rem;
+}
+
+.sch-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--sch-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+
+.sch-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--sch-muted);
+  margin: 0;
+  max-width: 36rem;
+}
+
+.sch-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sch-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sch-role-badge--teacher {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+
+.sch-role-badge--student {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.sch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+
+.sch-btn--ghost {
+  color: #334155;
+  background: var(--sch-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.sch-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--sch-accent);
+  color: var(--sch-accent-deep);
+}
+
+.sch-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .sch-insights {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.sch-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--sch-surface);
+  border: 1px solid var(--sch-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.sch-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--sch-accent-soft);
+  color: var(--sch-accent-deep);
+}
+
+.sch-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--sch-text);
+  line-height: 1.2;
+}
+
+.sch-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--sch-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+
+.sch-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Spreadsheet / timetable */
+.sch-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--sch-accent-soft);
+  color: var(--sch-accent-deep);
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+.sch-tag--today {
+  background: var(--sch-accent);
+  color: #fff;
+}
+
+.sch-tag--live {
+  background: #fef3c7;
+  color: #b45309;
+  margin-left: 0;
+  margin-top: 0.25rem;
+}
+
+.sch-sheet {
+  background: var(--sch-surface);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.sch-sheet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: #f1f5f9;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.sch-sheet-toolbar h2 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--sch-text);
+}
+
+.sch-sheet-meta {
+  font-size: 0.8rem;
+  color: var(--sch-muted);
+}
+
+.sch-table-scroll {
+  overflow: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sch-grid {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+}
+
+.sch-grid th,
+.sch-grid td {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 0.5rem 0.55rem;
+  vertical-align: top;
+  text-align: left;
+  background: #fff;
+}
+
+.sch-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #e2e8f0;
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #334155;
+  padding: 0.6rem 0.55rem;
+}
+
+.sch-grid-corner {
+  width: 7.5rem;
+  min-width: 7.5rem;
+  left: 0;
+  z-index: 3;
+  background: #cbd5e1 !important;
+}
+
+.sch-grid-day-head {
+  min-width: 8.5rem;
+}
+
+.sch-grid-day-head--today {
+  background: var(--sch-accent-soft) !important;
+  color: var(--sch-accent-deep);
+  box-shadow: inset 0 -3px 0 var(--sch-accent);
+}
+
+.sch-grid-day-name {
+  display: block;
+}
+
+.sch-grid tbody th.sch-grid-time {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f8fafc;
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--sch-muted);
+  white-space: nowrap;
+  width: 7.5rem;
+  min-width: 7.5rem;
+}
+
+.sch-grid tbody tr:nth-child(even) td,
+.sch-grid tbody tr:nth-child(even) th.sch-grid-time {
+  background: #fafbfc;
+}
+
+.sch-grid-cell--today {
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px var(--sch-accent-soft);
+}
+
+.sch-grid-cell--empty {
+  text-align: center;
+  color: #cbd5e1;
+}
+
+.sch-cell-dash {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+.sch-cell-entry {
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.sch-cell-entry:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sch-cell-entry--now {
+  background: var(--sch-accent-soft);
+  margin: -0.25rem;
+  padding: 0.35rem 0.25rem;
+  border-radius: 6px;
+  border-bottom: none;
+}
+
+.sch-cell-class {
+  font-weight: 800;
+  color: var(--sch-text);
+  line-height: 1.25;
+}
+
+.sch-cell-sub {
+  font-size: 0.68rem;
+  color: var(--sch-muted);
+  margin-bottom: 0.2rem;
+}
+
+.sch-cell-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.68rem;
+  color: var(--sch-muted);
+}
+
+.sch-cell-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.sch-cell-link {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--sch-accent-deep);
+  text-decoration: none;
+}
+
+.sch-cell-link:hover {
+  text-decoration: underline;
+}
+
+/* List / roster table */
+.sch-list-section {
+  margin-top: 0.25rem;
+}
+
+.sch-list-heading {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--sch-text);
+  margin: 0 0 0.65rem;
+}
+
+.sch-list {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sch-list thead th {
+  position: sticky;
+  top: 0;
+  background: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 0.55rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #334155;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sch-list tbody td {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.5rem 0.65rem;
+  vertical-align: middle;
+}
+
+.sch-list tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.sch-list-row--today {
+  background: var(--sch-accent-soft) !important;
+}
+
+.sch-list-row--now {
+  box-shadow: inset 3px 0 0 var(--sch-accent);
+}
+
+.sch-list-time {
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--sch-muted);
+}
+
+.sch-list-class {
+  font-weight: 700;
+  color: var(--sch-text);
+}
+
+.sch-list-action {
+  white-space: nowrap;
+}
+
+.sch-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--sch-accent-deep);
+  text-decoration: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--sch-accent);
+  background: #fff;
+}
+
+.sch-link-btn:hover {
+  background: var(--sch-accent-soft);
+}
+
+.sch-empty-state {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--sch-surface);
+  border-radius: 18px;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.sch-empty-state i {
+  font-size: 2.5rem;
+  color: var(--sch-accent);
+  opacity: 0.65;
+  margin-bottom: 0.75rem;
+}
+
+.sch-empty-state h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--sch-text);
+}
+
+.sch-empty-state p {
+  color: var(--sch-muted);
+  max-width: 28rem;
+  margin: 0.5rem auto 0;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 576px) {
+  .sch-hero-actions {
+    width: 100%;
+  }
+
+  .sch-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .sch-sheet-meta {
+    width: 100%;
+  }
+}

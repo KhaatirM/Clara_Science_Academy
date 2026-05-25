@@ -1,0 +1,125 @@
+{# Attendance landing (role dashboard section) #}
+{% set is_director = sidebar_role_canonical == 'Director' %}
+
+<div class="mgmt-att container-fluid px-0 px-md-1">
+  <div class="mgmt-att-shell{% if is_director %} mgmt-att-shell--director{% endif %}">
+
+    <header class="mgmt-att-hero">
+      <div>
+        <p class="mgmt-att-eyebrow">Attendance</p>
+        <h1 class="mgmt-att-title">Attendance management</h1>
+        <p class="mgmt-att-subtitle">
+          <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+          Track student attendance and generate reports
+        </p>
+      </div>
+      <div class="mgmt-att-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        <a href="{{ url_for('management.unified_attendance') }}" class="mgmt-att-btn mgmt-att-btn--primary">
+          <i class="bi bi-calendar3"></i> View all attendance
+        </a>
+      </div>
+    </header>
+
+    <div class="mgmt-att-insights" role="list">
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-house-door-fill"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ classes|length }}</div><div class="mgmt-att-insight-label">Classes</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-calendar-check"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ classes|length }}</div><div class="mgmt-att-insight-label">Today's classes</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-check-circle"></i></span>
+        <div><div class="mgmt-att-insight-value">—</div><div class="mgmt-att-insight-label">Completed today</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-percent"></i></span>
+        <div><div class="mgmt-att-insight-value">—</div><div class="mgmt-att-insight-label">Rate</div></div>
+      </div>
+    </div>
+
+    <div class="mgmt-att-content">
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-8">
+                    <div class="attendance-classes-card">
+                        <div class="attendance-classes-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-clipboard-check me-2"></i>Take Attendance by Class
+                            </h5>
+                        </div>
+                        <div class="attendance-classes-body">
+                            <div class="attendance-classes-grid">
+                                {% for class in classes %}
+                                <a href="{{ url_for('management.take_class_attendance', class_id=class.id) }}" class="attendance-class-item">
+                                    <div class="attendance-class-icon">
+                                        <i class="bi bi-book-fill"></i>
+                                    </div>
+                                    <div class="attendance-class-info">
+                                        <h6 class="attendance-class-name">{{ class.name }}</h6>
+                                        <p class="attendance-class-subject">{{ class.subject or 'General' }}</p>
+                                        <div class="attendance-class-meta">
+                                            <span class="badge bg-primary">{{ class.enrollments|selectattr('is_active')|list|length }} students</span>
+                                            <span class="badge bg-success">{{ class.get_grade_levels_display() or 'N/A' }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="attendance-class-action">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </div>
+                                </a>
+                                {% else %}
+                                <div class="attendance-empty-message">
+                                    <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                                    <p class="text-muted">No classes available for attendance.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <div class="attendance-reports-card">
+                        <div class="attendance-reports-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-file-earmark-bar-graph me-2"></i>Quick Reports
+                            </h5>
+                        </div>
+                        <div class="attendance-reports-body">
+                            <a href="{{ attendance_quick_links.daily }}" class="attendance-report-btn">
+                                <i class="bi bi-calendar-day me-2"></i>
+                                <span>Daily Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="{{ attendance_quick_links.weekly }}" class="attendance-report-btn">
+                                <i class="bi bi-calendar-week me-2"></i>
+                                <span>Weekly Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="{{ attendance_quick_links.monthly }}" class="attendance-report-btn">
+                                <i class="bi bi-calendar-month me-2"></i>
+                                <span>Monthly Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="{{ attendance_quick_links.reports }}" class="attendance-report-btn">
+                                <i class="bi bi-person-lines-fill me-2"></i>
+                                <span>All Reports</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="{{ attendance_quick_links.analytics }}" class="attendance-report-btn">
+                                <i class="bi bi-graph-up me-2"></i>
+                                <span>Analytics Dashboard</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+  </div>
+</div>

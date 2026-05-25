@@ -3,6 +3,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/students_role_student_dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/student_assignment_view_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">
 <style>
 /* Custom Modal Backdrop - Lighter and more readable */
 .modal-backdrop {
@@ -1026,7 +1027,14 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 </script>
 
 
-<div class="container-fluid px-2 px-md-4">
+{% set use_student_hub = section in ['home', 'classes', 'grades', 'assignments', 'school-calendar', 'settings'] %}
+{% if use_student_hub %}
+<div class="rh rh--student container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    {% include 'students/_student_hub_header.html' %}
+    <div class="rh-content">
+{% endif %}
+<div class="container-fluid px-2 px-md-4{% if use_student_hub %} px-0{% endif %}">
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
         <!-- Home Dashboard -->
@@ -5988,4 +5996,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         </div>
     </div>
 </div>
+{% if use_student_hub %}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %} 

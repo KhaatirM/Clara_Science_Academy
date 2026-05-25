@@ -703,13 +703,14 @@ def students():
     if page < 1:
         page = 1
     
-    # Build the query (exclude soft-deleted students by default, unless requested)
+    from utils.student_roster import active_roster_student_filters
+    # Build the query (exclude archived students by default, unless requested)
     if status_filter == 'former':
         query = Student.query.filter(Student.is_deleted == True)
     elif status_filter == 'all':
         query = Student.query
     else:
-        query = Student.query.filter(Student.is_deleted == False)
+        query = Student.query.filter(active_roster_student_filters())
     
     # Apply search filter if query exists
     if search_query:
@@ -1336,12 +1337,13 @@ def generate_report_card_for_student(student_id):
     # Get all data needed for the form
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     
-    # Get student's enrolled classes
+    # Get student's enrolled classes (active only; former students include past enrollments)
     from models import Enrollment
-    enrollments = Enrollment.query.filter_by(
-        student_id=student_id,
-        is_active=True
-    ).all()
+    from utils.student_roster import student_is_archived
+    enrollments_q = Enrollment.query.filter_by(student_id=student_id)
+    if not student_is_archived(student):
+        enrollments_q = enrollments_q.filter_by(is_active=True)
+    enrollments = enrollments_q.all()
     
     classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
     
@@ -2291,10 +2293,11 @@ def remove_student(student_id):
         from datetime import datetime, timezone
         from models import Enrollment
 
-        # Mark as deleted (record preserved)
+        # Mark as deleted / off roster (record preserved for logs & former report cards)
         student.is_deleted = True
         student.deleted_at = datetime.now(timezone.utc)
         student.marked_for_removal = False
+        student.is_active = False
         student.status_updated_at = datetime.now(timezone.utc)
 
         # Deactivate enrollments so they no longer appear in active rosters
@@ -3281,6 +3284,13 @@ def view_student_details_data(student_id):
         from utils.academic_concern_submission import academic_concern_effective_submitted
 
         student = Student.query.get_or_404(student_id)
+
+        from utils.student_roster import student_is_on_active_roster
+        if not student_is_on_active_roster(student):
+            return jsonify({
+                'success': False,
+                'error': 'This student is no longer on the active school roster.',
+            }), 404
         
         # --- GPA IMPACT ANALYSIS ---
         current_gpa = None

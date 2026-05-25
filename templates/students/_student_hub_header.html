@@ -1,0 +1,116 @@
+{# Dynamic hub header for student dashboard sections #}
+<header class="rh-hero">
+  <div>
+    {% if section == 'home' %}
+    <p class="rh-eyebrow">Student portal</p>
+    <h1 class="rh-title">Welcome back, {{ student.first_name }}</h1>
+    <p class="rh-subtitle"><i class="bi bi-calendar3"></i> Your learning dashboard</p>
+    {% elif section == 'classes' %}
+    <p class="rh-eyebrow">My courses</p>
+    <h1 class="rh-title">Classes</h1>
+    <p class="rh-subtitle"><i class="bi bi-journal-bookmark"></i> Enrolled classes and class workspaces</p>
+    {% elif section == 'grades' %}
+    <p class="rh-eyebrow">Academic progress</p>
+    <h1 class="rh-title">Grades</h1>
+    <p class="rh-subtitle"><i class="bi bi-card-checklist"></i> Grades, GPA, and quarter breakdowns</p>
+    {% elif section == 'assignments' %}
+    <p class="rh-eyebrow">Coursework</p>
+    <h1 class="rh-title">Assignments</h1>
+    <p class="rh-subtitle"><i class="bi bi-file-earmark-text"></i> Due dates, submissions, and class work</p>
+    {% elif section == 'school-calendar' %}
+    <p class="rh-eyebrow">School calendar</p>
+    <h1 class="rh-title">School calendar</h1>
+    <p class="rh-subtitle"><i class="bi bi-calendar-event"></i> Events, breaks, and important dates</p>
+    {% elif section == 'settings' %}
+    <p class="rh-eyebrow">Account</p>
+    <h1 class="rh-title">Settings</h1>
+    <p class="rh-subtitle"><i class="bi bi-gear"></i> Profile and preferences</p>
+    {% else %}
+    <p class="rh-eyebrow">Student portal</p>
+    <h1 class="rh-title">{{ dashboard_title or 'Student' }}</h1>
+    {% endif %}
+  </div>
+  <div class="rh-hero-actions">
+    <span class="rh-role-badge rh-role-badge--student"><i class="bi bi-mortarboard-fill"></i> Student</span>
+    {% if section != 'home' %}
+    <a href="{{ url_for('student.student_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-house-door"></i> Home</a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="rh-insights" role="list">
+  {% if section == 'home' %}
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-graph-up"></i></span>
+    <div><div class="rh-insight-value">{{ "%.2f"|format(gpa|default(0)) }}</div><div class="rh-insight-label">GPA</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-house-door"></i></span>
+    <div><div class="rh-insight-value">{{ my_classes|length if my_classes is defined else 0 }}</div><div class="rh-insight-label">Classes</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-journal-check"></i></span>
+    <div><div class="rh-insight-value">{{ upcoming_assignments|length if upcoming_assignments is defined else 0 }}</div><div class="rh-insight-label">Upcoming</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-trophy"></i></span>
+    <div><div class="rh-insight-value">{{ student.grade_level or '—' }}</div><div class="rh-insight-label">Grade level</div></div>
+  </div>
+  {% elif section == 'classes' %}
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-journal-bookmark"></i></span>
+    <div><div class="rh-insight-value">{{ my_classes|length if my_classes is defined else 0 }}</div><div class="rh-insight-label">Enrolled</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-person"></i></span>
+    <div><div class="rh-insight-value">{{ my_classes|map(attribute='teacher')|select|list|length if my_classes is defined else 0 }}</div><div class="rh-insight-label">Teachers</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-file-earmark"></i></span>
+    <div><div class="rh-insight-value">{{ assignments|length if assignments is defined else 0 }}</div><div class="rh-insight-label">Assignments</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-graph-up"></i></span>
+    <div><div class="rh-insight-value">{{ "%.2f"|format(gpa|default(0)) if gpa is defined else '—' }}</div><div class="rh-insight-label">GPA</div></div>
+  </div>
+  {% elif section == 'grades' %}
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-percent"></i></span>
+    <div><div class="rh-insight-value">{{ "%.1f"|format(overall_average|default(0)) if overall_average is defined else '—' }}%</div><div class="rh-insight-label">Overall avg</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-graph-up"></i></span>
+    <div><div class="rh-insight-value">{{ "%.2f"|format(gpa|default(0)) }}</div><div class="rh-insight-label">GPA</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-house-door"></i></span>
+    <div><div class="rh-insight-value">{{ grades_by_class|length if grades_by_class is defined else 0 }}</div><div class="rh-insight-label">Classes</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-calendar-range"></i></span>
+    <div><div class="rh-insight-value">{{ quarters|length if quarters is defined else 0 }}</div><div class="rh-insight-label">Quarters</div></div>
+  </div>
+  {% elif section == 'assignments' %}
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-list-task"></i></span>
+    <div><div class="rh-insight-value">{{ assignments|length if assignments is defined else 0 }}</div><div class="rh-insight-label">Total</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-clock"></i></span>
+    <div><div class="rh-insight-value">{{ upcoming_assignments|length if upcoming_assignments is defined else 0 }}</div><div class="rh-insight-label">Upcoming</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-check-circle"></i></span>
+    <div><div class="rh-insight-value">{{ submitted_count|default(0) }}</div><div class="rh-insight-label">Submitted</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-exclamation-circle"></i></span>
+    <div><div class="rh-insight-value">{{ overdue_count|default(0) }}</div><div class="rh-insight-label">Overdue</div></div>
+  </div>
+  {% else %}
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-house-door"></i></span>
+    <div><div class="rh-insight-value">{{ my_classes|length if my_classes is defined else 0 }}</div><div class="rh-insight-label">Classes</div></div>
+  </div>
+  {% endif %}
+</div>

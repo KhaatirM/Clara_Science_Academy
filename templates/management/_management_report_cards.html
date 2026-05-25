@@ -1,0 +1,251 @@
+{# Report Cards hub — administrators & directors #}
+{% set is_director = current_user.role == 'Director' %}
+{% set recent = recent_reports[:10] if recent_reports else [] %}
+{% set total_reports = report_cards|length if report_cards else 0 %}
+{% set total_students = students|length if students else 0 %}
+{% set total_years = school_years|length if school_years else 0 %}
+{% set cat_elementary = category_counts['elementary']|default(0) if category_counts is defined else 0 %}
+{% set cat_68 = category_counts['6-8']|default(0) if category_counts is defined else 0 %}
+{% set cat_hs = category_counts['9-12']|default(0) if category_counts is defined else 0 %}
+
+<div class="mgmt-rc container-fluid px-0 px-md-1">
+  <div class="mgmt-rc-shell{% if is_director %} mgmt-rc-shell--director{% endif %}">
+
+    <header class="mgmt-rc-hero">
+      <div>
+        <p class="mgmt-rc-eyebrow">Academic reporting</p>
+        <h1 class="mgmt-rc-title">Report cards</h1>
+        <p class="mgmt-rc-subtitle">
+          <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+          Generate and manage student report cards by grade category
+        </p>
+      </div>
+      <div class="mgmt-rc-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-rc-role-badge mgmt-rc-role-badge--director">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> Director
+        </span>
+        {% else %}
+        <span class="mgmt-rc-role-badge mgmt-rc-role-badge--admin">
+          <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
+        </span>
+        {% endif %}
+        {% if has_mgmt_role_access and 'school_year_closure.schedule' in current_app.view_functions %}
+        <a href="{{ url_for('school_year_closure.schedule') }}" class="mgmt-rc-btn mgmt-rc-btn--danger">
+          <i class="bi bi-calendar-event" aria-hidden="true"></i> Schedule year closure
+        </a>
+        {% elif has_mgmt_role_access %}
+        {# Fallback for stale processes that haven't loaded the new blueprint yet — points at legacy URL which now redirects. #}
+        <a href="{{ url_for('management.close_school_year') }}" class="mgmt-rc-btn mgmt-rc-btn--danger">
+          <i class="bi bi-calendar-event" aria-hidden="true"></i> Schedule year closure
+        </a>
+        {% endif %}
+        <a href="{{ url_for('management.management_dashboard') }}" class="mgmt-rc-btn mgmt-rc-btn--ghost">
+          <i class="bi bi-house-door" aria-hidden="true"></i> Dashboard
+        </a>
+      </div>
+    </header>
+
+    <div class="mgmt-rc-insights" role="list">
+      <div class="mgmt-rc-insight" role="listitem">
+        <span class="mgmt-rc-insight-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-rc-insight-value">{{ total_students }}</div>
+          <div class="mgmt-rc-insight-label">Total students</div>
+        </div>
+      </div>
+      <div class="mgmt-rc-insight" role="listitem">
+        <span class="mgmt-rc-insight-icon"><i class="bi bi-file-earmark-check-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-rc-insight-value">{{ total_reports }}</div>
+          <div class="mgmt-rc-insight-label">Report cards generated</div>
+        </div>
+      </div>
+      <div class="mgmt-rc-insight" role="listitem">
+        <span class="mgmt-rc-insight-icon"><i class="bi bi-calendar-range" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-rc-insight-value">{{ total_years }}</div>
+          <div class="mgmt-rc-insight-label">School years</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="mgmt-rc-categories" aria-labelledby="mgmtRcCategoriesTitle">
+      <h2 id="mgmtRcCategoriesTitle" class="mgmt-rc-section-title">
+        <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i> Select grade category
+      </h2>
+      <p class="mgmt-rc-section-desc">Choose a grade band to view students and generate report cards for that range.</p>
+      <div class="mgmt-rc-cat-grid">
+        <article class="mgmt-rc-cat mgmt-rc-cat--elementary">
+          <div class="mgmt-rc-cat-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></div>
+          <h3 class="mgmt-rc-cat-title">Elementary school</h3>
+          <p class="mgmt-rc-cat-range">Kindergarten – 5th grade</p>
+          <p class="mgmt-rc-cat-meta">{{ cat_elementary }} student{{ 's' if cat_elementary != 1 else '' }} enrolled</p>
+          <p class="mgmt-rc-cat-desc">Foundational through upper-elementary progress and standards-based grading.</p>
+          <a href="{{ url_for('management.report_cards_by_category', category='elementary') }}" class="mgmt-rc-cat-link">
+            Open elementary <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+          </a>
+        </article>
+        <article class="mgmt-rc-cat mgmt-rc-cat--68">
+          <div class="mgmt-rc-cat-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></div>
+          <h3 class="mgmt-rc-cat-title">Middle school</h3>
+          <p class="mgmt-rc-cat-range">6th – 8th grade</p>
+          <p class="mgmt-rc-cat-meta">{{ cat_68 }} student{{ 's' if cat_68 != 1 else '' }} enrolled</p>
+          <p class="mgmt-rc-cat-desc">Subject-specific grades and teacher comments.</p>
+          <a href="{{ url_for('management.report_cards_by_category', category='6-8') }}" class="mgmt-rc-cat-link">
+            Open middle school <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+          </a>
+        </article>
+        <article class="mgmt-rc-cat mgmt-rc-cat--hs">
+          <div class="mgmt-rc-cat-icon"><i class="bi bi-building" aria-hidden="true"></i></div>
+          <h3 class="mgmt-rc-cat-title">High school</h3>
+          <p class="mgmt-rc-cat-range">9th – 12th grade</p>
+          <p class="mgmt-rc-cat-meta">{{ cat_hs }} student{{ 's' if cat_hs != 1 else '' }} enrolled</p>
+          <p class="mgmt-rc-cat-desc">Credit-based courses, GPA, and graduation requirements.</p>
+          <a href="{{ url_for('management.report_cards_by_category', category='9-12') }}" class="mgmt-rc-cat-link">
+            Open high school <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <div class="mgmt-rc-main-grid">
+      <aside class="mgmt-rc-guide" aria-labelledby="mgmtRcGuideTitle">
+        <h2 id="mgmtRcGuideTitle" class="mgmt-rc-guide-title">
+          <i class="bi bi-info-circle-fill" aria-hidden="true"></i> Generation workflow
+        </h2>
+        <ol class="mgmt-rc-guide-steps">
+          <li>Select a grade category above</li>
+          <li>Choose a student from the roster</li>
+          <li>Pick school year, classes, and quarters</li>
+          <li>Review and generate the PDF report card</li>
+        </ol>
+        <ul class="mgmt-rc-guide-features">
+          <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Custom class selection</li>
+          <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Attendance statistics</li>
+          <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Teacher comments</li>
+          <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Official or unofficial copies</li>
+        </ul>
+      </aside>
+
+      <section class="mgmt-rc-actions-panel" aria-labelledby="mgmtRcQuickActions">
+        <h2 id="mgmtRcQuickActions" class="mgmt-rc-section-title">
+          <i class="bi bi-lightning-fill" aria-hidden="true"></i> Quick actions
+        </h2>
+        <div class="mgmt-rc-action-groups">
+          <div>
+            <p class="mgmt-rc-action-group-label">Report cards</p>
+            <div class="mgmt-rc-action-grid">
+              <a href="{{ url_for('management.generate_report_card_form') }}" class="mgmt-rc-action mgmt-rc-action--primary">
+                <i class="bi bi-plus-circle-fill" aria-hidden="true"></i>
+                <span>Generate new</span>
+              </a>
+              <a href="{{ url_for('management.report_cards_by_category', category='elementary') }}" class="mgmt-rc-action">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span>Elementary roster</span>
+              </a>
+              <a href="{{ url_for('management.report_cards_by_category', category='6-8') }}" class="mgmt-rc-action">
+                <i class="bi bi-mortarboard" aria-hidden="true"></i>
+                <span>Middle school roster</span>
+              </a>
+              <a href="{{ url_for('management.report_cards_by_category', category='9-12') }}" class="mgmt-rc-action">
+                <i class="bi bi-building" aria-hidden="true"></i>
+                <span>High school roster</span>
+              </a>
+              {% if 'teacher.grade3_standards.grade3_standards_index' in current_app.view_functions %}
+              <a href="{{ url_for('teacher.grade3_standards.grade3_standards_index') }}" class="mgmt-rc-action">
+                <i class="bi bi-check2-square" aria-hidden="true"></i>
+                <span>3rd grade standards</span>
+              </a>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <p class="mgmt-rc-action-group-label">Related</p>
+            <div class="mgmt-rc-action-grid">
+              <a href="{{ url_for('management.students') }}" class="mgmt-rc-action">
+                <i class="bi bi-people" aria-hidden="true"></i>
+                <span>Students</span>
+              </a>
+              <a href="{{ url_for('management.assignments_and_grades') }}" class="mgmt-rc-action">
+                <i class="bi bi-clipboard-data" aria-hidden="true"></i>
+                <span>Grades</span>
+              </a>
+              <a href="{{ url_for('management.unified_attendance') }}" class="mgmt-rc-action">
+                <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                <span>Attendance</span>
+              </a>
+              <a href="{{ url_for('management.management_dashboard') }}" class="mgmt-rc-action">
+                <i class="bi bi-house-door" aria-hidden="true"></i>
+                <span>Home</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="mgmt-rc-recent" aria-labelledby="mgmtRcRecentTitle">
+      <div class="mgmt-rc-recent-header">
+        <h2 id="mgmtRcRecentTitle" class="mgmt-rc-section-title">
+          <i class="bi bi-clock-history" aria-hidden="true"></i> Recently generated
+          {% if recent %}
+          <span class="mgmt-rc-recent-count">{{ recent|length }}</span>
+          {% endif %}
+        </h2>
+        <span class="mgmt-rc-recent-meta">Last 10 report cards</span>
+      </div>
+      <div class="mgmt-rc-recent-list">
+        {% if recent %}
+          {% for report in recent %}
+          <article class="mgmt-rc-recent-item">
+            <span class="mgmt-rc-recent-avatar" aria-hidden="true">
+              {{ report.student.first_name[0] }}{{ report.student.last_name[0] }}
+            </span>
+            <div class="mgmt-rc-recent-body">
+              <h3 class="mgmt-rc-recent-name">{{ report.student.first_name }} {{ report.student.last_name }}</h3>
+              <p class="mgmt-rc-recent-detail">
+                Grade {{ report.student.grade_level }}
+                · {{ report.school_year.name if report.school_year else 'N/A' }}
+                · <span class="mgmt-rc-quarter">{{ report.quarter }}</span>
+              </p>
+              <time class="mgmt-rc-recent-time">
+                {% if report.generated_at %}
+                  {{ report.generated_at.strftime('%b %d, %Y · %I:%M %p') }}
+                {% else %}
+                  Date unavailable
+                {% endif %}
+              </time>
+            </div>
+            <div class="mgmt-rc-recent-actions">
+              <a href="{{ url_for('management.student_report_card_history', student_id=report.student.id) }}" class="mgmt-rc-icon-btn" title="View history">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+              </a>
+              <a href="{{ url_for('management.view_report_card', report_card_id=report.id) }}" class="mgmt-rc-icon-btn" title="View details">
+                <i class="bi bi-eye" aria-hidden="true"></i>
+              </a>
+              <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report.id) }}" class="mgmt-rc-icon-btn" title="Download PDF" target="_blank" rel="noopener">
+                <i class="bi bi-file-pdf" aria-hidden="true"></i>
+              </a>
+              <button type="button" class="mgmt-rc-icon-btn mgmt-rc-icon-btn--danger" title="Delete"
+                onclick="if(confirm('Delete this report card? This cannot be undone.')) { document.getElementById('delete-rc-{{ report.id }}').submit(); }">
+                <i class="bi bi-trash" aria-hidden="true"></i>
+              </button>
+              <form id="delete-rc-{{ report.id }}" method="POST" action="{{ url_for('management.delete_report_card', report_card_id=report.id) }}" class="d-none">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              </form>
+            </div>
+          </article>
+          {% endfor %}
+        {% else %}
+          <div class="mgmt-rc-empty">
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <p>No report cards generated yet</p>
+            <span>Select a grade category above to get started.</span>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+  </div>
+</div>

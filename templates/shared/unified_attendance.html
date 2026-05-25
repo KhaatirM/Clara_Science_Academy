@@ -4,35 +4,62 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_attendance.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_unified_attendance.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/attendance_reports.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_attendance.css') }}?v=2">
 <script src="{{ url_for('static', filename='js/attendance_reports.js') }}" defer></script>
 {% endblock %}
 
 {% block title %}Unified Attendance Management{% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4 unified-attendance-page">
-    <!-- Modern Unified Attendance Header -->
-    <div class="unified-attendance-header mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <h2 class="unified-attendance-title mb-1">
-                    <i class="bi bi-clipboard-check me-2"></i>Unified Attendance Management
-                </h2>
-                <p class="unified-attendance-subtitle mb-0">
-                    <i class="bi bi-calendar-week me-2"></i>Complete attendance tracking for school days, class periods, and reporting
-                </p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('management.attendance_analytics') }}" class="btn btn-attendance-analytics">
-                    <i class="bi bi-graph-up-arrow me-2"></i>Attendance Analytics
-                </a>
-                <button class="btn btn-unified-refresh" onclick="window.location.reload()">
-                    <i class="bi bi-arrow-clockwise me-2"></i>Refresh
-                </button>
-            </div>
-        </div>
+{% set is_director = sidebar_role_canonical == 'Director' %}
+<div class="mgmt-att container-fluid px-0 px-md-1 unified-attendance-page">
+  <div class="mgmt-att-shell{% if is_director %} mgmt-att-shell--director{% endif %}">
+
+    <header class="mgmt-att-hero">
+      <div>
+        <p class="mgmt-att-eyebrow">Attendance</p>
+        <h1 class="mgmt-att-title">Unified attendance</h1>
+        <p class="mgmt-att-subtitle">
+          <i class="bi bi-calendar-week" aria-hidden="true"></i>
+          School day, class period, and reports in one place
+        </p>
+      </div>
+      <div class="mgmt-att-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        <span class="mgmt-att-date-badge"><i class="bi bi-calendar3"></i> {{ selected_date_str }}</span>
+        <a href="{{ url_for('management.attendance_analytics') }}" class="mgmt-att-btn mgmt-att-btn--primary">
+          <i class="bi bi-graph-up-arrow"></i> Analytics
+        </a>
+        <button type="button" class="mgmt-att-btn mgmt-att-btn--ghost" onclick="window.location.reload()">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="mgmt-att-insights" role="list">
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-people-fill"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ attendance_stats.total }}</div><div class="mgmt-att-insight-label">Students</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-check-circle-fill"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ attendance_stats.present }}</div><div class="mgmt-att-insight-label">School day present</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-journal-check"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ today_attendance_count or 0 }}</div><div class="mgmt-att-insight-label">Classes completed</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-percent"></i></span>
+        <div><div class="mgmt-att-insight-value">{{ overall_attendance_rate or 0 }}%</div><div class="mgmt-att-insight-label">Class period rate</div></div>
+      </div>
     </div>
 
+    <div class="mgmt-att-content">
     <!-- Modern Navigation Tabs -->
     <div class="unified-tabs-container mb-4">
         <ul class="nav nav-pills unified-nav-pills" id="attendanceTabs" role="tablist">
@@ -203,54 +230,6 @@
 
         <!-- Class Period Attendance Tab -->
         <div class="tab-pane fade" id="class-period" role="tabpanel">
-            <!-- Quick Stats -->
-            <div class="row g-3 mb-4">
-                <div class="col-6 col-md-3">
-                    <div class="unified-stat-card">
-                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #f093fb, #f5576c);">
-                            <i class="bi bi-house-door-fill"></i>
-                        </div>
-                        <div class="unified-stat-content">
-                            <h3 class="unified-stat-number">{{ classes|length }}</h3>
-                            <p class="unified-stat-label">Total Classes</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="unified-stat-card">
-                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #43e97b, #38f9d7);">
-                            <i class="bi bi-check-circle"></i>
-                        </div>
-                        <div class="unified-stat-content">
-                            <h3 class="unified-stat-number">{{ today_attendance_count or 0 }}</h3>
-                            <p class="unified-stat-label">Completed Today</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="unified-stat-card">
-                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #ffd700, #ffed4e);">
-                            <i class="bi bi-clock"></i>
-                        </div>
-                        <div class="unified-stat-content">
-                            <h3 class="unified-stat-number">{{ pending_classes_count or 0 }}</h3>
-                            <p class="unified-stat-label">Pending Today</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="unified-stat-card">
-                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #4facfe, #00f2fe);">
-                            <i class="bi bi-percent"></i>
-                        </div>
-                        <div class="unified-stat-content">
-                            <h3 class="unified-stat-number">{{ overall_attendance_rate or 0 }}%</h3>
-                            <p class="unified-stat-label">Overall Rate</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Date Selector -->
             <div class="card mb-4">
                 <div class="card-body">
@@ -348,26 +327,33 @@
         </div>
 
     </div>
+    </div>
+  </div>
 </div>
 
 <script>
+function localDateInputValue(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 // School Day Attendance Functions
 function setSchoolDateToToday() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('school_date').value = today;
+    document.getElementById('school_date').value = localDateInputValue(new Date());
 }
 
 // Class Period Attendance Functions
 function setClassDateToToday() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('class-attendance-date').value = today;
+    document.getElementById('class-attendance-date').value = localDateInputValue(new Date());
     loadClassAttendance();
 }
 
 function setClassDateToYesterday() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    document.getElementById('class-attendance-date').value = yesterday.toISOString().split('T')[0];
+    document.getElementById('class-attendance-date').value = localDateInputValue(yesterday);
     loadClassAttendance();
 }
 

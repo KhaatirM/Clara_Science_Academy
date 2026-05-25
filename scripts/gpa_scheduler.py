@@ -183,6 +183,20 @@ def run_academic_period_reminders_job():
             print(f"[{datetime.now()}] Academic period reminders error: {e}")
 
 
+def run_school_year_closure_tick_job():
+    """Daily: advance any SchoolYearClosure that crossed a milestone, fire
+    notifications, and auto-finalize on Day 28. Idempotent."""
+    from app import create_app
+    app = create_app()
+    with app.app_context():
+        from services.school_year_closure import run_closure_tick
+        try:
+            out = run_closure_tick(actor_label='scheduler')
+            print(f"[{datetime.now()}] School-year closure tick: {out}")
+        except Exception as e:
+            print(f"[{datetime.now()}] School-year closure tick error: {e}")
+
+
 def start_gpa_scheduler():
     """Start the GPA scheduler"""
     if not SCHEDULE_AVAILABLE:
@@ -195,8 +209,14 @@ def start_gpa_scheduler():
     schedule.every().day.at("14:00").do(update_all_gpas)
     schedule.every().day.at("22:00").do(update_all_gpas)
     schedule.every().day.at("08:00").do(run_academic_period_reminders_job)
-    
-    print("GPA scheduler started. GPA updates: 6:00 AM, 2:00 PM, 10:00 PM; academic period reminders: 8:00 AM daily.")
+    # Phased year-end workflow: check daily at 06:30 (before classes open) so
+    # any milestone transitions fire before students/teachers log in.
+    schedule.every().day.at("06:30").do(run_school_year_closure_tick_job)
+
+    print(
+        "GPA scheduler started. GPA updates: 6:00 AM, 2:00 PM, 10:00 PM; "
+        "academic period reminders: 8:00 AM daily; school-year closure tick: 6:30 AM daily."
+    )
     
     # Run the scheduler in a separate thread
     def run_scheduler():

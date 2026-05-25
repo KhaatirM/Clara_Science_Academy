@@ -1,0 +1,31 @@
+<header class="rh-hero">
+  <div>
+    <p class="rh-eyebrow">Teacher portal</p>
+    <h1 class="rh-title">Welcome back, {{ teacher.first_name if teacher else current_user.username }}</h1>
+    <p class="rh-subtitle"><i class="bi bi-calendar3"></i> Today's teaching dashboard</p>
+  </div>
+  <div class="rh-hero-actions">
+    <span class="rh-role-badge rh-role-badge--teacher"><i class="bi bi-mortarboard-fill"></i> Teacher</span>
+    {% if is_admin %}
+    <span class="rh-role-badge rh-role-badge--teacher" style="opacity:0.9"><i class="bi bi-shield-fill"></i> Admin view</span>
+    {% endif %}
+  </div>
+</header>
+<div class="rh-insights" role="list">
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-house-door-fill"></i></span>
+    <div><div class="rh-insight-value">{{ classes|length if classes else 0 }}</div><div class="rh-insight-label">Classes</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-people-fill"></i></span>
+    <div><div class="rh-insight-value">{{ total_students if total_students is defined else 0 }}</div><div class="rh-insight-label">Students</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-journal-text"></i></span>
+    <div><div class="rh-insight-value">{{ active_assignments if active_assignments is defined else 0 }}</div><div class="rh-insight-label">Active work</div></div>
+  </div>
+  <div class="rh-insight" role="listitem">
+    <span class="rh-insight-icon"><i class="bi bi-bell-fill"></i></span>
+    <div><div class="rh-insight-value">{{ notifications|length if notifications else 0 }}</div><div class="rh-insight-label">Notifications</div></div>
+  </div>
+</div>

@@ -1,11 +1,100 @@
 {% extends "shared/dashboard_layout.html" %}
+{% set use_mgmt_bug_hub = current_user.role not in ['Tech', 'IT Support'] and (sidebar_role_canonical in ['Director', 'School Administrator'] or has_mgmt_role_access) %}
+{% set use_rh_bug_hub = current_user.role not in ['Tech', 'IT Support'] and not use_mgmt_bug_hub %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+{% if use_mgmt_bug_hub %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_tools.css') }}?v=1">
+{% elif use_rh_bug_hub %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">
+{% endif %}
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
+{% if use_mgmt_bug_hub %}{% set is_director = sidebar_role_canonical == 'Director' %}{% endif %}
+<div class="{% if use_mgmt_bug_hub %}mgmt-bug {% endif %}container-fluid {% if use_mgmt_bug_hub %}px-0 px-md-1{% else %}px-2 px-md-4{% endif %}">
+{% if use_mgmt_bug_hub %}
+  <div class="mgmt-bug-shell{% if is_director %} mgmt-bug-shell--director{% endif %}">
+    <header class="mgmt-bug-hero">
+      <div>
+        <p class="mgmt-bug-eyebrow">Bug reports</p>
+        <h1 class="mgmt-bug-title">Bug reports</h1>
+        <p class="mgmt-bug-subtitle">
+          <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+          {% if can_manage %}Monitor and manage system bug reports{% else %}Submit and track your bug reports{% endif %}
+        </p>
+      </div>
+      <div class="mgmt-bug-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-bug-role-badge mgmt-bug-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-bug-role-badge mgmt-bug-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        {% if can_manage %}
+        <button type="button" class="mgmt-bug-btn mgmt-bug-btn--ghost" onclick="exportBugReports()"><i class="bi bi-download"></i> Export</button>
+        {% endif %}
+        <button type="button" class="mgmt-bug-btn mgmt-bug-btn--ghost" onclick="refreshReports()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        <button type="button" class="mgmt-bug-btn mgmt-bug-btn--primary" data-bs-toggle="modal" data-bs-target="#submitBugReportModal">
+          <i class="bi bi-plus-circle"></i> Submit report
+        </button>
+      </div>
+    </header>
+    <div class="mgmt-bug-insights" role="list">
+      <div class="mgmt-bug-insight" role="listitem">
+        <span class="mgmt-bug-insight-icon"><i class="bi bi-list-ul"></i></span>
+        <div><div class="mgmt-bug-insight-value">{{ bug_reports|length }}</div><div class="mgmt-bug-insight-label">Total</div></div>
+      </div>
+      <div class="mgmt-bug-insight" role="listitem">
+        <span class="mgmt-bug-insight-icon"><i class="bi bi-circle"></i></span>
+        <div><div class="mgmt-bug-insight-value">{{ bug_reports|selectattr('status', 'equalto', 'open')|list|length }}</div><div class="mgmt-bug-insight-label">Open</div></div>
+      </div>
+      <div class="mgmt-bug-insight" role="listitem">
+        <span class="mgmt-bug-insight-icon"><i class="bi bi-arrow-repeat"></i></span>
+        <div><div class="mgmt-bug-insight-value">{{ bug_reports|selectattr('status', 'equalto', 'in_progress')|list|length }}</div><div class="mgmt-bug-insight-label">In progress</div></div>
+      </div>
+      <div class="mgmt-bug-insight" role="listitem">
+        <span class="mgmt-bug-insight-icon"><i class="bi bi-check-circle"></i></span>
+        <div><div class="mgmt-bug-insight-value">{{ bug_reports|selectattr('status', 'equalto', 'resolved')|list|length }}</div><div class="mgmt-bug-insight-label">Resolved</div></div>
+      </div>
+    </div>
+    <div class="mgmt-bug-content">
+{% elif use_rh_bug_hub %}
+{% set is_teacher_bug = sidebar_role_canonical != 'Student' %}
+<div class="rh {% if is_teacher_bug %}rh--teacher{% else %}rh--student{% endif %} container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    <header class="rh-hero">
+      <div>
+        <p class="rh-eyebrow">Support</p>
+        <h1 class="rh-title">Bug reports</h1>
+        <p class="rh-subtitle"><i class="bi bi-bug"></i> {% if can_manage %}Monitor reports{% else %}Submit and track your reports{% endif %}</p>
+      </div>
+      <div class="rh-hero-actions">
+        <span class="rh-role-badge rh-role-badge--{% if is_teacher_bug %}teacher{% else %}student{% endif %}"><i class="bi bi-{% if is_teacher_bug %}mortarboard{% else %}person-badge{% endif %}-fill"></i> {% if is_teacher_bug %}Teacher{% else %}Student{% endif %}</span>
+        <button type="button" class="rh-btn rh-btn--ghost" onclick="refreshReports()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        <button type="button" class="rh-btn rh-btn--primary" data-bs-toggle="modal" data-bs-target="#submitBugReportModal"><i class="bi bi-plus-circle"></i> Submit</button>
+      </div>
+    </header>
+    <div class="rh-insights" role="list">
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-list-ul"></i></span>
+        <div><div class="rh-insight-value">{{ bug_reports|length }}</div><div class="rh-insight-label">Total</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-circle"></i></span>
+        <div><div class="rh-insight-value">{{ bug_reports|selectattr('status', 'equalto', 'open')|list|length }}</div><div class="rh-insight-label">Open</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-arrow-repeat"></i></span>
+        <div><div class="rh-insight-value">{{ bug_reports|selectattr('status', 'equalto', 'in_progress')|list|length }}</div><div class="rh-insight-label">In progress</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-check-circle"></i></span>
+        <div><div class="rh-insight-value">{{ bug_reports|selectattr('status', 'equalto', 'resolved')|list|length }}</div><div class="rh-insight-label">Resolved</div></div>
+      </div>
+    </div>
+    <div class="rh-content">
+{% else %}
     <!-- Modern Header -->
     <div class="tech-dashboard-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -82,6 +171,7 @@
         </div>
     </div>
     {% endif %}
+{% endif %}
 
     <!-- Bug Reports Table -->
     <div class="tech-quick-actions">
@@ -204,6 +294,14 @@
             {% endif %}
         </div>
     </div>
+{% if use_mgmt_bug_hub %}
+    </div>
+  </div>
+{% elif use_rh_bug_hub %}
+    </div>
+  </div>
+</div>
+{% endif %}
 </div>
 
 <!-- Submit Bug Report Modal -->

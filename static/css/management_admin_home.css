@@ -1,14 +1,14 @@
 /* School management home — administrators & directors */
 
 .mgmt-home {
-  --mgmt-home-bg: linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%);
-  --mgmt-home-surface: rgba(255, 255, 255, 0.94);
-  --mgmt-home-border: rgba(255, 255, 255, 0.92);
-  --mgmt-home-text: #0f172a;
-  --mgmt-home-muted: #64748b;
-  --mgmt-home-accent: #0d9488;
-  --mgmt-home-accent-deep: #0f766e;
-  --mgmt-home-accent-soft: rgba(13, 148, 136, 0.12);
+  --mgmt-home-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-home-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-home-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-home-text: var(--hub-text, #0f172a);
+  --mgmt-home-muted: var(--hub-muted, #64748b);
+  --mgmt-home-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-home-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-home-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
   --mgmt-home-director: #7c3aed;
   --mgmt-home-shadow: 0 4px 6px rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.08);
   --mgmt-home-radius: 20px;

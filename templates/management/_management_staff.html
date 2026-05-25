@@ -1,0 +1,473 @@
+{# Staff hub — administrators & directors #}
+{% set is_director = sidebar_role_canonical == 'Director' %}
+{% set teachers_mode = teachers_view|default('manage') %}
+
+<div class="mgmt-stf container-fluid px-0 px-md-1">
+  <div class="mgmt-stf-shell{% if is_director %} mgmt-stf-shell--director{% endif %}">
+
+    <header class="mgmt-stf-hero">
+      <div>
+        <p class="mgmt-stf-eyebrow">People operations</p>
+        <h1 class="mgmt-stf-title">Teachers &amp; staff</h1>
+        <p class="mgmt-stf-subtitle">
+          {% if teachers_mode == 'directory' and can_staff_admin_ui %}
+          <i class="bi bi-archive" aria-hidden="true"></i>
+          Browse payroll roster and inactive records
+          {% else %}
+          <i class="bi bi-briefcase" aria-hidden="true"></i>
+          Search, add, and maintain active staff records
+          {% endif %}
+        </p>
+      </div>
+      <div class="mgmt-stf-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-stf-role-badge mgmt-stf-role-badge--director">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> Director
+        </span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-stf-role-badge mgmt-stf-role-badge--admin">
+          <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
+        </span>
+        {% endif %}
+        {% if can_staff_admin_ui %}
+        <div class="mgmt-stf-mode-pills nav nav-pills">
+          <a class="nav-link {% if teachers_mode != 'directory' %}active{% endif %}" href="{{ url_for('management.teachers') }}">
+            <i class="bi bi-sliders"></i> Manage
+          </a>
+          <a class="nav-link {% if teachers_mode == 'directory' %}active{% endif %}" href="{{ url_for('management.teachers', teachers_view='directory', staff_dir_tab='current', staff_dir_q='') }}">
+            <i class="bi bi-people"></i> Roster
+          </a>
+        </div>
+        {% endif %}
+        {% if teachers_mode != 'directory' %}
+        <a href="{{ url_for('management.add_teacher_staff') }}" class="mgmt-stf-btn mgmt-stf-btn--primary">
+          <i class="bi bi-plus-circle" aria-hidden="true"></i> Add staff
+        </a>
+        {% endif %}
+        <a href="{{ url_for('management.management_dashboard') }}" class="mgmt-stf-btn mgmt-stf-btn--ghost">
+          <i class="bi bi-house-door" aria-hidden="true"></i> Dashboard
+        </a>
+      </div>
+    </header>
+
+    {% if teachers_mode != 'directory' %}
+    <div class="mgmt-stf-insights" role="list">
+      <div class="mgmt-stf-insight" role="listitem">
+        <span class="mgmt-stf-insight-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stf-insight-value">{{ total_teachers or teachers|length }}</div>
+          <div class="mgmt-stf-insight-label">Total staff</div>
+        </div>
+      </div>
+      <div class="mgmt-stf-insight" role="listitem">
+        <span class="mgmt-stf-insight-icon"><i class="bi bi-person-check-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stf-insight-value">{{ teachers_with_accounts or 0 }}</div>
+          <div class="mgmt-stf-insight-label">With accounts</div>
+        </div>
+      </div>
+      <div class="mgmt-stf-insight" role="listitem">
+        <span class="mgmt-stf-insight-icon"><i class="bi bi-person-x-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stf-insight-value">{{ teachers_without_accounts or 0 }}</div>
+          <div class="mgmt-stf-insight-label">Without accounts</div>
+        </div>
+      </div>
+      <div class="mgmt-stf-insight" role="listitem">
+        <span class="mgmt-stf-insight-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-stf-insight-value">{{ teachers|selectattr('employment_type', 'equalto', 'Full Time')|list|length }}</div>
+          <div class="mgmt-stf-insight-label">Full time</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="mgmt-stf-content">
+{% if teachers_mode != 'directory' %}
+<!-- Search & Filter Section -->
+<div class="teachers-search-card mb-4">
+    <div class="teachers-search-header">
+        <h5 class="mb-0">
+            <i class="bi bi-search me-2"></i>Search & Filter Staff
+        </h5>
+    </div>
+    <div class="teachers-search-body">
+    <form method="GET" action="{{ url_for('management.teachers') }}" id="teacherSearchForm">
+        <div class="row g-3">
+            <!-- Search Query -->
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search Query</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="search" 
+                       name="search" 
+                       value="{{ search_query or '' }}" 
+                       placeholder="Enter search term..."
+                       autocomplete="off">
+            </div>
+            
+            <!-- Search Type -->
+            <div class="col-md-6">
+                <label for="search_type" class="form-label">Search In</label>
+                <select class="form-select" id="search_type" name="search_type">
+                    <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                    <option value="name" {% if search_type == 'name' %}selected{% endif %}>Staff Name</option>
+                    <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                    <option value="role" {% if search_type == 'role' %}selected{% endif %}>Role & Position</option>
+                    <option value="department" {% if search_type == 'department' %}selected{% endif %}>Department</option>
+                    <option value="subject" {% if search_type == 'subject' %}selected{% endif %}>Subject</option>
+                    <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                    <option value="emergency" {% if search_type == 'emergency' %}selected{% endif %}>Emergency Contact</option>
+                    <option value="staff_id" {% if search_type == 'staff_id' %}selected{% endif %}>Staff ID</option>
+                    <option value="employment" {% if search_type == 'employment' %}selected{% endif %}>Employment Type</option>
+                </select>
+            </div>
+            
+            <!-- Department Filter -->
+            <div class="col-md-4">
+                <label for="department" class="form-label">Department</label>
+                <select class="form-select" id="department" name="department">
+                    <option value="">All Departments</option>
+                    <option value="Mathematics" {% if department_filter == 'Mathematics' %}selected{% endif %}>Mathematics</option>
+                    <option value="Science" {% if department_filter == 'Science' %}selected{% endif %}>Science</option>
+                    <option value="English" {% if department_filter == 'English' %}selected{% endif %}>English</option>
+                    <option value="History & Social Studies" {% if department_filter == 'History & Social Studies' %}selected{% endif %}>History & Social Studies</option>
+                    <option value="Physical Education & Health" {% if department_filter == 'Physical Education & Health' %}selected{% endif %}>Physical Education & Health</option>
+                    <option value="Music & Arts" {% if department_filter == 'Music & Arts' %}selected{% endif %}>Music & Arts</option>
+                    <option value="Computer Science & Technology" {% if department_filter == 'Computer Science & Technology' %}selected{% endif %}>Computer Science & Technology</option>
+                    <option value="Administration" {% if department_filter == 'Administration' %}selected{% endif %}>Administration</option>
+                    <option value="Counseling" {% if department_filter == 'Counseling' %}selected{% endif %}>Counseling</option>
+                    <option value="Special Education" {% if department_filter == 'Special Education' %}selected{% endif %}>Special Education</option>
+                    <option value="Foreign Language" {% if department_filter == 'Foreign Language' %}selected{% endif %}>Foreign Language</option>
+                    <option value="Business" {% if department_filter == 'Business' %}selected{% endif %}>Business</option>
+                </select>
+            </div>
+            
+            <!-- Role Filter -->
+            <div class="col-md-4">
+                <label for="role" class="form-label">Role</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="">All Roles</option>
+                    <option value="Director" {% if role_filter == 'Director' %}selected{% endif %}>Director</option>
+                    <option value="School Administrator" {% if role_filter == 'School Administrator' %}selected{% endif %}>School Administrator</option>
+                    <option value="Math Teacher" {% if role_filter == 'Math Teacher' %}selected{% endif %}>Math Teacher</option>
+                    <option value="Physics Teacher" {% if role_filter == 'Physics Teacher' %}selected{% endif %}>Physics Teacher</option>
+                    <option value="English Language Arts Teacher" {% if role_filter == 'English Language Arts Teacher' %}selected{% endif %}>English Language Arts Teacher</option>
+                    <option value="History Teacher" {% if role_filter == 'History Teacher' %}selected{% endif %}>History Teacher</option>
+                    <option value="Science Teacher" {% if role_filter == 'Science Teacher' %}selected{% endif %}>Science Teacher</option>
+                    <option value="Substitute Teacher" {% if role_filter == 'Substitute Teacher' %}selected{% endif %}>Substitute Teacher</option>
+                    <option value="School Counselor" {% if role_filter == 'School Counselor' %}selected{% endif %}>School Counselor</option>
+                    <option value="IT Support" {% if role_filter == 'IT Support' %}selected{% endif %}>IT Support</option>
+                    <option value="Other Staff" {% if role_filter == 'Other Staff' %}selected{% endif %}>Other Staff</option>
+                </select>
+            </div>
+            
+            <!-- Employment Type Filter -->
+            <div class="col-md-4">
+                <label for="employment" class="form-label">Employment Type</label>
+                <select class="form-select" id="employment" name="employment">
+                    <option value="">All Types</option>
+                    <option value="Full Time" {% if employment_filter == 'Full Time' %}selected{% endif %}>Full Time</option>
+                    <option value="Part Time" {% if employment_filter == 'Part Time' %}selected{% endif %}>Part Time</option>
+                </select>
+            </div>
+            
+            <!-- Sort Options -->
+            <div class="col-md-6">
+                <label for="sort" class="form-label">Sort By</label>
+                <select class="form-select" id="sort" name="sort">
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                    <option value="role" {% if sort_by == 'role' %}selected{% endif %}>Role</option>
+                    <option value="department" {% if sort_by == 'department' %}selected{% endif %}>Department</option>
+                    <option value="hire_date" {% if sort_by == 'hire_date' %}selected{% endif %}>Hire Date</option>
+                </select>
+            </div>
+            
+            <!-- Sort Order -->
+            <div class="col-md-6">
+                <label for="order" class="form-label">Order</label>
+                <select class="form-select" id="order" name="order">
+                    <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                    <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-teachers-search">
+                        <i class="bi bi-search me-2"></i>Search
+                    </button>
+                    <a href="{{ url_for('management.teachers') }}" class="btn btn-teachers-reset">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                    </a>
+                    <button type="button" class="btn btn-teachers-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                        <i class="bi bi-info-circle me-2"></i>Search Tips
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search Tips -->
+        <div class="collapse mt-3" id="searchTips">
+            <div class="teachers-info-box">
+                <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
+                <ul class="mb-0">
+                    <li><strong>All Fields:</strong> Searches across all staff information including name, contact, role, department, address, emergency contacts, and employment details</li>
+                    <li><strong>Staff Name:</strong> Search by first name, last name, or middle initial</li>
+                    <li><strong>Contact Info:</strong> Search by email address or phone number</li>
+                    <li><strong>Role & Position:</strong> Search by assigned role or position title</li>
+                    <li><strong>Department:</strong> Search within specific departments</li>
+                    <li><strong>Subject:</strong> Search by subjects taught</li>
+                    <li><strong>Address:</strong> Search by street, apartment/unit, city, state, or zip code</li>
+                    <li><strong>Emergency Contact:</strong> Search by emergency contact name, phone, email, or relationship</li>
+                    <li><strong>Staff ID:</strong> Search by staff identification number</li>
+                    <li><strong>Employment Type:</strong> Search by Full Time or Part Time employment status</li>
+                    <li><strong>Keyboard Shortcuts:</strong> Ctrl/Cmd + F to focus search, Escape to clear</li>
+                </ul>
+            </div>
+        </div>
+    </form>
+    </div>
+</div>
+
+<!-- Search Results Info -->
+{% if search_query or department_filter or role_filter or employment_filter %}
+<div class="teachers-results-banner mb-4">
+    <i class="bi bi-funnel me-2"></i>
+    <strong>Active Filters:</strong>
+    {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
+    {% if department_filter %}<span class="badge bg-secondary me-1">Dept: "{{ department_filter }}"</span>{% endif %}
+    {% if role_filter %}<span class="badge bg-warning me-1">Role: "{{ role_filter }}"</span>{% endif %}
+    {% if employment_filter %}<span class="badge bg-info me-1">Type: "{{ employment_filter }}"</span>{% endif %}
+</div>
+{% endif %}
+
+<!-- Teachers Table -->
+<div class="teachers-table-card">
+    <div class="teachers-table-header">
+        <h5 class="mb-0">
+            <i class="bi bi-table me-2"></i>Staff Records
+        </h5>
+        <div class="teachers-table-view-toggle">
+            <button class="btn btn-sm btn-teachers-view active" onclick="switchTeachersView('table')">
+                <i class="bi bi-table"></i> Table
+            </button>
+            <button class="btn btn-sm btn-teachers-view" onclick="switchTeachersView('cards')">
+                <i class="bi bi-grid-3x3-gap-fill"></i> Cards
+            </button>
+        </div>
+    </div>
+    <div class="teachers-table-body" id="teachersTableView">
+    
+    <div class="table-responsive">
+        <table class="table table-hover align-middle teachers-table">
+            <thead class="table-dark">
+                <tr>
+                    <th style="min-width: 220px;">Name</th>
+                    <th style="min-width: 140px;">Role</th>
+                    <th style="min-width: 160px;">Department</th>
+                    <th style="min-width: 200px;">Email</th>
+                    <th style="min-width: 130px;">Employment</th>
+                    <th style="min-width: 110px;">Status</th>
+                    <th style="min-width: 200px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for teacher in teachers %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if teacher.image %}
+                                        <img src="{{ url_for('static', filename='uploads/' + teacher.image) }}" 
+                                             alt="{{ teacher.first_name }} {{ teacher.last_name }}" 
+                                             class="rounded-circle" 
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-person-fill text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</div>
+                                    {% if teacher.staff_id %}
+                                        <small class="text-muted">ID: {{ teacher.staff_id }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% set role_labels = teacher|staff_role_labels %}
+                            {% for r in role_labels %}
+                                <span class="badge {{ r|role_badge_class }} mb-1 d-block text-wrap" style="max-width: 160px; white-space: normal; line-height: 1.2;">{{ r }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% if teacher.department %}
+                                {% set departments = teacher.department.split(',') %}
+                                {% for dept in departments %}
+                                    <span class="badge bg-info mb-1 d-block text-wrap" style="max-width: 140px; white-space: normal; line-height: 1.2;">{{ dept.strip() }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 170px;" title="{{ teacher.email or 'N/A' }}">
+                                {{ teacher.email or 'N/A' }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if teacher.employment_type %}
+                                <span class="badge bg-secondary">{{ teacher.employment_type }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set staff_status = teacher.employment_status|default('Active') %}
+                            {% if teacher.marked_for_removal|default(false) %}
+                                <span class="badge bg-danger">Marked</span>
+                                <div><small class="text-muted">For removal</small></div>
+                            {% elif staff_status == 'Inactive' %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% elif staff_status == 'On Leave' %}
+                                <span class="badge bg-warning text-dark">On Leave</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-teachers-action-view" onclick="viewTeacher({{ teacher.id }})">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-teachers-action-edit" onclick="editTeacher({{ teacher.id }})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-teachers-action-delete" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                            No teachers or staff found matching your criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </div>
+
+    <!-- Cards View (Hidden by default) -->
+    <div class="teachers-cards-body" id="teachersCardsView" style="display: none;">
+        <div class="row g-3">
+            {% for teacher in teachers %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="teacher-card">
+                    <div class="teacher-card-header">
+                        <div class="teacher-card-avatar">
+                            {% if teacher.image %}
+                                <img src="{{ url_for('static', filename='uploads/' + teacher.image) }}" 
+                                     alt="{{ teacher.first_name }} {{ teacher.last_name }}">
+                            {% else %}
+                                <i class="bi bi-person-fill"></i>
+                            {% endif %}
+                        </div>
+                        <div class="teacher-card-info">
+                            <h6 class="teacher-card-name">{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</h6>
+                            <p class="teacher-card-id">ID: {{ teacher.staff_id or 'N/A' }}</p>
+                        </div>
+                    </div>
+                    <div class="teacher-card-body">
+                        <div class="teacher-card-detail">
+                            <i class="bi bi-person-badge me-2"></i>
+                            <span class="d-inline-flex flex-wrap gap-1 align-items-center">Role:
+                                {% for r in teacher|staff_role_labels %}
+                                    <span class="badge {{ r|role_badge_class }}">{{ r }}</span>
+                                {% endfor %}
+                            </span>
+                        </div>
+                        <div class="teacher-card-detail">
+                            <i class="bi bi-building me-2"></i>
+                            <span>Dept: 
+                                {% if teacher.department %}
+                                    {% set departments = teacher.department.split(',') %}
+                                    {% for dept in departments[:2] %}
+                                        <span class="badge bg-info">{{ dept.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="teacher-card-detail">
+                            <i class="bi bi-envelope me-2"></i>
+                            <span class="text-truncate" style="max-width: 200px;">{{ teacher.email or 'N/A' }}</span>
+                        </div>
+                        <div class="teacher-card-detail">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            <span>Type: 
+                                {% if teacher.employment_type %}
+                                    <span class="badge bg-secondary">{{ teacher.employment_type }}</span>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="teacher-card-detail">
+                            <i class="bi bi-shield-check me-2"></i>
+                            <span>Status:
+                                {% set staff_status = teacher.employment_status|default('Active') %}
+                                {% if teacher.marked_for_removal|default(false) %}
+                                    <span class="badge bg-danger">Marked for removal</span>
+                                {% elif staff_status == 'Inactive' %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% elif staff_status == 'On Leave' %}
+                                    <span class="badge bg-warning text-dark">On Leave</span>
+                                {% else %}
+                                    <span class="badge bg-success">Active</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="teacher-card-footer">
+                        <button type="button" class="btn btn-sm btn-teachers-card-action" onclick="viewTeacher({{ teacher.id }})">
+                            <i class="bi bi-eye me-1"></i>View
+                        </button>
+                        <button type="button" class="btn btn-sm btn-teachers-card-action" onclick="editTeacher({{ teacher.id }})">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-teachers-card-action-delete" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')">
+                            <i class="bi bi-trash me-1"></i>Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                <p class="text-muted">No teachers or staff found.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% else %}
+{% include 'management/_staff_directory_panel.html' %}
+{% endif %}
+
+
+    </div>
+  </div>
+</div>

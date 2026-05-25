@@ -1261,6 +1261,31 @@ def student_classes():
     
     classes = [enrollment.class_info for enrollment in enrollments]
 
+    # Honor a phased school-year closure: once the student lockout has fired,
+    # current-year classes move to "Previous years" (hybrid behavior). We still
+    # let them through if the student or one of their classes has an extension.
+    closure_archived_classes = []
+    closure_phase_label = None
+    try:
+        from services.school_year_closure import (
+            get_student_access_status, get_latest_closure_for_year,
+            ACCESS_HIDDEN, ACCESS_READONLY,
+        )
+        status = get_student_access_status(current_user, current_school_year)
+        active_closure = get_latest_closure_for_year(current_school_year.id)
+        if active_closure:
+            closure_phase_label = active_closure.phase
+        if status == ACCESS_HIDDEN:
+            closure_archived_classes = list(classes)
+            classes = []
+        elif status == ACCESS_READONLY:
+            # Year is over / closure finalized but extension or active state lets them
+            # still see the list — flag them as read-only via context so the template
+            # can disable submit buttons.
+            pass
+    except Exception:
+        current_app.logger.debug("student_classes: closure gating skipped", exc_info=True)
+
     # Get grades for each class and calculate average (same logic as Grades tab)
     grades = {}
     all_grades = []
@@ -1325,7 +1350,9 @@ def student_classes():
                               my_classes=classes,
                               grades=grades,
                               assistant_for_classes=assistant_for_classes,
-                              class_groups_by_class_id=class_groups_by_class_id))
+                              class_groups_by_class_id=class_groups_by_class_id,
+                              closure_archived_classes=closure_archived_classes,
+                              closure_phase_label=closure_phase_label))
 
 
 def _get_low_grade_data(student):
@@ -1438,6 +1465,73 @@ def _get_low_grade_data(student):
 def low_grades():
     """Redirect to Assignments with modal open (Grades to Improve is now a modal on Assignments tab)."""
     return redirect(url_for('student.student_assignments', show_low_grades=1))
+
+
+@student_blueprint.route('/previous-years')
+@login_required
+@student_required
+def student_previous_years():
+    """
+    Show archived school years and their classes / grades.
+
+    A year is "archived" from the student's perspective when:
+      - SchoolYear.is_active is False (truly finalized year), OR
+      - There's a SchoolYearClosure for that year past the student lockout date
+        (Day 7 onward) and the student has no active extension.
+
+    The current-year Grades tab continues to surface live data; this view is the
+    long-term history landing page.
+    """
+    student = Student.query.get_or_404(current_user.student_id)
+    try:
+        from services.school_year_closure import (
+            get_student_access_status,
+            ACCESS_FULL,
+        )
+    except Exception:
+        get_student_access_status = None  # type: ignore
+        ACCESS_FULL = 'full'  # type: ignore
+
+    # Pull every school year the student has an Enrollment row in.
+    all_enrollments = (
+        Enrollment.query
+        .filter_by(student_id=student.id)
+        .join(Class, Enrollment.class_id == Class.id)
+        .all()
+    )
+
+    by_year = {}
+    for e in all_enrollments:
+        c = e.class_info
+        if not c:
+            continue
+        sy = SchoolYear.query.get(c.school_year_id)
+        if not sy:
+            continue
+        if get_student_access_status:
+            try:
+                status = get_student_access_status(current_user, sy)
+            except Exception:
+                status = ACCESS_FULL
+        else:
+            status = ACCESS_FULL
+        # The "active" tab should only show classes that are still in full-access mode.
+        # Everything else (read-only OR hidden) belongs in this Previous Years view.
+        if status == ACCESS_FULL:
+            continue
+        bucket = by_year.setdefault(sy.id, {'school_year': sy, 'classes': [], 'access': status})
+        bucket['classes'].append(c)
+
+    # Sort years descending by name
+    years_sorted = sorted(by_year.values(),
+                          key=lambda b: (b['school_year'].name or ''),
+                          reverse=True)
+
+    return render_template(
+        'students/student_previous_years.html',
+        student=student,
+        previous_years=years_sorted,
+    )
 
 
 @student_blueprint.route('/update-low-grade-threshold', methods=['POST'])
@@ -1917,45 +2011,22 @@ def student_schedule():
     ).all()
     classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
     
-    # Get full weekly schedule (Monday=0 to Sunday=6)
-    weekly_schedule = {}
-    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    
-    for day_num in range(7):
-        day_schedules = []
-        for class_obj in classes:
-            schedule = ClassSchedule.query.filter_by(
-                class_id=class_obj.id,
-                day_of_week=day_num
-            ).first()
-            
-            if schedule:
-                teacher_name = (class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name) if class_obj.teacher else 'TBD'
-                day_schedules.append({
-                    'class': class_obj,
-                    'start_time': schedule.start_time,
-                    'end_time': schedule.end_time,
-                    'time_str': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
-                    'room': schedule.room or class_obj.room_number or 'TBD',
-                    'teacher_name': teacher_name
-                })
-        
-        # Sort by start time
-        day_schedules.sort(key=lambda x: x['start_time'])
-        weekly_schedule[day_num] = {
-            'day_name': day_names[day_num],
-            'schedules': day_schedules
-        }
-    
-    # Get today's weekday for highlighting
+    from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
+
+    weekly_schedule = build_weekly_schedule(classes, role='student')
+    weekly_schedule, today_weekday, schedule_insights, schedule_grid = finalize_schedule_view(weekly_schedule)
     today = datetime.now()
-    today_weekday = today.weekday()
-    
-    return render_template('shared/schedule.html',
-                         weekly_schedule=weekly_schedule,
-                         today_weekday=today_weekday,
-                         schedule_role='student',
-                         dashboard_title='Student')
+
+    return render_template(
+        'shared/schedule.html',
+        weekly_schedule=weekly_schedule,
+        today_weekday=today_weekday,
+        schedule_insights=schedule_insights,
+        schedule_grid=schedule_grid,
+        schedule_role='student',
+        dashboard_title='Student',
+        today_date_display=today.strftime('%A, %B %d, %Y'),
+    )
 
 @student_blueprint.route('/school-calendar')
 @login_required
@@ -1964,6 +2035,8 @@ def student_school_calendar():
     """View school calendar (read-only for students)"""
     from datetime import datetime, timedelta
     import calendar as cal
+    from management_routes.calendar import get_academic_dates_for_calendar
+    from models import SchoolYear
     
     # Get current month/year from query params or use current date
     month = request.args.get('month', datetime.now().month, type=int)
@@ -1978,8 +2051,8 @@ def student_school_calendar():
     cal_obj = cal.monthcalendar(year, month)
     month_name = datetime(year, month, 1).strftime('%B')
     
-    # Get academic dates for this month
     academic_dates = get_academic_dates_for_calendar(year, month)
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
     
     # Simple calendar data structure
     calendar_data = {
@@ -2019,6 +2092,7 @@ def student_school_calendar():
                          month_name=month_name,
                          year=year,
                          month=month,
+                         active_school_year=active_school_year,
                          section='calendar',
                          active_tab='calendar')
 

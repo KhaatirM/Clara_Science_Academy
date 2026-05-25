@@ -5,97 +5,68 @@
     <title>Unofficial 3rd Grade Progress Report - Clara Science Academy</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='report_card_styles.css') }}">
 </head>
-<body>
+<body class="grade3-report-card">
     {% set header_title = "UNOFFICIAL STUDENT TRANSCRIPT" %}
     {% set show_unofficial_watermark = True %}
-    {% include 'management/_report_card_header.html' %}
+    {% from 'management/_report_card_grade3_standards_table.html' import render_grade3_standards_table %}
 
-    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%B %d, %Y') }}</p>
+    {# Page 1 — Summary #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+        {% include 'management/_report_card_grade3_page1.html' %}
+    </div>
 
-    <div class="section-title">ATTENDANCE:</div>
-    <table>
-        <thead>
-            <tr>
-                <th>&nbsp;</th>
-                <th>1st Q</th>
-                <th>2nd Q</th>
-                <th>3rd Q</th>
-                <th>4th Q</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td>Excused Absences</td><td></td><td></td><td></td><td></td></tr>
-            <tr><td>Unexcused Absences</td><td></td><td></td><td></td><td></td></tr>
-        </tbody>
-    </table>
+    {# Page 2 — Language Arts #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+        {{ render_grade3_standards_table(grade3_language_arts, grade3_language_arts_marks, grade3_quarter_columns) }}
+    </div>
 
-    <div class="section-title">Academic Standards:</div>
-    <p>The Clara Science Academy (CSA) reports student performance quarterly. This 3rd grade progress report lists the skills outlined by the NC Department of Education Standards. This framework provides guidance about what a 3rd grade student should know or be able to do. The K12 curriculum is the core set of courses used by CSA to help 3rd grade students meet these standards. Individualized goals are set for each student. The teacher and learning coach determine the percentage of course completion necessary to meet the academic goals for the second-grade student based on the standards and anchors. The year-to-date course progress reflects the progress towards meeting standards as well as academic goals related to course completion. The decision to promote a student to the next level is determined by the teacher.</p>
+    {# Page 3 — Math #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+        {{ render_grade3_standards_table(grade3_math, grade3_math_marks, grade3_quarter_columns) }}
+    </div>
 
-    <div class="section-title">Year-to-date Course Progress:</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Course</th>
-                <th>Quarter Grade</th>
-                <th>Comments</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% if class_objects %}
-                {% for class_obj in class_objects %}
-                    {% set class_grade = grades.get(class_obj.id, {}) if grades else {} %}
-                    {% set letter_grade = class_grade.get('letter', 'N/A') if class_grade else 'N/A' %}
-                    {% set percentage = class_grade.get('percentage', class_grade.get('average', 0)) if class_grade else 0 %}
+    {# Page 4 — Assignment grades, comments, signatures #}
+    <div class="grade3-page grade3-page-last">
+        {% include 'management/_report_card_header.html' %}
+
+        <div class="section-title">Assignment Grades ({{ report_card.quarter }}):</div>
+        {% if report_card.grade_summary %}
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
-                        <td>{{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
-                        {% set comment = (comments_by_class.get(class_obj.id|string, '') if comments_by_class else '') %}
-                        <td>{% if include_comments and comment %}{{ comment|nl2br }}{% else %}N/A{% endif %}</td>
+                        <th>Assignment Title</th>
+                        <th>Grade</th>
                     </tr>
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="3">No grade data available</td>
-                </tr>
-            {% endif %}
-        </tbody>
-    </table>
+                </thead>
+                <tbody>
+                    {% for title, grade in report_card.grade_summary.items() %}
+                    <tr>
+                        <td>{{ title }}</td>
+                        <td>{{ grade }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No individual assignment grades recorded for this quarter.</p>
+        {% endif %}
 
-    <div class="section-title">Assignment Grades ({{ report_card.quarter }}):</div>
-    {% if report_card.grade_summary %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Assignment Title</th>
-                    <th>Grade</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for title, grade in report_card.grade_summary.items() %}
-                <tr>
-                    <td>{{ title }}</td>
-                    <td>{{ grade }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No individual assignment grades recorded for this quarter.</p>
-    {% endif %}
+        <div class="section-title">Teacher Comments:</div>
+        <div class="comments-box">
+            <p>{{ report_card.comments|nl2br if report_card.comments else 'N/A' }}</p>
+        </div>
 
-    <div class="section-title">Teacher Comments:</div>
-    <div class="comments-box">
-        <p>{{ report_card.comments|nl2br }}</p>
-    </div>
+        <div class="section-title" style="margin-top: 0.6cm;">Additional Comment/Concern:</div>
+        <div class="comments-box">
+            <p>{% if additional_comments %}{{ additional_comments|nl2br }}{% else %}N/A{% endif %}</p>
+        </div>
 
-    <div class="section-title" style="margin-top: 0.6cm;">Additional Comment/Concern:</div>
-    <div class="comments-box">
-        <p>{% if additional_comments %}{{ additional_comments|nl2br }}{% else %}N/A{% endif %}</p>
-    </div>
-
-    <div class="footer">
-        <p>*** UNOFFICIAL DOCUMENT ***</p>
+        <div class="footer">
+            <p>*** UNOFFICIAL DOCUMENT ***</p>
+        </div>
     </div>
 </body>
 </html>

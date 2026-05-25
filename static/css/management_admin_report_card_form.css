@@ -1,0 +1,817 @@
+/* ============================================================
+   Report Card Generate Form
+   ------------------------------------------------------------
+   Matches the management report-cards hub design language
+   (teal accent, soft hub background, rounded cards, insight chips).
+   Prefix: .mgmt-rcf-
+   ============================================================ */
+
+/* Drop the global ``html, body { min-height: 100dvh }`` for this page —
+   the form is fully self-sized below, so leaving it on would leave a
+   second scrollable column of empty body background below the shell. */
+html:has(.mgmt-rcf),
+body:has(.mgmt-rcf) {
+  height: auto;
+  min-height: auto;
+}
+
+.mgmt-rcf {
+  --rcf-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --rcf-surface: var(--hub-surface, #ffffff);
+  --rcf-surface-soft: #f8fafa;
+  --rcf-border: rgba(15, 23, 42, 0.08);
+  --rcf-border-strong: rgba(15, 23, 42, 0.18);
+  --rcf-text: var(--hub-text, #0f172a);
+  --rcf-muted: var(--hub-muted, #64748b);
+  --rcf-accent: var(--hub-mgmt-accent, #0d9488);
+  --rcf-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --rcf-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  --rcf-success: #15803d;
+  --rcf-success-soft: rgba(34, 197, 94, 0.12);
+  --rcf-warn: #b45309;
+  --rcf-warn-soft: rgba(245, 158, 11, 0.14);
+  --rcf-danger: #b91c1c;
+  --rcf-danger-soft: rgba(220, 38, 38, 0.10);
+  --rcf-shadow: 0 4px 6px rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.08);
+  --rcf-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.05);
+  --rcf-radius: 18px;
+  --rcf-radius-sm: 12px;
+  /* Fill the available main-content area so the shell reaches the
+     viewport bottom even when the form is short. The subtraction
+     covers .main-content's vertical padding so we never overflow into
+     a second body scrollbar. */
+  min-height: calc(100dvh - 4rem);
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Director theme overrides */
+.mgmt-rcf-shell--director {
+  --rcf-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --rcf-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --rcf-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --rcf-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+
+.mgmt-rcf-shell {
+  background: var(--rcf-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+  color: var(--rcf-text);
+  flex: 1 1 auto;          /* stretch to fill .mgmt-rcf via flex */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Push the sticky footer to the bottom of the shell when the form is
+   short. When the form is tall, sticky positioning takes over and the
+   footer rides the bottom of the viewport as the user scrolls. */
+.mgmt-rcf-shell > form { flex-shrink: 0; }
+.mgmt-rcf-footer { margin-top: auto; }
+
+/* -------------------------------------------------------------
+   Hero
+   ------------------------------------------------------------- */
+.mgmt-rcf-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.mgmt-rcf-breadcrumb {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+.mgmt-rcf-breadcrumb a {
+  color: var(--rcf-accent-deep);
+  text-decoration: none;
+  font-weight: 600;
+}
+.mgmt-rcf-breadcrumb a:hover { text-decoration: underline; }
+
+.mgmt-rcf-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rcf-muted);
+  margin: 0 0 0.35rem;
+}
+
+.mgmt-rcf-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--rcf-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+
+.mgmt-rcf-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--rcf-muted);
+  margin: 0;
+}
+
+.mgmt-rcf-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mgmt-rcf-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--rcf-accent-soft);
+  color: var(--rcf-accent-deep);
+}
+
+/* -------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------- */
+.mgmt-rcf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.05rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  background: var(--rcf-surface);
+  color: var(--rcf-text);
+  box-shadow: var(--rcf-shadow-soft);
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.mgmt-rcf-btn:hover { transform: translateY(-1px); box-shadow: var(--rcf-shadow); color: var(--rcf-text); }
+.mgmt-rcf-btn:active { transform: translateY(0); }
+
+.mgmt-rcf-btn--ghost {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: var(--rcf-border);
+}
+.mgmt-rcf-btn--primary {
+  background: var(--rcf-accent);
+  color: #ffffff;
+  border-color: var(--rcf-accent-deep);
+}
+.mgmt-rcf-btn--primary:hover { background: var(--rcf-accent-deep); color: #ffffff; }
+.mgmt-rcf-btn--success {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  border-color: #166534;
+}
+.mgmt-rcf-btn--success:hover { color: #ffffff; }
+.mgmt-rcf-btn[disabled],
+.mgmt-rcf-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
+
+/* -------------------------------------------------------------
+   Stepper (visual progress at top of form)
+   ------------------------------------------------------------- */
+.mgmt-rcf-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  background: var(--rcf-surface);
+  border-radius: var(--rcf-radius);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--rcf-shadow);
+  margin-bottom: 1.5rem;
+}
+
+.mgmt-rcf-step {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 10px;
+  color: var(--rcf-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  position: relative;
+}
+.mgmt-rcf-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--rcf-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.mgmt-rcf-step-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mgmt-rcf-step.is-active {
+  color: var(--rcf-accent-deep);
+  background: var(--rcf-accent-soft);
+}
+.mgmt-rcf-step.is-active .mgmt-rcf-step-num {
+  background: var(--rcf-accent);
+  color: #ffffff;
+}
+.mgmt-rcf-step.is-complete .mgmt-rcf-step-num {
+  background: var(--rcf-success);
+  color: #ffffff;
+}
+.mgmt-rcf-step.is-complete .mgmt-rcf-step-num::before {
+  content: '\F26B'; /* bi-check-lg */
+  font-family: 'bootstrap-icons';
+  font-size: 0.95rem;
+}
+.mgmt-rcf-step.is-complete .mgmt-rcf-step-num span { display: none; }
+
+@media (max-width: 800px) {
+  .mgmt-rcf-stepper { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0.55rem 0.5rem; }
+  .mgmt-rcf-step-label { display: none; }
+  .mgmt-rcf-step { justify-content: center; padding: 0.25rem; }
+}
+
+/* -------------------------------------------------------------
+   Section cards
+   ------------------------------------------------------------- */
+.mgmt-rcf-section {
+  background: var(--rcf-surface);
+  border-radius: var(--rcf-radius);
+  box-shadow: var(--rcf-shadow);
+  border: 1px solid var(--rcf-border);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+
+.mgmt-rcf-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rcf-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 250, 1));
+}
+
+.mgmt-rcf-section-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--rcf-accent-soft);
+  color: var(--rcf-accent-deep);
+  font-size: 1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.mgmt-rcf-section-title-wrap { flex-grow: 1; min-width: 0; }
+.mgmt-rcf-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.1rem;
+  color: var(--rcf-text);
+  letter-spacing: -0.01em;
+}
+.mgmt-rcf-section-helper {
+  font-size: 0.84rem;
+  color: var(--rcf-muted);
+  margin: 0;
+}
+.mgmt-rcf-section-meta {
+  font-size: 0.78rem;
+  color: var(--rcf-muted);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(15, 23, 42, 0.04);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.mgmt-rcf-section-meta.is-ok {
+  color: var(--rcf-success);
+  background: var(--rcf-success-soft);
+}
+.mgmt-rcf-section-meta.is-warn {
+  color: var(--rcf-warn);
+  background: var(--rcf-warn-soft);
+}
+
+.mgmt-rcf-section-body {
+  padding: 1.25rem;
+}
+
+/* -------------------------------------------------------------
+   Fields & form controls
+   ------------------------------------------------------------- */
+.mgmt-rcf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.mgmt-rcf-field:last-child { margin-bottom: 0; }
+.mgmt-rcf-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--rcf-text);
+}
+.mgmt-rcf-required { color: var(--rcf-danger); margin-left: 0.15rem; }
+.mgmt-rcf-helper {
+  font-size: 0.78rem;
+  color: var(--rcf-muted);
+}
+
+.mgmt-rcf-input,
+.mgmt-rcf-select,
+.mgmt-rcf-textarea {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.94rem;
+  background: var(--rcf-surface);
+  color: var(--rcf-text);
+  border: 1px solid var(--rcf-border-strong);
+  border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.mgmt-rcf-input:focus,
+.mgmt-rcf-select:focus,
+.mgmt-rcf-textarea:focus {
+  outline: none;
+  border-color: var(--rcf-accent);
+  box-shadow: 0 0 0 3px var(--rcf-accent-soft);
+}
+.mgmt-rcf-textarea { resize: vertical; min-height: 110px; }
+.mgmt-rcf-readonly,
+.mgmt-rcf-input[readonly],
+.mgmt-rcf-textarea[readonly] {
+  background: var(--rcf-surface-soft);
+  color: var(--rcf-muted);
+  cursor: default;
+}
+.mgmt-rcf-input.is-empty {
+  border-color: rgba(220, 38, 38, 0.5);
+  background: rgba(220, 38, 38, 0.04);
+  color: var(--rcf-danger);
+}
+
+/* Inline checkbox row (e.g., "Show withdrawn students") */
+.mgmt-rcf-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--rcf-muted);
+  cursor: pointer;
+}
+.mgmt-rcf-inline-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--rcf-accent);
+}
+
+/* -------------------------------------------------------------
+   Pre-selected student callout
+   ------------------------------------------------------------- */
+.mgmt-rcf-student-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  padding: 0.85rem 1.1rem;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.06), rgba(13, 148, 136, 0.02));
+  border: 1px solid var(--rcf-accent-soft);
+  border-radius: var(--rcf-radius-sm);
+}
+.mgmt-rcf-student-pill-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--rcf-accent);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.mgmt-rcf-student-pill-body { flex-grow: 1; min-width: 0; }
+.mgmt-rcf-student-pill-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.1rem;
+}
+.mgmt-rcf-student-pill-meta {
+  font-size: 0.84rem;
+  color: var(--rcf-muted);
+  margin: 0;
+}
+
+/* -------------------------------------------------------------
+   Confirmation panel (synced student / school info)
+   ------------------------------------------------------------- */
+.mgmt-rcf-confirm-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 0.95rem;
+  background: var(--rcf-warn-soft);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--rcf-radius-sm);
+  color: var(--rcf-warn);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+.mgmt-rcf-confirm-banner i { font-size: 1rem; line-height: 1.2; }
+
+.mgmt-rcf-confirm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+@media (max-width: 800px) {
+  .mgmt-rcf-confirm-grid { grid-template-columns: 1fr; }
+}
+
+.mgmt-rcf-confirm-block-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--rcf-accent-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* -------------------------------------------------------------
+   Class selection grid
+   ------------------------------------------------------------- */
+.mgmt-rcf-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 2.25rem 1rem;
+  color: var(--rcf-muted);
+}
+.mgmt-rcf-loading .spinner-border { color: var(--rcf-accent); }
+
+.mgmt-rcf-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.mgmt-rcf-class-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  background: var(--rcf-surface-soft);
+  border: 1px solid var(--rcf-border);
+  border-radius: var(--rcf-radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+}
+.mgmt-rcf-class-card:hover {
+  border-color: var(--rcf-accent);
+  background: #ffffff;
+}
+.mgmt-rcf-class-card.is-selected {
+  border-color: var(--rcf-accent);
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.10), rgba(13, 148, 136, 0.04));
+  box-shadow: 0 0 0 1px var(--rcf-accent-soft) inset;
+}
+.mgmt-rcf-class-card input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--rcf-accent);
+  margin-top: 0.15rem;
+  cursor: pointer;
+}
+.mgmt-rcf-class-card-body { flex-grow: 1; min-width: 0; }
+.mgmt-rcf-class-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.15rem;
+  color: var(--rcf-text);
+}
+.mgmt-rcf-class-card-meta {
+  font-size: 0.8rem;
+  color: var(--rcf-muted);
+  margin: 0;
+}
+
+/* -------------------------------------------------------------
+   Quarter chips
+   ------------------------------------------------------------- */
+.mgmt-rcf-quarter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+@media (max-width: 640px) {
+  .mgmt-rcf-quarter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.mgmt-rcf-quarter {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--rcf-surface-soft);
+  border: 1px solid var(--rcf-border);
+  border-radius: var(--rcf-radius-sm);
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--rcf-muted);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.mgmt-rcf-quarter input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--rcf-accent);
+  cursor: pointer;
+}
+.mgmt-rcf-quarter:hover {
+  border-color: var(--rcf-accent);
+}
+.mgmt-rcf-quarter.is-checked,
+.mgmt-rcf-quarter:has(input:checked) {
+  color: var(--rcf-accent-deep);
+  background: var(--rcf-accent-soft);
+  border-color: var(--rcf-accent);
+}
+
+/* -------------------------------------------------------------
+   Options (radios + toggles)
+   ------------------------------------------------------------- */
+.mgmt-rcf-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+}
+
+.mgmt-rcf-option-card {
+  background: var(--rcf-surface-soft);
+  border: 1px solid var(--rcf-border);
+  border-radius: var(--rcf-radius-sm);
+  padding: 0.95rem 1rem;
+}
+.mgmt-rcf-option-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0 0 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--rcf-text);
+}
+
+.mgmt-rcf-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-bottom: 0.25rem;
+}
+.mgmt-rcf-radio:hover { background: rgba(15, 23, 42, 0.03); }
+.mgmt-rcf-radio input[type="radio"] {
+  margin-top: 0.2rem;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--rcf-accent);
+}
+.mgmt-rcf-radio-body { flex-grow: 1; }
+.mgmt-rcf-radio-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: block;
+  color: var(--rcf-text);
+}
+.mgmt-rcf-radio-desc {
+  font-size: 0.78rem;
+  color: var(--rcf-muted);
+  display: block;
+}
+.mgmt-rcf-radio:has(input:checked) {
+  background: var(--rcf-accent-soft);
+}
+
+.mgmt-rcf-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.5rem;
+  cursor: pointer;
+}
+.mgmt-rcf-toggle-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  background: rgba(15, 23, 42, 0.18);
+  border-radius: 999px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.mgmt-rcf-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+.mgmt-rcf-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.mgmt-rcf-toggle:has(input:checked) .mgmt-rcf-toggle-switch {
+  background: var(--rcf-accent);
+}
+.mgmt-rcf-toggle:has(input:checked) .mgmt-rcf-toggle-switch::after {
+  transform: translateX(18px);
+}
+.mgmt-rcf-toggle-body { flex-grow: 1; }
+.mgmt-rcf-toggle-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  display: block;
+  color: var(--rcf-text);
+}
+.mgmt-rcf-toggle-desc {
+  font-size: 0.78rem;
+  color: var(--rcf-muted);
+  display: block;
+}
+
+/* -------------------------------------------------------------
+   Empty / info state
+   ------------------------------------------------------------- */
+.mgmt-rcf-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem;
+  background: var(--rcf-surface-soft);
+  border: 1px dashed var(--rcf-border-strong);
+  border-radius: var(--rcf-radius-sm);
+  color: var(--rcf-muted);
+  font-size: 0.88rem;
+}
+.mgmt-rcf-empty i { color: var(--rcf-accent); font-size: 1.05rem; }
+
+/* -------------------------------------------------------------
+   Per-class comments
+   ------------------------------------------------------------- */
+.mgmt-rcf-comments-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+.mgmt-rcf-comment-card {
+  background: var(--rcf-surface-soft);
+  border: 1px solid var(--rcf-border);
+  border-radius: var(--rcf-radius-sm);
+  padding: 0.85rem 1rem;
+}
+.mgmt-rcf-comment-card-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--rcf-accent-deep);
+}
+
+/* -------------------------------------------------------------
+   Sticky footer action bar (lives inside .mgmt-rcf-shell so it
+   stays aligned with the content area / respects the sidebar).
+
+   Note: z-index is intentionally kept LOW so the Academic Concerns
+   toast (z-index 1055, fixed to bottom-right of the viewport in
+   academic_concerns_partial.html) is never hidden behind us. We
+   also avoid backdrop-filter here — it would create a containing
+   block / stacking context that can suppress fixed descendants in
+   some browsers.
+   ------------------------------------------------------------- */
+.mgmt-rcf-footer {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 5;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--rcf-border);
+  border-radius: var(--rcf-radius);
+  box-shadow: var(--rcf-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Pin the academic concerns toast to the viewport bottom-right so
+   nothing on this page can accidentally move/cover it. We deliberately
+   DO NOT force display / opacity / visibility here — Bootstrap's JS
+   needs to be able to dismiss the toast when the user clicks ✕ or
+   "Review concerns" (which hides the toast and opens the modal). */
+.toast-container.academic-alert-toast-container {
+  position: fixed !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 1080 !important;
+  pointer-events: auto !important;
+}
+.mgmt-rcf-footer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.mgmt-rcf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--rcf-muted);
+}
+.mgmt-rcf-chip.is-ok {
+  background: var(--rcf-success-soft);
+  color: var(--rcf-success);
+}
+.mgmt-rcf-chip.is-warn {
+  background: var(--rcf-warn-soft);
+  color: var(--rcf-warn);
+}
+.mgmt-rcf-chip.is-accent {
+  background: var(--rcf-accent-soft);
+  color: var(--rcf-accent-deep);
+}
+.mgmt-rcf-chip i { font-size: 0.95rem; }
+
+.mgmt-rcf-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.mgmt-rcf-footer-note {
+  font-size: 0.78rem;
+  color: var(--rcf-muted);
+  display: block;
+  width: 100%;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+@media (max-width: 700px) {
+  .mgmt-rcf-footer-note { text-align: left; }
+}
+
+/* -------------------------------------------------------------
+   Compact tweaks
+   ------------------------------------------------------------- */
+.mgmt-rcf-divider-soft {
+  height: 1px;
+  background: var(--rcf-border);
+  margin: 1rem 0;
+}

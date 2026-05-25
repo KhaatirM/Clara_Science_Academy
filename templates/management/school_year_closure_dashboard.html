@@ -1,0 +1,724 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_school_year_closure.css') }}?v=2">
+{% endblock %}
+
+{% block dashboard_content %}
+{% set is_director = current_user.role == 'Director' %}
+{% set phase = closure.phase %}
+{% set is_terminal = phase in ('finalized', 'cancelled') %}
+{% set is_paused = phase == 'paused' %}
+{% set days = days_to %}
+
+{% macro phase_pill(label, key, is_done, is_current) %}
+<li class="mgmt-syc-phase-step{% if is_done %} is-done{% endif %}{% if is_current %} is-current{% endif %}" data-phase="{{ key }}">
+  <span class="mgmt-syc-phase-marker" aria-hidden="true"></span>
+  <span class="mgmt-syc-phase-label">{{ label }}</span>
+</li>
+{% endmacro %}
+
+<div class="mgmt-syc container-fluid px-0 px-md-1">
+  <div class="mgmt-syc-shell{% if is_director %} mgmt-syc-shell--director{% endif %}">
+
+    <header class="mgmt-syc-hero">
+      <div>
+        <p class="mgmt-syc-eyebrow">School-year closure</p>
+        <h1 class="mgmt-syc-title">
+          {{ school_year.name if school_year else 'School year' }}
+          <span class="mgmt-syc-phase-badge mgmt-syc-phase-badge--{{ phase }}">
+            {{ phase_labels.get(phase, phase) }}
+          </span>
+        </h1>
+        <p class="mgmt-syc-subtitle">
+          <i class="bi bi-calendar3" aria-hidden="true"></i>
+          Day&nbsp;0: {{ closure.closure_date.strftime('%b %d, %Y') }}
+          &nbsp;·&nbsp; Auto-finalize: {{ closure.finalize_at.strftime('%b %d, %Y') }}
+          {% if closure.created_by %} &nbsp;·&nbsp; Scheduled by {{ closure.created_by.username }}{% endif %}
+        </p>
+      </div>
+      <div class="mgmt-syc-hero-actions">
+        <a href="{{ url_for('school_year_closure.schedule') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">
+          <i class="bi bi-list" aria-hidden="true"></i> All closures
+        </a>
+        <a href="{{ url_for('management.report_cards') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> Report cards
+        </a>
+      </div>
+    </header>
+
+    {# ───────────── Phase timeline ───────────── #}
+    <section class="mgmt-syc-timeline" aria-label="Phase timeline">
+      <ol class="mgmt-syc-phase-rail">
+        {{ phase_pill('Scheduled', 'scheduled',
+                     is_done=(phase not in ('scheduled',)),
+                     is_current=(phase=='scheduled')) }}
+        {{ phase_pill('Day 0 · Student window', 'student_window',
+                     is_done=(phase in ('teacher_window','admin_window','finalized')),
+                     is_current=(phase=='student_window')) }}
+        {{ phase_pill('Day 7 · Teacher window', 'teacher_window',
+                     is_done=(phase in ('admin_window','finalized')),
+                     is_current=(phase=='teacher_window')) }}
+        {{ phase_pill('Day 21 · Admin window', 'admin_window',
+                     is_done=(phase=='finalized'),
+                     is_current=(phase=='admin_window')) }}
+        {{ phase_pill('Day 28 · Finalized', 'finalized',
+                     is_done=(phase=='finalized'),
+                     is_current=(phase=='finalized')) }}
+      </ol>
+
+      {% if not is_terminal %}
+      <div class="mgmt-syc-countdowns">
+        <div class="mgmt-syc-countdown">
+          <span class="mgmt-syc-countdown-label">Student lockout</span>
+          <span class="mgmt-syc-countdown-date">{{ closure.student_lockout_at.strftime('%b %d, %Y') }}</span>
+          <span class="mgmt-syc-countdown-days">
+            {% if days.student_lockout > 0 %}in {{ days.student_lockout }} day{{ 's' if days.student_lockout != 1 else '' }}
+            {% elif days.student_lockout == 0 %}today
+            {% else %}{{ -days.student_lockout }} day{{ 's' if days.student_lockout != -1 else '' }} ago
+            {% endif %}
+          </span>
+        </div>
+        <div class="mgmt-syc-countdown">
+          <span class="mgmt-syc-countdown-label">Teacher lockout</span>
+          <span class="mgmt-syc-countdown-date">{{ closure.teacher_lockout_at.strftime('%b %d, %Y') }}</span>
+          <span class="mgmt-syc-countdown-days">
+            {% if days.teacher_lockout > 0 %}in {{ days.teacher_lockout }} day{{ 's' if days.teacher_lockout != 1 else '' }}
+            {% elif days.teacher_lockout == 0 %}today
+            {% else %}{{ -days.teacher_lockout }} day{{ 's' if days.teacher_lockout != -1 else '' }} ago
+            {% endif %}
+          </span>
+        </div>
+        <div class="mgmt-syc-countdown mgmt-syc-countdown--final">
+          <span class="mgmt-syc-countdown-label">Auto-finalize</span>
+          <span class="mgmt-syc-countdown-date">{{ closure.finalize_at.strftime('%b %d, %Y') }}</span>
+          <span class="mgmt-syc-countdown-days">
+            {% if days.finalize > 0 %}in {{ days.finalize }} day{{ 's' if days.finalize != 1 else '' }}
+            {% elif days.finalize == 0 %}today
+            {% else %}{{ -days.finalize }} day{{ 's' if days.finalize != -1 else '' }} ago
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if is_paused %}
+      <div class="mgmt-syc-alert mgmt-syc-alert--info">
+        <i class="bi bi-pause-circle-fill" aria-hidden="true"></i>
+        Closure is paused. Transitions and notifications are frozen.
+        {% if closure.paused_by %}Paused by {{ closure.paused_by.username }}{% endif %}
+        {% if closure.paused_at %} at {{ closure.paused_at.strftime('%b %d, %Y · %I:%M %p') }}{% endif %}.
+      </div>
+      {% endif %}
+      {% if phase == 'cancelled' %}
+      <div class="mgmt-syc-alert mgmt-syc-alert--warning">
+        <i class="bi bi-x-octagon-fill" aria-hidden="true"></i>
+        Closure was cancelled{% if closure.cancelled_by %} by {{ closure.cancelled_by.username }}{% endif %}
+        {% if closure.cancelled_at %} on {{ closure.cancelled_at.strftime('%b %d, %Y') }}{% endif %}.
+        {% if closure.cancellation_reason %}<br><em>{{ closure.cancellation_reason }}</em>{% endif %}
+      </div>
+      {% endif %}
+      {% if phase == 'finalized' %}
+      <div class="mgmt-syc-alert mgmt-syc-alert--success">
+        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+        Closure finalized on
+        {{ closure.finalized_at.strftime('%b %d, %Y · %I:%M %p') if closure.finalized_at else closure.finalize_at.strftime('%b %d, %Y') }}.
+        The school year is archived.
+      </div>
+      {% endif %}
+    </section>
+
+    {# ───────────── Start-next-year affordance (finalized only) ───────────── #}
+    {% if phase == 'finalized' and next_year_suggestion %}
+    <section class="mgmt-syc-next-year">
+      <header class="mgmt-syc-next-year-head">
+        <div>
+          <p class="mgmt-syc-eyebrow">What's next</p>
+          <h2 class="mgmt-syc-section-title">
+            <i class="bi bi-arrow-right-circle-fill" aria-hidden="true"></i>
+            Start the next school year
+          </h2>
+          <p class="mgmt-syc-section-desc">
+            {% if next_year_exists %}
+            <span class="text-success">
+              <i class="bi bi-check2-circle" aria-hidden="true"></i>
+              School year <strong>{{ next_year_suggestion.name }}</strong> already exists.
+            </span>
+            Activate it from
+            <a href="{{ url_for('management.school_years') }}">Settings &rarr; School Years</a>
+            if it isn't active yet.
+            {% else %}
+            The closed year ({{ next_year_suggestion.prior_year_name }}) has been archived
+            and students have been promoted. Create the next year below — quarters will be
+            generated automatically and it'll be set active immediately.
+            {% endif %}
+          </p>
+        </div>
+      </header>
+
+      {% if not next_year_exists %}
+      <form method="POST" action="{{ url_for('management.school_years') }}" class="mgmt-syc-next-year-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="is_active" value="true">
+        <input type="hidden" name="auto_generate_quarters" value="true">
+
+        <p class="mgmt-syc-form-hint">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          Dates are pre-filled by adding one calendar year to
+          {{ next_year_suggestion.prior_year_name }}'s start &amp; end dates
+          ({{ next_year_suggestion.prior_year_start.strftime('%b %d, %Y') if next_year_suggestion.prior_year_start else '—' }}
+          &rarr;
+          {{ next_year_suggestion.prior_year_end.strftime('%b %d, %Y') if next_year_suggestion.prior_year_end else '—' }}).
+          Edit them below if your calendar shifts year-to-year — quarters will
+          be auto-generated from whatever range you set.
+        </p>
+
+        <div class="mgmt-syc-next-year-grid">
+          <div class="mgmt-syc-form-row">
+            <label class="mgmt-syc-label" for="next_year_name">Year name</label>
+            <input class="mgmt-syc-input" type="text" id="next_year_name" name="name"
+                   value="{{ next_year_suggestion.name }}" required>
+          </div>
+          <div class="mgmt-syc-form-row">
+            <label class="mgmt-syc-label" for="next_year_start">Start date</label>
+            <input class="mgmt-syc-input" type="date" id="next_year_start" name="start_date"
+                   value="{{ next_year_suggestion.start_date.isoformat() }}" required>
+          </div>
+          <div class="mgmt-syc-form-row">
+            <label class="mgmt-syc-label" for="next_year_end">End date</label>
+            <input class="mgmt-syc-input" type="date" id="next_year_end" name="end_date"
+                   value="{{ next_year_suggestion.end_date.isoformat() }}" required>
+          </div>
+        </div>
+
+        <ul class="mgmt-syc-next-year-checks">
+          <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Sets the new year as active (deactivates {{ next_year_suggestion.prior_year_name }}'s archived state — already done).</li>
+          <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Auto-generates Q1–Q4 academic periods evenly across the year.</li>
+          <li><i class="bi bi-info-circle" aria-hidden="true"></i> You'll still need to set up classes (Settings → Classes) and roster the students into them.</li>
+        </ul>
+
+        <div class="mgmt-syc-actions">
+          <a href="{{ url_for('management.school_years') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">
+            <i class="bi bi-gear" aria-hidden="true"></i> Open full Settings instead
+          </a>
+          <button type="submit" class="mgmt-syc-btn mgmt-syc-btn--primary">
+            <i class="bi bi-calendar-plus" aria-hidden="true"></i> Create {{ next_year_suggestion.name }}
+          </button>
+        </div>
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <div class="mgmt-syc-grid">
+      {# ───────────── LEFT COLUMN ───────────── #}
+      <div class="mgmt-syc-col">
+
+        {% if checklist %}
+        <section class="mgmt-syc-card">
+          <h2 class="mgmt-syc-card-title">
+            <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+            Pre-finalization checklist
+          </h2>
+          <p class="mgmt-syc-card-sub">
+            {{ checklist.students_total }} student{{ 's' if checklist.students_total != 1 else '' }}
+            across {{ checklist.classes_total }} class{{ 'es' if checklist.classes_total != 1 else '' }}.
+            {% if checklist.classes_without_q4_grades %}
+            {{ checklist.classes_without_q4_grades|length }} class{{ 'es' if checklist.classes_without_q4_grades|length != 1 else '' }} still have missing Q4 grades.
+            {% else %}
+            No outstanding gradebook gaps detected.
+            {% endif %}
+          </p>
+          {% if checklist.classes_without_q4_grades %}
+          <ul class="mgmt-syc-checklist">
+            {% for c in checklist.classes_without_q4_grades %}
+            <li>
+              <span class="mgmt-syc-checklist-name">{{ c.class_name }}</span>
+              <span class="mgmt-syc-checklist-subject">{{ c.subject }}</span>
+              <span class="mgmt-syc-checklist-stat">
+                {{ c.missing_student_count }} / {{ c.roster_size }} student{{ 's' if c.roster_size != 1 else '' }} missing Q4
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </section>
+        {% endif %}
+
+        {% if finalize_stats %}
+        <section class="mgmt-syc-card">
+          <h2 class="mgmt-syc-card-title">
+            <i class="bi bi-graph-up" aria-hidden="true"></i>
+            Finalize results
+          </h2>
+          <dl class="mgmt-syc-stat-grid">
+            <div><dt>Triggered by</dt><dd>{{ finalize_stats.triggered_by|default('—') }}</dd></div>
+            <div><dt>Report cards saved</dt><dd>{{ finalize_stats.report_cards_ok|default(0) }}</dd></div>
+            <div><dt>Skipped</dt><dd>{{ finalize_stats.report_cards_skipped|default(0) }}</dd></div>
+            <div><dt>Errors</dt><dd>{{ finalize_stats.report_cards_errors|default(0) }}</dd></div>
+            <div><dt>Classes archived</dt><dd>{{ finalize_stats.classes_archived|default(0) }}</dd></div>
+            <div><dt>Students processed</dt><dd>{{ finalize_stats.students_processed|default(0) }}</dd></div>
+            {% if finalize_stats.promotion %}
+            <div><dt>Promoted one grade</dt><dd>{{ finalize_stats.promotion.promoted|default(0) }}</dd></div>
+            <div><dt>Repeating (flag cleared)</dt><dd>{{ finalize_stats.promotion.repeating_cleared|default(0) }}</dd></div>
+            <div><dt>Skipped (12th / no grade)</dt><dd>{{ finalize_stats.promotion.skipped|default(0) }}</dd></div>
+            <div><dt>New portal accounts</dt><dd>{{ finalize_stats.promotion.provisioned_accounts|default(0) }}</dd></div>
+            {% endif %}
+          </dl>
+          {% if finalize_stats.errors_sample %}
+          <details class="mgmt-syc-errors">
+            <summary>Errors sample ({{ finalize_stats.errors_sample|length }})</summary>
+            <ul>
+              {% for err in finalize_stats.errors_sample %}<li>{{ err }}</li>{% endfor %}
+            </ul>
+          </details>
+          {% endif %}
+        </section>
+        {% endif %}
+
+        <section class="mgmt-syc-card">
+          <div class="mgmt-syc-card-head">
+            <h2 class="mgmt-syc-card-title">
+              <i class="bi bi-shield-plus" aria-hidden="true"></i>
+              Extensions
+            </h2>
+            {% if not is_terminal %}
+            <button type="button" class="mgmt-syc-btn mgmt-syc-btn--primary mgmt-syc-btn--sm"
+                    data-bs-toggle="modal" data-bs-target="#mgmtSycExtensionModal">
+              <i class="bi bi-plus-circle" aria-hidden="true"></i> Grant extension
+            </button>
+            {% endif %}
+          </div>
+          {% if extensions %}
+          <ul class="mgmt-syc-ext-list">
+            {% for ext in extensions %}
+            <li class="mgmt-syc-ext-item">
+              <div class="mgmt-syc-ext-target">
+                {% if ext.scope_user %}
+                  <i class="bi bi-person-fill" aria-hidden="true"></i>
+                  {{ ext.scope_user.username }} ({{ ext.for_role }})
+                {% elif ext.scope_class %}
+                  <i class="bi bi-easel-fill" aria-hidden="true"></i>
+                  {{ ext.scope_class.name }} ({{ ext.for_role }})
+                {% else %}
+                  Unknown scope
+                {% endif %}
+              </div>
+              <div class="mgmt-syc-ext-meta">
+                Until <strong>{{ ext.extended_until.strftime('%b %d, %Y') }}</strong>
+                {% if ext.reason %} · {{ ext.reason }}{% endif %}
+                {% if ext.granted_by %} · by {{ ext.granted_by.username }}{% endif %}
+              </div>
+              {% if not is_terminal %}
+              <form method="POST"
+                    action="{{ url_for('school_year_closure.revoke_extension_route', closure_id=closure.id, extension_id=ext.id) }}"
+                    class="mgmt-syc-ext-revoke"
+                    onsubmit="return confirm('Revoke this extension?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="mgmt-syc-btn mgmt-syc-btn--ghost mgmt-syc-btn--sm">
+                  <i class="bi bi-x-circle" aria-hidden="true"></i> Revoke
+                </button>
+              </form>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="mgmt-syc-empty">No extensions granted yet.</p>
+          {% endif %}
+        </section>
+
+      </div>
+
+      {# ───────────── RIGHT COLUMN ───────────── #}
+      <div class="mgmt-syc-col">
+
+        {% if not is_terminal %}
+        <section class="mgmt-syc-card">
+          <h2 class="mgmt-syc-card-title">
+            <i class="bi bi-sliders" aria-hidden="true"></i> Controls
+          </h2>
+
+          <div class="mgmt-syc-controls">
+            {% if not is_paused %}
+              <form method="POST" action="{{ url_for('school_year_closure.pause', closure_id=closure.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="mgmt-syc-btn mgmt-syc-btn--ghost">
+                  <i class="bi bi-pause-circle" aria-hidden="true"></i> Pause workflow
+                </button>
+              </form>
+            {% else %}
+              <form method="POST" action="{{ url_for('school_year_closure.resume', closure_id=closure.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="mgmt-syc-btn mgmt-syc-btn--primary">
+                  <i class="bi bi-play-circle" aria-hidden="true"></i> Resume workflow
+                </button>
+              </form>
+            {% endif %}
+
+            <button type="button" class="mgmt-syc-btn mgmt-syc-btn--ghost"
+                    data-bs-toggle="modal" data-bs-target="#mgmtSycPostponeModal">
+              <i class="bi bi-calendar-plus" aria-hidden="true"></i> Postpone…
+            </button>
+
+            <button type="button" class="mgmt-syc-btn mgmt-syc-btn--ghost"
+                    data-bs-toggle="modal" data-bs-target="#mgmtSycResetModal">
+              <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restart clock…
+            </button>
+
+            <button type="button" class="mgmt-syc-btn mgmt-syc-btn--ghost"
+                    data-bs-toggle="modal" data-bs-target="#mgmtSycAdvanceModal">
+              <i class="bi bi-skip-forward" aria-hidden="true"></i> Advance phase…
+            </button>
+
+            {% if phase == 'admin_window' %}
+            <button type="button" class="mgmt-syc-btn mgmt-syc-btn--danger"
+                    data-bs-toggle="modal" data-bs-target="#mgmtSycFinalizeModal">
+              <i class="bi bi-archive-fill" aria-hidden="true"></i> Finalize now…
+            </button>
+            {% endif %}
+
+            <button type="button" class="mgmt-syc-btn mgmt-syc-btn--danger mgmt-syc-btn--outline"
+                    data-bs-toggle="modal" data-bs-target="#mgmtSycCancelModal">
+              <i class="bi bi-x-octagon" aria-hidden="true"></i> Cancel closure…
+            </button>
+          </div>
+        </section>
+        {% endif %}
+
+        {% if phase == 'finalized' %}
+        <section class="mgmt-syc-card">
+          <h2 class="mgmt-syc-card-title">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Late corrections
+          </h2>
+          <p class="mgmt-syc-card-sub">
+            Reopening the closure re-activates the school year so admins can fix grades, regenerate report cards, or unarchive a class. Use sparingly.
+          </p>
+          <button type="button" class="mgmt-syc-btn mgmt-syc-btn--ghost"
+                  data-bs-toggle="modal" data-bs-target="#mgmtSycReopenModal">
+            <i class="bi bi-unlock" aria-hidden="true"></i> Reopen closure…
+          </button>
+        </section>
+        {% endif %}
+
+        <section class="mgmt-syc-card">
+          <h2 class="mgmt-syc-card-title">
+            <i class="bi bi-list-ul" aria-hidden="true"></i> Audit log
+          </h2>
+          {% if events %}
+          <ol class="mgmt-syc-events">
+            {% for ev in events %}
+            <li class="mgmt-syc-event mgmt-syc-event--{{ ev.event_type }}">
+              <span class="mgmt-syc-event-time">
+                {{ ev.created_at.strftime('%b %d · %I:%M %p') if ev.created_at else '—' }}
+              </span>
+              <span class="mgmt-syc-event-type">{{ ev.event_type|replace('_', ' ') }}</span>
+              <span class="mgmt-syc-event-actor">
+                {% if ev.actor %}{{ ev.actor.username }}{% else %}{{ ev.actor_label or 'system' }}{% endif %}
+              </span>
+            </li>
+            {% endfor %}
+          </ol>
+          {% else %}
+          <p class="mgmt-syc-empty">No events recorded yet.</p>
+          {% endif %}
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ───────────── MODALS ───────────── #}
+
+{# Postpone #}
+<div class="modal fade" id="mgmtSycPostponeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.postpone', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Postpone closure</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Slides every milestone forward by N days. Useful for snow days or last-minute scheduling changes.</p>
+          <div class="mb-3">
+            <label class="form-label" for="postpone_days">Days to postpone</label>
+            <input class="form-control" type="number" name="days" id="postpone_days" min="1" max="90" value="7" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="postpone_reason">Reason (optional)</label>
+            <input class="form-control" type="text" name="reason" id="postpone_reason" placeholder="e.g. Extra snow days extended Q4">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Postpone</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Reset milestones (restart the 1/3/4-week clock from today) #}
+<div class="modal fade" id="mgmtSycResetModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.reset_milestones', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Restart the lockout clock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Recomputes the three milestone dates so they run from <strong>today</strong>:</p>
+          <ul>
+            <li>Student lockout = today + 7 days</li>
+            <li>Teacher lockout = today + 21 days</li>
+            <li>Auto-finalize = today + 28 days</li>
+          </ul>
+          <p>If the workflow has already advanced past the student window (e.g. you scheduled
+          with a Day&nbsp;0 that was in the past, so students were locked out immediately),
+          this also rewinds the phase to <em>Student window</em> and clears the student/teacher
+          lockout stamps so they regain access.</p>
+          <div class="mb-3">
+            <label class="form-label" for="reset_reason">Reason (optional)</label>
+            <input class="form-control" type="text" name="reason" id="reset_reason"
+                   placeholder="e.g. Scheduled with old end-date; resetting so students get their week">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Restart clock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Advance phase #}
+<div class="modal fade" id="mgmtSycAdvanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.advance', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Advance to next phase</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Force a phase transition before its scheduled date. Use only when you need to lock students or teachers out early.</p>
+          <div class="mb-3">
+            <label class="form-label" for="target_phase">Phase</label>
+            <select class="form-select" name="target_phase" id="target_phase" required>
+              {% if phase == 'scheduled' %}
+              <option value="student_window">Student window (notify + open submissions)</option>
+              {% endif %}
+              {% if phase in ('scheduled','student_window') %}
+              <option value="teacher_window">Teacher window (lock students)</option>
+              {% endif %}
+              {% if phase in ('scheduled','student_window','teacher_window') %}
+              <option value="admin_window">Admin window (lock teachers)</option>
+              {% endif %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Advance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Finalize now #}
+<div class="modal fade" id="mgmtSycFinalizeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.finalize_now', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Finalize now</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-danger"><strong>This is irreversible.</strong> The system will:</p>
+          <ul>
+            <li>Generate official Q1–Q4 report cards for every enrolled student.</li>
+            <li>Mark all classes / enrollments / assignments in this year inactive.</li>
+            <li>Promote students one grade level (skipping <em>is_repeating</em> and 12th).</li>
+            <li>Deactivate the school year.</li>
+          </ul>
+          <p>You can <em>Reopen</em> this closure later if grade corrections are needed, but report cards will need to be regenerated.</p>
+          <div class="mb-3">
+            <label class="form-label" for="finalize_confirm">Type <code>FINALIZE NOW</code> to confirm</label>
+            <input class="form-control" type="text" name="confirm" id="finalize_confirm" autocomplete="off" placeholder="FINALIZE NOW" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-danger" type="submit">Finalize closure</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Cancel #}
+<div class="modal fade" id="mgmtSycCancelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.cancel', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Cancel closure workflow</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Aborts the workflow. The school year continues as normal — no archival, no notifications. The closure record stays for auditing.</p>
+          <div class="mb-3">
+            <label class="form-label" for="cancel_reason">Reason</label>
+            <input class="form-control" type="text" name="reason" id="cancel_reason" placeholder="e.g. End-of-year postponed by one month; will reschedule">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="cancel_confirm">Type <code>CANCEL</code> to confirm</label>
+            <input class="form-control" type="text" name="confirm" id="cancel_confirm" autocomplete="off" placeholder="CANCEL" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Back</button>
+          <button class="btn btn-danger" type="submit">Cancel closure</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Reopen #}
+<div class="modal fade" id="mgmtSycReopenModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.reopen', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Reopen closure</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Re-activates the school year so directors/admins can make late corrections. Closure phase moves back to Admin window.</p>
+          <div class="mb-3">
+            <label class="form-label" for="reopen_reason">Reason</label>
+            <input class="form-control" type="text" name="reason" id="reopen_reason" placeholder="e.g. Late grade correction for student X">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="reopen_confirm">Type <code>REOPEN</code> to confirm</label>
+            <input class="form-control" type="text" name="confirm" id="reopen_confirm" autocomplete="off" placeholder="REOPEN" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Back</button>
+          <button class="btn btn-primary" type="submit">Reopen closure</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Grant extension #}
+<div class="modal fade" id="mgmtSycExtensionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('school_year_closure.grant_extension_route', closure_id=closure.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Grant deadline extension</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Scope</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="scope" id="ext_scope_user" value="user" checked>
+              <label class="form-check-label" for="ext_scope_user">Specific teacher or student</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="scope" id="ext_scope_class" value="class">
+              <label class="form-check-label" for="ext_scope_class">Whole class (teacher + students)</label>
+            </div>
+          </div>
+
+          <div class="mb-3" id="ext_user_picker">
+            <label class="form-label" for="target_user_id">Person</label>
+            <select class="form-select" name="target_user_id" id="target_user_id">
+              <option value="">— Select —</option>
+              <optgroup label="Teachers / Staff">
+                {% for t in teachers %}
+                  {% if t.user %}
+                  <option value="{{ t.user.id }}">{{ t.first_name }} {{ t.last_name }} ({{ t.user.username }})</option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+            </select>
+            <small class="form-text text-muted">For per-student extensions, use the student's user account id (or grant per-class).</small>
+          </div>
+
+          <div class="mb-3 d-none" id="ext_class_picker">
+            <label class="form-label" for="target_class_id">Class</label>
+            <select class="form-select" name="target_class_id" id="target_class_id">
+              <option value="">— Select —</option>
+              {% for c in classes_in_year %}
+              <option value="{{ c.id }}">{{ c.name }} — {{ c.subject }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="ext_for_role">Applies to</label>
+            <select class="form-select" name="for_role" id="ext_for_role">
+              <option value="both">Both student & teacher lockout</option>
+              <option value="student">Student lockout only</option>
+              <option value="teacher">Teacher lockout only</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="ext_until">Extend until</label>
+            <input class="form-control" type="date" name="extended_until" id="ext_until" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="ext_reason">Reason</label>
+            <input class="form-control" type="text" name="reason" id="ext_reason" placeholder="e.g. Teacher on medical leave through June 30">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Grant extension</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const userRadio = document.getElementById('ext_scope_user');
+  const classRadio = document.getElementById('ext_scope_class');
+  const userPicker = document.getElementById('ext_user_picker');
+  const classPicker = document.getElementById('ext_class_picker');
+  function refresh() {
+    if (classRadio && classRadio.checked) {
+      classPicker.classList.remove('d-none');
+      userPicker.classList.add('d-none');
+    } else {
+      userPicker.classList.remove('d-none');
+      classPicker.classList.add('d-none');
+    }
+  }
+  [userRadio, classRadio].forEach(r => r && r.addEventListener('change', refresh));
+  refresh();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,250 @@
+/* Role hub shell — teachers & students; colors from hub_themes.css (theme-default = original design) */
+
+.rh {
+  --rh-bg: var(--hub-teacher-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --rh-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --rh-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --rh-text: var(--hub-text, #0f172a);
+  --rh-muted: var(--hub-muted, #64748b);
+  --rh-accent: var(--hub-teacher-accent, #0d9488);
+  --rh-accent-deep: var(--hub-teacher-accent-deep, #0f766e);
+  --rh-accent-soft: var(--hub-teacher-accent-soft, rgba(13, 148, 136, 0.12));
+  padding: 0 0 2rem;
+}
+
+.rh--teacher {
+  --rh-bg: var(--hub-teacher-bg, linear-gradient(165deg, #ecfdf5 0%, #e0f2f1 45%, #d8ebe8 100%));
+  --rh-accent: var(--hub-teacher-accent, #0d9488);
+  --rh-accent-deep: var(--hub-teacher-accent-deep, #0f766e);
+  --rh-accent-soft: var(--hub-teacher-accent-soft, rgba(13, 148, 136, 0.14));
+}
+
+.rh--student {
+  --rh-bg: var(--hub-student-bg, linear-gradient(165deg, #f5f3ff 0%, #ede9fe 45%, #e8e4f8 100%));
+  --rh-accent: var(--hub-student-accent, #7c3aed);
+  --rh-accent-deep: var(--hub-student-accent-deep, #6d28d9);
+  --rh-accent-soft: var(--hub-student-accent-soft, rgba(124, 58, 237, 0.12));
+}
+
+.rh-shell {
+  background: var(--rh-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+
+.rh-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.rh-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rh-muted);
+  margin: 0 0 0.35rem;
+}
+
+.rh-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--rh-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+
+.rh-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--rh-muted);
+  margin: 0;
+  max-width: 40rem;
+}
+
+.rh-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rh-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.rh-role-badge--teacher {
+  background: var(--hub-teacher-badge-bg, linear-gradient(135deg, #ccfbf1, #99f6e4));
+  color: var(--hub-teacher-badge-text, #115e59);
+  border: 1px solid var(--hub-teacher-badge-border, rgba(13, 148, 136, 0.25));
+}
+
+.rh-role-badge--student {
+  background: var(--hub-student-badge-bg, linear-gradient(135deg, #ede9fe, #ddd6fe));
+  color: var(--hub-student-badge-text, #5b21b6);
+  border: 1px solid var(--hub-student-badge-border, rgba(124, 58, 237, 0.2));
+}
+
+.rh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+
+.rh-btn--ghost {
+  color: var(--hub-btn-ghost-text, #334155);
+  background: var(--rh-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.rh-btn--ghost:hover {
+  background: var(--rh-surface);
+  border-color: var(--rh-accent);
+  color: var(--rh-accent-deep);
+}
+
+.rh-btn--primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--rh-accent), var(--rh-accent-deep)) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  border: none !important;
+}
+
+.rh-btn--primary:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+
+.rh-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .rh-insights {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.rh-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--rh-surface);
+  border: 1px solid var(--rh-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.rh-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--rh-accent-soft);
+  color: var(--rh-accent-deep);
+}
+
+.rh-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--rh-text);
+  line-height: 1.2;
+}
+
+.rh-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--rh-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+
+.rh-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Hide legacy page headers inside hub */
+.rh-content .home-header,
+.rh-content .student-home-header,
+.rh-content .student-classes-hero,
+.rh-content .student-grades-header,
+.rh-content .student-assignments-header,
+.rh-content .classes-header,
+.rh-content .assignments-header,
+.rh-content .students-header,
+.rh-content .student-schedule-header,
+.rh-content .student-settings-header,
+.rh-content .header-card-settings,
+.rh-content .attendance-hub-header,
+.rh-content .student-assignments-header,
+.rh-content .student-grades-header {
+  display: none !important;
+}
+
+.rh-content .card,
+.rh-content .enhanced-filters .card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.rh-content .btn-primary {
+  background: linear-gradient(135deg, var(--rh-accent), var(--rh-accent-deep)) !important;
+  border-color: var(--rh-accent-deep) !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.rh-content .btn-outline-primary {
+  color: var(--rh-accent-deep) !important;
+  border-color: var(--rh-accent) !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.rh-content .btn-outline-primary:hover {
+  background: var(--rh-accent-soft) !important;
+}
+
+@media (max-width: 576px) {
+  .rh-hero-actions {
+    width: 100%;
+  }
+
+  .rh-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

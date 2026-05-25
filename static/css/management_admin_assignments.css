@@ -1,0 +1,459 @@
+/* Assignments & grades hub — matches management home / report cards */
+.mgmt-asg {
+  --mgmt-asg-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-asg-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-asg-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-asg-text: var(--hub-text, #0f172a);
+  --mgmt-asg-muted: var(--hub-muted, #64748b);
+  --mgmt-asg-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-asg-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-asg-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  --mgmt-asg-radius: 20px;
+  padding: 0 0 2rem;
+}
+.mgmt-asg-shell {
+  background: var(--mgmt-asg-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+.mgmt-asg-shell--director {
+  --mgmt-asg-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --mgmt-asg-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --mgmt-asg-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --mgmt-asg-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+.mgmt-asg-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.mgmt-asg-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mgmt-asg-muted);
+  margin: 0 0 0.35rem;
+}
+.mgmt-asg-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--mgmt-asg-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.mgmt-asg-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--mgmt-asg-muted);
+  margin: 0;
+}
+.mgmt-asg-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mgmt-asg-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.mgmt-asg-role-badge--director {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+.mgmt-asg-role-badge--admin {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+.mgmt-asg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+.mgmt-asg-btn--ghost {
+  color: #334155;
+  background: var(--mgmt-asg-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+.mgmt-asg-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--mgmt-asg-accent);
+  color: var(--mgmt-asg-accent-deep);
+}
+.mgmt-asg-btn--primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--mgmt-asg-accent), var(--mgmt-asg-accent-deep)) !important;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+  border: none !important;
+}
+.mgmt-asg-btn--primary:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+.mgmt-asg-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  margin-left: 0.15rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.mgmt-asg-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 768px) {
+  .mgmt-asg-insights { grid-template-columns: repeat(4, 1fr); }
+}
+.mgmt-asg-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--mgmt-asg-surface);
+  border: 1px solid var(--mgmt-asg-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.mgmt-asg-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--mgmt-asg-accent-soft);
+  color: var(--mgmt-asg-accent-deep);
+}
+.mgmt-asg-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mgmt-asg-text);
+  line-height: 1.2;
+}
+.mgmt-asg-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mgmt-asg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+.mgmt-asg-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ===== Content: teal theme, pill buttons, class cards ===== */
+.mgmt-asg-content .assignments-admin-header {
+  display: none !important;
+}
+
+.mgmt-asg-content .class-finder-card {
+  background: var(--mgmt-asg-surface);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.mgmt-asg-content .class-finder-input:focus {
+  border-color: var(--mgmt-asg-accent) !important;
+  box-shadow: 0 0 0 0.2rem var(--mgmt-asg-accent-soft) !important;
+}
+
+.mgmt-asg-content .class-finder-count {
+  background: var(--mgmt-asg-accent-soft);
+  color: var(--mgmt-asg-accent-deep);
+  border: 1px solid rgba(13, 148, 136, 0.2);
+}
+
+.mgmt-asg-content .assignment-class-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.mgmt-asg-content .assignment-class-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+.mgmt-asg-content .assignment-class-header {
+  background: linear-gradient(135deg, var(--mgmt-asg-accent) 0%, var(--mgmt-asg-accent-deep) 100%) !important;
+  padding: 1.25rem 1.35rem;
+}
+
+.mgmt-asg-content .assignment-class-header::before {
+  display: none !important;
+}
+
+.mgmt-asg-content .assignment-class-icon {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+  border-radius: 12px;
+}
+
+.mgmt-asg-content .assignment-class-detail i {
+  color: var(--mgmt-asg-accent) !important;
+}
+
+.mgmt-asg-content .btn-assignment-class-action {
+  background: linear-gradient(135deg, var(--mgmt-asg-accent), var(--mgmt-asg-accent-deep)) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 0.55rem 1rem !important;
+  font-weight: 600 !important;
+}
+
+.mgmt-asg-content .btn-assignment-class-action:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+}
+
+.mgmt-asg-content .btn-assistant-proposals-card,
+.mgmt-asg-content .btn-assistant-review-now {
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(13, 148, 136, 0.35) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+  background: var(--mgmt-asg-accent-soft) !important;
+}
+
+.mgmt-asg-content .btn-assistant-proposals-card:hover,
+.mgmt-asg-content .btn-assistant-review-now:hover {
+  background: rgba(13, 148, 136, 0.18) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+.mgmt-asg-content .assignments-empty-state {
+  background: var(--mgmt-asg-surface);
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.mgmt-asg-content .assistant-proposals-alert-banner {
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+}
+
+/* View mode toggles */
+.mgmt-asg-content .view-toggle-buttons .btn-primary,
+.mgmt-asg-content .view-toggle-buttons .btn-primary.active {
+  background: linear-gradient(135deg, var(--mgmt-asg-accent), var(--mgmt-asg-accent-deep)) !important;
+  border-color: var(--mgmt-asg-accent-deep) !important;
+  color: #fff !important;
+}
+
+.mgmt-asg-content .view-toggle-buttons .btn-outline-primary {
+  color: var(--mgmt-asg-accent-deep) !important;
+  border-color: rgba(13, 148, 136, 0.45) !important;
+  background: var(--mgmt-asg-surface) !important;
+}
+
+.mgmt-asg-content .view-toggle-buttons .btn-outline-primary:hover,
+.mgmt-asg-content .view-toggle-buttons .btn-outline-primary.active {
+  background: var(--mgmt-asg-accent-soft) !important;
+  border-color: var(--mgmt-asg-accent) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+/* Bootstrap primary buttons inside content */
+.mgmt-asg-content .btn-primary {
+  background: linear-gradient(135deg, var(--mgmt-asg-accent), var(--mgmt-asg-accent-deep)) !important;
+  border-color: var(--mgmt-asg-accent-deep) !important;
+  color: #fff !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-asg-content .btn-primary:hover {
+  filter: brightness(1.05);
+  color: #fff !important;
+}
+
+.mgmt-asg-content .btn-outline-primary {
+  color: var(--mgmt-asg-accent-deep) !important;
+  border-color: var(--mgmt-asg-accent) !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-asg-content .btn-outline-primary:hover {
+  background: var(--mgmt-asg-accent-soft) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+.mgmt-asg-content .btn-outline-secondary {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Assignment cards in grid view */
+.mgmt-asg-content .assignment-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.mgmt-asg-content .assignment-card .card-header {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(13, 148, 136, 0.04));
+  border-bottom: 1px solid rgba(13, 148, 136, 0.12);
+}
+
+/* Grades panels — align with hub teal */
+.mgmt-asg-content .grades-overview-card .grades-overview-header {
+  background: linear-gradient(125deg, var(--mgmt-asg-accent-deep) 0%, var(--mgmt-asg-accent) 42%, #14b8a6 100%) !important;
+}
+
+.mgmt-asg-content .grades-by-assignment-card .grades-by-assignment-header {
+  background: linear-gradient(125deg, var(--mgmt-asg-accent-deep) 0%, var(--mgmt-asg-accent) 48%, #14b8a6 100%) !important;
+}
+
+.mgmt-asg-content .grades-ba-actions .grades-ba-btn {
+  border-radius: 999px !important;
+  border-color: rgba(13, 148, 136, 0.35) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+.mgmt-asg-content .grades-ba-actions .grades-ba-btn:hover {
+  background: var(--mgmt-asg-accent-soft) !important;
+  border-color: var(--mgmt-asg-accent) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+.mgmt-asg-content .grades-ba-actions .grades-ba-btn-primary {
+  background: var(--mgmt-asg-accent-soft) !important;
+  border-color: rgba(13, 148, 136, 0.45) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+.mgmt-asg-content .grades-overview-toolbar .form-control:focus {
+  border-color: var(--mgmt-asg-accent) !important;
+  box-shadow: 0 0 0 0.2rem var(--mgmt-asg-accent-soft) !important;
+}
+
+/* Legacy toolbar buttons (if present in nested partials) */
+.mgmt-asg-content .btn-redo-dashboard,
+.mgmt-asg-content .btn-extension-requests,
+.mgmt-asg-content .btn-assignments-back,
+.mgmt-asg-content .btn-bulk-void,
+.mgmt-asg-content .btn-assistant-proposals,
+.mgmt-asg-content .btn-assignments-add {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  padding: 0.45rem 0.9rem !important;
+  border-radius: 999px !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.mgmt-asg-content .btn-redo-dashboard,
+.mgmt-asg-content .btn-assignments-back,
+.mgmt-asg-content .btn-bulk-void,
+.mgmt-asg-content .btn-assistant-proposals {
+  color: #334155 !important;
+  background: var(--mgmt-asg-surface) !important;
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+}
+
+.mgmt-asg-content .btn-redo-dashboard:hover,
+.mgmt-asg-content .btn-assignments-back:hover,
+.mgmt-asg-content .btn-bulk-void:hover,
+.mgmt-asg-content .btn-assistant-proposals:hover {
+  background: #fff !important;
+  border-color: var(--mgmt-asg-accent) !important;
+  color: var(--mgmt-asg-accent-deep) !important;
+}
+
+.mgmt-asg-content .btn-extension-requests {
+  color: var(--mgmt-asg-accent-deep) !important;
+  background: #fffbeb !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.mgmt-asg-content .btn-extension-requests:hover {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.mgmt-asg-content .btn-assignments-add {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--mgmt-asg-accent), var(--mgmt-asg-accent-deep)) !important;
+  border: none !important;
+}
+
+.mgmt-asg-content .btn-assignments-add:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+
+/* Void modals — primary accent */
+.mgmt-asg .void-scope-card:hover,
+.mgmt-asg .void-scope-card:has(.void-scope-card-input:checked) {
+  border-color: var(--mgmt-asg-accent) !important;
+}
+
+.mgmt-asg .void-scope-card:has(.void-scope-card-input:checked)::before {
+  background: var(--mgmt-asg-accent) !important;
+  border-color: var(--mgmt-asg-accent) !important;
+}
+
+.mgmt-asg .bulk-void-assignment-card:hover,
+.mgmt-asg .bulk-void-assignment-card:has(.bulk-void-assignment-card-input:checked) {
+  border-color: rgba(13, 148, 136, 0.5) !important;
+  background: var(--mgmt-asg-accent-soft) !important;
+}
+
+@media (max-width: 576px) {
+  .mgmt-asg-hero-actions {
+    width: 100%;
+  }
+  .mgmt-asg-hero-actions .mgmt-asg-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

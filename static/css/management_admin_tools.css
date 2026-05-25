@@ -1,0 +1,360 @@
+/* Management hub — Settings, Bug Reports, Student Jobs */
+
+/* ===== SETTINGS (mgmt-set) ===== */
+.mgmt-set {
+  --mgmt-hub-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-hub-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-hub-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-hub-text: var(--hub-text, #0f172a);
+  --mgmt-hub-muted: var(--hub-muted, #64748b);
+  --mgmt-hub-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-hub-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-hub-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  padding: 0 0 2rem;
+}
+.mgmt-set-shell,
+.mgmt-bug-shell,
+.mgmt-job-shell {
+  background: var(--mgmt-hub-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+.mgmt-set-shell--director,
+.mgmt-bug-shell--director,
+.mgmt-job-shell--director {
+  --mgmt-hub-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --mgmt-hub-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --mgmt-hub-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --mgmt-hub-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+.mgmt-set-hero,
+.mgmt-bug-hero,
+.mgmt-job-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.mgmt-set-eyebrow,
+.mgmt-bug-eyebrow,
+.mgmt-job-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mgmt-hub-muted);
+  margin: 0 0 0.35rem;
+}
+.mgmt-set-title,
+.mgmt-bug-title,
+.mgmt-job-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--mgmt-hub-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.mgmt-set-subtitle,
+.mgmt-bug-subtitle,
+.mgmt-job-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--mgmt-hub-muted);
+  margin: 0;
+}
+.mgmt-set-hero-actions,
+.mgmt-bug-hero-actions,
+.mgmt-job-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mgmt-set-role-badge,
+.mgmt-bug-role-badge,
+.mgmt-job-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.mgmt-set-role-badge--director,
+.mgmt-bug-role-badge--director,
+.mgmt-job-role-badge--director {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+.mgmt-set-role-badge--admin,
+.mgmt-bug-role-badge--admin,
+.mgmt-job-role-badge--admin {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+.mgmt-set-btn,
+.mgmt-bug-btn,
+.mgmt-job-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+.mgmt-set-btn--ghost,
+.mgmt-bug-btn--ghost,
+.mgmt-job-btn--ghost {
+  color: #334155;
+  background: var(--mgmt-hub-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+.mgmt-set-btn--ghost:hover,
+.mgmt-bug-btn--ghost:hover,
+.mgmt-job-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--mgmt-hub-accent);
+  color: var(--mgmt-hub-accent-deep);
+}
+.mgmt-set-btn--primary,
+.mgmt-bug-btn--primary,
+.mgmt-job-btn--primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--mgmt-hub-accent), var(--mgmt-hub-accent-deep)) !important;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+  border: none !important;
+}
+.mgmt-set-btn--primary:hover,
+.mgmt-bug-btn--primary:hover,
+.mgmt-job-btn--primary:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+.mgmt-set-insights,
+.mgmt-bug-insights,
+.mgmt-job-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 768px) {
+  .mgmt-set-insights,
+  .mgmt-bug-insights,
+  .mgmt-job-insights { grid-template-columns: repeat(4, 1fr); }
+}
+.mgmt-set-insight,
+.mgmt-bug-insight,
+.mgmt-job-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--mgmt-hub-surface);
+  border: 1px solid var(--mgmt-hub-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.mgmt-set-insight-icon,
+.mgmt-bug-insight-icon,
+.mgmt-job-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--mgmt-hub-accent-soft);
+  color: var(--mgmt-hub-accent-deep);
+}
+.mgmt-set-insight-value,
+.mgmt-bug-insight-value,
+.mgmt-job-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mgmt-hub-text);
+  line-height: 1.2;
+}
+.mgmt-set-insight-label,
+.mgmt-bug-insight-label,
+.mgmt-job-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mgmt-hub-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+.mgmt-set-content,
+.mgmt-bug-content,
+.mgmt-job-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mgmt-set .header-card-settings {
+  display: none !important;
+}
+
+.mgmt-set-content .settings-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.mgmt-set-content .card-icon-settings.bg-primary,
+.mgmt-set-content .card-icon-settings.bg-success,
+.mgmt-set-content .card-icon-settings.bg-info,
+.mgmt-set-content .card-icon-settings.bg-google {
+  background: var(--mgmt-hub-accent-soft) !important;
+  color: var(--mgmt-hub-accent-deep) !important;
+}
+
+.mgmt-set-content .btn-action-settings,
+.mgmt-set-content .btn-save-settings,
+.mgmt-set-content .btn-connect-google {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-set-content .btn-action-settings.btn-warning-gradient,
+.mgmt-set-content .btn-save-settings {
+  background: linear-gradient(135deg, var(--mgmt-hub-accent), var(--mgmt-hub-accent-deep)) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* ===== BUG REPORTS (mgmt-bug) ===== */
+.mgmt-bug {
+  --mgmt-hub-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-hub-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-hub-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-hub-text: var(--hub-text, #0f172a);
+  --mgmt-hub-muted: var(--hub-muted, #64748b);
+  --mgmt-hub-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-hub-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-hub-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  padding: 0 0 2rem;
+}
+
+.mgmt-bug-content .tech-dashboard-header {
+  display: none !important;
+}
+
+.mgmt-bug-content .tech-card {
+  display: none !important;
+}
+
+.mgmt-bug-content .tech-quick-actions {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.mgmt-bug-content .tech-quick-actions-header {
+  background: linear-gradient(135deg, var(--mgmt-hub-accent), var(--mgmt-hub-accent-deep)) !important;
+  color: #fff !important;
+  padding: 1rem 1.25rem;
+}
+
+.mgmt-bug-content .tech-quick-actions-header h5 {
+  color: #fff !important;
+}
+
+.mgmt-bug-content .btn-primary {
+  background: linear-gradient(135deg, var(--mgmt-hub-accent), var(--mgmt-hub-accent-deep)) !important;
+  border-color: var(--mgmt-hub-accent-deep) !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-bug-content .btn-outline-primary,
+.mgmt-bug-content .btn-outline-secondary {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-bug .modal-header.bg-danger {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+}
+
+/* ===== STUDENT JOBS (mgmt-job) ===== */
+.mgmt-job {
+  --mgmt-hub-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-hub-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-hub-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-hub-text: var(--hub-text, #0f172a);
+  --mgmt-hub-muted: var(--hub-muted, #64748b);
+  --mgmt-hub-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-hub-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-hub-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  padding: 0 0 2rem;
+}
+
+.mgmt-job-content .card.border-success > .card-header.bg-success,
+.mgmt-job-content .cleaning-team-card .card-header.bg-gradient-primary,
+.mgmt-job-content .team-1-card .card-header,
+.mgmt-job-content .team-2-card .card-header {
+  background: linear-gradient(135deg, var(--mgmt-hub-accent) 0%, var(--mgmt-hub-accent-deep) 100%) !important;
+  color: #fff !important;
+}
+
+.mgmt-job-content .cleaning-team-card .card-header::before,
+.mgmt-job-content .team-1-card .card-header::before {
+  display: none !important;
+}
+
+.mgmt-job-content .btn-primary {
+  background: linear-gradient(135deg, var(--mgmt-hub-accent), var(--mgmt-hub-accent-deep)) !important;
+  border-color: var(--mgmt-hub-accent-deep) !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-job-content .btn-outline-primary {
+  color: var(--mgmt-hub-accent-deep) !important;
+  border-color: var(--mgmt-hub-accent) !important;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.mgmt-job-content .btn-outline-primary:hover {
+  background: var(--mgmt-hub-accent-soft) !important;
+}
+
+.mgmt-job-content .card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+@media (max-width: 576px) {
+  .mgmt-set-hero-actions,
+  .mgmt-bug-hero-actions,
+  .mgmt-job-hero-actions {
+    width: 100%;
+  }
+  .mgmt-set-btn,
+  .mgmt-bug-btn,
+  .mgmt-job-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

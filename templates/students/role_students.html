@@ -2,12 +2,43 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/students_role_students.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">
 {% endblock %}
 
 {% block dashboard_content %}
-
-
-<div class="container-fluid px-2 px-md-4 py-4">
+<div class="rh rh--teacher container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    <header class="rh-hero">
+      <div>
+        <p class="rh-eyebrow">Roster</p>
+        <h1 class="rh-title">My students</h1>
+        <p class="rh-subtitle"><i class="bi bi-people"></i> Students across your classes</p>
+      </div>
+      <div class="rh-hero-actions">
+        <span class="rh-role-badge rh-role-badge--teacher"><i class="bi bi-mortarboard-fill"></i> Teacher</span>
+        <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-grid"></i> Home</a>
+      </div>
+    </header>
+    <div class="rh-insights" role="list">
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-people-fill"></i></span>
+        <div><div class="rh-insight-value">{{ students|length }}</div><div class="rh-insight-label">Students</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-mortarboard"></i></span>
+        <div><div class="rh-insight-value">{{ students|map(attribute='grade_level')|unique|list|length }}</div><div class="rh-insight-label">Grade levels</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-envelope"></i></span>
+        <div><div class="rh-insight-value">{{ students|selectattr('email')|list|length }}</div><div class="rh-insight-label">With email</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-card-text"></i></span>
+        <div><div class="rh-insight-value">{{ students|selectattr('state_id')|list|length }}</div><div class="rh-insight-label">With ID</div></div>
+      </div>
+    </div>
+    <div class="rh-content">
+<div class="container-fluid px-2 px-md-4 py-4 px-0">
     <!-- Enhanced Header -->
     <div class="students-header">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
@@ -112,7 +143,9 @@
         {% endfor %}
     </div>
 </div>
-
+    </div>
+  </div>
+</div>
 {% endblock %} 
 
  

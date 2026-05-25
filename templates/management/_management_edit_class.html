@@ -1,0 +1,631 @@
+{# Edit class — administrators & directors #}
+{% set is_director = sidebar_role_canonical == 'Director' %}
+{% set enrolled_count = enrolled_students|length if enrolled_students is defined else 0 %}
+{% set assistant_count = current_student_assistants|length if current_student_assistants is defined else 0 %}
+{% set grade_levels_list = class_info.get_grade_levels() if class_info.get_grade_levels else [] %}
+{% set grade_count = grade_levels_list|length if grade_levels_list else 0 %}
+
+<div class="mgmt-ec container-fluid px-0 px-md-1">
+  <div class="mgmt-ec-shell{% if is_director %} mgmt-ec-shell--director{% endif %}">
+
+    <header class="mgmt-ec-hero">
+      <div>
+        <p class="mgmt-ec-eyebrow">Class management</p>
+        <h1 class="mgmt-ec-title">Edit class</h1>
+        <p class="mgmt-ec-subtitle">
+          <i class="bi bi-mortarboard" aria-hidden="true"></i>
+          {{ class_info.name }} · {{ class_info.subject or 'No subject' }}
+        </p>
+      </div>
+      <div class="mgmt-ec-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-ec-role-badge mgmt-ec-role-badge--director">
+          <i class="bi bi-award-fill" aria-hidden="true"></i> Director
+        </span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-ec-role-badge mgmt-ec-role-badge--admin">
+          <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
+        </span>
+        {% endif %}
+        <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="mgmt-ec-btn mgmt-ec-btn--ghost">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> View class
+        </a>
+        <a href="{{ url_for('management.classes') }}" class="mgmt-ec-btn mgmt-ec-btn--ghost">
+          <i class="bi bi-grid" aria-hidden="true"></i> All classes
+        </a>
+      </div>
+    </header>
+
+    <div class="mgmt-ec-insights" role="list">
+      <div class="mgmt-ec-insight" role="listitem">
+        <span class="mgmt-ec-insight-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-ec-insight-value">{{ enrolled_count }}</div>
+          <div class="mgmt-ec-insight-label">Enrolled</div>
+        </div>
+      </div>
+      <div class="mgmt-ec-insight" role="listitem">
+        <span class="mgmt-ec-insight-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-ec-insight-value">{{ class_info.max_students or 30 }}</div>
+          <div class="mgmt-ec-insight-label">Max capacity</div>
+        </div>
+      </div>
+      <div class="mgmt-ec-insight" role="listitem">
+        <span class="mgmt-ec-insight-icon"><i class="bi bi-list-ol" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-ec-insight-value">{{ grade_count }}</div>
+          <div class="mgmt-ec-insight-label">Grade levels set</div>
+        </div>
+      </div>
+      <div class="mgmt-ec-insight" role="listitem">
+        <span class="mgmt-ec-insight-icon"><i class="bi bi-{% if class_info.is_active %}check-circle-fill{% else %}pause-circle-fill{% endif %}" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-ec-insight-value">{% if class_info.is_active %}Active{% else %}Inactive{% endif %}</div>
+          <div class="mgmt-ec-insight-label">Class status</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mgmt-ec-layout">
+      <div class="mgmt-ec-form-col">
+        <form method="POST" class="mgmt-ec-form edit-class-form" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <section class="mgmt-ec-panel" aria-labelledby="mgmtEcBasicTitle">
+            <div class="mgmt-ec-panel-head">
+              <span class="mgmt-ec-panel-icon"><i class="bi bi-info-circle-fill" aria-hidden="true"></i></span>
+              <h2 id="mgmtEcBasicTitle" class="mgmt-ec-panel-title">Basic information</h2>
+            </div>
+            <div class="mgmt-ec-panel-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="name" class="form-label-modern">
+                    <i class="bi bi-mortarboard"></i>
+                    Class name <span class="required">*</span>
+                  </label>
+                  <input type="text" class="form-input-modern" id="name" name="name" value="{{ class_info.name }}" required>
+                </div>
+                <div class="form-group">
+                  <label for="subject" class="form-label-modern">
+                    <i class="bi bi-book"></i>
+                    Subject <span class="required">*</span>
+                  </label>
+                  <input type="text" class="form-input-modern" id="subject" name="subject" value="{{ class_info.subject or '' }}" required>
+                </div>
+                <div class="form-group">
+                  <label for="room_number" class="form-label-modern">
+                    <i class="bi bi-door-open"></i>
+                    Room number
+                  </label>
+                  <input type="text" class="form-input-modern" id="room_number" name="room_number" value="{{ class_info.room_number or '' }}" placeholder="e.g., Room 101">
+                </div>
+                <div class="form-group">
+                  <label for="max_students" class="form-label-modern">
+                    <i class="bi bi-people-fill"></i>
+                    Maximum students
+                  </label>
+                  <input type="number" class="form-input-modern" id="max_students" name="max_students" value="{{ class_info.max_students or 30 }}" min="1" max="100">
+                </div>
+                <div class="form-group form-group-full">
+                  <label class="form-label-modern">
+                    <i class="bi bi-clock"></i>
+                    Weekly schedule
+                  </label>
+                  <div class="schedule-builder">
+                    <div class="schedule-table-wrapper">
+                      <table class="schedule-table">
+                        <thead>
+                          <tr>
+                            <th class="time-header">Time</th>
+                            <th class="day-header">Mon</th>
+                            <th class="day-header">Tue</th>
+                            <th class="day-header">Wed</th>
+                            <th class="day-header">Thu</th>
+                            <th class="day-header">Fri</th>
+                            <th class="day-header disabled">Sat</th>
+                            <th class="day-header disabled">Sun</th>
+                          </tr>
+                        </thead>
+                        <tbody id="scheduleGrid"></tbody>
+                      </table>
+                    </div>
+                    <input type="hidden" id="schedule" name="schedule" value="{{ class_info.schedule or '' }}">
+                    <div class="schedule-actions">
+                      <button type="button" class="btn-schedule-clear" onclick="clearSchedule()">
+                        <i class="bi bi-x-circle"></i> Clear all
+                      </button>
+                      <small class="form-hint">Click time slots to mark class meetings. Saturday and Sunday are disabled.</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="term_type" class="form-label-modern">
+                    <i class="bi bi-calendar4-range"></i>
+                    Class term
+                  </label>
+                  <select class="form-select-modern" id="term_type" name="term_type">
+                    {% set _term_type = class_info.term_type if class_info.term_type else 'full_year' %}
+                    <option value="full_year" {% if _term_type == 'full_year' %}selected{% endif %}>Full year (all quarters)</option>
+                    <option value="semester" {% if _term_type == 'semester' %}selected{% endif %}>Semester (S1 or S2)</option>
+                    <option value="quarter" {% if _term_type == 'quarter' %}selected{% endif %}>Single quarter (Q1–Q4)</option>
+                  </select>
+                  <small class="form-hint">Controls how non-applicable quarters display on report cards.</small>
+                </div>
+                <div class="form-group">
+                  <label for="term_value" class="form-label-modern">
+                    <i class="bi bi-calendar2-week"></i>
+                    Term value
+                  </label>
+                  <select class="form-select-modern" id="term_value" name="term_value">
+                    {% set _term_value = class_info.term_value if class_info.term_value else '' %}
+                    <option value="" {% if not _term_value %}selected{% endif %}>—</option>
+                    <option value="S1" {% if _term_value == 'S1' %}selected{% endif %}>S1 (Q1 + Q2)</option>
+                    <option value="S2" {% if _term_value == 'S2' %}selected{% endif %}>S2 (Q3 + Q4)</option>
+                    <option value="Q1" {% if _term_value == 'Q1' %}selected{% endif %}>Q1 only</option>
+                    <option value="Q2" {% if _term_value == 'Q2' %}selected{% endif %}>Q2 only</option>
+                    <option value="Q3" {% if _term_value == 'Q3' %}selected{% endif %}>Q3 only</option>
+                    <option value="Q4" {% if _term_value == 'Q4' %}selected{% endif %}>Q4 only</option>
+                  </select>
+                  <small class="form-hint">For semester/quarter classes. Leave blank for full-year.</small>
+                </div>
+                <div class="form-group form-group-full">
+                  <label for="description" class="form-label-modern">
+                    <i class="bi bi-file-text"></i>
+                    Description
+                  </label>
+                  <textarea class="form-textarea-modern" id="description" name="description" rows="3" placeholder="Optional description of the class...">{{ class_info.description or '' }}</textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="mgmt-ec-panel" aria-labelledby="mgmtEcTeachersTitle">
+            <div class="mgmt-ec-panel-head">
+              <span class="mgmt-ec-panel-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+              <h2 id="mgmtEcTeachersTitle" class="mgmt-ec-panel-title">Teacher assignment</h2>
+            </div>
+            <div class="mgmt-ec-panel-body">
+              <div class="teacher-section">
+                <div class="teacher-group">
+                  <label for="teacher_id" class="form-label-modern">
+                    <i class="bi bi-person-fill"></i>
+                    Primary teacher <span class="required">*</span>
+                  </label>
+                  <select class="form-select-modern" id="teacher_id" name="teacher_id" required>
+                    <option value="">Select a primary teacher...</option>
+                    {% for teacher in available_teachers %}
+                    <option value="{{ teacher.id }}" {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
+                      {{ teacher.first_name }} {{ teacher.last_name }}
+                      {% if teacher.user %}({{ teacher.user.username }}){% endif %}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="teacher-grid">
+                  <div class="teacher-group">
+                    <label for="substitute_teachers" class="form-label-modern">
+                      <i class="bi bi-person-clock"></i>
+                      Substitute teachers
+                    </label>
+                    <select class="form-select-modern form-select-multiple" id="substitute_teachers" name="substitute_teachers" multiple size="5">
+                      {% for teacher in available_teachers %}
+                      <option value="{{ teacher.id }}" {% if teacher in class_info.substitute_teachers %}selected{% endif %}>
+                        {{ teacher.first_name }} {{ teacher.last_name }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <small class="form-hint">Hold Ctrl/Cmd to select multiple</small>
+                  </div>
+                  <div class="teacher-group">
+                    <label for="additional_teachers" class="form-label-modern">
+                      <i class="bi bi-people"></i>
+                      Additional teachers
+                    </label>
+                    <select class="form-select-modern form-select-multiple" id="additional_teachers" name="additional_teachers" multiple size="5">
+                      {% for teacher in available_teachers %}
+                      <option value="{{ teacher.id }}" {% if teacher in class_info.additional_teachers %}selected{% endif %}>
+                        {{ teacher.first_name }} {{ teacher.last_name }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <small class="form-hint">Hold Ctrl/Cmd to select multiple</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="mgmt-ec-panel" aria-labelledby="mgmtEcGradesTitle">
+            <div class="mgmt-ec-panel-head">
+              <span class="mgmt-ec-panel-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span>
+              <h2 id="mgmtEcGradesTitle" class="mgmt-ec-panel-title">Grade levels</h2>
+            </div>
+            <div class="mgmt-ec-panel-body">
+              <label class="form-label-modern">
+                <i class="bi bi-list-ol"></i>
+                Target grade levels
+              </label>
+              <div class="grade-search-box mb-3">
+                <i class="bi bi-search"></i>
+                <input type="text" id="gradeSearch" class="grade-search-input" placeholder="Search grade levels...">
+              </div>
+              <div class="mb-3">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                  <button type="button" class="mgmt-ec-btn-sm mgmt-ec-btn-sm--primary" onclick="selectAllGrades()">
+                    <i class="bi bi-check-all me-1"></i>Select all
+                  </button>
+                  <button type="button" class="mgmt-ec-btn-sm" onclick="clearAllGrades()">
+                    <i class="bi bi-x me-1"></i>Clear all
+                  </button>
+                  <span class="ms-auto text-muted small" id="gradeSelectedCount">0 selected</span>
+                </div>
+              </div>
+              <div class="grade-levels-list" id="gradeLevelsList">
+                {% for grade in range(1, 13) %}
+                <div class="grade-level-item" data-grade-name="grade {{ grade }}">
+                  <input class="grade-checkbox" type="checkbox" name="grade_levels" value="{{ grade }}" id="grade_{{ grade }}"
+                    {% if class_info.get_grade_levels and grade in class_info.get_grade_levels() %}checked{% endif %}
+                    onchange="updateGradeSelectedCount()">
+                  <label class="grade-level-label" for="grade_{{ grade }}">
+                    <div class="grade-level-avatar">{{ grade }}</div>
+                    <div class="grade-level-info">
+                      <div class="grade-level-name">Grade {{ grade }}</div>
+                      <div class="grade-level-meta">
+                        <span class="grade-meta-badge">
+                          <i class="bi bi-mortarboard"></i>
+                          {% if grade <= 5 %}Elementary{% elif grade <= 8 %}Middle school{% else %}High school{% endif %}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+
+          <section class="mgmt-ec-panel" aria-labelledby="mgmtEcStatusTitle">
+            <div class="mgmt-ec-panel-head">
+              <span class="mgmt-ec-panel-icon"><i class="bi bi-toggle-on" aria-hidden="true"></i></span>
+              <h2 id="mgmtEcStatusTitle" class="mgmt-ec-panel-title">Class status</h2>
+            </div>
+            <div class="mgmt-ec-panel-body">
+              <div class="status-toggle">
+                <label class="toggle-label" for="is_active">
+                  <input type="checkbox" class="toggle-input" id="is_active" name="is_active" {% if class_info.is_active %}checked{% endif %}>
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-text">
+                    <strong>Class is active</strong>
+                    <small>When active, this class is available for enrollment and assignments</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {% if can_manage_student_assistants %}
+          <section class="mgmt-ec-panel" aria-labelledby="mgmtEcAssistantsTitle">
+            <div class="mgmt-ec-panel-head">
+              <span class="mgmt-ec-panel-icon"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></span>
+              <h2 id="mgmtEcAssistantsTitle" class="mgmt-ec-panel-title">Student assistants</h2>
+            </div>
+            <div class="mgmt-ec-panel-body">
+              <p class="form-hint mb-3">
+                Up to {{ max_assistants_per_class }} students per class. Each student may assist at most <strong>2 classes</strong>.
+                Assistants can take attendance and enter grades; actions are logged and staff are alerted on sensitive changes.
+              </p>
+              {% set ca = current_student_assistants if current_student_assistants is defined else [] %}
+              {% set slot1 = ca[0] if ca|length > 0 else none %}
+              {% set slot2 = ca[1] if ca|length > 1 else none %}
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="student_assistant_ids_1" class="form-label-modern">
+                    <i class="bi bi-person-plus"></i> Assistant 1
+                  </label>
+                  <select class="form-select-modern" id="student_assistant_ids_1" name="student_assistant_ids">
+                    <option value="">— None —</option>
+                    {% for s in eligible_assistant_students %}
+                    <option value="{{ s.id }}" {% if slot1 and slot1.id == s.id %}selected{% endif %}>
+                      {{ s.first_name }} {{ s.last_name }}{% if s.grade_level %} (Grade {{ s.grade_level }}){% endif %}{% if s.student_id %} — {{ s.student_id }}{% endif %}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="student_assistant_ids_2" class="form-label-modern">
+                    <i class="bi bi-person-plus"></i> Assistant 2
+                  </label>
+                  <select class="form-select-modern" id="student_assistant_ids_2" name="student_assistant_ids">
+                    <option value="">— None —</option>
+                    {% for s in eligible_assistant_students %}
+                    <option value="{{ s.id }}" {% if slot2 and slot2.id == s.id %}selected{% endif %}>
+                      {{ s.first_name }} {{ s.last_name }}{% if s.grade_level %} (Grade {{ s.grade_level }}){% endif %}{% if s.student_id %} — {{ s.student_id }}{% endif %}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              {% if not eligible_assistant_students %}
+              <small class="text-muted d-block mt-2">No eligible students. Enroll students or set grade levels for the class.</small>
+              {% endif %}
+            </div>
+          </section>
+          {% endif %}
+
+          <div class="mgmt-ec-form-actions">
+            <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="mgmt-ec-btn-cancel">
+              <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            <button type="submit" class="mgmt-ec-btn-submit">
+              <i class="bi bi-check-circle"></i> Save changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <aside class="mgmt-ec-sidebar" aria-labelledby="mgmtEcSummaryTitle">
+        <div class="mgmt-ec-summary">
+          <div class="mgmt-ec-summary-head">
+            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+            <h2 id="mgmtEcSummaryTitle">Current configuration</h2>
+          </div>
+
+          <div class="mgmt-ec-summary-group">
+            <h3>Class details</h3>
+            <dl class="mgmt-ec-summary-list">
+              <div><dt>Name</dt><dd>{{ class_info.name }}</dd></div>
+              <div><dt>Subject</dt><dd>{{ class_info.subject or 'Not set' }}</dd></div>
+              <div><dt>Room</dt><dd>{{ class_info.room_number or 'Not set' }}</dd></div>
+              <div><dt>Schedule</dt><dd>{{ class_info.schedule or 'Not set' }}</dd></div>
+              <div><dt>Max students</dt><dd>{{ class_info.max_students or 30 }}</dd></div>
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  {% if class_info.is_active %}
+                  <span class="mgmt-ec-badge mgmt-ec-badge--active">Active</span>
+                  {% else %}
+                  <span class="mgmt-ec-badge mgmt-ec-badge--inactive">Inactive</span>
+                  {% endif %}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="mgmt-ec-summary-group">
+            <h3>Teachers</h3>
+            <dl class="mgmt-ec-summary-list">
+              <div>
+                <dt>Primary</dt>
+                <dd>
+                  {% if class_info.teacher_id %}
+                    {% for teacher in available_teachers %}
+                      {% if teacher.id == class_info.teacher_id %}{{ teacher.first_name }} {{ teacher.last_name }}{% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="text-muted">Not assigned</span>
+                  {% endif %}
+                </dd>
+              </div>
+              <div>
+                <dt>Substitutes</dt>
+                <dd>{% set sub_count = class_info.substitute_teachers|list|length %}{% if sub_count > 0 %}{{ sub_count }} assigned{% else %}<span class="text-muted">None</span>{% endif %}</dd>
+              </div>
+              <div>
+                <dt>Additional</dt>
+                <dd>{% set add_count = class_info.additional_teachers|list|length %}{% if add_count > 0 %}{{ add_count }} assigned{% else %}<span class="text-muted">None</span>{% endif %}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="mgmt-ec-summary-group">
+            <h3>Other</h3>
+            <dl class="mgmt-ec-summary-list">
+              <div>
+                <dt>Grade levels</dt>
+                <dd>{% if class_info.get_grade_levels_display %}{{ class_info.get_grade_levels_display() }}{% else %}<span class="text-muted">Not set</span>{% endif %}</dd>
+              </div>
+              <div>
+                <dt>School year</dt>
+                <dd>{% if class_info.school_year %}{{ class_info.school_year.name }}{% else %}<span class="text-muted">Not set</span>{% endif %}</dd>
+              </div>
+              {% if can_manage_student_assistants and assistant_count > 0 %}
+              <div>
+                <dt>Assistants</dt>
+                <dd>{{ assistant_count }} assigned</dd>
+              </div>
+              {% endif %}
+            </dl>
+          </div>
+
+          <div class="mgmt-ec-summary-note">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <p><strong>Note:</strong> Changes affect all assignments and student records for this class.</p>
+          </div>
+
+          <div class="mgmt-ec-sidebar-links">
+            <a href="{{ url_for('management.class_roster', class_id=class_info.id) }}" class="mgmt-ec-sidebar-link">
+              <i class="bi bi-people"></i> Manage roster
+            </a>
+            <a href="{{ url_for('management.assignments_and_grades', class_id=class_info.id) }}" class="mgmt-ec-sidebar-link">
+              <i class="bi bi-clipboard-data"></i> Grades &amp; assignments
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+// Schedule Builder Functionality
+(function() {
+    const scheduleInput = document.getElementById('schedule');
+    const scheduleGrid = document.getElementById('scheduleGrid');
+    if (!scheduleGrid || !scheduleInput) return;
+    const timeSlots = [];
+    for (let hour = 8; hour <= 15; hour++) {
+        const startMinute = hour === 8 ? 30 : 0;
+        const endMinute = hour === 15 ? 30 : 60;
+        for (let minute = startMinute; minute < endMinute; minute += 30) {
+            const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            const displayTime = formatTime(hour, minute);
+            timeSlots.push({ value: timeStr, display: displayTime });
+        }
+    }
+    let selectedSlots = parseSchedule(scheduleInput.value);
+    timeSlots.forEach(slot => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="time-cell">${slot.display}</td>
+            <td class="schedule-cell" data-day="mon" data-time="${slot.value}"></td>
+            <td class="schedule-cell" data-day="tue" data-time="${slot.value}"></td>
+            <td class="schedule-cell" data-day="wed" data-time="${slot.value}"></td>
+            <td class="schedule-cell" data-day="thu" data-time="${slot.value}"></td>
+            <td class="schedule-cell" data-day="fri" data-time="${slot.value}"></td>
+            <td class="schedule-cell disabled" data-day="sat" data-time="${slot.value}"></td>
+            <td class="schedule-cell disabled" data-day="sun" data-time="${slot.value}"></td>
+        `;
+        scheduleGrid.appendChild(row);
+    });
+    setTimeout(() => {
+        document.querySelectorAll('.schedule-cell:not(.disabled)').forEach(cell => {
+            cell.addEventListener('click', function() {
+                const day = this.dataset.day;
+                const time = this.dataset.time;
+                const key = `${day}-${time}`;
+                if (this.classList.contains('active')) {
+                    this.classList.remove('active');
+                    delete selectedSlots[key];
+                } else {
+                    this.classList.add('active');
+                    selectedSlots[key] = { day, time };
+                }
+                updateScheduleInput();
+            });
+            const day = cell.dataset.day;
+            const time = cell.dataset.time;
+            const key = `${day}-${time}`;
+            if (selectedSlots[key]) cell.classList.add('active');
+        });
+    }, 100);
+    function formatTime(hour, minute) {
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+        return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+    }
+    function parseSchedule(scheduleStr) {
+        const slots = {};
+        if (!scheduleStr) return slots;
+        return slots;
+    }
+    function updateScheduleInput() {
+        const scheduleParts = [];
+        const dayNames = ['mon', 'tue', 'wed', 'thu', 'fri'];
+        const dayLabels = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri' };
+        dayNames.forEach(day => {
+            const daySlots = Object.keys(selectedSlots)
+                .filter(key => selectedSlots[key].day === day)
+                .map(key => selectedSlots[key].time)
+                .sort();
+            if (daySlots.length > 0) {
+                const timeRanges = groupConsecutiveTimes(daySlots);
+                timeRanges.forEach(range => {
+                    const startTime = formatTimeForDisplay(range.start);
+                    const endTime = formatTimeForDisplay(range.end);
+                    if (range.start === range.end) {
+                        scheduleParts.push(`${dayLabels[day]} ${startTime}`);
+                    } else {
+                        scheduleParts.push(`${dayLabels[day]} ${startTime}-${endTime}`);
+                    }
+                });
+            }
+        });
+        scheduleInput.value = scheduleParts.join(', ') || '';
+    }
+    function groupConsecutiveTimes(times) {
+        if (times.length === 0) return [];
+        const ranges = [];
+        let currentStart = times[0];
+        let currentEnd = times[0];
+        for (let i = 1; i < times.length; i++) {
+            const prevTime = parseTime(currentEnd);
+            const currTime = parseTime(times[i]);
+            if (currTime - prevTime === 30) {
+                currentEnd = times[i];
+            } else {
+                ranges.push({ start: currentStart, end: add30Minutes(currentEnd) });
+                currentStart = times[i];
+                currentEnd = times[i];
+            }
+        }
+        ranges.push({ start: currentStart, end: add30Minutes(currentEnd) });
+        return ranges;
+    }
+    function parseTime(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+    function add30Minutes(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        let newMinutes = minutes + 30;
+        let newHours = hours;
+        if (newMinutes >= 60) { newMinutes = 0; newHours += 1; }
+        return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+    }
+    function formatTimeForDisplay(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+        return `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
+    }
+    window.clearSchedule = function() {
+        selectedSlots = {};
+        document.querySelectorAll('.schedule-cell.active').forEach(cell => cell.classList.remove('active'));
+        updateScheduleInput();
+    };
+})();
+
+(function() {
+    const gradeSearchInput = document.getElementById('gradeSearch');
+    if (gradeSearchInput) {
+        gradeSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            document.querySelectorAll('.grade-level-item').forEach(item => {
+                const gradeName = item.dataset.gradeName || '';
+                const label = item.querySelector('.grade-level-name');
+                const labelText = label ? label.textContent.toLowerCase() : '';
+                item.style.display = (gradeName.includes(searchTerm) || labelText.includes(searchTerm)) ? 'block' : 'none';
+            });
+            updateGradeSelectedCount();
+        });
+    }
+    window.updateGradeSelectedCount = function() {
+        const checkboxes = document.querySelectorAll('.grade-checkbox:not(:disabled)');
+        const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+            const item = cb.closest('.grade-level-item');
+            return item && item.style.display !== 'none';
+        });
+        const checked = visibleCheckboxes.filter(cb => cb.checked).length;
+        const total = visibleCheckboxes.length;
+        const countElement = document.getElementById('gradeSelectedCount');
+        if (countElement) countElement.textContent = `${checked} selected${total > 0 ? ` of ${total}` : ''}`;
+    };
+    window.selectAllGrades = function() {
+        Array.from(document.querySelectorAll('.grade-checkbox:not(:disabled)')).filter(cb => {
+            const item = cb.closest('.grade-level-item');
+            return item && item.style.display !== 'none';
+        }).forEach(cb => { cb.checked = true; });
+        updateGradeSelectedCount();
+    };
+    window.clearAllGrades = function() {
+        document.querySelectorAll('.grade-checkbox').forEach(cb => { cb.checked = false; });
+        updateGradeSelectedCount();
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateGradeSelectedCount);
+    } else {
+        updateGradeSelectedCount();
+    }
+})();
+</script>

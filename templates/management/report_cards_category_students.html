@@ -1,245 +1,351 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/management_report_cards_category_students.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_report_cards_category.css') }}?v=1">
 {% endblock %}
 
+{% set is_director = current_user.role == 'Director' %}
+
+{% set _category_icon_map = {
+  'elementary': 'pencil-square',
+  '6-8': 'mortarboard-fill',
+  '9-12': 'building'
+} %}
+{% set _category_short_map = {
+  'elementary': 'Elementary',
+  '6-8': 'Middle school',
+  '9-12': 'High school'
+} %}
+{% set _hero_icon = _category_icon_map.get(category, category_icon) %}
+{% set _category_short = _category_short_map.get(category, category_name) %}
+
+{# Pre-compute aggregate stats so we don't re-walk the list multiple times #}
+{% set _total_students = students|length if students else 0 %}
+{% set _grade_levels = grade_levels|length if grade_levels else 0 %}
+{% set _ns = namespace(total_reports=0, with_reports=0) %}
+{% if students %}
+  {% for s in students %}
+    {% if s.report_cards and s.report_cards|length > 0 %}
+      {% set _ns.with_reports = _ns.with_reports + 1 %}
+      {% set _ns.total_reports = _ns.total_reports + (s.report_cards|length) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 {% block dashboard_content %}
-<div class="container-fluid py-4">
-  <!-- Header Section -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-          <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-              <li class="breadcrumb-item"><a href="{{ url_for('management.report_cards') }}">Report Cards</a></li>
-              <li class="breadcrumb-item active" aria-current="page">{{ category_name }}</li>
-            </ol>
-          </nav>
-          <h2 class="mb-1 fw-bold">
-            <i class="bi bi-{{ category_icon }} me-2 text-{{ category_color }}"></i>{{ category_name }}
-          </h2>
-          <p class="text-muted mb-0">Select a student to generate their report card</p>
+<div class="mgmt-rcc container-fluid px-0 px-md-1" data-category="{{ category }}">
+  <div class="mgmt-rcc-shell{% if is_director %} mgmt-rcc-shell--director{% endif %}">
+
+    {# ===== Hero ===== #}
+    <header class="mgmt-rcc-hero">
+      <div class="mgmt-rcc-hero-left">
+        <div class="mgmt-rcc-hero-icon" aria-hidden="true">
+          <i class="bi bi-{{ _hero_icon }}"></i>
         </div>
         <div>
-          <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Categories
-          </a>
+          <ol class="mgmt-rcc-breadcrumb" aria-label="Breadcrumb">
+            <li><a href="{{ url_for('management.report_cards') }}">Report cards</a></li>
+            <li class="sep" aria-hidden="true">›</li>
+            <li class="current" aria-current="page">{{ category_name }}</li>
+          </ol>
+          <p class="mgmt-rcc-eyebrow">Generate report cards</p>
+          <h1 class="mgmt-rcc-title">
+            {{ category_name }}
+            <span class="mgmt-rcc-title-chip">{{ _category_short }}</span>
+          </h1>
+          <p class="mgmt-rcc-subtitle">
+            <i class="bi bi-people-fill" aria-hidden="true"></i>
+            Pick a student to start their report card — search, filter, and skim recent activity below.
+          </p>
+        </div>
+      </div>
+      <div class="mgmt-rcc-hero-actions">
+        <a href="{{ url_for('management.report_cards') }}" class="mgmt-rcc-btn mgmt-rcc-btn--ghost">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to categories
+        </a>
+        {% if 'management.generate_report_card_form' in current_app.view_functions %}
+        <a href="{{ url_for('management.generate_report_card_form') }}" class="mgmt-rcc-btn mgmt-rcc-btn--primary">
+          <i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Generate report card
+        </a>
+        {% endif %}
+      </div>
+    </header>
+
+    {# ===== Insight tiles ===== #}
+    <div class="mgmt-rcc-insights" role="list">
+      <div class="mgmt-rcc-insight" role="listitem">
+        <span class="mgmt-rcc-insight-icon mgmt-rcc-insight-icon--band">
+          <i class="bi bi-people-fill" aria-hidden="true"></i>
+        </span>
+        <div>
+          <div class="mgmt-rcc-insight-value">{{ _total_students }}</div>
+          <div class="mgmt-rcc-insight-label">Students in category</div>
+        </div>
+      </div>
+      <div class="mgmt-rcc-insight" role="listitem">
+        <span class="mgmt-rcc-insight-icon">
+          <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
+        </span>
+        <div>
+          <div class="mgmt-rcc-insight-value">{{ _grade_levels }}</div>
+          <div class="mgmt-rcc-insight-label">Grade levels</div>
+        </div>
+      </div>
+      <div class="mgmt-rcc-insight" role="listitem">
+        <span class="mgmt-rcc-insight-icon">
+          <i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i>
+        </span>
+        <div>
+          <div class="mgmt-rcc-insight-value">{{ _ns.total_reports }}</div>
+          <div class="mgmt-rcc-insight-label">Report cards on file</div>
+        </div>
+      </div>
+      <div class="mgmt-rcc-insight" role="listitem">
+        <span class="mgmt-rcc-insight-icon mgmt-rcc-insight-icon--warn">
+          <i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i>
+        </span>
+        <div>
+          <div class="mgmt-rcc-insight-value">{{ _total_students - _ns.with_reports }}</div>
+          <div class="mgmt-rcc-insight-label">Students without a card</div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Search and Filter -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="row g-3 align-items-end">
-            <div class="col-md-8">
-              <label for="searchStudent" class="form-label fw-semibold">
-                <i class="bi bi-search me-2"></i>Search Students
-              </label>
-              <input type="text" class="form-control form-control-lg" id="searchStudent" placeholder="Search by name or student ID...">
-            </div>
-            <div class="col-md-4">
-              <label for="filterGrade" class="form-label fw-semibold">
-                <i class="bi bi-funnel me-2"></i>Filter by Grade
-              </label>
-              <select class="form-select form-select-lg" id="filterGrade">
-                <option value="">All Grades in Category</option>
-                {% for grade in grade_levels %}
-                  <option value="{{ grade }}">Grade {{ grade }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Students Grid -->
-  <div class="row g-4" id="studentsGrid">
     {% if students and students|length > 0 %}
+    {# ===== Toolbar (search + grade chips + sort) ===== #}
+    <div class="mgmt-rcc-toolbar" role="search">
+      <div class="mgmt-rcc-search">
+        <i class="bi bi-search mgmt-rcc-search-icon" aria-hidden="true"></i>
+        <input type="search"
+               id="rccSearchInput"
+               placeholder="Search by name or student ID…"
+               autocomplete="off"
+               aria-label="Search students by name or ID">
+      </div>
+
+      <div class="mgmt-rcc-toolbar-group" role="group" aria-label="Filter by grade">
+        <span class="mgmt-rcc-toolbar-label">Grade</span>
+        <button type="button" class="mgmt-rcc-chip is-active" data-grade-chip="">All</button>
+        {% for grade in grade_levels %}
+        <button type="button" class="mgmt-rcc-chip" data-grade-chip="{{ grade }}">{{ grade }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="mgmt-rcc-toolbar-group">
+        <label for="rccSortOrder" class="mgmt-rcc-toolbar-label">Sort</label>
+        <select id="rccSortOrder" class="mgmt-rcc-select">
+          <option value="name-asc">Name (A → Z)</option>
+          <option value="name-desc">Name (Z → A)</option>
+          <option value="grade-asc">Grade (low → high)</option>
+          <option value="grade-desc">Grade (high → low)</option>
+          <option value="reports-desc">Most report cards</option>
+          <option value="reports-asc">Fewest report cards</option>
+        </select>
+      </div>
+    </div>
+
+    {# ===== Grid header (live count) ===== #}
+    <div class="mgmt-rcc-grid-head">
+      <h2 class="mgmt-rcc-grid-title">
+        <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i> Roster
+      </h2>
+      <span class="mgmt-rcc-count">
+        Showing <strong id="rccVisibleCount">{{ _total_students }}</strong>
+        of <strong>{{ _total_students }}</strong> student{{ 's' if _total_students != 1 else '' }}
+      </span>
+    </div>
+
+    {# ===== Student grid ===== #}
+    <div class="mgmt-rcc-grid" id="rccGrid">
       {% for student in students %}
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3 student-card" data-grade="{{ student.grade_level }}" data-name="{{ student.first_name }} {{ student.last_name }}" data-id="{{ student.student_id if student.student_id else '' }}">
-          <div class="card h-100 border-0 shadow-sm hover-lift" style="min-width: 280px;">
-            <div class="card-body p-4">
-              <div class="d-flex align-items-start mb-3" style="min-height: 70px;">
-                <div class="rounded-circle bg-{{ category_color }} bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; flex-shrink: 0; min-width: 60px;">
-                  <span class="text-{{ category_color }} fw-bold fs-4" style="white-space: nowrap;">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
-                </div>
-                <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
-                  <h5 class="mb-1 fw-bold" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ student.first_name }} {{ student.last_name }}</h5>
-                  <p class="text-muted small mb-0" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    <i class="bi bi-card-text me-1"></i>
-                    {% if student.student_id %}
-                      ID: {{ student.student_id }}
-                    {% else %}
-                      No ID
-                    {% endif %}
-                  </p>
-                </div>
-              </div>
-              
-              <div class="mb-3">
-                <div class="row g-2">
-                  <div class="col-6">
-                    <div class="bg-light rounded p-2 text-center" style="min-height: 60px; display: flex; flex-direction: column; justify-content: center;">
-                      <small class="text-muted d-block" style="white-space: nowrap; font-size: 0.75rem;">Grade Level</small>
-                      <strong class="text-{{ category_color }}" style="font-size: 1.25rem;">{{ student.grade_level }}</strong>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="bg-light rounded p-2 text-center" style="min-height: 60px; display: flex; flex-direction: column; justify-content: center;">
-                      <small class="text-muted d-block" style="white-space: nowrap; font-size: 0.75rem;">Enrolled Classes</small>
-                      <strong class="text-{{ category_color }}" style="font-size: 1.25rem;">{{ student.enrollments|length if student.enrollments else 0 }}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {% set _initials = (student.first_name[0] if student.first_name else '?') ~ (student.last_name[0] if student.last_name else '') %}
+      {% set _enrollments = student.enrollments|length if student.enrollments else 0 %}
+      {% set _student_reports = student.report_cards|sort(attribute='generated_at', reverse=True)|list if student.report_cards else [] %}
+      {% set _report_count = _student_reports|length %}
+      <article class="mgmt-rcc-student"
+               data-name="{{ (student.first_name ~ ' ' ~ student.last_name)|lower }}"
+               data-id="{{ student.student_id|default('', true)|lower }}"
+               data-grade="{{ student.grade_level }}"
+               data-reports="{{ _report_count }}">
+        <div class="mgmt-rcc-student-stripe" aria-hidden="true"></div>
+        <div class="mgmt-rcc-student-body">
 
-              <div class="d-grid">
-                <a href="{{ url_for('management.generate_report_card_for_student', student_id=student.id, category=category) }}" class="btn btn-{{ category_color }} btn-lg">
-                  <i class="bi bi-file-earmark-text me-2"></i>Generate Report Card
-                </a>
-              </div>
-
-              <!-- Recent Report Cards -->
-              {% set student_reports = student.report_cards|sort(attribute='generated_at', reverse=True)|list %}
-              {% if student_reports and student_reports|length > 0 %}
-                <div class="mt-3 pt-3 border-top">
-                  <small class="text-muted fw-semibold d-block mb-2">
-                    <i class="bi bi-clock-history me-1"></i>Recent Report Cards
-                  </small>
-                  {% for report in student_reports[:3] %}
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                      <small class="text-muted">{{ report.quarter }} - {{ report.school_year.name if report.school_year else 'N/A' }}</small>
-                      <div class="btn-group btn-group-sm">
-                        <a href="{{ url_for('management.view_report_card', report_card_id=report.id) }}" class="btn btn-outline-secondary btn-sm" title="View">
-                          <i class="bi bi-eye"></i>
-                        </a>
-                        <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report.id) }}" class="btn btn-outline-secondary btn-sm" title="PDF" target="_blank">
-                          <i class="bi bi-file-pdf"></i>
-                        </a>
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% endif %}
+          <div class="mgmt-rcc-student-head">
+            <div class="mgmt-rcc-avatar" aria-hidden="true">{{ _initials }}</div>
+            <div class="mgmt-rcc-student-ident">
+              <p class="mgmt-rcc-student-name" title="{{ student.first_name }} {{ student.last_name }}">
+                {{ student.first_name }} {{ student.last_name }}
+              </p>
+              <span class="mgmt-rcc-student-id">
+                <i class="bi bi-card-text" aria-hidden="true"></i>
+                {% if student.student_id %}
+                  ID {{ student.student_id }}
+                {% else %}
+                  No student ID
+                {% endif %}
+              </span>
             </div>
           </div>
-        </div>
-      {% endfor %}
-    {% else %}
-      <div class="col-12">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body text-center py-5">
-            <div class="mb-3">
-              <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+
+          <div class="mgmt-rcc-student-stats">
+            <div class="mgmt-rcc-stat">
+              <p class="mgmt-rcc-stat-label">Grade</p>
+              <p class="mgmt-rcc-stat-value">{{ student.grade_level }}</p>
             </div>
-            <h5 class="text-muted mb-2">No Students Found</h5>
-            <p class="text-muted">There are no students in the {{ category_name }} category.</p>
-            <a href="{{ url_for('management.report_cards') }}" class="btn btn-primary mt-3">
-              <i class="bi bi-arrow-left me-2"></i>Back to Categories
+            <div class="mgmt-rcc-stat">
+              <p class="mgmt-rcc-stat-label">Classes</p>
+              <p class="mgmt-rcc-stat-value">{{ _enrollments }}</p>
+            </div>
+          </div>
+
+          <div class="mgmt-rcc-student-actions">
+            <a href="{{ url_for('management.generate_report_card_for_student', student_id=student.id, category=category) }}"
+               class="mgmt-rcc-btn mgmt-rcc-btn--band">
+              <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Generate report card
             </a>
           </div>
-        </div>
-      </div>
-    {% endif %}
-  </div>
 
-  <!-- Statistics Summary -->
-  {% if students and students|length > 0 %}
-    <div class="row g-4 mt-4">
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body text-center">
-            <h6 class="text-muted mb-2">Students in Category</h6>
-            <h2 class="mb-0 fw-bold text-{{ category_color }}">{{ students|length }}</h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body text-center">
-            <h6 class="text-muted mb-2">Grade Levels</h6>
-            <h2 class="mb-0 fw-bold text-{{ category_color }}">{{ grade_levels|length }}</h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body text-center">
-            <h6 class="text-muted mb-2">Total Report Cards</h6>
-            <h2 class="mb-0 fw-bold text-{{ category_color }}">
-              {% set ns = namespace(total=0) %}
-              {% for student in students %}
-                {% if student.report_cards %}
-                  {% set ns.total = ns.total + student.report_cards|length %}
-                {% endif %}
+          {% if _report_count > 0 %}
+          <div class="mgmt-rcc-recent" data-recent>
+            <button type="button" class="mgmt-rcc-recent-toggle" aria-expanded="false">
+              <span>
+                <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+                Recent ({{ _report_count }})
+              </span>
+              <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+            </button>
+            <div class="mgmt-rcc-recent-list">
+              {% for report in _student_reports[:5] %}
+              <div class="mgmt-rcc-recent-row">
+                <span class="mgmt-rcc-recent-meta" title="{{ report.quarter }} — {{ report.school_year.name if report.school_year else 'N/A' }}">
+                  <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+                  {{ report.quarter }} · {{ report.school_year.name if report.school_year else 'N/A' }}
+                </span>
+                <span class="mgmt-rcc-recent-actions">
+                  <a class="mgmt-rcc-icon-btn"
+                     href="{{ url_for('management.view_report_card', report_card_id=report.id) }}"
+                     title="View report card">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                  </a>
+                  <a class="mgmt-rcc-icon-btn"
+                     href="{{ url_for('management.generate_report_card_pdf', report_card_id=report.id) }}"
+                     target="_blank"
+                     rel="noopener"
+                     title="Open PDF">
+                    <i class="bi bi-file-pdf" aria-hidden="true"></i>
+                  </a>
+                </span>
+              </div>
               {% endfor %}
-              {{ ns.total }}
-            </h2>
+            </div>
           </div>
+          {% endif %}
+
+        </div>
+      </article>
+      {% endfor %}
+
+      <div class="mgmt-rcc-noresults" id="rccNoResults" hidden>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <div>
+          <strong>No students match your filters.</strong>
+          <span class="d-block small">Clear the search or pick a different grade to see the full roster.</span>
         </div>
       </div>
     </div>
-  {% endif %}
+
+    {% else %}
+    {# ===== Truly empty: no students in this category ===== #}
+    <div class="mgmt-rcc-empty">
+      <div class="mgmt-rcc-empty-icon"><i class="bi bi-inbox" aria-hidden="true"></i></div>
+      <p class="mgmt-rcc-empty-title">No students in {{ category_name }}</p>
+      <p class="mgmt-rcc-empty-text">There are no enrolled students in this grade band yet.</p>
+      <a href="{{ url_for('management.report_cards') }}" class="mgmt-rcc-btn mgmt-rcc-btn--primary">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to categories
+      </a>
+    </div>
+    {% endif %}
+  </div>
 </div>
 
-
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const searchInput = document.getElementById('searchStudent');
-  const gradeFilter = document.getElementById('filterGrade');
-  const studentCards = document.querySelectorAll('.student-card');
+document.addEventListener('DOMContentLoaded', function () {
+  const grid = document.getElementById('rccGrid');
+  if (!grid) return;
 
-  function filterStudents() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const selectedGrade = gradeFilter.value;
+  const searchInput = document.getElementById('rccSearchInput');
+  const sortSelect = document.getElementById('rccSortOrder');
+  const chips = Array.from(document.querySelectorAll('[data-grade-chip]'));
+  const cards = Array.from(grid.querySelectorAll('.mgmt-rcc-student'));
+  const noResults = document.getElementById('rccNoResults');
+  const visibleCountEl = document.getElementById('rccVisibleCount');
 
-    studentCards.forEach(card => {
-      const name = card.getAttribute('data-name').toLowerCase();
-      const id = card.getAttribute('data-id').toLowerCase();
-      const grade = card.getAttribute('data-grade');
+  let activeGrade = '';
 
-      const matchesSearch = name.includes(searchTerm) || id.includes(searchTerm);
-      const matchesGrade = !selectedGrade || grade === selectedGrade;
-
-      if (matchesSearch && matchesGrade) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
+  function applyFilters() {
+    const term = (searchInput && searchInput.value || '').trim().toLowerCase();
+    let visible = 0;
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name') || '';
+      const id = card.getAttribute('data-id') || '';
+      const grade = card.getAttribute('data-grade') || '';
+      const matchesSearch = !term || name.includes(term) || id.includes(term);
+      const matchesGrade = !activeGrade || grade === activeGrade;
+      const show = matchesSearch && matchesGrade;
+      card.hidden = !show;
+      if (show) visible++;
     });
-
-    // Show/hide no results message
-    const visibleCards = Array.from(studentCards).filter(card => card.style.display !== 'none');
-    const noResultsMsg = document.getElementById('noResultsMessage');
-    
-    if (visibleCards.length === 0 && !noResultsMsg) {
-      const grid = document.getElementById('studentsGrid');
-      const msg = document.createElement('div');
-      msg.id = 'noResultsMessage';
-      msg.className = 'col-12';
-      msg.innerHTML = `
-        <div class="alert alert-info text-center">
-          <i class="bi bi-search me-2"></i>No students match your search criteria.
-        </div>
-      `;
-      grid.appendChild(msg);
-    } else if (visibleCards.length > 0 && noResultsMsg) {
-      noResultsMsg.remove();
-    }
+    if (visibleCountEl) visibleCountEl.textContent = String(visible);
+    if (noResults) noResults.hidden = visible !== 0;
   }
 
-  searchInput.addEventListener('input', filterStudents);
-  gradeFilter.addEventListener('change', filterStudents);
+  function sortCards(order) {
+    const sorted = cards.slice().sort((a, b) => {
+      const an = a.getAttribute('data-name') || '';
+      const bn = b.getAttribute('data-name') || '';
+      const ag = parseInt(a.getAttribute('data-grade'), 10);
+      const bg = parseInt(b.getAttribute('data-grade'), 10);
+      const ar = parseInt(a.getAttribute('data-reports'), 10) || 0;
+      const br = parseInt(b.getAttribute('data-reports'), 10) || 0;
+      switch (order) {
+        case 'name-desc':    return bn.localeCompare(an);
+        case 'grade-asc':    return (ag - bg) || an.localeCompare(bn);
+        case 'grade-desc':   return (bg - ag) || an.localeCompare(bn);
+        case 'reports-desc': return (br - ar) || an.localeCompare(bn);
+        case 'reports-asc':  return (ar - br) || an.localeCompare(bn);
+        case 'name-asc':
+        default:             return an.localeCompare(bn);
+      }
+    });
+    sorted.forEach(card => grid.appendChild(card));
+    // keep no-results banner at the end
+    if (noResults) grid.appendChild(noResults);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilters);
+  }
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+      activeGrade = chip.getAttribute('data-grade-chip') || '';
+      applyFilters();
+    });
+  });
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => sortCards(sortSelect.value));
+  }
+
+  // Collapsible recent report cards per student card
+  document.querySelectorAll('[data-recent]').forEach(panel => {
+    const btn = panel.querySelector('.mgmt-rcc-recent-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const open = panel.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
 });
 </script>
 {% endblock %}
-

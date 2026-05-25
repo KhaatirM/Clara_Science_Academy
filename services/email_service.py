@@ -7,7 +7,7 @@ for the domain. Optional MAIL_REPLY_TO (monitored inbox) often helps versus pure
 """
 
 import html
-import uuid
+from email.utils import make_msgid
 
 from flask import current_app, has_request_context, url_for
 from extensions import mail
@@ -42,10 +42,12 @@ def _message_id_domain() -> str:
 
 
 def _transactional_extra_headers() -> dict:
-    """Headers that help classify mail as system-generated (not bulk marketing)."""
-    domain = _message_id_domain()
+    """Headers that help classify mail as system-generated (not bulk marketing).
+
+    Do not set Message-ID here — Flask-Mail sets it from msg.msgId; adding another
+    via extra_headers violates RFC 5322 and Gmail rejects the message.
+    """
     return {
-        'Message-ID': f'<{uuid.uuid4().hex}@{domain}>',
         'Auto-Submitted': 'auto-generated',
         # Reduces auto-reply / OOF loops to donotrespond@ (Exchange / Outlook)
         'X-Auto-Response-Suppress': 'OOF, AutoReply',
@@ -100,6 +102,10 @@ def send_email(to_email, subject, body_text, body_html=None):
             reply_to=reply_to,
             extra_headers=extra,
         )
+        domain = _message_id_domain()
+        if domain:
+            msg.msgId = make_msgid(domain=domain)
+
         mail.send(msg)
         return True
     except Exception as e:

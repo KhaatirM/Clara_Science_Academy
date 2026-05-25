@@ -421,7 +421,8 @@ def create_announcement():
         
         # Create notifications for target users
         if target_group == 'all_students':
-            students = Student.query.all()
+            from utils.student_roster import active_roster_students_query
+            students = active_roster_students_query(require_active_enrollment=True).all()
             for student in students:
                 if student.user:
                     notification = Notification(

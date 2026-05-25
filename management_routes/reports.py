@@ -12,6 +12,40 @@ from models import db, ReportCard, SchoolYear, Class, Student, Enrollment
 
 bp = Blueprint('reports', __name__)
 
+# Grade-band categories for report card navigation (0 = Kindergarten)
+REPORT_CARD_CATEGORIES = {
+    'elementary': {
+        'name': 'Elementary School (K–5th)',
+        'grades': [0, 1, 2, 3, 4, 5],
+        'icon': 'pencil-square',
+        'color': 'primary',
+    },
+    '6-8': {
+        'name': 'Middle School (6th–8th)',
+        'grades': [6, 7, 8],
+        'icon': 'mortarboard',
+        'color': 'warning',
+    },
+    '9-12': {
+        'name': 'High School (9th–12th)',
+        'grades': [9, 10, 11, 12],
+        'icon': 'building',
+        'color': 'info',
+    },
+}
+
+# Legacy category slugs → current slug
+REPORT_CARD_CATEGORY_ALIASES = {
+    'k-2': 'elementary',
+    '3-5': 'elementary',
+}
+
+
+def _resolve_report_card_category(category):
+    """Map URL slug to a defined report card category key."""
+    return REPORT_CARD_CATEGORY_ALIASES.get(category, category)
+
+
 def _as_date(value):
     """Convert datetime/date/str to date, best-effort."""
     if value is None:
@@ -29,6 +63,24 @@ def _as_date(value):
             except Exception:
                 continue
     return None
+
+
+def _grade3_pdf_extras(student, school_year_id, selected_quarters, class_objects, grades, include_attendance,
+                       report_card_data=None):
+    """Context variables for 3rd grade progress report (director page-1 layout)."""
+    if not student or getattr(student, 'grade_level', None) != 3:
+        return {}
+    from utils.report_card_grade3 import grade3_full_template_context
+    sid = student.id if hasattr(student, 'id') else student
+    return grade3_full_template_context(
+        sid,
+        school_year_id,
+        selected_quarters,
+        class_objects,
+        grades,
+        include_attendance=include_attendance,
+        report_card_data=report_card_data,
+    )
 
 
 def _selected_quarters_date_window(school_year_id, quarters_clean):
@@ -340,15 +392,8 @@ def persist_report_card_record(
     if not student:
         out['error'] = 'Student not found.'
         return out
-    if getattr(student, 'is_deleted', False):
-        out['error'] = (
-            'This student has been archived (removed from the school roster). '
-            'New report cards cannot be generated for archived students.'
-        )
-        return out
-
-    # Withdrawn students: allow historical generation without requiring active enrollment.
-    if getattr(student, 'is_active', True) is False:
+    # Archived / former students: allow report cards for transfer records (any enrollment).
+    if getattr(student, 'is_deleted', False) or getattr(student, 'is_active', True) is False:
         enrollment_must_be_active = False
 
     if not getattr(student, 'gender', None):
@@ -791,7 +836,16 @@ def generate_report_card_form():
                 additional_comments=report_card_data.get('additional_comments', '') if isinstance(report_card_data, dict) else '',
                 generated_date=datetime.utcnow(),
                 report_type=report_type,
-                template_prefix=template_prefix
+                template_prefix=template_prefix,
+                **_grade3_pdf_extras(
+                    student,
+                    school_year_id_int,
+                    quarters_to_include,
+                    class_objects,
+                    calculated_grades,
+                    include_attendance,
+                    report_card_data,
+                ),
             )
             
             # Read CSS file from filesystem and inject it into the HTML
@@ -1133,7 +1187,16 @@ def generate_report_card_pdf(report_card_id):
             additional_comments=report_card_data.get('additional_comments', '') if isinstance(report_card_data, dict) else '',
             generated_date=report_card.generated_at or datetime.utcnow(),
             report_type=report_type,
-            template_prefix=template_prefix
+            template_prefix=template_prefix,
+            **_grade3_pdf_extras(
+                student,
+                report_card.school_year_id,
+                selected_quarters,
+                class_objects,
+                grades,
+                include_attendance,
+                report_card_data,
+            ),
         )
         
         # Read CSS file from filesystem and inject it into the HTML
@@ -1250,14 +1313,20 @@ def report_cards():
     )
     all_classes = Class.query.order_by(Class.name).all()
     quarters = ['All', 'Q1', 'Q2', 'Q3', 'Q4']
+
+    category_counts = {
+        key: sum(1 for s in all_students if s.grade_level in info['grades'])
+        for key, info in REPORT_CARD_CATEGORIES.items()
+    }
     
     return render_template('management/report_cards_enhanced.html', 
                          report_cards=report_cards_list,
-                         recent_reports=report_cards_list,
+                         recent_reports=report_cards_list[:10],
                          school_years=SchoolYear.query.all(),
                          students=all_students,
-                         classes=Class.query.all(),
-                         quarters=quarters)
+                         classes=all_classes,
+                         quarters=quarters,
+                         category_counts=category_counts)
 
 
 
@@ -1271,33 +1340,13 @@ def report_cards():
 @permissions_required('report_cards:view', 'report_cards:generate')
 def report_cards_by_category(category):
     """Display students by grade category for report card generation."""
-    # Define category mappings
-    categories = {
-        'k-2': {
-            'name': 'Elementary School (K-2)',
-            'grades': [0, 1, 2],  # 0 for Kindergarten
-            'icon': 'alphabet-uppercase',
-            'color': 'primary'
-        },
-        '3-5': {
-            'name': 'Elementary School (3rd-5th)',
-            'grades': [3, 4, 5],
-            'icon': 'book',
-            'color': 'success'
-        },
-        '6-8': {
-            'name': 'Middle School (6th-8th)',
-            'grades': [6, 7, 8],
-            'icon': 'mortarboard',
-            'color': 'warning'
-        }
-    }
-    
-    if category not in categories:
+    category = _resolve_report_card_category(category)
+
+    if category not in REPORT_CARD_CATEGORIES:
         flash('Invalid grade category selected.', 'danger')
         return redirect(url_for('management.report_cards'))
-    
-    category_info = categories[category]
+
+    category_info = REPORT_CARD_CATEGORIES[category]
     
     # Get students in this grade category
     students = (

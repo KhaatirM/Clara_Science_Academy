@@ -11,6 +11,13 @@ from datetime import datetime, timedelta, date
 import csv
 import io
 
+from utils.attendance_status import (
+    VALID_ATTENDANCE_STATUSES,
+    normalize_attendance_status,
+    attendance_status_form_value,
+    count_class_attendance_stats,
+)
+
 bp = Blueprint('attendance', __name__)
 
 @bp.route('/attendance')
@@ -86,25 +93,28 @@ def take_attendance(class_id):
             
             # Process attendance for each student
             for student in students:
-                status = request.form.get(f'status_{student.id}', 'absent')
-                
-                # Check if attendance already exists for this date and student
+                raw_status = request.form.get(f'status_{student.id}')
+                status = normalize_attendance_status(raw_status)
+                if not status or status not in VALID_ATTENDANCE_STATUSES:
+                    continue
+                notes = (request.form.get(f'notes_{student.id}') or '').strip() or None
+
                 existing_attendance = Attendance.query.filter_by(
                     class_id=class_id,
                     student_id=student.id,
                     date=attendance_date
                 ).first()
-                
+
                 if existing_attendance:
-                    # Update existing attendance
                     existing_attendance.status = status
+                    existing_attendance.notes = notes
                 else:
-                    # Create new attendance record
                     new_attendance = Attendance(
                         class_id=class_id,
                         student_id=student.id,
                         date=attendance_date,
                         status=status,
+                        notes=notes,
                         teacher_id=current_user.teacher_staff_id
                     )
                     db.session.add(new_attendance)
@@ -142,21 +152,14 @@ def take_attendance(class_id):
         date=selected_date
     ).all()
     
-    present_count = sum(1 for a in selected_date_attendance if a.status.lower() == 'present')
-    late_count = sum(1 for a in selected_date_attendance if a.status.lower() == 'late')
-    absent_count = sum(1 for a in selected_date_attendance if a.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
     total_students = len(students)
-    present_percentage = round((present_count / total_students * 100) if total_students > 0 else 0, 1)
-    
-    attendance_stats = {
-        'present': present_count,
-        'late': late_count,
-        'absent': absent_count,
-        'present_percentage': present_percentage
-    }
-    
-    # Create dictionaries for existing records
+    attendance_stats = count_class_attendance_stats(selected_date_attendance, total_students)
+
     existing_records = {a.student_id: a for a in selected_date_attendance}
+    existing_form_status = {
+        sid: attendance_status_form_value(rec.status)
+        for sid, rec in existing_records.items()
+    }
     school_day_records = {}  # Placeholder for school-wide attendance if needed
     
     # Define attendance status options
@@ -169,6 +172,7 @@ def take_attendance(class_id):
                          attendance_stats=attendance_stats,
                          attendance_date_str=selected_date.strftime('%Y-%m-%d'),
                          existing_records=existing_records,
+                         existing_form_status=existing_form_status,
                          school_day_records=school_day_records,
                          statuses=statuses)
 
@@ -298,13 +302,13 @@ def mark_all_present(class_id):
             ).first()
             
             if existing_attendance:
-                existing_attendance.status = 'present'
+                existing_attendance.status = 'Present'
             else:
                 new_attendance = Attendance(
                     class_id=class_id,
                     student_id=student.id,
                     date=attendance_date,
-                    status='present',
+                    status='Present',
                     teacher_id=current_user.teacher_staff_id
                 )
                 db.session.add(new_attendance)

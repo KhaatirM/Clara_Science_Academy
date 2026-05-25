@@ -2,165 +2,19 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_attendance_hub.css') }}">
+{% if request.endpoint and request.endpoint.startswith('teacher.') %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">
+{% else %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_attendance.css') }}?v=2">
+{% endif %}
 {% endblock %}
 
 {% block title %}Attendance Hub{% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <!-- Modern Attendance Header -->
-    <div class="attendance-admin-header mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <h2 class="attendance-admin-title mb-1">
-                    <i class="bi bi-calendar-check me-2"></i>Attendance Hub
-                </h2>
-                <p class="attendance-admin-subtitle mb-0">
-                    <i class="bi bi-clipboard-check me-2"></i>Take and manage attendance for all classes
-                </p>
-            </div>
-            <div>
-                <span class="badge badge-attendance-date">
-                    <i class="bi bi-calendar3 me-2"></i>{{ today_date }}
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="attendance-stat-card">
-                <div class="attendance-stat-icon">
-                    <i class="bi bi-house-door-fill"></i>
-                </div>
-                <div class="attendance-stat-content">
-                    <h3 class="attendance-stat-number">{{ classes|length }}</h3>
-                    <p class="attendance-stat-label">Total Classes</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="attendance-stat-card">
-                <div class="attendance-stat-icon">
-                    <i class="bi bi-check-circle"></i>
-                </div>
-                <div class="attendance-stat-content">
-                    <h3 class="attendance-stat-number">{{ today_attendance_count or 0 }}</h3>
-                    <p class="attendance-stat-label">Completed Today</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="attendance-stat-card">
-                <div class="attendance-stat-icon">
-                    <i class="bi bi-clock"></i>
-                </div>
-                <div class="attendance-stat-content">
-                    <h3 class="attendance-stat-number">{{ pending_classes_count or 0 }}</h3>
-                    <p class="attendance-stat-label">Pending</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="attendance-stat-card">
-                <div class="attendance-stat-icon">
-                    <i class="bi bi-percent"></i>
-                </div>
-                <div class="attendance-stat-content">
-                    <h3 class="attendance-stat-number">{{ overall_attendance_rate or 0 }}%</h3>
-                    <p class="attendance-stat-label">Attendance Rate</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Classes Grid -->
-    {% if classes %}
-    <div class="row g-4">
-        {% for class_item in classes %}
-        <div class="col-12 col-md-6 col-xl-4">
-            <div class="attendance-class-card-modern">
-                <div class="attendance-card-header-modern">
-                    <div class="attendance-card-icon-modern">
-                        <i class="bi bi-book-fill"></i>
-                    </div>
-                    <div class="attendance-card-info-modern">
-                        <h6 class="attendance-card-title-modern">{{ class_item.name }}</h6>
-                        <p class="attendance-card-subject-modern">{{ class_item.subject or 'General' }}</p>
-                    </div>
-                    <div class="attendance-status-badge">
-                        {% if class_item.attendance_taken_today %}
-                            <span class="badge bg-success">
-                                <i class="bi bi-check-circle me-1"></i>Taken
-                            </span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark">
-                                <i class="bi bi-clock me-1"></i>Pending
-                            </span>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="attendance-card-body-modern">
-                    <div class="attendance-card-detail-modern">
-                        <i class="bi bi-people-fill me-2"></i>
-                        <span>Students: <strong>{{ class_item.enrollments|selectattr('is_active')|list|length }}</strong></span>
-                    </div>
-                    <div class="attendance-card-detail-modern">
-                        <i class="bi bi-person-badge me-2"></i>
-                        <span>Teacher: <strong>{{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</strong></span>
-                    </div>
-                    <div class="attendance-card-detail-modern">
-                        <i class="bi bi-calendar me-2"></i>
-                        <span>Grade: <strong>{{ class_item.get_grade_levels_display() if class_item.get_grade_levels_display() else 'N/A' }}</strong></span>
-                    </div>
-                    
-                    <div class="attendance-progress-modern">
-                        {% set student_count = class_item.enrollments|selectattr('is_active')|list|length %}
-                        <div class="attendance-progress-label">
-                            <small>Today's Attendance</small>
-                            <small>{% if class_item.attendance_taken_today %}{{ student_count }}/{{ student_count }}{% else %}0/{{ student_count }}{% endif %}</small>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            {% set progress_percentage = 100 if class_item.attendance_taken_today else 0 %}
-                            <div class="progress-bar {% if class_item.attendance_taken_today %}bg-success{% else %}bg-warning{% endif %}" 
-                                 role="progressbar" style="width: {{ progress_percentage }}%"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="attendance-card-footer-modern">
-                    <a href="{% if can_calendar_admin_ui %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}" class="btn btn-attendance-action-modern w-100">
-                        <i class="bi bi-clipboard-check me-1"></i>
-                        {% if class_item.attendance_taken_today %}View/Edit Attendance{% else %}Take Attendance{% endif %}
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="attendance-empty-state">
-        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
-        <h5 class="text-muted">No Classes Available</h5>
-        <p class="text-muted mb-3">There are no classes available to take attendance for.</p>
-        <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-attendance-unified">
-            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
-        </a>
-    </div>
-    {% endif %}
-</div>
-
-
-
-<script>
-function markAllClassesPresent() {
-    alert('Mark all classes present functionality will be implemented');
-}
-
-function viewAttendanceReports() {
-    alert('Attendance reports functionality will be implemented');
-}
-</script>
+{% if request.endpoint and request.endpoint.startswith('teacher.') %}
+{% include 'teachers/_teacher_attendance_hub.html' %}
+{% else %}
+{% include 'management/_management_attendance_hub.html' %}
+{% endif %}
 {% endblock %}

@@ -1,0 +1,1049 @@
+/* stu shell — matches management home / report cards */
+.mgmt-stu {
+  --mgmt-stu-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-stu-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-stu-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-stu-text: var(--hub-text, #0f172a);
+  --mgmt-stu-muted: var(--hub-muted, #64748b);
+  --mgmt-stu-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-stu-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-stu-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  --mgmt-stu-shadow: 0 4px 6px rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.08);
+  --mgmt-stu-radius: 20px;
+  padding: 0 0 2rem;
+}
+.mgmt-stu-shell {
+  background: var(--mgmt-stu-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+.mgmt-stu-shell--director {
+  --mgmt-stu-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --mgmt-stu-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --mgmt-stu-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --mgmt-stu-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+.mgmt-stu-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.mgmt-stu-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mgmt-stu-muted);
+  margin: 0 0 0.35rem;
+}
+.mgmt-stu-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--mgmt-stu-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.mgmt-stu-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--mgmt-stu-muted);
+  margin: 0;
+}
+.mgmt-stu-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mgmt-stu-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.mgmt-stu-role-badge--director {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+.mgmt-stu-role-badge--admin {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+.mgmt-stu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.mgmt-stu-btn--ghost {
+  color: #334155;
+  background: var(--mgmt-stu-surface);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+.mgmt-stu-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--mgmt-stu-accent);
+  color: var(--mgmt-stu-accent-deep);
+}
+.mgmt-stu-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--mgmt-stu-accent), var(--mgmt-stu-accent-deep));
+  border: 1px solid transparent;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+}
+.mgmt-stu-btn--primary:hover {
+  color: #fff;
+  filter: brightness(1.05);
+}
+.mgmt-stu-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 768px) {
+  .mgmt-stu-insights { grid-template-columns: repeat(4, 1fr); }
+}
+.mgmt-stu-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--mgmt-stu-surface);
+  border: 1px solid var(--mgmt-stu-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.mgmt-stu-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--mgmt-stu-accent-soft);
+  color: var(--mgmt-stu-accent-deep);
+}
+.mgmt-stu-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mgmt-stu-text);
+  line-height: 1.2;
+}
+.mgmt-stu-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mgmt-stu-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+.mgmt-stu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.mgmt-stu-mode-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.2rem;
+  background: var(--mgmt-stu-surface);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+.mgmt-stu-mode-pills .nav-link {
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 0.4rem 0.85rem;
+}
+.mgmt-stu-mode-pills .nav-link.active {
+  background: var(--mgmt-stu-accent-soft);
+  color: var(--mgmt-stu-accent-deep);
+}
+
+
+/* Scoped content */
+STUDENTS TAB STYLES ==================== */
+    
+    /* Students Header */
+.mgmt-stu-content .students-admin-header {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+.mgmt-stu-content .students-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+.mgmt-stu-content .students-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+.mgmt-stu-content .btn-students-add {
+        background: white;
+        color: #0d9488;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #0d9488;
+    }
+
+    /* Students Statistics Cards */
+.mgmt-stu-content .students-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+.mgmt-stu-content .students-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-stu-content .students-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-stu-content .students-stat-card:nth-child(1) .students-stat-icon {
+        background: linear-gradient(45deg, #0d9488, #14b8a6);
+    }
+
+.mgmt-stu-content .students-stat-card:nth-child(2) .students-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+.mgmt-stu-content .students-stat-card:nth-child(3) .students-stat-icon {
+        background: linear-gradient(45deg, #fa709a, #fee140);
+    }
+
+.mgmt-stu-content .students-stat-card:nth-child(4) .students-stat-icon {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+.mgmt-stu-content .students-stat-content {
+        flex: 1;
+    }
+
+.mgmt-stu-content .students-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+.mgmt-stu-content .students-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Students Search Card */
+.mgmt-stu-content .students-search-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+.mgmt-stu-content .students-search-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #0d9488;
+    }
+
+.mgmt-stu-content .students-search-header h5 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+    /* Compact account legend in header */
+.mgmt-stu-content .students-account-legend {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        line-height: 1.1;
+    }
+
+.mgmt-stu-content .students-account-legend .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+    }
+    .students-account-legend .legend-dot-danger { background: #dc3545; }
+    .students-account-legend .legend-dot-warning { background: #fd7e14; }
+    .students-account-legend .legend-dot-success { background: #198754; }
+
+.mgmt-stu-content .students-search-body {
+        padding: 1.5rem;
+    }
+
+.mgmt-stu-content .btn-students-search {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(13, 148, 136, 0.3);
+        color: white;
+    }
+
+.mgmt-stu-content .btn-students-reset {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-reset:hover {
+        background: #f8f9fa;
+        border-color: #0d9488;
+        color: #0d9488;
+    }
+
+.mgmt-stu-content .btn-students-info {
+        background: white;
+        color: #17a2b8;
+        border: 2px solid #17a2b8;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-info:hover {
+        background: #17a2b8;
+        color: white;
+    }
+
+.mgmt-stu-content .students-info-box {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 2px solid #0d9488;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+.mgmt-stu-content .students-info-box h6 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+.mgmt-stu-content .students-info-box ul {
+        margin-bottom: 0;
+        padding-left: 1.25rem;
+    }
+
+.mgmt-stu-content .students-info-box li {
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+
+    /* Students CSV Card */
+.mgmt-stu-content .students-csv-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+.mgmt-stu-content .students-csv-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #28a745;
+    }
+
+.mgmt-stu-content .students-csv-header h5 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+.mgmt-stu-content .students-csv-body {
+        padding: 1.5rem;
+    }
+
+    /* Students Results Banner */
+.mgmt-stu-content .students-results-banner {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 2px solid #0d9488;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    /* Students Table Card */
+.mgmt-stu-content .students-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+.mgmt-stu-content .students-table-header {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        flex-wrap: wrap;
+        gap: 1rem;
+        text-align: center;
+    }
+
+.mgmt-stu-content .students-table-header h5 {
+        margin: 0;
+        color: white;
+        font-weight: 700;
+    }
+
+.mgmt-stu-content .students-table-view-toggle {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+.mgmt-stu-content .btn-students-view {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 0.375rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-view:hover,
+.mgmt-stu-content .btn-students-view.active {
+        background: white;
+        color: #0d9488;
+    }
+
+.mgmt-stu-content .students-table-body {
+        padding: 1.5rem;
+    }
+
+.mgmt-stu-content .students-table-body .table {
+        margin-bottom: 0;
+    }
+
+.mgmt-stu-content .students-table-body .table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        border-bottom: 2px solid #0d9488;
+        padding: 1rem;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+.mgmt-stu-content .students-table-body .table tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+.mgmt-stu-content .students-table-body .table tbody td:first-child .d-flex {
+        justify-content: center;
+    }
+
+.mgmt-stu-content .students-table-body .gpa-display {
+        align-items: center;
+        margin-inline: auto;
+        width: fit-content;
+        max-width: 100%;
+    }
+
+.mgmt-stu-content .students-table-body .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .students-table-body .table tbody tr:hover {
+        background: #f8f9fa;
+        transform: scale(1.01);
+    }
+
+    /* Student Action Buttons */
+.mgmt-stu-content .btn-students-action-view {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-action-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+.mgmt-stu-content .btn-students-action-edit {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-action-edit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(13, 148, 136, 0.4);
+        color: white;
+    }
+
+.mgmt-stu-content .btn-students-action-delete {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Students Cards View */
+.mgmt-stu-content .students-cards-body {
+        padding: 1.5rem;
+    }
+
+    /* Full-width cards; global style.css sets .student-card { width: 120px } for legacy UI */
+.mgmt-stu-content .students-cards-body .student-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+.mgmt-stu-content .student-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+.mgmt-stu-content .student-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+.mgmt-stu-content .student-card-header {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+.mgmt-stu-content .student-card-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #0d9488;
+        flex-shrink: 0;
+    }
+
+.mgmt-stu-content .student-card-info {
+        flex: 1;
+    }
+
+.mgmt-stu-content .student-card-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+    }
+
+.mgmt-stu-content .student-card-id {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.9);
+        margin: 0.25rem 0 0 0;
+    }
+
+.mgmt-stu-content .student-card-body {
+        padding: 1.5rem;
+    }
+
+.mgmt-stu-content .student-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+.mgmt-stu-content .student-card-detail:last-child {
+        border-bottom: none;
+    }
+
+.mgmt-stu-content .student-card-detail i {
+        color: #0d9488;
+        width: 24px;
+    }
+
+.mgmt-stu-content .student-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+.mgmt-stu-content .btn-students-card-action {
+        flex: 1;
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-card-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(13, 148, 136, 0.4);
+        color: white;
+    }
+
+.mgmt-stu-content .btn-students-card-action-delete {
+        flex: 1;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-students-card-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Responsive Design for Students Tab */
+    @media (max-width: 768px) {
+.mgmt-stu-content .students-admin-title {
+            font-size: 2rem;
+        }
+        
+.mgmt-stu-content .students-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+.mgmt-stu-content .students-table-header {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+    }
+
+    /* ==================== STUDENT MODALS STYLES ==================== */
+    
+    /* Student Modal Base */
+.mgmt-stu-content .student-modal .modal-content {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    /* View Modal Header */
+.mgmt-stu-content .student-modal-header {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+    }
+
+.mgmt-stu-content .student-modal-header .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Edit Modal Header */
+.mgmt-stu-content .student-modal-header-edit {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+    }
+
+.mgmt-stu-content .student-modal-header-edit .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Modal Body */
+.mgmt-stu-content .student-modal-body {
+        padding: 2rem;
+        background: #f8f9fa;
+    }
+
+    /* Avatar Section */
+.mgmt-stu-content .student-modal-avatar-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+.mgmt-stu-content .student-modal-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-stu-content .student-modal-name-section {
+        flex: 1;
+    }
+
+.mgmt-stu-content .student-modal-name {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+.mgmt-stu-content .student-modal-id {
+        font-size: 1rem;
+        color: #6c757d;
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Student Info Grid */
+.mgmt-stu-content .student-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+.mgmt-stu-content .student-info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .student-info-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+
+.mgmt-stu-content .student-info-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+.mgmt-stu-content .student-info-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+.mgmt-stu-content .student-info-content label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+.mgmt-stu-content .student-info-content span {
+        font-size: 1.1rem;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+    /* Student Details Section */
+.mgmt-stu-content .student-details-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+.mgmt-stu-content .student-details-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #0d9488;
+    }
+
+.mgmt-stu-content .student-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+    }
+
+.mgmt-stu-content .student-detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+.mgmt-stu-content .student-detail-item label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+.mgmt-stu-content .student-detail-item span {
+        font-size: 1rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    /* Student Classes List */
+.mgmt-stu-content .student-classes-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+.mgmt-stu-content .student-class-badge {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        box-shadow: 0 3px 10px rgba(13, 148, 136, 0.3);
+    }
+
+    /* Edit Sections */
+.mgmt-stu-content .edit-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+.mgmt-stu-content .edit-section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #f093fb;
+    }
+
+.mgmt-stu-content .student-input {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.625rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .student-input:focus {
+        border-color: #0d9488;
+        box-shadow: 0 0 0 0.2rem rgba(13, 148, 136, 0.25);
+    }
+
+    /* Modal Footer */
+.mgmt-stu-content .student-modal-footer {
+        background: white;
+        padding: 1.5rem 2rem;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+    }
+
+    /* Modal Buttons */
+.mgmt-stu-content .btn-student-edit {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-student-edit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(240, 147, 251, 0.4);
+        color: white;
+    }
+
+.mgmt-stu-content .btn-student-close {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-student-close:hover {
+        background: #f8f9fa;
+        border-color: #0d9488;
+        color: #0d9488;
+    }
+
+.mgmt-stu-content .btn-student-save {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border: none;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-student-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(67, 233, 123, 0.4);
+        color: white;
+    }
+
+.mgmt-stu-content .btn-student-cancel {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+.mgmt-stu-content .btn-student-cancel:hover {
+        background: #f8f9fa;
+        border-color: #f093fb;
+        color: #f093fb;
+    }
+
+    /* Modal Responsive Design */
+    @media (max-width: 768px) {
+.mgmt-stu-content .student-modal-avatar-section {
+            flex-direction: column;
+            text-align: center;
+        }
+
+.mgmt-stu-content .student-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+.mgmt-stu-content .student-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ==================== 

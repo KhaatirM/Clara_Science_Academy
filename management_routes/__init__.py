@@ -329,8 +329,13 @@ def report_cards_route():
 @login_required
 @management_required
 def close_school_year_route():
-    """End-of-year archive and bulk report cards"""
-    return close_school_year_func()
+    """Legacy endpoint — redirect to the new phased closure workflow.
+
+    The old instant-close behavior is removed; users now schedule a closure
+    that runs Day 0 → 7 → 21 → 28 with notifications, lockouts, and a
+    pre-finalize checklist. See blueprint `school_year_closure`.
+    """
+    return redirect(url_for('school_year_closure.schedule'))
 
 @management_blueprint.route('/billing', endpoint='billing')
 @login_required

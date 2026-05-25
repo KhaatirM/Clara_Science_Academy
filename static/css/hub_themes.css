@@ -1,0 +1,382 @@
+/* ===== HUB LAYOUT THEME TOKENS =====
+ * Role hubs (rh-*), schedule (sch-*), and management hubs (mgmt-*) read these variables.
+ * theme-default matches the original teal / purple hub designs.
+ * Other body.theme-* classes shift accents and shells to match site themes (themes.css).
+ */
+
+body,
+body.theme-default {
+  /* Management / school admin hubs */
+  --hub-mgmt-accent: #0d9488;
+  --hub-mgmt-accent-deep: #0f766e;
+  --hub-mgmt-accent-soft: rgba(13, 148, 136, 0.12);
+  --hub-mgmt-bg: linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%);
+  --hub-mgmt-director-accent: #7c3aed;
+  --hub-mgmt-director-accent-deep: #6d28d9;
+  --hub-mgmt-director-accent-soft: rgba(124, 58, 237, 0.12);
+  --hub-mgmt-director-bg: linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%);
+
+  /* Shared hub chrome */
+  --hub-surface: rgba(255, 255, 255, 0.94);
+  --hub-border: rgba(255, 255, 255, 0.92);
+  --hub-text: #0f172a;
+  --hub-muted: #64748b;
+  --hub-btn-ghost-text: #334155;
+
+  /* Teacher role hubs */
+  --hub-teacher-accent: #0d9488;
+  --hub-teacher-accent-deep: #0f766e;
+  --hub-teacher-accent-soft: rgba(13, 148, 136, 0.14);
+  --hub-teacher-bg: linear-gradient(165deg, #ecfdf5 0%, #e0f2f1 45%, #d8ebe8 100%);
+  --hub-teacher-badge-bg: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  --hub-teacher-badge-text: #115e59;
+  --hub-teacher-badge-border: rgba(13, 148, 136, 0.25);
+
+  /* Student role hubs */
+  --hub-student-accent: #7c3aed;
+  --hub-student-accent-deep: #6d28d9;
+  --hub-student-accent-soft: rgba(124, 58, 237, 0.12);
+  --hub-student-bg: linear-gradient(165deg, #f5f3ff 0%, #ede9fe 45%, #e8e4f8 100%);
+  --hub-student-badge-bg: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  --hub-student-badge-text: #5b21b6;
+  --hub-student-badge-border: rgba(124, 58, 237, 0.2);
+
+  /* Academic concerns modal (default = alert red header + teal actions) */
+  --hub-concern-header-bg: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+  --hub-concern-shell-bg: var(--hub-mgmt-bg);
+  --hub-concern-alert: #dc3545;
+  --hub-concern-alert-deep: #b02a37;
+  --hub-concern-warning: #f59e0b;
+  --hub-concern-warning-deep: #d97706;
+  --hub-concern-info: #0ea5e9;
+  --hub-concern-info-deep: #0284c7;
+  --hub-concern-success: #16a34a;
+
+  /* Schedule hub (neutral base; teacher/student modifiers below) */
+  --hub-schedule-accent: #4f46e5;
+  --hub-schedule-accent-deep: #4338ca;
+  --hub-schedule-accent-soft: rgba(79, 70, 229, 0.12);
+  --hub-schedule-bg: linear-gradient(165deg, #eef2ff 0%, #e8eef8 45%, #e2eaf5 100%);
+}
+
+/* Non-default themes: concerns header follows site theme accent */
+body[class*="theme-"]:not(.theme-default) {
+  --hub-concern-header-bg: linear-gradient(
+    135deg,
+    var(--hub-mgmt-accent) 0%,
+    var(--hub-mgmt-accent-deep) 100%
+  );
+  --hub-concern-shell-bg: var(--hub-mgmt-bg);
+}
+
+/* ----- Per-theme hub accents (derived from themes.css sidebar / header palettes) ----- */
+
+body.theme-light {
+  --hub-concern-header-bg: linear-gradient(135deg, #2e86ab 0%, #1a6b8a 100%);
+  --hub-mgmt-accent: #2e86ab;
+  --hub-mgmt-accent-deep: #1a6b8a;
+  --hub-mgmt-accent-soft: rgba(46, 134, 171, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #eef4f8 0%, #e2ecf4 45%, #d8e6f0 100%);
+  --hub-teacher-accent: #2e86ab;
+  --hub-teacher-accent-deep: #1a6b8a;
+  --hub-teacher-accent-soft: rgba(46, 134, 171, 0.14);
+  --hub-teacher-bg: linear-gradient(165deg, #eef6fa 0%, #e4f0f8 45%, #dceaf4 100%);
+  --hub-student-accent: #4a6fa5;
+  --hub-student-accent-deep: #3d5a80;
+  --hub-student-bg: linear-gradient(165deg, #f0f4f8 0%, #e8eef6 45%, #e0eaf2 100%);
+  --hub-schedule-accent: #2e86ab;
+  --hub-schedule-accent-deep: #1a6b8a;
+  --hub-schedule-bg: linear-gradient(165deg, #eef4f8 0%, #e4eef6 45%, #dce8f2 100%);
+}
+
+body.theme-dark,
+body.theme-midnight {
+  --hub-concern-header-bg: linear-gradient(135deg, #3d7ea6 0%, #2d6280 100%);
+  --hub-mgmt-accent: #3d7ea6;
+  --hub-mgmt-accent-deep: #2d6280;
+  --hub-mgmt-accent-soft: rgba(61, 126, 166, 0.2);
+  --hub-mgmt-bg: linear-gradient(165deg, #1a1d23 0%, #252a31 45%, #2d3238 100%);
+  --hub-mgmt-director-accent: #8b7cb8;
+  --hub-mgmt-director-accent-deep: #5c4d8c;
+  --hub-mgmt-director-bg: linear-gradient(165deg, #1a1533 0%, #252a31 45%, #2d2647 100%);
+  --hub-surface: rgba(37, 42, 49, 0.96);
+  --hub-border: rgba(61, 69, 80, 0.6);
+  --hub-text: #e2e6ea;
+  --hub-muted: #94a3b8;
+  --hub-btn-ghost-text: #cbd5e1;
+  --hub-teacher-accent: #3d7ea6;
+  --hub-teacher-accent-deep: #2d6280;
+  --hub-teacher-bg: var(--hub-mgmt-bg);
+  --hub-student-accent: #8b7cb8;
+  --hub-student-accent-deep: #5c4d8c;
+  --hub-student-bg: linear-gradient(165deg, #1a1533 0%, #252a31 45%, #2d2647 100%);
+  --hub-schedule-accent: #3d7ea6;
+  --hub-schedule-accent-deep: #2d6280;
+  --hub-schedule-bg: var(--hub-mgmt-bg);
+}
+
+body.theme-snowy {
+  --hub-mgmt-accent: #5b8fb9;
+  --hub-mgmt-accent-deep: #3d6b8f;
+  --hub-mgmt-accent-soft: rgba(91, 143, 185, 0.16);
+  --hub-mgmt-bg: linear-gradient(165deg, #e8f4fc 0%, #d4e8f7 45%, #f0f8ff 100%);
+  --hub-teacher-accent: #5b8fb9;
+  --hub-teacher-accent-deep: #3d6b8f;
+  --hub-teacher-bg: linear-gradient(165deg, #eef6fc 0%, #dceef8 45%, #d4e8f7 100%);
+  --hub-student-accent: #7eb8e0;
+  --hub-student-accent-deep: #3d6b8f;
+  --hub-student-bg: linear-gradient(165deg, #f0f8ff 0%, #e8f4fc 45%, #dceef8 100%);
+  --hub-schedule-accent: #5b8fb9;
+  --hub-schedule-accent-deep: #3d6b8f;
+  --hub-schedule-bg: linear-gradient(165deg, #e8f4fc 0%, #dceef8 45%, #d4e8f7 100%);
+}
+
+body.theme-autumn {
+  --hub-mgmt-accent: #b8860b;
+  --hub-mgmt-accent-deep: #8b6914;
+  --hub-mgmt-accent-soft: rgba(184, 134, 11, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #faf6f0 0%, #f5ebe0 45%, #ede0d4 100%);
+  --hub-teacher-accent: #c45c26;
+  --hub-teacher-accent-deep: #8b4513;
+  --hub-student-accent: #a0522d;
+  --hub-student-accent-deep: #6b3410;
+  --hub-schedule-accent: #b8860b;
+  --hub-schedule-accent-deep: #8b6914;
+}
+
+body.theme-spring {
+  --hub-mgmt-accent: #43a047;
+  --hub-mgmt-accent-deep: #2e7d32;
+  --hub-mgmt-accent-soft: rgba(67, 160, 71, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #f0fff4 0%, #e8f5e9 45%, #f1f8e9 100%);
+  --hub-teacher-accent: #43a047;
+  --hub-teacher-accent-deep: #2e7d32;
+  --hub-student-accent: #66bb6a;
+  --hub-student-accent-deep: #388e3c;
+  --hub-schedule-accent: #43a047;
+  --hub-schedule-accent-deep: #2e7d32;
+}
+
+body.theme-summer {
+  --hub-mgmt-accent: #ff8f00;
+  --hub-mgmt-accent-deep: #e65100;
+  --hub-mgmt-accent-soft: rgba(255, 143, 0, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #fffde7 0%, #fff9c4 45%, #fff59d 100%);
+  --hub-teacher-accent: #f9a825;
+  --hub-teacher-accent-deep: #e65100;
+  --hub-student-accent: #ff8f00;
+  --hub-student-accent-deep: #e65100;
+  --hub-schedule-accent: #ff8f00;
+  --hub-schedule-accent-deep: #e65100;
+}
+
+body.theme-ocean {
+  --hub-mgmt-accent: #0097a7;
+  --hub-mgmt-accent-deep: #006064;
+  --hub-mgmt-accent-soft: rgba(0, 151, 167, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #e0f7fa 0%, #b2ebf2 45%, #80deea 100%);
+  --hub-teacher-accent: #0097a7;
+  --hub-teacher-accent-deep: #006064;
+  --hub-student-accent: #00acc1;
+  --hub-student-accent-deep: #00838f;
+  --hub-schedule-accent: #0097a7;
+  --hub-schedule-accent-deep: #006064;
+}
+
+body.theme-forest {
+  --hub-mgmt-accent: #388e3c;
+  --hub-mgmt-accent-deep: #1b5e20;
+  --hub-mgmt-accent-soft: rgba(56, 142, 60, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #e8f5e9 0%, #c8e6c9 45%, #a5d6a7 100%);
+  --hub-teacher-accent: #388e3c;
+  --hub-teacher-accent-deep: #1b5e20;
+  --hub-student-accent: #43a047;
+  --hub-student-accent-deep: #2e7d32;
+  --hub-schedule-accent: #388e3c;
+  --hub-schedule-accent-deep: #1b5e20;
+}
+
+body.theme-holiday {
+  --hub-mgmt-accent: #c62828;
+  --hub-mgmt-accent-deep: #1b5e20;
+  --hub-mgmt-accent-soft: rgba(198, 40, 40, 0.12);
+  --hub-mgmt-bg: linear-gradient(165deg, #ffebee 0%, #fce4ec 45%, #e8f5e9 100%);
+  --hub-teacher-accent: #c62828;
+  --hub-teacher-accent-deep: #8b0000;
+  --hub-student-accent: #2e7d32;
+  --hub-student-accent-deep: #1b5e20;
+  --hub-schedule-accent: #c62828;
+  --hub-schedule-accent-deep: #1b5e20;
+}
+
+body.theme-sunset {
+  --hub-mgmt-accent: #d45d35;
+  --hub-mgmt-accent-deep: #b84a28;
+  --hub-mgmt-accent-soft: rgba(212, 93, 53, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #fff5f0 0%, #ffe4dc 45%, #ffddd2 100%);
+  --hub-teacher-accent: #e07c4a;
+  --hub-teacher-accent-deep: #b84a28;
+  --hub-student-accent: #d45d35;
+  --hub-student-accent-deep: #b84a28;
+  --hub-schedule-accent: #d45d35;
+  --hub-schedule-accent-deep: #b84a28;
+}
+
+body.theme-desert {
+  --hub-mgmt-accent: #b07d52;
+  --hub-mgmt-accent-deep: #8b5e34;
+  --hub-mgmt-accent-soft: rgba(176, 125, 82, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #faf5ee 0%, #f5ebe0 45%, #ede0d1 100%);
+  --hub-teacher-accent: #c4946c;
+  --hub-teacher-accent-deep: #8b5e34;
+  --hub-student-accent: #b07d52;
+  --hub-student-accent-deep: #8b5e34;
+  --hub-schedule-accent: #b07d52;
+  --hub-schedule-accent-deep: #8b5e34;
+}
+
+body.theme-lavender {
+  --hub-mgmt-accent: #6b5b9e;
+  --hub-mgmt-accent-deep: #5a4a8c;
+  --hub-mgmt-accent-soft: rgba(107, 91, 158, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #f5f0ff 0%, #ede8f9 45%, #e5dff5 100%);
+  --hub-mgmt-director-accent: #7c6bad;
+  --hub-mgmt-director-accent-deep: #5a4a8c;
+  --hub-teacher-accent: #6b5b9e;
+  --hub-teacher-accent-deep: #5a4a8c;
+  --hub-student-accent: #8b7ab8;
+  --hub-student-accent-deep: #6b5b9e;
+  --hub-schedule-accent: #6b5b9e;
+  --hub-schedule-accent-deep: #5a4a8c;
+}
+
+body.theme-rose {
+  --hub-mgmt-accent: #c45466;
+  --hub-mgmt-accent-deep: #a83d4e;
+  --hub-mgmt-accent-soft: rgba(196, 84, 102, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #fff5f7 0%, #ffe8ec 45%, #fce4e8 100%);
+  --hub-teacher-accent: #d4697a;
+  --hub-teacher-accent-deep: #a83d4e;
+  --hub-student-accent: #c45466;
+  --hub-student-accent-deep: #a83d4e;
+  --hub-schedule-accent: #c45466;
+  --hub-schedule-accent-deep: #a83d4e;
+}
+
+body.theme-cherry {
+  --hub-mgmt-accent: #d87a94;
+  --hub-mgmt-accent-deep: #b85a7a;
+  --hub-mgmt-accent-soft: rgba(216, 122, 148, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #fff0f5 0%, #ffe4ed 45%, #ffdae8 100%);
+  --hub-teacher-accent: #e8a0b4;
+  --hub-teacher-accent-deep: #b85a7a;
+  --hub-student-accent: #d87a94;
+  --hub-student-accent-deep: #b85a7a;
+  --hub-schedule-accent: #d87a94;
+  --hub-schedule-accent-deep: #b85a7a;
+}
+
+body.theme-aurora {
+  --hub-mgmt-accent: #2d9a8a;
+  --hub-mgmt-accent-deep: #1e5c52;
+  --hub-mgmt-accent-soft: rgba(45, 154, 138, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #e8f9f5 0%, #d4f1ea 45%, #b8e8e0 100%);
+  --hub-teacher-accent: #2d9a8a;
+  --hub-teacher-accent-deep: #1e5c52;
+  --hub-student-accent: #4ab8a8;
+  --hub-student-accent-deep: #1e5c52;
+  --hub-schedule-accent: #2d9a8a;
+  --hub-schedule-accent-deep: #1e5c52;
+}
+
+body.theme-storm {
+  --hub-mgmt-accent: #4a5568;
+  --hub-mgmt-accent-deep: #2d3748;
+  --hub-mgmt-accent-soft: rgba(74, 85, 104, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #e8ecf0 0%, #d8dce4 45%, #c8ccd4 100%);
+  --hub-teacher-accent: #4a5568;
+  --hub-teacher-accent-deep: #2d3748;
+  --hub-student-accent: #5a6578;
+  --hub-student-accent-deep: #2d3748;
+  --hub-schedule-accent: #4a5568;
+  --hub-schedule-accent-deep: #2d3748;
+}
+
+body.theme-wine {
+  --hub-mgmt-accent: #6b2d3c;
+  --hub-mgmt-accent-deep: #4a1c28;
+  --hub-mgmt-accent-soft: rgba(107, 45, 60, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #faf5f5 0%, #f5ebeb 45%, #ede0e0 100%);
+  --hub-teacher-accent: #7b3d4c;
+  --hub-teacher-accent-deep: #4a1c28;
+  --hub-student-accent: #8b3d4c;
+  --hub-student-accent-deep: #4a1c28;
+  --hub-schedule-accent: #6b2d3c;
+  --hub-schedule-accent-deep: #4a1c28;
+}
+
+body.theme-mint {
+  --hub-mgmt-accent: #3d9a86;
+  --hub-mgmt-accent-deep: #2d7a6a;
+  --hub-mgmt-accent-soft: rgba(61, 154, 134, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #f0fff8 0%, #e0f8ef 45%, #d0f0e4 100%);
+  --hub-teacher-accent: #4db6a0;
+  --hub-teacher-accent-deep: #2d7a6a;
+  --hub-student-accent: #3d9a86;
+  --hub-student-accent-deep: #2d7a6a;
+  --hub-schedule-accent: #3d9a86;
+  --hub-schedule-accent-deep: #2d7a6a;
+}
+
+/* Calendar grid accents (shared/calendar.html) */
+body {
+  --hub-cal-accent: var(--hub-mgmt-accent);
+  --hub-cal-accent-deep: var(--hub-mgmt-accent-deep);
+}
+
+.rh--teacher,
+.sch--teacher {
+  --hub-cal-accent: var(--hub-teacher-accent);
+  --hub-cal-accent-deep: var(--hub-teacher-accent-deep);
+}
+
+.rh--student,
+.sch--student {
+  --hub-cal-accent: var(--hub-student-accent);
+  --hub-cal-accent-deep: var(--hub-student-accent-deep);
+}
+
+/* Dark themes: hub shells and nested content */
+body.theme-dark [class*="mgmt-"] [class*="-insight"],
+body.theme-dark .rh-insight,
+body.theme-midnight [class*="mgmt-"] [class*="-insight"],
+body.theme-midnight .rh-insight {
+  background: var(--hub-surface);
+  border-color: var(--hub-border);
+}
+
+body.theme-dark [class*="mgmt-"] [class*="-title"],
+body.theme-dark [class*="mgmt-"] [class*="-insight-value"],
+body.theme-dark .rh-title,
+body.theme-dark .rh-insight-value,
+body.theme-midnight [class*="mgmt-"] [class*="-title"],
+body.theme-midnight [class*="mgmt-"] [class*="-insight-value"],
+body.theme-midnight .rh-title,
+body.theme-midnight .rh-insight-value {
+  color: var(--hub-text);
+}
+
+body.theme-dark .rh-content .card,
+body.theme-dark [class*="mgmt-"] [class*="-content"] .card,
+body.theme-midnight .rh-content .card,
+body.theme-midnight [class*="mgmt-"] [class*="-content"] .card {
+  background-color: var(--hub-surface);
+  border-color: var(--hub-border);
+  color: var(--hub-text);
+}
+
+body.theme-dark .sch-insight,
+body.theme-midnight .sch-insight {
+  background: var(--hub-surface);
+  border-color: var(--hub-border);
+}

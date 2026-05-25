@@ -1,0 +1,145 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Billing &amp; Financials{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_billing.css') }}?v=1">
+{% endblock %}
+
+{% block dashboard_content %}
+{% set is_director = sidebar_role_canonical == 'Director' %}
+{% set student_count = students|length if students else 0 %}
+{% set pending_count = pending_invoices|length if pending_invoices else 0 %}
+
+<div class="mgmt-bill container-fluid px-0 px-md-1 py-2">
+  <div class="mgmt-bill-shell{% if is_director %} mgmt-bill-shell--director{% endif %}">
+    <header class="mgmt-bill-hero">
+      <div>
+        <p class="mgmt-bill-eyebrow">Financial operations</p>
+        <h1 class="mgmt-bill-title">Billing &amp; financials</h1>
+        <p class="mgmt-bill-subtitle">
+          <i class="bi bi-currency-dollar" aria-hidden="true"></i>
+          Tuition, fees, invoices, and school-wide financial reporting
+        </p>
+      </div>
+      <div class="mgmt-bill-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-bill-role-badge mgmt-bill-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-bill-role-badge mgmt-bill-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        <a href="{{ url_for('management.management_dashboard') }}" class="mgmt-bill-btn mgmt-bill-btn--ghost">
+          <i class="bi bi-house-door"></i> Dashboard
+        </a>
+        <form method="post" action="{{ url_for('management.administration.add_invoice') }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="mgmt-bill-btn mgmt-bill-btn--ghost">
+            <i class="bi bi-receipt"></i> New invoice
+          </button>
+        </form>
+        <form method="post" action="{{ url_for('management.administration.record_payment') }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="mgmt-bill-btn mgmt-bill-btn--primary">
+            <i class="bi bi-cash-coin"></i> Record payment
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <div class="mgmt-bill-insights" role="list">
+      <div class="mgmt-bill-insight" role="listitem">
+        <span class="mgmt-bill-insight-icon"><i class="bi bi-graph-up-arrow"></i></span>
+        <div>
+          <div class="mgmt-bill-insight-value">${{ '%.2f'|format(total_revenue|default(0)|float) }}</div>
+          <div class="mgmt-bill-insight-label">Total revenue</div>
+        </div>
+      </div>
+      <div class="mgmt-bill-insight" role="listitem">
+        <span class="mgmt-bill-insight-icon"><i class="bi bi-wallet2"></i></span>
+        <div>
+          <div class="mgmt-bill-insight-value">${{ '%.2f'|format(total_payments|default(0)|float) }}</div>
+          <div class="mgmt-bill-insight-label">Payments received</div>
+        </div>
+      </div>
+      <div class="mgmt-bill-insight" role="listitem">
+        <span class="mgmt-bill-insight-icon"><i class="bi bi-exclamation-circle"></i></span>
+        <div>
+          <div class="mgmt-bill-insight-value">${{ '%.2f'|format(outstanding_balance|default(0)|float) }}</div>
+          <div class="mgmt-bill-insight-label">Outstanding balance</div>
+        </div>
+      </div>
+      <div class="mgmt-bill-insight" role="listitem">
+        <span class="mgmt-bill-insight-icon"><i class="bi bi-people"></i></span>
+        <div>
+          <div class="mgmt-bill-insight-value">{{ student_count }}</div>
+          <div class="mgmt-bill-insight-label">Students on file</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mgmt-bill-content">
+      <div class="mgmt-bill-notice" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <div>
+          <strong>Financial management</strong>
+          <p class="mb-0">Manage tuition, fees, and financial records. Invoice and payment workflows are being expanded; use the actions above for placeholders until full billing is live.</p>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card shadow-sm mgmt-bill-card h-100">
+            <div class="card-header mgmt-bill-card-header mgmt-bill-card-header--success">
+              <h2 class="h5 mb-0"><i class="bi bi-mortarboard me-2"></i>Tuition management</h2>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">Manage student tuition and payment plans.</p>
+              <div class="d-grid gap-2">
+                <button type="button" class="btn mgmt-bill-outline-btn" disabled title="Coming soon">View tuition records</button>
+                <button type="button" class="btn mgmt-bill-outline-btn" disabled title="Coming soon">Generate invoices</button>
+                <button type="button" class="btn mgmt-bill-outline-btn" disabled title="Coming soon">Payment history</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm mgmt-bill-card h-100">
+            <div class="card-header mgmt-bill-card-header mgmt-bill-card-header--reports">
+              <h2 class="h5 mb-0"><i class="bi bi-bar-chart-line me-2"></i>Financial reports</h2>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">Generate financial reports and analytics.</p>
+              <div class="d-grid gap-2">
+                <button type="button" class="btn mgmt-bill-outline-btn mgmt-bill-outline-btn--warm" disabled title="Coming soon">Revenue report</button>
+                <button type="button" class="btn mgmt-bill-outline-btn mgmt-bill-outline-btn--warm" disabled title="Coming soon">Expense report</button>
+                <button type="button" class="btn mgmt-bill-outline-btn mgmt-bill-outline-btn--warm" disabled title="Coming soon">Budget analysis</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mgmt-bill-card mt-1">
+        <div class="card-header mgmt-bill-card-header">
+          <h2 class="h5 mb-0"><i class="bi bi-receipt-cutoff me-2"></i>Invoices &amp; pending payments</h2>
+        </div>
+        <div class="card-body">
+          {% if invoices or pending_invoices %}
+          <p class="text-muted mb-0">Invoice list will appear here when billing records are connected.</p>
+          {% else %}
+          <div class="mgmt-bill-empty">
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <p class="mb-1"><strong>No invoices yet</strong></p>
+            <p class="text-muted mb-0 small">
+              {{ active_invoices|default(0) }} active invoice{{ 's' if active_invoices|default(0) != 1 else '' }},
+              {{ pending_count }} pending — billing data models are not connected yet.
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

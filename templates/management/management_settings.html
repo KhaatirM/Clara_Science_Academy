@@ -2,31 +2,50 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_management_settings.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_tools.css') }}?v=1">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid py-4">
-    <!-- Animated Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="header-card-settings animated-fade-in">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <div class="header-icon-wrapper-settings me-3">
-                            <i class="bi bi-gear-fill"></i>
-                        </div>
-                        <div>
-                            <h2 class="mb-1 fw-bold text-white">Settings</h2>
-                            <p class="text-white mb-0 opacity-90"><i class="bi bi-person me-2"></i>{{ current_user.username }} - {{ current_user.role }}</p>
-                        </div>
-                    </div>
-                    <a href="{{ settings_back_url }}" class="btn btn-back-settings text-decoration-none">
-                        <i class="bi bi-arrow-left me-2"></i>Back
-                    </a>
-                </div>
-            </div>
-        </div>
+{% set is_director = sidebar_role_canonical == 'Director' %}
+<div class="mgmt-set container-fluid px-0 px-md-1 py-2">
+  <div class="mgmt-set-shell{% if is_director %} mgmt-set-shell--director{% endif %}">
+    <header class="mgmt-set-hero">
+      <div>
+        <p class="mgmt-set-eyebrow">Settings</p>
+        <h1 class="mgmt-set-title">Account &amp; preferences</h1>
+        <p class="mgmt-set-subtitle">
+          <i class="bi bi-person" aria-hidden="true"></i>
+          {{ current_user.username }} · {{ current_user.role }}
+        </p>
+      </div>
+      <div class="mgmt-set-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-set-role-badge mgmt-set-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-set-role-badge mgmt-set-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        <a href="{{ settings_back_url }}" class="mgmt-set-btn mgmt-set-btn--ghost"><i class="bi bi-arrow-left"></i> Dashboard</a>
+      </div>
+    </header>
+    <div class="mgmt-set-insights" role="list">
+      <div class="mgmt-set-insight" role="listitem">
+        <span class="mgmt-set-insight-icon"><i class="bi bi-google"></i></span>
+        <div><div class="mgmt-set-insight-value">{% if google_connected %}Connected{% else %}Not linked{% endif %}</div><div class="mgmt-set-insight-label">Google Classroom</div></div>
+      </div>
+      <div class="mgmt-set-insight" role="listitem">
+        <span class="mgmt-set-insight-icon"><i class="bi bi-palette"></i></span>
+        <div><div class="mgmt-set-insight-value">{{ current_user.theme_preference or 'default' }}</div><div class="mgmt-set-insight-label">Theme</div></div>
+      </div>
+      <div class="mgmt-set-insight" role="listitem">
+        <span class="mgmt-set-insight-icon"><i class="bi bi-envelope"></i></span>
+        <div><div class="mgmt-set-insight-value" style="font-size:0.85rem;">{{ current_user.email or '—' }}</div><div class="mgmt-set-insight-label">Email</div></div>
+      </div>
+      <div class="mgmt-set-insight" role="listitem">
+        <span class="mgmt-set-insight-icon"><i class="bi bi-shield-lock"></i></span>
+        <div><div class="mgmt-set-insight-value">Secure</div><div class="mgmt-set-insight-label">Password</div></div>
+      </div>
     </div>
+    <div class="mgmt-set-content">
     <div class="row g-4">
         <!-- Account Settings -->
         <div class="col-lg-6">
@@ -305,6 +324,8 @@
         </div>
         {% endif %}
     </div>
+    </div>
+  </div>
 </div>
 
 

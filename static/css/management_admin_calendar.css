@@ -1,0 +1,323 @@
+/* School calendar hub — matches management home / report cards */
+.mgmt-cal {
+  --mgmt-cal-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-cal-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-cal-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-cal-text: var(--hub-text, #0f172a);
+  --mgmt-cal-muted: var(--hub-muted, #64748b);
+  --mgmt-cal-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-cal-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-cal-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  padding: 0 0 2rem;
+}
+.mgmt-cal-shell {
+  background: var(--mgmt-cal-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+.mgmt-cal-shell--director {
+  --mgmt-cal-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --mgmt-cal-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --mgmt-cal-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --mgmt-cal-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+.mgmt-cal-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.mgmt-cal-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mgmt-cal-muted);
+  margin: 0 0 0.35rem;
+}
+.mgmt-cal-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--mgmt-cal-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.mgmt-cal-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--mgmt-cal-muted);
+  margin: 0;
+}
+.mgmt-cal-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* CTA to the dedicated /management/school-years workspace */
+.mgmt-cal-school-years-cta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(91, 141, 239, 0.16), rgba(156, 107, 255, 0.14));
+  border: 1px solid rgba(91, 141, 239, 0.32);
+  color: #fff;
+  text-decoration: none;
+  margin: 0 0 1.25rem;
+  transition: transform 0.12s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.mgmt-cal-school-years-cta:hover {
+  color: #fff;
+  transform: translateY(-1px);
+  border-color: rgba(91, 141, 239, 0.55);
+  box-shadow: 0 14px 30px rgba(91, 141, 239, 0.22);
+}
+.mgmt-cal-school-years-cta-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #5b8def, #9c6bff);
+  font-size: 1.2rem;
+}
+.mgmt-cal-school-years-cta-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.mgmt-cal-school-years-cta-body strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+.mgmt-cal-school-years-cta-body span {
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+.mgmt-cal-school-years-cta-arrow {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+}
+@media (max-width: 700px) {
+  .mgmt-cal-school-years-cta { flex-wrap: wrap; }
+  .mgmt-cal-school-years-cta-arrow { width: 100%; text-align: center; }
+}
+.mgmt-cal-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.mgmt-cal-role-badge--director {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+.mgmt-cal-role-badge--admin {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+.mgmt-cal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+.mgmt-cal-btn--ghost {
+  color: #334155;
+  background: var(--mgmt-cal-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+.mgmt-cal-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--mgmt-cal-accent);
+  color: var(--mgmt-cal-accent-deep);
+}
+.mgmt-cal-btn--primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--mgmt-cal-accent), var(--mgmt-cal-accent-deep)) !important;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+  border: none !important;
+}
+.mgmt-cal-btn--primary:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+.mgmt-cal-btn--warn {
+  color: #92400e !important;
+  background: #fffbeb !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+.mgmt-cal-btn--warn:hover {
+  background: #fef3c7 !important;
+}
+.mgmt-cal-nav-group {
+  display: inline-flex;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: var(--mgmt-cal-surface);
+}
+.mgmt-cal-nav-group .mgmt-cal-btn {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid rgba(148, 163, 184, 0.25);
+}
+.mgmt-cal-nav-group .mgmt-cal-btn:last-child {
+  border-right: none;
+}
+.mgmt-cal-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 768px) {
+  .mgmt-cal-insights { grid-template-columns: repeat(4, 1fr); }
+}
+.mgmt-cal-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--mgmt-cal-surface);
+  border: 1px solid var(--mgmt-cal-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.mgmt-cal-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--mgmt-cal-accent-soft);
+  color: var(--mgmt-cal-accent-deep);
+}
+.mgmt-cal-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mgmt-cal-text);
+  line-height: 1.2;
+}
+.mgmt-cal-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mgmt-cal-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+.mgmt-cal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Calendar grid & legend — teal accents */
+.mgmt-cal.mgmt-cal-page {
+  background: transparent !important;
+  min-height: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.mgmt-cal-content .card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.mgmt-cal-content .calendar-header {
+  border-bottom-color: var(--mgmt-cal-accent) !important;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.06), rgba(13, 148, 136, 0.02)) !important;
+}
+
+.mgmt-cal-content .calendar-day-header {
+  color: var(--mgmt-cal-accent-deep) !important;
+}
+
+.mgmt-cal-content .calendar-day:hover {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.06), rgba(13, 148, 136, 0.02)) !important;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.1) !important;
+}
+
+.mgmt-cal-content .calendar-day-today {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.12), rgba(13, 148, 136, 0.06)) !important;
+  border-color: var(--mgmt-cal-accent) !important;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.15) !important;
+}
+
+.mgmt-cal-content .calendar-day-today .day-number span,
+.mgmt-cal-content .calendar-day-today .day-number {
+  color: var(--mgmt-cal-accent-deep) !important;
+}
+
+.mgmt-cal-content .calendar-day-today .day-number span {
+  background: linear-gradient(135deg, var(--mgmt-cal-accent), var(--mgmt-cal-accent-deep)) !important;
+  color: #fff !important;
+}
+
+.mgmt-cal-content .card-header.text-white {
+  background: linear-gradient(135deg, var(--mgmt-cal-accent), var(--mgmt-cal-accent-deep)) !important;
+}
+
+.mgmt-cal .modal-header.text-white[style*="667eea"],
+.mgmt-cal #eventDetailsModal .modal-header {
+  background: linear-gradient(135deg, var(--mgmt-cal-accent), var(--mgmt-cal-accent-deep)) !important;
+}
+
+.mgmt-cal #addEventModal .modal-header {
+  background: linear-gradient(135deg, var(--mgmt-cal-accent-deep), var(--mgmt-cal-accent)) !important;
+}
+
+.mgmt-cal #teacherWorkDaysModal .modal-header,
+.mgmt-cal #schoolBreaksModal .modal-header {
+  background: linear-gradient(135deg, var(--mgmt-cal-accent), var(--mgmt-cal-accent-deep)) !important;
+}
+
+@media (max-width: 576px) {
+  .mgmt-cal-hero-actions {
+    width: 100%;
+  }
+  .mgmt-cal-nav-group {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .mgmt-cal-nav-group .mgmt-cal-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

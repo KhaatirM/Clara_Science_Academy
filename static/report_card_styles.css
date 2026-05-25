@@ -387,3 +387,181 @@ th {
     padding: 3px;
     text-align: left;
 }
+
+/* ----- 3rd Grade Progress Report (director layout) ----- */
+body.grade3-report-card {
+    font-size: 8.5pt;
+    line-height: 1.15;
+}
+
+body.grade3-report-card table {
+    margin-bottom: 0.3cm;
+}
+
+body.grade3-report-card .report-period-line {
+    margin-top: 0.3cm;
+    margin-bottom: 0.3cm;
+}
+
+/* Each grade-3 page wrapper forces a page break after itself,
+   except for the final page (.grade3-page-last). The student/school header
+   is rendered at the top of every page wrapper. */
+.grade3-page {
+    page-break-after: always;
+}
+
+.grade3-page:last-of-type,
+.grade3-page-last {
+    page-break-after: auto;
+}
+
+/* Slimmer pdf-header-table when reused as a per-page header */
+.grade3-report-card .pdf-header-table {
+    margin-bottom: 0.3cm;
+}
+
+.grade3-report-card .pdf-header-table .central-column h1 {
+    font-size: 14pt;
+    margin: 4px 0 0 0;
+    padding: 2px 0;
+}
+
+.grade3-report-card .pdf-header-table .logo-overlay-container {
+    width: 70px;
+    height: 70px;
+}
+
+.grade3-report-card .pdf-header-table .info-grid-table td {
+    padding: 2px 5px;
+    font-size: 7.5pt;
+}
+
+.grade3-report-card .pdf-header-table .school-column {
+    padding-bottom: 0.4cm;
+}
+
+.rc-header-dark th,
+.rc-header-dark td {
+    background-color: #000 !important;
+    color: #fff !important;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #000;
+    padding: 5px 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.rc-subheader th {
+    background-color: #e8e8e8 !important;
+    color: #000 !important;
+    font-weight: bold;
+    text-align: left;
+    border: 1px solid #333;
+}
+
+.rc-table--compact th,
+.rc-table--compact td {
+    padding: 4px 6px;
+    font-size: 8.5pt;
+    border: 1px solid #333;
+}
+
+.rc-table--attendance td:first-child {
+    text-align: left;
+    font-weight: normal;
+}
+
+.rc-center {
+    text-align: center;
+}
+
+.academic-standards-block {
+    margin: 0.25cm 0;
+    text-align: justify;
+}
+
+.academic-standards-block p {
+    margin: 0;
+    font-size: 8pt;
+    line-height: 1.2;
+}
+
+.standards-legend-grid td {
+    width: 50%;
+    vertical-align: top;
+}
+
+.rc-underline {
+    text-decoration: underline;
+}
+
+/* Subject standards tables (pages 2-3) */
+.grade3-subject-title {
+    text-align: center;
+    font-size: 13pt;
+    font-weight: bold;
+    margin: 0 0 0.25cm 0;
+    padding: 0;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+.rc-standards-table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+    box-sizing: border-box;
+}
+
+.rc-standards-table th,
+.rc-standards-table td {
+    font-size: 9.5pt;
+    line-height: 1.25;
+    padding: 6px 7px;
+    border: 1px solid #333;
+    vertical-align: top;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.rc-standards-table .rc-standards-desc-col {
+    width: 76%;
+}
+
+.rc-standards-table th:not(:first-child),
+.rc-standards-table td:not(:first-child) {
+    width: 6%;
+    text-align: center;
+    vertical-align: middle;
+    padding: 5px 2px;
+    font-size: 8.5pt;
+}
+
+.rc-standards-table thead th {
+    background-color: #f5f5f5;
+    text-align: center;
+    font-weight: bold;
+    padding: 5px 5px;
+    font-size: 9.5pt;
+}
+
+.rc-standards-table thead th.rc-standards-desc-col {
+    text-align: left;
+}
+
+.rc-standards-section td {
+    background-color: #e8e8e8 !important;
+    font-weight: bold;
+    text-align: left;
+    padding: 4px 7px;
+    font-size: 10pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.rc-standards-section--blank td {
+    padding: 2px 6px;
+    font-size: 6pt;
+    background-color: #f0f0f0 !important;
+}

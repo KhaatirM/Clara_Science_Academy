@@ -5,29 +5,64 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/management_student_jobs.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_tools.css') }}?v=1">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 mb-0">
-                    <i class="bi bi-briefcase-fill me-2"></i>Student Jobs Management
-                </h1>
-                {% if current_user.role != 'Student' %}
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary" onclick="exportToSheets()">
-                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export to Sheets
-                    </button>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inspectionModal">
-                        <i class="bi bi-clipboard-check me-1"></i>Conduct Inspection
-                    </button>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+{% set is_director = sidebar_role_canonical == 'Director' %}
+{% set job_insights = namespace(teams=team_data|length, members=0, inspections=inspection_history|length, passed=0) %}
+{% for tid, tentry in team_data.items() %}
+  {% set job_insights.members = job_insights.members + tentry.members|length %}
+{% endfor %}
+{% for insp in inspection_history %}
+  {% if insp.status == 'Passed' %}{% set job_insights.passed = job_insights.passed + 1 %}{% endif %}
+{% endfor %}
+<div class="mgmt-job container-fluid px-0 px-md-1">
+  <div class="mgmt-job-shell{% if is_director %} mgmt-job-shell--director{% endif %}">
+    <header class="mgmt-job-hero">
+      <div>
+        <p class="mgmt-job-eyebrow">Student jobs</p>
+        <h1 class="mgmt-job-title">Student jobs</h1>
+        <p class="mgmt-job-subtitle">
+          <i class="bi bi-briefcase-fill" aria-hidden="true"></i>
+          Cleaning crews, inspections, and team management
+        </p>
+      </div>
+      <div class="mgmt-job-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-job-role-badge mgmt-job-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-job-role-badge mgmt-job-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        {% if current_user.role != 'Student' %}
+        <button type="button" class="mgmt-job-btn mgmt-job-btn--ghost" onclick="exportToSheets()">
+          <i class="bi bi-file-earmark-spreadsheet"></i> Export
+        </button>
+        <button type="button" class="mgmt-job-btn mgmt-job-btn--primary" data-bs-toggle="modal" data-bs-target="#inspectionModal">
+          <i class="bi bi-clipboard-check"></i> Conduct inspection
+        </button>
+        {% endif %}
+      </div>
+    </header>
+    <div class="mgmt-job-insights" role="list">
+      <div class="mgmt-job-insight" role="listitem">
+        <span class="mgmt-job-insight-icon"><i class="bi bi-people"></i></span>
+        <div><div class="mgmt-job-insight-value">{{ job_insights.teams }}</div><div class="mgmt-job-insight-label">Teams</div></div>
+      </div>
+      <div class="mgmt-job-insight" role="listitem">
+        <span class="mgmt-job-insight-icon"><i class="bi bi-person-badge"></i></span>
+        <div><div class="mgmt-job-insight-value">{{ job_insights.members }}</div><div class="mgmt-job-insight-label">Members</div></div>
+      </div>
+      <div class="mgmt-job-insight" role="listitem">
+        <span class="mgmt-job-insight-icon"><i class="bi bi-clipboard-check"></i></span>
+        <div><div class="mgmt-job-insight-value">{{ job_insights.inspections }}</div><div class="mgmt-job-insight-label">Recent inspections</div></div>
+      </div>
+      <div class="mgmt-job-insight" role="listitem">
+        <span class="mgmt-job-insight-icon"><i class="bi bi-check-circle"></i></span>
+        <div><div class="mgmt-job-insight-value">{{ job_insights.passed }}</div><div class="mgmt-job-insight-label">Passed</div></div>
+      </div>
     </div>
+    <div class="mgmt-job-content">
 
     <!-- Point System Overview -->
     <div class="row mb-4">
@@ -1200,6 +1235,9 @@
             </div>
         </div>
     </div>
+
+    </div>
+  </div>
 </div>
 
 <script>

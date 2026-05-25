@@ -4,6 +4,9 @@
 {% block body_class %}take-attendance-no-nested-scroll{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_take_attendance.css') }}">
+{% if can_calendar_admin_ui and not is_student_assistant %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_attendance.css') }}?v=2">
+{% endif %}
 {% if is_student_assistant %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
 {% endif %}
@@ -27,7 +30,55 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-<div class="container-fluid px-2 px-md-4 py-4 take-attendance-page">
+{% set use_mgmt_att_hub = can_calendar_admin_ui and not is_student_assistant %}
+{% if use_mgmt_att_hub %}{% set is_director = sidebar_role_canonical == 'Director' %}{% endif %}
+<div class="{% if use_mgmt_att_hub %}mgmt-att {% endif %}container-fluid {% if use_mgmt_att_hub %}px-0 px-md-1{% else %}px-2 px-md-4 py-4{% endif %} take-attendance-page">
+{% if use_mgmt_att_hub %}
+  <div class="mgmt-att-shell{% if is_director %} mgmt-att-shell--director{% endif %}">
+    <header class="mgmt-att-hero">
+      <div>
+        <p class="mgmt-att-eyebrow">Class period attendance</p>
+        <h1 class="mgmt-att-title">{{ class_item.name }}</h1>
+        <p class="mgmt-att-subtitle">
+          <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+          {{ class_item.subject or 'General' }} · {{ students|length }} enrolled
+        </p>
+      </div>
+      <div class="mgmt-att-hero-actions">
+        {% if is_director %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
+        {% elif has_mgmt_role_access %}
+        <span class="mgmt-att-role-badge mgmt-att-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        <span class="mgmt-att-date-badge"><i class="bi bi-calendar3"></i> {{ attendance_date_str }}</span>
+        <a href="{{ url_for('management.unified_attendance', class_date=attendance_date_str) }}" class="mgmt-att-btn mgmt-att-btn--ghost">
+          <i class="bi bi-arrow-left"></i> Attendance
+        </a>
+        <a href="{{ url_for('management.view_class', class_id=class_item.id) }}" class="mgmt-att-btn mgmt-att-btn--ghost">
+          <i class="bi bi-eye"></i> Class
+        </a>
+      </div>
+    </header>
+    <div class="mgmt-att-insights" role="list">
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-check-circle-fill"></i></span>
+        <div><div class="mgmt-att-insight-value" id="presentCount">{{ attendance_stats.present }}</div><div class="mgmt-att-insight-label">Present</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-clock-fill"></i></span>
+        <div><div class="mgmt-att-insight-value" id="lateCount">{{ attendance_stats.late }}</div><div class="mgmt-att-insight-label">Late</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-x-circle-fill"></i></span>
+        <div><div class="mgmt-att-insight-value" id="absentCount">{{ attendance_stats.absent }}</div><div class="mgmt-att-insight-label">Absent</div></div>
+      </div>
+      <div class="mgmt-att-insight" role="listitem">
+        <span class="mgmt-att-insight-icon"><i class="bi bi-graph-up-arrow"></i></span>
+        <div><div class="mgmt-att-insight-value" id="attendanceRate">{{ attendance_stats.present_percentage }}%</div><div class="mgmt-att-insight-label">Rate</div></div>
+      </div>
+    </div>
+    <div class="mgmt-att-content">
+{% else %}
     <!-- Header Section -->
     <div class="attendance-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -51,10 +102,6 @@
                     <i class="bi bi-arrow-left me-1"></i>Class workspace
                 </a>
                 </div>
-            {% elif can_calendar_admin_ui %}
-                <a href="{{ url_for('management.unified_attendance') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Attendance
-                </a>
             {% else %}
                 <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>Back to My Classes
@@ -62,15 +109,16 @@
             {% endif %}
         </div>
     </div>
+{% endif %}
 
     {% if is_student_assistant %}
     {% include 'management/_student_assistant_class_switcher.html' %}
     {% endif %}
 
-    <!-- Date Selector & Stats Row -->
+    <!-- Date Selector {% if not use_mgmt_att_hub %}& Stats{% endif %} Row -->
     <div class="row g-4 mb-4">
         <!-- Date Selector Card -->
-        <div class="col-12 col-lg-4">
+        <div class="col-12 {% if use_mgmt_att_hub %}col-lg-5{% else %}col-lg-4{% endif %}">
             <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
                     <h6 class="card-subtitle mb-3 text-muted">
@@ -103,6 +151,7 @@
             </div>
         </div>
 
+        {% if not use_mgmt_att_hub %}
         <!-- Live Statistics Cards -->
         <div class="col-12 col-lg-8">
             <div class="row g-3">
@@ -152,6 +201,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- Attendance Form -->
@@ -252,7 +302,7 @@
                                     <input type="radio" class="btn-check" name="status_{{ student.id }}" 
                                            id="status-{{ student.id }}-{{ loop.index }}" 
                                            value="{{ status|lower }}" 
-                                           {% if record and record.status == status|lower %}checked{% endif %} 
+                                           {% if record and (existing_form_status.get(student.id) if existing_form_status is defined else record.status|lower) == status|lower %}checked{% endif %} 
                                            required>
                                     <label class="btn btn-attendance btn-attendance-{{ status|lower|replace(' ', '-') }}" 
                                            for="status-{{ student.id }}-{{ loop.index }}">
@@ -310,90 +360,11 @@
             </div>
         </div>
     </form>
-</div>
-
-<!-- Bulk Upload Modal -->
-<div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-labelledby="bulkUploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="bulkUploadModalLabel">
-                    <i class="bi bi-cloud-upload-fill me-2"></i>Bulk Upload Attendance
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('teacher.attendance.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="modal-body">
-                    <div class="alert alert-info border-0 mb-4">
-                        <div class="d-flex align-items-start">
-                            <i class="bi bi-info-circle me-3 fs-4"></i>
-                            <div>
-                                <h6 class="alert-heading mb-2">How to use Bulk Upload:</h6>
-                                <ol class="mb-0 ps-3 small">
-                                    <li>Click <strong>"Download Template"</strong> to get a CSV file pre-filled with your class roster</li>
-                                    <li>Open the CSV in Excel, Google Sheets, or any spreadsheet program</li>
-                                    <li>Fill in attendance data for past dates (format: MM/DD/YYYY)</li>
-                                    <li>Delete the instruction rows (starting with #)</li>
-                                    <li>Save and upload the file here</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h6 class="fw-bold mb-3">
-                            <i class="bi bi-clipboard-check me-2 text-primary"></i>Valid Attendance Statuses:
-                        </h6>
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-success">Present</span>
-                            <span class="badge bg-warning">Late</span>
-                            <span class="badge bg-danger">Unexcused Absence</span>
-                            <span class="badge bg-info">Excused Absence</span>
-                            <span class="badge bg-secondary">Suspended</span>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="attendance_file" class="form-label fw-semibold">
-                            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Select CSV File
-                        </label>
-                        <input type="file" class="form-control form-control-lg" id="attendance_file" name="attendance_file" accept=".csv" required>
-                        <div class="form-text">
-                            <i class="bi bi-exclamation-circle me-1"></i>
-                            Only CSV files are accepted. Max file size: 5MB
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-warning border-0">
-                        <div class="d-flex align-items-start">
-                            <i class="bi bi-exclamation-triangle me-3 fs-5"></i>
-                            <div class="small">
-                                <strong>Important:</strong>
-                                <ul class="mb-0 ps-3 mt-2">
-                                    <li>This will add or <strong>update existing</strong> attendance records</li>
-                                    <li>Student IDs must match exactly</li>
-                                    <li>Cannot upload attendance for future dates</li>
-                                    <li>Only students currently enrolled in <strong>{{ class_item.name }}</strong> will be processed</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-upload me-1"></i>Upload Attendance Data
-                    </button>
-                </div>
-            </form>
-        </div>
+{% if use_mgmt_att_hub %}
     </div>
+  </div>
+{% endif %}
 </div>
-
-
 
 <script>
 // Global variables
@@ -532,10 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Initialize stats on page load
-    setTimeout(function() {
-        updateStats();
-    }, 100);
+    // Server-rendered stats are authoritative on load; only recount after user edits.
 });
 
 // Quick action functions
@@ -568,18 +536,22 @@ function clearAll() {
 }
 
 // Date helper functions
+function localDateInputValue(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 function setToday() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-    // Auto-submit the form
+    document.getElementById('date').value = localDateInputValue(new Date());
     document.getElementById('date').closest('form').submit();
 }
 
 function setYesterday() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    document.getElementById('date').value = yesterday.toISOString().split('T')[0];
-    // Auto-submit the form
+    document.getElementById('date').value = localDateInputValue(yesterday);
     document.getElementById('date').closest('form').submit();
 }
 

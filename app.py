@@ -1,3 +1,85 @@
+import sys
+import logging
+import os as _os
+from logging.handlers import RotatingFileHandler
+
+# Force line-buffered stdout/stderr so request logs and tracebacks show up
+# immediately when the app is launched from a non-TTY (e.g. Cursor terminal,
+# CI runners, or any captured/piped shell). Otherwise output can sit in a
+# block buffer for many seconds, making the server look silent.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+
+class _FlushingStreamHandler(logging.StreamHandler):
+    """StreamHandler that flushes after every record. Some Windows terminals
+    (and Cursor's captured terminal) block-buffer pipe stderr, so logs can sit
+    invisible for minutes. Calling flush() after each emit forces them out."""
+
+    def emit(self, record):
+        super().emit(record)
+        try:
+            self.flush()
+        except Exception:
+            pass
+
+
+def _bootstrap_logging() -> None:
+    """Configure log output BEFORE Flask/Werkzeug touch the root logger so we
+    capture the very first request. Sends everything to stderr (flushing) AND
+    to a rolling file at ``logs/server.log`` — the file is a guaranteed way to
+    see logs even if the terminal capture eats them."""
+    log_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'logs')
+    try:
+        _os.makedirs(log_dir, exist_ok=True)
+    except Exception:
+        log_dir = None
+
+    fmt = logging.Formatter(
+        '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
+    stream_handler = _FlushingStreamHandler(sys.stderr)
+    stream_handler.setFormatter(fmt)
+
+    handlers = [stream_handler]
+    if log_dir:
+        try:
+            file_handler = RotatingFileHandler(
+                _os.path.join(log_dir, 'server.log'),
+                maxBytes=2 * 1024 * 1024,
+                backupCount=5,
+                encoding='utf-8',
+            )
+            file_handler.setFormatter(fmt)
+            handlers.append(file_handler)
+        except Exception:
+            pass
+
+    root = logging.getLogger()
+    # Wipe any default handlers Werkzeug might have already attached.
+    for h in list(root.handlers):
+        root.removeHandler(h)
+    for h in handlers:
+        root.addHandler(h)
+    root.setLevel(logging.INFO)
+
+    # Werkzeug attaches its own handler to its child logger; make sure ours
+    # are the ones in effect.
+    werkzeug = logging.getLogger('werkzeug')
+    for h in list(werkzeug.handlers):
+        werkzeug.removeHandler(h)
+    werkzeug.setLevel(logging.INFO)
+    werkzeug.propagate = True
+
+
+_bootstrap_logging()
+
+print("Loading Clara Science App...", flush=True)
 import os
 import json
 from flask import Flask, render_template, g, current_app, redirect, url_for, flash, request, session, jsonify, abort
@@ -5,19 +87,23 @@ from flask_login import current_user, login_user, logout_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.security import check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
+print("  loading config...", flush=True)
 from config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
 from sqlalchemy import func, and_, text
 from datetime import datetime, timezone
 from decorators import is_teacher_role, user_can_manage_assignments_and_grades
 
 # Import extensions to avoid circular imports
+print("  loading extensions...", flush=True)
 from extensions import db, login_manager, csrf, mail
 from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
+print("  loading models...", flush=True)
 from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension, QuarterGrade, Class, Enrollment, AcademicPeriod, RedoRequest
 
 # Re-export services so "from app import create_notification" etc. still work
+print("  loading services...", flush=True)
 from services import (
     get_grade_for_student,
     calculate_and_get_grade_for_student,
@@ -556,6 +642,190 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: redo_request table check failed (may already exist): {e}")
 
+        # Add report_card columns for auto-generation provenance if missing
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(report_card)"))
+                    cols = [row[1] for row in r]
+                    if 'is_auto_generated' not in cols:
+                        conn.execute(text(
+                            "ALTER TABLE report_card ADD COLUMN is_auto_generated INTEGER NOT NULL DEFAULT 0"
+                        ))
+                        conn.commit()
+                        print("Added report_card.is_auto_generated column.")
+                    if 'generated_by_user_id' not in cols:
+                        conn.execute(text(
+                            "ALTER TABLE report_card ADD COLUMN generated_by_user_id INTEGER"
+                        ))
+                        conn.commit()
+                        print("Added report_card.generated_by_user_id column.")
+                elif dialect == 'postgresql':
+                    for col_name, col_sql in (
+                        ('is_auto_generated',
+                         'ALTER TABLE "report_card" ADD COLUMN is_auto_generated BOOLEAN NOT NULL DEFAULT false'),
+                        ('generated_by_user_id',
+                         'ALTER TABLE "report_card" ADD COLUMN generated_by_user_id INTEGER'),
+                    ):
+                        r = conn.execute(text(
+                            "SELECT 1 FROM information_schema.columns "
+                            "WHERE table_name = 'report_card' AND column_name = :col"
+                        ), {"col": col_name})
+                        if r.fetchone() is None:
+                            conn.execute(text(col_sql))
+                            conn.commit()
+                            print(f"Added report_card.{col_name} column.")
+        except Exception as e:
+            print(f"Note: report_card provenance column check failed (may already exist): {e}")
+
+        # Create school_year_closure / extension / event tables if missing
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    def _has_table(name):
+                        return conn.execute(text(
+                            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"
+                        ), {"n": name}).fetchone() is not None
+
+                    if not _has_table('school_year_closure'):
+                        conn.execute(text("""
+                            CREATE TABLE school_year_closure (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                school_year_id INTEGER NOT NULL REFERENCES school_year(id),
+                                closure_date DATE NOT NULL,
+                                student_lockout_at DATE NOT NULL,
+                                teacher_lockout_at DATE NOT NULL,
+                                finalize_at DATE NOT NULL,
+                                phase VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+                                previous_phase VARCHAR(20),
+                                created_by_user_id INTEGER REFERENCES user(id),
+                                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                student_notice_sent_at DATETIME,
+                                teacher_notice_sent_at DATETIME,
+                                admin_warning_sent_at DATETIME,
+                                students_locked_at DATETIME,
+                                teachers_locked_at DATETIME,
+                                finalized_at DATETIME,
+                                cancelled_at DATETIME,
+                                cancelled_by_user_id INTEGER REFERENCES user(id),
+                                cancellation_reason TEXT,
+                                paused_at DATETIME,
+                                paused_by_user_id INTEGER REFERENCES user(id),
+                                notes TEXT,
+                                last_tick_at DATETIME,
+                                finalize_stats TEXT
+                            )
+                        """))
+                        conn.commit()
+                        print("Created school_year_closure table.")
+                    if not _has_table('school_year_closure_extension'):
+                        conn.execute(text("""
+                            CREATE TABLE school_year_closure_extension (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                closure_id INTEGER NOT NULL REFERENCES school_year_closure(id),
+                                scope_user_id INTEGER REFERENCES user(id),
+                                scope_class_id INTEGER REFERENCES class(id),
+                                for_role VARCHAR(10) NOT NULL DEFAULT 'both',
+                                extended_until DATE NOT NULL,
+                                reason TEXT,
+                                granted_by_user_id INTEGER REFERENCES user(id),
+                                granted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                revoked_at DATETIME,
+                                revoked_by_user_id INTEGER REFERENCES user(id),
+                                revoked_reason TEXT
+                            )
+                        """))
+                        conn.commit()
+                        print("Created school_year_closure_extension table.")
+                    if not _has_table('school_year_closure_event'):
+                        conn.execute(text("""
+                            CREATE TABLE school_year_closure_event (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                closure_id INTEGER NOT NULL REFERENCES school_year_closure(id),
+                                event_type VARCHAR(40) NOT NULL,
+                                actor_user_id INTEGER REFERENCES user(id),
+                                actor_label VARCHAR(40),
+                                payload TEXT,
+                                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                        conn.commit()
+                        print("Created school_year_closure_event table.")
+                elif dialect == 'postgresql':
+                    def _has_table_pg(name):
+                        return conn.execute(text(
+                            "SELECT 1 FROM information_schema.tables WHERE table_name = :n"
+                        ), {"n": name}).fetchone() is not None
+
+                    if not _has_table_pg('school_year_closure'):
+                        conn.execute(text("""
+                            CREATE TABLE school_year_closure (
+                                id SERIAL PRIMARY KEY,
+                                school_year_id INTEGER NOT NULL REFERENCES school_year(id),
+                                closure_date DATE NOT NULL,
+                                student_lockout_at DATE NOT NULL,
+                                teacher_lockout_at DATE NOT NULL,
+                                finalize_at DATE NOT NULL,
+                                phase VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+                                previous_phase VARCHAR(20),
+                                created_by_user_id INTEGER REFERENCES "user"(id),
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                student_notice_sent_at TIMESTAMP,
+                                teacher_notice_sent_at TIMESTAMP,
+                                admin_warning_sent_at TIMESTAMP,
+                                students_locked_at TIMESTAMP,
+                                teachers_locked_at TIMESTAMP,
+                                finalized_at TIMESTAMP,
+                                cancelled_at TIMESTAMP,
+                                cancelled_by_user_id INTEGER REFERENCES "user"(id),
+                                cancellation_reason TEXT,
+                                paused_at TIMESTAMP,
+                                paused_by_user_id INTEGER REFERENCES "user"(id),
+                                notes TEXT,
+                                last_tick_at TIMESTAMP,
+                                finalize_stats TEXT
+                            )
+                        """))
+                        conn.commit()
+                        print("Created school_year_closure table.")
+                    if not _has_table_pg('school_year_closure_extension'):
+                        conn.execute(text("""
+                            CREATE TABLE school_year_closure_extension (
+                                id SERIAL PRIMARY KEY,
+                                closure_id INTEGER NOT NULL REFERENCES school_year_closure(id),
+                                scope_user_id INTEGER REFERENCES "user"(id),
+                                scope_class_id INTEGER REFERENCES "class"(id),
+                                for_role VARCHAR(10) NOT NULL DEFAULT 'both',
+                                extended_until DATE NOT NULL,
+                                reason TEXT,
+                                granted_by_user_id INTEGER REFERENCES "user"(id),
+                                granted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                revoked_at TIMESTAMP,
+                                revoked_by_user_id INTEGER REFERENCES "user"(id),
+                                revoked_reason TEXT
+                            )
+                        """))
+                        conn.commit()
+                        print("Created school_year_closure_extension table.")
+                    if not _has_table_pg('school_year_closure_event'):
+                        conn.execute(text("""
+                            CREATE TABLE school_year_closure_event (
+                                id SERIAL PRIMARY KEY,
+                                closure_id INTEGER NOT NULL REFERENCES school_year_closure(id),
+                                event_type VARCHAR(40) NOT NULL,
+                                actor_user_id INTEGER REFERENCES "user"(id),
+                                actor_label VARCHAR(40),
+                                payload TEXT,
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                        conn.commit()
+                        print("Created school_year_closure_event table.")
+        except Exception as e:
+            print(f"Note: school_year_closure table check failed (may already exist): {e}")
+
         # Optional: run one-off production DB fix only when explicitly requested.
         # Prefer Flask-Migrate for schema changes: flask db migrate / flask db upgrade
         if os.environ.get('RUN_PRODUCTION_DB_FIX', '').strip() == '1':
@@ -623,6 +893,7 @@ def create_app(config_class=None):
     from studentroutes import student_blueprint
     from teacher_routes import teacher_blueprint  # Using new modular teacher_routes package
     from management_routes import management_blueprint  # Using new modular management_routes package
+    from management_routes.school_year_closure import school_year_closure_bp
     from techroutes import tech_blueprint
     from communications_api import api_bp as communications_api_bp
     from shared_communications import bp as shared_communications_bp
@@ -632,10 +903,25 @@ def create_app(config_class=None):
     app.register_blueprint(student_blueprint, url_prefix='/student')
     app.register_blueprint(teacher_blueprint, url_prefix='/teacher')
     app.register_blueprint(management_blueprint, url_prefix='/management')
+    app.register_blueprint(school_year_closure_bp)  # Phased year-end workflow (own url_prefix)
+
+    # Lockout enforcement: gates known student/teacher write endpoints once a
+    # SchoolYearClosure has advanced past Day 7 / Day 21. Honors per-user and
+    # per-class extensions.
+    try:
+        from utils.closure_gates import register_closure_gates
+        register_closure_gates(app)
+    except Exception as _gate_exc:
+        app.logger.exception("Failed to register closure gates: %s", _gate_exc)
     app.register_blueprint(tech_blueprint, url_prefix='/tech')
     app.register_blueprint(student_assistant_blueprint)  # /assistant/... for student assistants
     app.register_blueprint(communications_api_bp)  # Communications API - no prefix, uses absolute paths
     app.register_blueprint(shared_communications_bp)  # Shared communications routes
+
+    # Expose ``current_app`` to Jinja so templates can defensively check
+    # registered endpoints (e.g. {% if 'foo.bar' in current_app.view_functions %}).
+    from flask import current_app as _flask_current_app
+    app.jinja_env.globals['current_app'] = _flask_current_app
 
     # Custom template filters
     @app.template_filter('from_json')
@@ -981,10 +1267,16 @@ def create_app(config_class=None):
                 "can_calendar_admin_ui": False,
                 "can_assignments_admin_ui": False,
                 "can_home_assignment_actions": False,
+                "can_manage_student_assistants": False,
             }
         try:
             from utils.user_roles import user_has_management_entry_access
-            from decorators import has_permission, has_any_permission, is_teacher_role
+            from decorators import (
+                has_permission,
+                has_any_permission,
+                is_teacher_role,
+                user_can_manage_student_assistants,
+            )
 
             _cal_perms = (
                 "students:view",
@@ -1009,6 +1301,7 @@ def create_app(config_class=None):
                 "can_calendar_admin_ui": cal,
                 "can_assignments_admin_ui": asn,
                 "can_home_assignment_actions": home_asn,
+                "can_manage_student_assistants": user_can_manage_student_assistants(current_user),
             }
         except Exception as e:
             current_app.logger.warning("inject_management_capability_flags failed: %s", e)
@@ -1019,6 +1312,7 @@ def create_app(config_class=None):
                 "can_calendar_admin_ui": False,
                 "can_assignments_admin_ui": False,
                 "can_home_assignment_actions": False,
+                "can_manage_student_assistants": False,
             }
 
     @app.context_processor
@@ -1605,9 +1899,16 @@ def create_app(config_class=None):
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
         """Handle any unexpected errors."""
-        import traceback
-        print(f"Unexpected error: {error}")
-        traceback.print_exc()
+        # Route through ``app.logger`` so tracebacks land in BOTH the live
+        # terminal AND ``logs/server.log``. The previous implementation used
+        # bare ``print`` + ``traceback.print_exc`` which can be silently
+        # swallowed by Cursor's captured terminal on Windows.
+        try:
+            app.logger.exception("Unexpected error: %s", error)
+        except Exception:
+            import traceback
+            print(f"Unexpected error: {error}", flush=True)
+            traceback.print_exc()
         try:
             db.session.rollback()
         except Exception:
@@ -1649,16 +1950,80 @@ def create_app(config_class=None):
             return jsonify({'ok': False, 'error': 'CRON_SECRET is not configured'}), 503
         received = request.headers.get('X-Cron-Secret') or request.args.get('token')
         if received != secret:
-            abort(403)
+            return jsonify({'ok': False, 'error': 'invalid or missing secret'}), 403
         from utils.academic_period_reminders import run_academic_period_reminders
         result = run_academic_period_reminders()
         return jsonify(result)
 
+    @app.route('/cron/school-year-closure-tick', methods=['POST'])
+    @csrf.exempt
+    def cron_school_year_closure_tick():
+        """
+        Daily job: advance every active SchoolYearClosure that has crossed a
+        milestone (Day 7 / Day 21 / Day 28), fire notifications, and auto-run
+        finalize once Day 28 is reached.
+
+        Idempotent: re-running the same day is a no-op once each transition
+        has been recorded. Protected with CRON_SECRET like the other cron endpoints.
+        """
+        secret = app.config.get('CRON_SECRET') or os.environ.get('CRON_SECRET')
+        if not secret:
+            return jsonify({'ok': False, 'error': 'CRON_SECRET is not configured'}), 503
+        received = request.headers.get('X-Cron-Secret') or request.args.get('token')
+        if received != secret:
+            # Use a direct JSON response (not abort(403)) so the 403 errorhandler
+            # doesn't redirect external schedulers to /login.
+            return jsonify({'ok': False, 'error': 'invalid or missing secret'}), 403
+        from services.school_year_closure import run_closure_tick
+        result = run_closure_tick(actor_label='cron')
+        return jsonify({'ok': True, 'result': result})
+
+    # ------------------------------------------------------------------
+    # Request access log via Flask (Werkzeug's own access log sometimes
+    # doesn't propagate to the root logger under certain Windows setups).
+    # We log through ``app.logger`` which inherits the flushing handlers
+    # installed by ``_bootstrap_logging`` at the top of this file, so every
+    # request reliably appears in both stderr and ``logs/server.log``.
+    # ------------------------------------------------------------------
+    _access_logger = logging.getLogger('clara.access')
+
+    # Wrap the WSGI app so we log EVERY request — this is below Flask's
+    # request lifecycle and works even if middleware short-circuits before
+    # before_request hooks fire.
+    _inner_wsgi = app.wsgi_app
+
+    def _logging_wsgi(environ, start_response):
+        method = environ.get('REQUEST_METHOD', '-')
+        path = environ.get('PATH_INFO', '-')
+        qs = environ.get('QUERY_STRING')
+        full = f"{path}?{qs}" if qs else path
+        remote = environ.get('HTTP_X_FORWARDED_FOR') or environ.get('REMOTE_ADDR', '-')
+
+        status_holder = {'status': '???'}
+
+        def _start_response(status, headers, exc_info=None):
+            status_holder['status'] = status
+            return start_response(status, headers, exc_info)
+
+        try:
+            result = _inner_wsgi(environ, _start_response)
+        except Exception:
+            _access_logger.exception('%s "%s %s" CRASHED', remote, method, full)
+            raise
+
+        _access_logger.info('%s %s "%s %s"', remote, status_holder['status'], method, full)
+        return result
+
+    app.wsgi_app = _logging_wsgi
+
     return app
 
 # Create the application instance
+print("Initializing Clara Science App (first load may take 1–2 minutes)...", flush=True)
 app = create_app()
+print("Application ready.", flush=True)
 
 if __name__ == '__main__':
-    # This block only runs if you execute 'python app.py' directly
-    app.run(debug=True, port=5000)
+    # use_reloader=False avoids a common Windows hang with debug mode
+    print("Starting server at http://127.0.0.1:5000", flush=True)
+    app.run(debug=True, port=5000, use_reloader=False)

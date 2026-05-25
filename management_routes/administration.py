@@ -34,21 +34,24 @@ def _parse_dt_ymd(s):
 @management_required
 def billing():
     """Billing and financials management"""
-    # Dummy data for now
-    students = Student.query.all()
-    invoices = []  # Will be populated when billing models are created
+    # Placeholder metrics until billing models are connected
+    from utils.student_roster import active_roster_students_query
+    students = active_roster_students_query(require_active_enrollment=False).order_by(
+        Student.last_name, Student.first_name
+    ).all()
+    invoices = []
     pending_invoices = []
-    
-    return render_template('management/role_dashboard.html',
-                         students=students,
-                         invoices=invoices,
-                         pending_invoices=pending_invoices,
-                         total_revenue=0,
-                         total_payments=0,
-                         outstanding_balance=0,
-                         active_invoices=0,
-                         section='billing',
-                         active_tab='billing')
+
+    return render_template(
+        'management/management_billing.html',
+        students=students,
+        invoices=invoices,
+        pending_invoices=pending_invoices,
+        total_revenue=0,
+        total_payments=0,
+        outstanding_balance=0,
+        active_invoices=0,
+    )
 
 
 

@@ -2,10 +2,43 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_settings.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=1">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid py-4">
+<div class="rh rh--teacher container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    <header class="rh-hero">
+      <div>
+        <p class="rh-eyebrow">Account</p>
+        <h1 class="rh-title">Settings</h1>
+        <p class="rh-subtitle"><i class="bi bi-gear"></i> {{ current_user.username }} · {{ current_user.role }}</p>
+      </div>
+      <div class="rh-hero-actions">
+        <span class="rh-role-badge rh-role-badge--teacher"><i class="bi bi-mortarboard-fill"></i> Teacher</span>
+        <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-arrow-left"></i> Home</a>
+      </div>
+    </header>
+    <div class="rh-insights" role="list">
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-google"></i></span>
+        <div><div class="rh-insight-value">{% if google_connected %}Yes{% else %}No{% endif %}</div><div class="rh-insight-label">Google linked</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-person"></i></span>
+        <div><div class="rh-insight-value">{{ current_user.username }}</div><div class="rh-insight-label">Username</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-envelope"></i></span>
+        <div><div class="rh-insight-value" style="font-size:0.8rem;">{{ current_user.email or '—' }}</div><div class="rh-insight-label">Email</div></div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-shield-lock"></i></span>
+        <div><div class="rh-insight-value">Secure</div><div class="rh-insight-label">Password</div></div>
+      </div>
+    </div>
+    <div class="rh-content">
+<div class="container-fluid py-4 px-0">
     <!-- Animated Header -->
     <div class="row mb-4">
         <div class="col-12">
@@ -380,4 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+    </div>
+  </div>
+</div>
 {% endblock %} 

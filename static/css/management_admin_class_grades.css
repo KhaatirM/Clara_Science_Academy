@@ -1,0 +1,1313 @@
+/* Class grades — matches management home / report cards */
+.mgmt-grd {
+  --mgmt-grd-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --mgmt-grd-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --mgmt-grd-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --mgmt-grd-text: var(--hub-text, #0f172a);
+  --mgmt-grd-muted: var(--hub-muted, #64748b);
+  --mgmt-grd-accent: var(--hub-mgmt-accent, #0d9488);
+  --mgmt-grd-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --mgmt-grd-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  --mgmt-grd-radius: 20px;
+  padding: 0 0 2rem;
+}
+.mgmt-grd-shell {
+  background: var(--mgmt-grd-bg);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 0 -0.25rem;
+}
+.mgmt-grd-shell--director {
+  --mgmt-grd-accent: var(--hub-mgmt-director-accent, #7c3aed);
+  --mgmt-grd-accent-deep: var(--hub-mgmt-director-accent-deep, #6d28d9);
+  --mgmt-grd-accent-soft: var(--hub-mgmt-director-accent-soft, rgba(124, 58, 237, 0.12));
+  --mgmt-grd-bg: var(--hub-mgmt-director-bg, linear-gradient(165deg, #f0ecf5 0%, #e8e4f0 45%, #e2dce8 100%));
+}
+.mgmt-grd-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.mgmt-grd-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mgmt-grd-muted);
+  margin: 0 0 0.35rem;
+}
+.mgmt-grd-title {
+  font-size: clamp(1.45rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  color: var(--mgmt-grd-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.mgmt-grd-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--mgmt-grd-muted);
+  margin: 0;
+}
+.mgmt-grd-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mgmt-grd-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.mgmt-grd-role-badge--director {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+.mgmt-grd-role-badge--admin {
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  color: #115e59;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+.mgmt-grd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+.mgmt-grd-btn--ghost {
+  color: #334155;
+  background: var(--mgmt-grd-surface);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+.mgmt-grd-btn--ghost:hover {
+  background: #fff;
+  border-color: var(--mgmt-grd-accent);
+  color: var(--mgmt-grd-accent-deep);
+}
+.mgmt-grd-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--mgmt-grd-accent), var(--mgmt-grd-accent-deep));
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+}
+.mgmt-grd-btn--primary:hover {
+  color: #fff;
+  filter: brightness(1.05);
+}
+.mgmt-grd-insights {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 768px) {
+  .mgmt-grd-insights { grid-template-columns: repeat(4, 1fr); }
+}
+.mgmt-grd-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--mgmt-grd-surface);
+  border: 1px solid var(--mgmt-grd-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.mgmt-grd-insight-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--mgmt-grd-accent-soft);
+  color: var(--mgmt-grd-accent-deep);
+}
+.mgmt-grd-insight-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--mgmt-grd-text);
+  line-height: 1.2;
+}
+.mgmt-grd-insight-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mgmt-grd-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+.mgmt-grd-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+
+/* ===== CLASS_GRADES STYLES ===== */
+/* Extracted from: templates\management\class_grades.html */
+
+.mgmt-grd-content .bg-gradient-primary {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.mgmt-grd-content .bg-gradient-info {
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+}
+
+.mgmt-grd-content .btn-primary {
+    background: linear-gradient(135deg, #0d9488, #0f766e);
+    border-color: #0f766e;
+}
+
+.mgmt-grd-content .btn-outline-primary {
+    color: #0f766e;
+    border-color: #0d9488;
+}
+
+.mgmt-grd-content .btn-outline-primary:hover,
+.mgmt-grd-content .btn-primary:hover {
+    background: linear-gradient(135deg, #0f766e, #115e59);
+    border-color: #115e59;
+    color: #fff;
+}
+
+.mgmt-grd-content .card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.mgmt-grd-content .card:hover {
+    transform: translateY(-2px);
+}
+
+.mgmt-grd-content .table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.mgmt-grd-content .badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.mgmt-grd-content .btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Fix table column widths */
+.mgmt-grd-content .table-responsive table {
+    min-width: 1200px;
+}
+
+.table th:first-child,
+.mgmt-grd-content .table td:first-child {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2),
+.table th:nth-child(3),
+.mgmt-grd-content .table td:nth-child(3) {
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+}
+
+/* Ensure assignment columns have adequate width */
+.table th:nth-child(n+4):not(:last-child),
+.mgmt-grd-content .table td:nth-child(n+4):not(:last-child) {
+    width: 140px !important;
+    min-width: 140px !important;
+}
+
+/* Average column (last column) - give it proper width */
+.table th:last-child,
+.mgmt-grd-content .table td:last-child {
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+/* Student name styling */
+.mgmt-grd-content .student-name-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+/* ===== MANAGEMENT ASSIGNMENTS & GRADES PAGE STYLES ===== */
+/* Redo Dashboard Button - High Visibility */
+.mgmt-grd-content .btn-redo-dashboard {
+    background: white;
+    color: #6c757d;
+    border: 2px solid white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.mgmt-grd-content .btn-redo-dashboard:hover {
+    background: #f8f9fa;
+    color: #495057;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border-color: white;
+}
+
+/* Extension Requests Button - Enhanced Modern Design */
+.mgmt-grd-content .btn-extension-requests {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: white;
+    border: 2px solid #ffc107;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.mgmt-grd-content .btn-extension-requests:hover {
+    background: linear-gradient(135deg, #ff9800 0%, #ffc107 100%);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.5);
+    border-color: #ffc107;
+}
+
+.mgmt-grd-content .btn-extension-requests:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+}
+
+.mgmt-grd-content .btn-extension-requests i {
+    font-size: 1.1rem;
+}
+
+/* Bulk Void Button - Matches header palette, subtle void accent */
+.mgmt-grd-content .btn-bulk-void {
+    background: rgba(255, 255, 255, 0.95);
+    color: #5a4d6e;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.mgmt-grd-content .btn-bulk-void:hover {
+    background: white;
+    color: #c45c5c;
+    border-color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+}
+
+.mgmt-grd-content .btn-bulk-void i {
+    color: #b85454;
+    transition: color 0.3s ease;
+}
+
+.mgmt-grd-content .btn-bulk-void:hover i {
+    color: #c45c5c;
+}
+
+/* Quick class finder */
+.mgmt-grd-content .class-finder-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 4px 14px rgba(31, 41, 55, 0.06);
+}
+
+.mgmt-grd-content .class-finder-icon {
+    background: #f8fafc;
+    border-right: 0;
+    color: #6b7280;
+}
+
+.mgmt-grd-content .class-finder-input {
+    border-left: 0;
+    min-height: 42px;
+}
+
+.mgmt-grd-content .class-finder-input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.mgmt-grd-content .class-finder-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+}
+
+/* Assignment Context Badges - Enhanced with higher specificity */
+.card.assignment-card .card-body .badge.bg-primary,
+.card.assignment-card .card-body .badge.bg-secondary,
+.assignment-card .card-body .badge.bg-primary,
+.assignment-card .card-body .badge.bg-secondary,
+.card-body .badge.bg-primary,
+.mgmt-grd-content .card-body .badge.bg-secondary {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.75rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.card.assignment-card .card-body .badge.bg-primary,
+.assignment-card .card-body .badge.bg-primary,
+.mgmt-grd-content .card-body .badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: white !important;
+    border: none !important;
+}
+
+.card.assignment-card .card-body .badge.bg-secondary,
+.assignment-card .card-body .badge.bg-secondary,
+.mgmt-grd-content .card-body .badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: white !important;
+    border: none !important;
+}
+
+.card.assignment-card .card-body .badge i,
+.assignment-card .card-body .badge i,
+.mgmt-grd-content .card-body .badge i {
+    font-size: 0.9rem !important;
+    margin-right: 0.25rem;
+}
+
+/* Group Assignment Badges */
+.card.border-info .card-body .badge.bg-primary,
+.mgmt-grd-content .card.border-info .card-body .badge.bg-secondary {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.75rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* ===== RESPONSIVE VIEW TOGGLE BUTTONS ===== */
+.mgmt-grd-content .view-toggle-buttons {
+    display: flex !important;
+    gap: 0;
+}
+
+.mgmt-grd-content .view-toggle-buttons .btn {
+    flex: 1;
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-icon {
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text {
+    display: inline;
+}
+
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text-long {
+    display: inline;
+}
+
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text-short {
+    display: none;
+}
+
+/* Medium screens (tablets, smaller laptops) - show shorter text */
+@media (max-width: 992px) {
+.mgmt-grd-content .view-toggle-buttons .btn {
+        font-size: 0.9rem;
+        padding: 0.75rem 0.5rem;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-icon {
+        margin-right: 0.4rem;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text-long {
+        display: none;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text-short {
+        display: inline;
+    }
+}
+
+/* Small screens (phones) - stack vertically with full text */
+@media (max-width: 768px) {
+.mgmt-grd-content .view-toggle-buttons {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        border-radius: 0.375rem !important;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn:first-child {
+        border-top-left-radius: 0.375rem !important;
+        border-top-right-radius: 0.375rem !important;
+        border-bottom-left-radius: 0.375rem !important;
+        border-bottom-right-radius: 0.375rem !important;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn:last-child {
+        border-top-left-radius: 0.375rem !important;
+        border-top-right-radius: 0.375rem !important;
+        border-bottom-left-radius: 0.375rem !important;
+        border-bottom-right-radius: 0.375rem !important;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-icon {
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text {
+        display: inline;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text-long {
+        display: none;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-text-short {
+        display: inline;
+    }
+}
+
+/* Extra small screens - compact but still readable */
+@media (max-width: 576px) {
+.mgmt-grd-content .view-toggle-buttons .btn {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.9rem;
+    }
+    
+.mgmt-grd-content .view-toggle-buttons .btn .view-btn-icon {
+        font-size: 1rem;
+        margin-right: 0.6rem;
+    }
+}
+
+/* Table View Styling - Improved spacing and layout */
+.mgmt-grd-content .table-responsive {
+    max-height: 80vh;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.mgmt-grd-content .table-responsive table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.mgmt-grd-content .table-responsive thead th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.mgmt-grd-content .table-responsive tbody td {
+    padding: 0.75rem 0.5rem;
+    vertical-align: middle;
+}/* Ensure sticky columns have proper background on hover */
+.mgmt-grd-content .table-responsive tbody tr:hover td {
+    background-color: #f8f9fa;
+}
+
+.mgmt-grd-content .table-responsive tbody tr:hover td[style*="position: sticky"] {
+    background-color: #f8f9fa !important;
+}
+
+/* ===== STUDENT GRADES TABLE (Table view) — scoped so other tables stay unchanged ===== */
+.mgmt-grd-content .grades-overview-card {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+}
+
+.mgmt-grd-content .grades-overview-card .grades-overview-header {
+    background: linear-gradient(125deg, #0f766e 0%, #0d9488 42%, #14b8a6 100%);
+    padding: 1rem 1.25rem;
+}
+
+.mgmt-grd-content .grades-overview-card .grades-overview-header .grades-overview-header-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.mgmt-grd-content .grades-overview-card .grades-overview-header h5 {
+    letter-spacing: -0.02em;
+}
+
+.mgmt-grd-content .grades-overview-toolbar {
+    padding: 1rem 1.25rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.mgmt-grd-content .grades-overview-toolbar .form-label {
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 0.7rem !important;
+}
+
+.mgmt-grd-content .grades-overview-toolbar .input-group {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.mgmt-grd-content .grades-overview-toolbar .input-group-text {
+    background: #fff;
+    border-color: #e2e8f0;
+    color: #64748b;
+}
+
+.mgmt-grd-content .grades-overview-toolbar .form-control {
+    border-color: #e2e8f0;
+}
+
+.mgmt-grd-content .grades-overview-toolbar .form-control:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 0.2rem rgba(13, 148, 136, 0.12);
+}
+
+.mgmt-grd-content .grades-overview-toolbar #gradesTableStudentFilterClear {
+    border-color: #e2e8f0;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.mgmt-grd-content .grades-overview-toolbar #gradesTableStudentFilterClear:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+.mgmt-grd-content .grades-overview-toolbar .grades-filter-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    margin-top: 0.5rem;
+}
+
+.mgmt-grd-content .grades-overview-scroll {
+    max-height: min(78vh, 900px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table {
+    --grades-sticky-bg: #f8fafc;
+    --grades-sticky-body: #ffffff;
+    --grades-row-alt: #f8fafc;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 100%;
+    white-space: nowrap;
+    font-size: 0.875rem;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table thead th {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    background: var(--grades-sticky-bg) !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    vertical-align: middle;
+    padding: 0.65rem 0.5rem;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table thead th.grades-th-assign .grades-assign-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.25rem;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table thead th.grades-th-assign .grades-assign-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #0f172a !important;
+    line-height: 1.25;
+    max-width: 120px;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table tbody td {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 0.65rem 0.5rem;
+    vertical-align: middle;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table tbody tr:nth-child(even) td {
+    background-color: var(--grades-row-alt);
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table tbody tr:hover td {
+    background-color: #ecfdf5 !important;
+}
+
+.grades-overview-scroll table.grades-overview-table .grades-th-corner-l,
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-td-student {
+    position: sticky;
+    left: 0;
+    z-index: 12;
+    width: 180px;
+    min-width: 180px;
+    box-shadow: 4px 0 12px -4px rgba(15, 23, 42, 0.12);
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-th-corner-l {
+    top: 0;
+    z-index: 22;
+    background: var(--grades-sticky-bg) !important;
+}
+
+.grades-overview-scroll table.grades-overview-table .grades-th-corner-r,
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-td-average {
+    position: sticky;
+    right: 0;
+    z-index: 12;
+    width: 100px;
+    min-width: 100px;
+    box-shadow: -4px 0 12px -4px rgba(15, 23, 42, 0.12);
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-th-corner-r {
+    top: 0;
+    z-index: 22;
+    background: var(--grades-sticky-bg) !important;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-td-student {
+    background: var(--grades-sticky-body) !important;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-td-average {
+    background: var(--grades-sticky-body) !important;
+}
+
+.grades-overview-scroll table.grades-overview-table tbody tr:nth-child(even) .grades-td-student,
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table tbody tr:nth-child(even) .grades-td-average {
+    background: var(--grades-row-alt) !important;
+}
+
+.grades-overview-scroll table.grades-overview-table tbody tr:hover .grades-td-student,
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table tbody tr:hover .grades-td-average {
+    background-color: #ecfdf5 !important;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-student-avatar {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(13, 148, 136, 0.12), rgba(13, 148, 136, 0.06));
+    border: 1px solid rgba(13, 148, 136, 0.2);
+    flex-shrink: 0;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-student-avatar i {
+    color: #0f766e;
+    font-size: 1.1rem;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .grades-td-grade-cell {
+    text-align: center;
+}
+
+.mgmt-grd-content .grades-overview-scroll table.grades-overview-table .badge {
+    border-radius: 8px;
+}
+
+/* ===== GRADES VIEW (by assignment) — list with stats & actions ===== */
+.mgmt-grd-content .grades-by-assignment-card {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(30, 27, 75, 0.1), 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+}
+
+.mgmt-grd-content .grades-by-assignment-card .grades-by-assignment-header {
+    background: linear-gradient(125deg, #312e81 0%, #4338ca 48%, #6366f1 100%);
+    padding: 1rem 1.25rem;
+}
+
+.mgmt-grd-content .grades-by-assignment-header-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.mgmt-grd-content .grades-by-assignment-header h5 {
+    letter-spacing: -0.02em;
+}
+
+.mgmt-grd-content .grades-by-assignment-scroll {
+    max-height: min(78vh, 900px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+}
+
+.mgmt-grd-content .grades-by-assignment-scroll.table-responsive {
+    border-radius: 0;
+}
+
+.mgmt-grd-content .grades-by-assignment-table {
+    --gba-row-alt: #f8fafc;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+}
+
+.mgmt-grd-content .grades-by-assignment-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    background: #f1f5f9 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    white-space: nowrap;
+    padding: 0.75rem 0.85rem;
+    vertical-align: middle;
+}
+
+.mgmt-grd-content .grades-by-assignment-table tbody td {
+    padding: 0.85rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.mgmt-grd-content .grades-by-assignment-table tbody tr:nth-child(even) td {
+    background: var(--gba-row-alt);
+}
+
+.mgmt-grd-content .grades-by-assignment-table tbody tr:hover td {
+    background: #eef2ff !important;
+}
+
+.mgmt-grd-content .grades-ba-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+}
+
+.mgmt-grd-content .grades-ba-meta .badge {
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.28rem 0.5rem;
+}
+
+.mgmt-grd-content .grades-ba-date-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.mgmt-grd-content .grades-ba-stat {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    min-width: 2.5rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.mgmt-grd-content .grades-ba-stat-info {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0369a1;
+    border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+.mgmt-grd-content .grades-ba-stat-warn {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.mgmt-grd-content .grades-ba-stat-done {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.mgmt-grd-content .grades-ba-stat-denom {
+    font-weight: 600;
+    font-size: 0.75rem;
+    opacity: 0.85;
+    margin-left: 0.1rem;
+}
+
+.mgmt-grd-content .grades-ba-avg {
+    display: inline-block;
+    padding: 0.4rem 0.65rem;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 0.82rem;
+    min-width: 3.25rem;
+    text-align: center;
+}
+
+.mgmt-grd-content .grades-ba-avg-high {
+    background: rgba(16, 185, 129, 0.15);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.mgmt-grd-content .grades-ba-avg-mid {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.mgmt-grd-content .grades-ba-avg-low {
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.mgmt-grd-content .grades-ba-avg-below {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.mgmt-grd-content .grades-ba-avg-na {
+    font-weight: 600;
+    color: #94a3b8;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+}
+
+.grades-ba-avg-voided,
+.mgmt-grd-content .grades-ba-stat-muted {
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.mgmt-grd-content .grades-by-assignment-row-voided td {
+    background: #f8fafc !important;
+}
+
+.mgmt-grd-content .grades-by-assignment-row-voided:hover td {
+    background: #f1f5f9 !important;
+}
+
+.mgmt-grd-content .grades-by-assignment-row-voided .grades-ba-title {
+    color: #64748b;
+}
+
+.mgmt-grd-content .grades-ba-actions .grades-ba-btn {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid #c7d2fe;
+    color: #4338ca;
+    background: #fff;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.mgmt-grd-content .grades-ba-actions .grades-ba-btn:hover {
+    background: #eef2ff;
+    border-color: #a5b4fc;
+    color: #312e81;
+}
+
+.mgmt-grd-content .grades-ba-actions .grades-ba-btn-primary {
+    border-color: rgba(16, 185, 129, 0.45);
+    color: #047857;
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.mgmt-grd-content .grades-ba-actions .grades-ba-btn-primary:hover {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: #10b981;
+    color: #065f46;
+}
+
+.mgmt-grd-content .grades-by-assignment-empty-icon {
+    font-size: 2.75rem;
+    color: #cbd5e1;
+    line-height: 1;
+}
+
+.mgmt-grd-content .grades-by-assignment-empty {
+    background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+}
+
+/* Void / bulk-void scope: no visible native radio — card + custom dot only */
+.mgmt-grd-content .void-scope-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    margin: 0 0 0.5rem 0;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    background: var(--bs-body-bg, #fff);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    position: relative;
+}
+
+.mgmt-grd-content .void-scope-card::before {
+    content: '';
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.2rem;
+    border: 2px solid #adb5bd;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background: transparent;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mgmt-grd-content .void-scope-card:hover {
+    border-color: rgba(13, 110, 253, 0.45);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.18);
+}
+
+.mgmt-grd-content .void-scope-card:hover::before {
+    border-color: rgba(13, 110, 253, 0.65);
+}
+
+.mgmt-grd-content .void-scope-card:has(.void-scope-card-input:checked) {
+    border-color: var(--bs-primary, #0d6efd);
+    background: rgba(13, 110, 253, 0.06);
+    box-shadow: 0 0 0 0.12rem rgba(13, 110, 253, 0.2);
+}
+
+.mgmt-grd-content .void-scope-card:has(.void-scope-card-input:checked)::before {
+    border-color: var(--bs-primary, #0d6efd);
+    background: var(--bs-primary, #0d6efd);
+    box-shadow: inset 0 0 0 3px var(--bs-body-bg, #fff);
+}
+
+.mgmt-grd-content .void-scope-card:focus-within {
+    outline: 2px solid var(--bs-primary, #0d6efd);
+    outline-offset: 2px;
+}
+
+.mgmt-grd-content .void-scope-card-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0.01;
+}
+
+.mgmt-grd-content .void-scope-card-text {
+    flex: 1;
+    min-width: 0;
+    user-select: none;
+}
+
+.mgmt-grd-content .bulk-void-assignment-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    background: var(--bs-body-bg, #fff);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.mgmt-grd-content .bulk-void-assignment-card:hover {
+    border-color: rgba(13, 110, 253, 0.4);
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+}
+
+.mgmt-grd-content .bulk-void-assignment-card:has(.bulk-void-assignment-card-input:checked) {
+    border-color: rgba(13, 110, 253, 0.65);
+    background: rgba(13, 110, 253, 0.05);
+}
+
+.mgmt-grd-content .bulk-void-assignment-card-input {
+    flex-shrink: 0;
+    margin-top: 0.2rem !important;
+    cursor: pointer;
+}
+
+.mgmt-grd-content .bulk-void-assignment-card-label {
+    flex: 1;
+    min-width: 0;
+    user-select: none;
+    cursor: pointer;
+}
+
+/* ===== Grades content — hub theme (same layout, management palette) ===== */
+
+.mgmt-grd-content .mgmt-grd-mode-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: var(--mgmt-grd-surface);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+.mgmt-grd-content .mgmt-grd-mode-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: #475569;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.mgmt-grd-content .mgmt-grd-mode-btn:hover {
+  color: var(--mgmt-grd-accent-deep);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.mgmt-grd-content .mgmt-grd-mode-btn.active {
+  background: var(--mgmt-grd-accent-soft);
+  color: var(--mgmt-grd-accent-deep);
+  border-color: rgba(13, 148, 136, 0.25);
+}
+
+.mgmt-grd-content .mgmt-grd-panel,
+.mgmt-grd-content .mgmt-grd-student-card,
+.mgmt-grd-content .card.shadow-sm,
+.mgmt-grd-content .card.shadow-lg {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+.mgmt-grd-content .mgmt-grd-panel-head,
+.mgmt-grd-content .mgmt-grd-student-head,
+.mgmt-grd-content .card-header.bg-gradient-info,
+.mgmt-grd-content .card-header.bg-gradient-primary {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.14) 0%, rgba(20, 184, 166, 0.08) 100%) !important;
+  color: var(--mgmt-grd-text) !important;
+  padding: 1rem 1.25rem !important;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.12) !important;
+}
+
+.mgmt-grd-content .mgmt-grd-panel-icon,
+.mgmt-grd-content .mgmt-grd-student-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mgmt-grd-accent-soft);
+  color: var(--mgmt-grd-accent-deep);
+}
+
+.mgmt-grd-content .mgmt-grd-panel-sub {
+  color: var(--mgmt-grd-muted);
+  font-size: 0.82rem;
+}
+
+.mgmt-grd-content .mgmt-grd-btn--ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mgmt-grd-accent-deep);
+  background: #fff;
+  border: 1px solid rgba(13, 148, 136, 0.4);
+}
+
+.mgmt-grd-content .mgmt-grd-btn--ghost:hover {
+  background: var(--mgmt-grd-accent-soft);
+  border-color: var(--mgmt-grd-accent);
+  color: var(--mgmt-grd-accent-deep);
+}
+
+.mgmt-grd-content .card:hover {
+  transform: none;
+}
+
+.mgmt-grd-content .table thead.table-light {
+  background: #f8fafc;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mgmt-grd-muted);
+}
+
+.mgmt-grd-content .table-hover tbody tr:hover {
+  background: rgba(13, 148, 136, 0.04);
+}
+
+.mgmt-grd-content .bg-light.rounded-3 {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0;
+}
+
+.mgmt-grd-content .badge.bg-warning.bg-opacity-20 {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.mgmt-grd-content #voidAssignmentModal .modal-header.bg-danger {
+  background: linear-gradient(135deg, #fef2f2 0%, #fff 100%) !important;
+  color: #991b1b !important;
+  border-bottom: 1px solid #fecaca;
+}
+
+.mgmt-grd-content #voidAssignmentModal .btn-close-white {
+  filter: none;
+  opacity: 0.6;
+}
+
+.mgmt-grd-content .void-scope-card {
+  border-radius: 12px;
+  border-color: #e2e8f0;
+}
+
+.mgmt-grd-content .void-scope-card:has(.void-scope-card-input:checked) {
+  border-color: var(--mgmt-grd-accent);
+  background: var(--mgmt-grd-accent-soft);
+}
+
+.mgmt-grd-shell--director .mgmt-grd-content .mgmt-grd-mode-btn.active {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+.mgmt-grd-shell--director .mgmt-grd-content .mgmt-grd-panel-head,
+.mgmt-grd-shell--director .mgmt-grd-content .mgmt-grd-student-head {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(167, 139, 250, 0.08) 100%) !important;
+}
+
+.mgmt-grd-shell--director .mgmt-grd-content .mgmt-grd-panel-icon,
+.mgmt-grd-shell--director .mgmt-grd-content .mgmt-grd-student-avatar {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
+.mgmt-grd-shell--director .mgmt-grd-content .mgmt-grd-btn--ghost {
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.4);
+}

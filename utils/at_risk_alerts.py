@@ -9,12 +9,31 @@ The modal lists one card per student; assignment details load via API.
 """
 
 import json
+import threading
+import time
 from datetime import datetime
 
 from flask import current_app
 
 # Show academic concerns only when GPA is below this value (not equal).
 ACADEMIC_CONCERN_GPA_THRESHOLD = 2.0
+
+# Per-user TTL cache. The unscoped computation is O(students * assignments) and runs
+# on every page render via a context processor, so without caching every teacher/admin
+# request fans out into 1k+ queries. 5 min is short enough that fresh grades show up
+# quickly; callers that mutate grades can use invalidate_at_risk_alerts_cache(user_id).
+_ALERTS_CACHE_TTL_SECONDS = 300
+_alerts_cache_lock = threading.Lock()
+_alerts_cache = {}  # user_id -> (expires_at_epoch, payload_tuple)
+
+
+def invalidate_at_risk_alerts_cache(user_id=None):
+    """Drop a single user's cached at-risk alerts, or the whole cache if user_id is None."""
+    with _alerts_cache_lock:
+        if user_id is None:
+            _alerts_cache.clear()
+        else:
+            _alerts_cache.pop(user_id, None)
 
 
 def _percentage_from_grade_data(grade_data, assignment_total_points):
@@ -239,6 +258,8 @@ def get_at_risk_alerts_for_user():
 
     Returns (student_concerns, failing_assignment_count, overdue_assignment_count).
     Each concern dict is one row per student (not per assignment).
+
+    Cached per-user for _ALERTS_CACHE_TTL_SECONDS to keep page renders fast.
     """
     from flask_login import current_user
     from models import db, Class
@@ -258,6 +279,16 @@ def get_at_risk_alerts_for_user():
     is_teacher = any(is_teacher_role(r) for r in all_role_strings(current_user))
     if not (is_teacher or is_admin_user):
         return empty
+
+    # Per-user short TTL cache: the underlying queries are heavy and this runs on
+    # every authenticated page render via inject_at_risk_alerts (context processor).
+    cache_key = getattr(current_user, 'id', None)
+    if cache_key is not None:
+        now_ts = time.time()
+        with _alerts_cache_lock:
+            entry = _alerts_cache.get(cache_key)
+            if entry and entry[0] > now_ts:
+                return entry[1]
 
     try:
         class_ids = None
@@ -367,7 +398,14 @@ def get_at_risk_alerts_for_user():
             )
 
         concerns.sort(key=lambda c: (c['current_gpa'], c['student_name'].lower()))
-        return concerns, total_failing, total_overdue
+        result = (concerns, total_failing, total_overdue)
+        if cache_key is not None:
+            with _alerts_cache_lock:
+                _alerts_cache[cache_key] = (
+                    time.time() + _ALERTS_CACHE_TTL_SECONDS,
+                    result,
+                )
+        return result
 
     except Exception as e:
         current_app.logger.warning('Error computing at_risk_alerts: %s', e)

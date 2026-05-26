@@ -6,7 +6,11 @@ services:
     buildCommand: |
       pip install -r requirements.txt
     releaseCommand: python scripts/startup.py --migrate-only
-    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    # 1 worker + 4 gthread threads = 4 concurrent requests within one process.
+    # Keeps memory low for Render's 512MB free plan; upgrade to `--workers 2 --threads 4`
+    # if you move to a paid plan with more RAM. --timeout 60 prevents Gunicorn from
+    # killing requests that are slow due to a cold DB connection or PDF generation.
+    startCommand: gunicorn --workers 1 --threads 4 --worker-class gthread --timeout 60 --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: FLASK_ENV
         value: production

@@ -4,6 +4,7 @@ Flask-SQLAlchemy
 Flask-WTF
 Flask-Migrate
 Flask-Mail
+Flask-Compress
 gunicorn
 python-dotenv
 psycopg2-binary

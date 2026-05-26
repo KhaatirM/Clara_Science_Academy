@@ -160,6 +160,15 @@ def create_app(config_class=None):
     login_manager.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
+
+    # gzip compression for HTML/CSS/JS/JSON. Big templates (e.g. the grading page,
+    # dashboards) shrink ~5-10x over the wire and noticeably cut perceived load time.
+    try:
+        from flask_compress import Compress
+        Compress(app)
+    except ImportError:
+        # Flask-Compress is optional; if it isn't installed the app still works.
+        app.logger.info("Flask-Compress not installed; skipping gzip compression.")
     
     # Initialize database schema; create_all plus idempotent ADD COLUMN patches for older deployments
     with app.app_context():

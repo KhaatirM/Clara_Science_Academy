@@ -848,11 +848,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (!hasScores) {
-                e.preventDefault();
-                return;
-            }
+            e.preventDefault();
+            return;
         }
-        
+
         // Show loading state
         const submitBtn = form.querySelector('.btn-save-grades');
         submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving Grades...';

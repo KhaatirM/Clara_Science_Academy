@@ -23,8 +23,26 @@ class Config:
     # Prioritize the production DATABASE_URL, with SQLite as a fallback.
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'app.db')
-        
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Connection pool tuning. Pre-ping silently revalidates pooled connections before
+    # use — without this, hosted Postgres on Render/Heroku drops idle TCP connections
+    # and the first request after quiet time stalls 1–3s on a dead-connection retry.
+    # Pool/overflow are only valid for non-SQLite URIs (SQLite uses SingletonThreadPool).
+    _db_uri = SQLALCHEMY_DATABASE_URI or ''
+    if _db_uri.startswith('sqlite'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 280,   # < typical 5-min idle disconnect on hosted Postgres
+            'pool_size': 5,
+            'max_overflow': 5,
+            'pool_timeout': 30,
+        }
     # Use UPLOAD_FOLDER from env for persistent storage (e.g. Render disk at /data/uploads).
     # Without this, uploads go to project/static/uploads, which is EPHEMERAL on PaaS (Render, Heroku).
     # Files work right after upload but disappear after restart/redeploy. Set to a persistent path to fix.

@@ -170,11 +170,12 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
             if class_name:
                 classes_with_issues.add(class_name)
         elif percentage is not None and percentage <= 69:
+            # A graded assignment is not "past due" anymore even when its due
+            # date is in the past; it's just failing. Past-due is reserved for
+            # the no-grade case so badges don't double-count the same item.
             failing += 1
             if class_name:
                 classes_with_issues.add(class_name)
-            if is_past_due:
-                overdue += 1
 
     if is_admin_user:
         ga_list = GroupAssignment.query.filter(GroupAssignment.status != 'Voided').all()
@@ -220,11 +221,10 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
                     if class_name:
                         classes_with_issues.add(class_name)
                 elif percentage is not None and percentage <= 69:
+                    # Failing-and-graded should not also count as past-due.
                     failing += 1
                     if class_name:
                         classes_with_issues.add(class_name)
-                    if is_past_due:
-                        overdue += 1
 
     assign_q = Assignment.query.filter(
         Assignment.status == 'Active',
@@ -387,6 +387,7 @@ def get_at_risk_alerts_for_user():
                     'student_name': f'{student.first_name} {student.last_name}',
                     'student_user_id': sid,
                     'current_gpa': gpa,
+                    'grade_level': student.grade_level,
                     'class_count': len(enrolled_names) or len(classes_set),
                     'classes_label': classes_label,
                     'enrolled_class_names': enrolled_names,

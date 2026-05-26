@@ -3,7 +3,7 @@ Reports routes for management users.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required, permissions_required
@@ -108,12 +108,36 @@ def _selected_quarters_date_window(school_year_id, quarters_clean):
 def _enrollment_overlaps_window(enrollment, window_start, window_end):
     """
     True if enrollment overlaps [window_start, window_end] (dates).
-    Treats null dropped_at as open-ended; null enrolled_at as far past.
+
+    For currently-active enrollments, a null ``dropped_at`` means "still enrolled",
+    so we treat it as open-ended through ``window_end``.
+
+    For inactive enrollments, a null ``dropped_at`` historically meant the
+    enrollment was marked inactive without recording when. We must NOT pretend
+    those span the whole window — that would let stale enrollments leak into
+    forms and report cards. We treat the drop date as equal to ``enrolled_at``
+    (or far in the past if neither is set), which excludes them from any future
+    window they were never actually active in.
     """
     if not window_start or not window_end:
         return False
-    enrolled_at = _as_date(getattr(enrollment, 'enrolled_at', None)) or window_start
-    dropped_at = _as_date(getattr(enrollment, 'dropped_at', None)) or window_end
+    enrolled_at = _as_date(getattr(enrollment, 'enrolled_at', None))
+    raw_dropped = _as_date(getattr(enrollment, 'dropped_at', None))
+    is_active = getattr(enrollment, 'is_active', True)
+
+    if raw_dropped is None:
+        if is_active:
+            dropped_at = window_end
+        else:
+            # Inactive + no recorded drop date -> collapse the enrollment to a
+            # point in time so overlap only matches if enrolled_at falls inside
+            # the window. Avoids leaking dropped enrollments through.
+            dropped_at = enrolled_at if enrolled_at is not None else (window_start - timedelta(days=1))
+    else:
+        dropped_at = raw_dropped
+
+    if enrolled_at is None:
+        enrolled_at = window_start  # unknown start: assume on/before window
     return enrolled_at <= window_end and dropped_at >= window_start
 
 

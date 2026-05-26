@@ -551,7 +551,15 @@ def get_enrolled_students_json(class_id):
 def get_student_classes(student_id):
     """
     Get classes a student was enrolled in for a given school year and selected quarters.
-    Includes withdrawn students and inactive enrollments, but enforces overlap with the selected period.
+
+    For currently-active students: only active enrollments are returned. This matches
+    user expectations on the form ("classes the student is in right now") and avoids
+    surfacing dropped enrollments whose ``dropped_at`` timestamp was never recorded
+    (common legacy data state — the active flag was flipped but the date wasn't set).
+
+    For archived/withdrawn students: all enrollments are returned, since the use case is
+    typically generating a historical/transfer report card.
+
     Query params:
       - school_year_id (int, optional; defaults to active school year)
       - quarters (Q1..Q4, repeatable; optional; defaults to all quarters)
@@ -576,12 +584,17 @@ def get_student_classes(student_id):
             from management_routes.reports import _selected_quarters_date_window
             window_start, window_end = _selected_quarters_date_window(school_year_id, valid_quarters)
 
-        # Include enrollments even if inactive; filter by school_year and overlap.
+        from utils.student_roster import student_is_archived
+
         enrollments_q = Enrollment.query.filter_by(student_id=student_id).join(Class)
         if school_year_id:
             enrollments_q = enrollments_q.filter(Class.school_year_id == school_year_id)
+        # Active students -> only active enrollments. Archived (withdrawn) students may
+        # legitimately have only inactive enrollments left, so include all of theirs.
+        if not student_is_archived(student):
+            enrollments_q = enrollments_q.filter(Enrollment.is_active.is_(True))
         enrollments = enrollments_q.all()
-        
+
         classes_data = []
         for enrollment in enrollments:
             class_info = enrollment.class_info
@@ -3385,6 +3398,7 @@ def view_student_details_data(student_id):
                         missing_assignments_by_class[class_name].append({
                             'title': g.assignment.title,
                             'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
+                            'quarter': g.assignment.quarter or '',
                             'status': status,
                             'score': round(percentage, 1) if percentage is not None else 'N/A',
                             'assignment_type': g.assignment.assignment_type or 'pdf',
@@ -3455,6 +3469,7 @@ def view_student_details_data(student_id):
                                     missing_assignments_by_class[class_name].append({
                                         'title': ga.title,
                                         'due_date': ga.due_date.strftime('%Y-%m-%d') if ga.due_date else 'No due date',
+                                        'quarter': getattr(ga, 'quarter', '') or '',
                                         'status': 'failing',
                                         'score': round(percentage, 1),
                                         'assignment_type': f'group_{ga.assignment_type or "pdf"}',
@@ -3471,6 +3486,7 @@ def view_student_details_data(student_id):
                         missing_assignments_by_class[class_name].append({
                             'title': ga.title,
                             'due_date': ga.due_date.strftime('%Y-%m-%d') if ga.due_date else 'No due date',
+                            'quarter': getattr(ga, 'quarter', '') or '',
                             'status': 'missing',
                             'score': 'N/A',
                             'assignment_type': f'group_{ga.assignment_type or "pdf"}',

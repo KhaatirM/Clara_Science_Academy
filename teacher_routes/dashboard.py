@@ -1920,6 +1920,7 @@ def view_student_details_data(student_id):
                         missing_assignments_by_class[class_name].append({
                             'title': g.assignment.title,
                             'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
+                            'quarter': g.assignment.quarter or '',
                             'status': status,
                             'score': round(percentage, 1) if percentage is not None else 'N/A',
                             'assignment_type': g.assignment.assignment_type if g.assignment.assignment_type else 'pdf',
@@ -1988,6 +1989,7 @@ def view_student_details_data(student_id):
                                 missing_assignments_by_class[class_name].append({
                                     'title': ga.title,
                                     'due_date': ga.due_date.strftime('%Y-%m-%d') if ga.due_date else 'No due date',
+                                    'quarter': getattr(ga, 'quarter', '') or '',
                                     'status': 'failing',
                                     'score': round(percentage, 1),
                                     'assignment_type': f'group_{ga.assignment_type or "pdf"}',
@@ -2004,6 +2006,7 @@ def view_student_details_data(student_id):
                     missing_assignments_by_class[class_name].append({
                         'title': ga.title,
                         'due_date': ga.due_date.strftime('%Y-%m-%d') if ga.due_date else 'No due date',
+                        'quarter': getattr(ga, 'quarter', '') or '',
                         'status': 'missing',
                         'score': 'N/A',
                         'assignment_type': f'group_{ga.assignment_type or "pdf"}',

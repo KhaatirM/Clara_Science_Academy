@@ -234,6 +234,33 @@
   font-weight: 600;
 }
 
+.rh-hero-actions .btn-grades-to-improve {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #0d9488 100%);
+  color: #fff !important;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.rh-hero-actions .btn-grades-to-improve:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.45);
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+
+.rh-hero-actions .btn-grades-to-improve .badge-gti {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f766e;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
 .rh-content .btn-outline-primary:hover {
   background: var(--rh-accent-soft) !important;
 }

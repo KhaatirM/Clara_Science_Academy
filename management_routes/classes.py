@@ -166,6 +166,25 @@ def management_api_class_groups(class_id):
         return jsonify({'success': False, 'message': 'Error fetching groups'}), 500
 
 
+@bp.route('/api/school-years', methods=['GET'])
+@login_required
+@management_required
+def management_api_school_years():
+    """API endpoint to list all school years for dropdown filters."""
+    years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    return jsonify({
+        'success': True,
+        'years': [
+            {
+                'id': y.id,
+                'name': y.name,
+                'is_active': bool(y.is_active),
+            }
+            for y in years
+        ],
+    })
+
+
 
 # ============================================================
 # Route: /classes
@@ -177,7 +196,29 @@ def management_api_class_groups(class_id):
 @management_required
 def classes():
     """Enhanced classes management page for Directors and School Administrators."""
+    # Filters (GET):
+    # - If a school year is active and the user didn't explicitly pick a year,
+    #   default the UI to the active year.
+    # - Keep the page fast to navigate by loading all classes and filtering in
+    #   the UI (so switching years doesn't require a full reload).
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    selected_school_year_id = request.args.get('school_year_id', type=int)
+    if selected_school_year_id is None and active_school_year:
+        selected_school_year_id = active_school_year.id
+
     classes = Class.query.all()
+
+    # Provide school-year list for the filter dropdown
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    try:
+        current_app.logger.info(
+            "[classes_tab] active_school_year=%s selected_school_year_id=%s school_years_count=%s",
+            getattr(active_school_year, "id", None),
+            selected_school_year_id,
+            len(school_years) if school_years is not None else None,
+        )
+    except Exception:
+        pass
     
     # Get unique student count (total students in system, not sum across classes)
     from models import Student
@@ -185,6 +226,8 @@ def classes():
     
     return render_template('management/enhanced_classes.html', 
                          classes=classes,
+                         school_years=school_years,
+                         selected_school_year_id=selected_school_year_id,
                          unique_student_count=unique_student_count,
                          section='classes',
                          active_tab='classes')

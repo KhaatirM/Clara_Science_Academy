@@ -1366,14 +1366,28 @@ def create_app(config_class=None):
             current_app.logger.warning("inject_school_timezone_display: %s", e)
             return {"school_timezone_display": None}
 
+    @app.context_processor
+    def inject_school_years_for_filters():
+        """Provide school years for management filter dropdowns (defensive)."""
+        try:
+            from models import SchoolYear
+            years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+            active = next((y for y in years if getattr(y, "is_active", False)), None)
+            return {"all_school_years": years, "active_school_year_obj": active}
+        except Exception:
+            return {"all_school_years": [], "active_school_year_obj": None}
+
     # Inject at_risk_alerts for teacher/admin dashboard pages (shown on all tabs)
     @app.context_processor
     def inject_at_risk_alerts():
+        from utils.academic_concerns_ui import academic_concerns_popup_disabled
+
         out = {
             'at_risk_alerts': [],
             'failing_count': 0,
             'overdue_count': 0,
             'academic_concerns_audience': False,
+            'disable_academic_alert_popup': academic_concerns_popup_disabled(),
         }
         if not current_user.is_authenticated:
             return out

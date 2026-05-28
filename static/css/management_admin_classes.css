@@ -1139,6 +1139,13 @@ CLASSES TAB STYLES ==================== */
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
 }
 
+/* Allow dropdown menus to render outside the filters card */
+.mgmt-cls-content .enhanced-filters,
+.mgmt-cls-content .enhanced-filters .card,
+.mgmt-cls-content .enhanced-filters .card-body {
+  overflow: visible;
+}
+
 .mgmt-cls-content .enhanced-filters .form-control,
 .mgmt-cls-content .enhanced-filters .form-select,
 .mgmt-cls-content .enhanced-filters .input-group-text {
@@ -1146,9 +1153,220 @@ CLASSES TAB STYLES ==================== */
   border-color: #e2e8f0;
 }
 
+/* Ensure dropdown caret + consistent control shape inside the filters card. */
+.mgmt-cls-content .enhanced-filters .form-control,
+.mgmt-cls-content .enhanced-filters .form-select {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 14px;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  box-shadow: none;
+}
+
+.mgmt-cls-content .enhanced-filters .form-select {
+  /* Some pages disable the native caret; enforce a consistent one here. */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 2.5rem;
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 14px 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M3.204 5.5a.75.75 0 0 1 1.06-.056L8 8.94l3.736-3.496a.75.75 0 1 1 1.004 1.112l-4.25 3.98a.9.9 0 0 1-1.24 0l-4.25-3.98a.75.75 0 0 1-.056-1.06Z'/%3E%3C/svg%3E");
+}
+
+.mgmt-cls-content .enhanced-filters .form-control:focus,
+.mgmt-cls-content .enhanced-filters .form-select:focus {
+  border-color: rgba(13, 148, 136, 0.5);
+  box-shadow: 0 0 0 0.22rem rgba(13, 148, 136, 0.15);
+}
+
 .mgmt-cls-content .enhanced-filters .btn-primary {
   background: linear-gradient(135deg, var(--mgmt-cls-accent), var(--mgmt-cls-accent-deep));
   border-color: var(--mgmt-cls-accent-deep);
+}
+
+/* Filter header + labels */
+.mgmt-cls-content .mgmt-cls-filters-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.mgmt-cls-content .mgmt-cls-filters-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 800;
+  color: var(--mgmt-cls-text);
+  letter-spacing: -0.01em;
+}
+
+.mgmt-cls-content .mgmt-cls-filters-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mgmt-cls-content .mgmt-cls-filter-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mgmt-cls-muted);
+  margin: 0 0 0.35rem;
+}
+
+/* "Pretty" dropdowns for the filters panel (custom menu instead of native <select>). */
+.mgmt-cls-content .mgmt-cls-pretty-select {
+  width: 100%;
+  position: relative;
+}
+
+.mgmt-cls-content .mgmt-cls-pretty-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.mgmt-cls-content .mgmt-cls-pretty-select-btn:focus,
+.mgmt-cls-content .mgmt-cls-pretty-select-btn:active {
+  border-color: rgba(13, 148, 136, 0.5);
+  box-shadow: 0 0 0 0.22rem rgba(13, 148, 136, 0.15);
+}
+
+.mgmt-cls-content .mgmt-cls-pretty-select-menu {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  padding: 0.35rem;
+  min-width: 100%;
+  max-height: 320px;
+  overflow: auto;
+  z-index: 2000;
+}
+
+.mgmt-cls-content .mgmt-cls-pretty-select-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mgmt-cls-content .mgmt-cls-pretty-select-item {
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  font-weight: 600;
+}
+
+.mgmt-cls-content .mgmt-cls-pretty-select-item:hover,
+.mgmt-cls-content .mgmt-cls-pretty-select-item:focus {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f172a;
+}
+
+/* ------------------------------------------------------------------ */
+/* Create Class modal (modern management hub styling) */
+/* ------------------------------------------------------------------ */
+#createClassModal .mgmt-create-class-modal {
+  border: none;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+}
+
+#createClassModal .mgmt-create-class-modal__header {
+  background: linear-gradient(135deg, var(--mgmt-cls-accent), var(--mgmt-cls-accent-deep));
+  color: #fff;
+  border: none;
+  padding: 1.15rem 1.25rem;
+}
+
+#createClassModal .mgmt-create-class-modal__header .btn-close {
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+#createClassModal .mgmt-create-class-modal__header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+#createClassModal .mgmt-create-class-modal__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+  font-size: 1.15rem;
+}
+
+#createClassModal .mgmt-create-class-modal__subtitle {
+  font-size: 0.9rem;
+  opacity: 0.92;
+  margin-top: 0.25rem;
+}
+
+#createClassModal .modal-body {
+  background: #f8fafc;
+}
+
+#createClassModal .mgmt-create-class-modal__section {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  padding: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+#createClassModal .mgmt-create-class-modal__section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+#createClassModal .form-label {
+  font-weight: 700;
+  color: #334155;
+}
+
+#createClassModal .form-control,
+#createClassModal .form-select {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+#createClassModal .form-control:focus,
+#createClassModal .form-select:focus {
+  border-color: rgba(13, 148, 136, 0.5);
+  box-shadow: 0 0 0 0.22rem rgba(13, 148, 136, 0.15);
+}
+
+#createClassModal .mgmt-create-class-modal__footer {
+  background: #fff;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.95rem 1.25rem;
 }
 
 .mgmt-cls-content .classes-grid-header {

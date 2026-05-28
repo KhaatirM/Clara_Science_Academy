@@ -899,6 +899,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Runs infrequently to reduce server load.
     (function initQuizKeepAlive() {
         const keepAliveUrl = "{{ url_for('student.quiz_keepalive', assignment_id=assignment.id) }}";
+        const keepAliveUrlParams = new URLSearchParams(window.location.search);
+        const isRetakePage = keepAliveUrlParams.get('retake') === 'true';
         let didAutoSubmitOnClose = false;
 
         function autoSubmitBecauseClosed() {
@@ -924,8 +926,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (!data) return;
+                    // Reopened assignments stay open past the original due date; rely on is_open.
+                    if (data.is_open === true) return;
                     const remaining = typeof data.seconds_remaining === 'number' ? data.seconds_remaining : null;
-                    if (remaining !== null && remaining <= 0) {
+                    if (remaining !== null && remaining <= 0 && !isRetakePage) {
                         autoSubmitBecauseClosed();
                     }
                 })
@@ -1198,7 +1202,8 @@ function startQuizTimer() {
         if (quizState.timeRemaining <= 0) {
             clearInterval(quizState.timer);
             alert('Time is up! The quiz will be submitted automatically.');
-            document.getElementById('quizForm').submit();
+            const form = document.getElementById('quizForm');
+            if (form) form.submit();
         }
     }, 1000);
 }

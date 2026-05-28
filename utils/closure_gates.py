@@ -44,6 +44,19 @@ STUDENT_WRITE_ENDPOINTS = {
     'student.edit_discussion_post':               ('current_year', None),
 }
 
+# Student-assistant endpoints that modify attendance / grades / assignments for a class.
+# These should be locked on the same timeline as TEACHER write access (Day 21+).
+ASSISTANT_WRITE_ENDPOINTS = {
+    # endpoint name                                 : (kind, arg_name)
+    'student_assistant.take_attendance':             ('class', 'class_id'),
+    'student_assistant.grade_assignment':            ('assignment', 'assignment_id'),
+    'student_assistant.grade_group_assignment':      ('group_assignment', 'assignment_id'),
+    'student_assistant.assistant_add_assignment':    ('class', 'class_id'),
+    'student_assistant.assistant_add_quiz_assignment': ('class', 'class_id'),
+    'student_assistant.assistant_add_discussion_assignment': ('class', 'class_id'),
+    'student_assistant.assistant_save_group_assignment': ('class', 'class_id'),
+}
+
 # Teacher endpoints that should be blocked once teachers are locked out.
 # These names are the ACTUAL Flask endpoint names registered in this app
 # (verified by inspection of teacher_routes/*.py). Misspelled or removed
@@ -69,7 +82,7 @@ TEACHER_WRITE_ENDPOINTS = {
 def _resolve_school_year_for_request(kind: str, arg_name: Optional[str]):
     """Return the SchoolYear most relevant to this request, or None."""
     from models import (
-        Assignment, GroupAssignment, SchoolYear,
+        Assignment, GroupAssignment, SchoolYear, Class,
     )
     view_args = request.view_args or {}
     if kind == 'assignment' and arg_name and view_args.get(arg_name) is not None:
@@ -80,6 +93,10 @@ def _resolve_school_year_for_request(kind: str, arg_name: Optional[str]):
         ga = GroupAssignment.query.get(view_args.get(arg_name))
         if ga:
             return SchoolYear.query.get(ga.school_year_id)
+    if kind == 'class' and arg_name and view_args.get(arg_name) is not None:
+        c = Class.query.get(view_args.get(arg_name))
+        if c:
+            return SchoolYear.query.get(c.school_year_id)
     if kind == 'current_year':
         return SchoolYear.query.filter_by(is_active=True).first()
     return None
@@ -95,6 +112,8 @@ def _resolve_class_for_request(kind: str, arg_name: Optional[str]):
     if kind == 'group_assignment' and arg_name and view_args.get(arg_name) is not None:
         ga = GroupAssignment.query.get(view_args.get(arg_name))
         return Class.query.get(ga.class_id) if ga else None
+    if kind == 'class' and arg_name and view_args.get(arg_name) is not None:
+        return Class.query.get(view_args.get(arg_name))
     return None
 
 
@@ -213,6 +232,22 @@ def register_closure_gates(app):
             if sy and get_teacher_access_status(user, sy) != ACCESS_FULL:
                 return _teacher_locked_response(endpoint)
 
+        elif endpoint in ASSISTANT_WRITE_ENDPOINTS:
+            kind, arg = ASSISTANT_WRITE_ENDPOINTS[endpoint]
+            try:
+                klass = _resolve_class_for_request(kind, arg)
+                sy = _resolve_school_year_for_request(kind, arg)
+            except Exception:
+                current_app.logger.exception("closure_gate resolve failed for %s", endpoint)
+                return
+
+            # Student assistants should be locked on the teacher timeline (Day 21+),
+            # not the student lockout (Day 7+).
+            if klass and class_is_locked_for_writes(klass, for_role='teacher', user_id=None):
+                return _assistant_locked_response(endpoint)
+            if sy and get_teacher_access_status(user, sy) != ACCESS_FULL:
+                return _assistant_locked_response(endpoint)
+
 
 def _safe_current_user():
     try:
@@ -242,5 +277,17 @@ def _teacher_locked_response(endpoint: str):
     )
     try:
         return redirect(request.referrer or url_for('teacher.dashboard.my_classes'))
+    except Exception:
+        return redirect('/')
+
+
+def _assistant_locked_response(endpoint: str):
+    flash(
+        "The teacher window for this school year has ended. Student assistant edits are locked. "
+        "Contact the Director or School Administrator if you still need to update grades or attendance.",
+        "warning",
+    )
+    try:
+        return redirect(request.referrer or url_for('student_assistant.assistant_console'))
     except Exception:
         return redirect('/')

@@ -1561,15 +1561,26 @@ def close_school_year():
             GroupAssignment.status != 'Voided',
         ).update({GroupAssignment.status: 'Inactive'}, synchronize_session=False)
 
-        Enrollment.query.filter(Enrollment.class_id.in_(class_ids)).update(
-            {Enrollment.is_active: False},
+    # Defensive close: deactivate EVERYTHING tied to this school year, even if
+    # an unexpected class slipped out of `class_ids` (bad data, late edits, etc).
+    # (We keep historical rows; we only flip "active" flags.)
+    class_ids_for_year = [c.id for c in classes_in_year]
+    if class_ids_for_year:
+        Enrollment.query.filter(
+            Enrollment.class_id.in_(class_ids_for_year),
+            Enrollment.is_active.is_(True),
+        ).update(
+            {Enrollment.is_active: False, Enrollment.dropped_at: datetime.utcnow()},
             synchronize_session=False,
         )
 
-        Class.query.filter(Class.id.in_(class_ids)).update(
-            {Class.is_active: False},
-            synchronize_session=False,
-        )
+    Class.query.filter(
+        Class.school_year_id == sy.id,
+        Class.is_active.is_(True),
+    ).update(
+        {Class.is_active: False},
+        synchronize_session=False,
+    )
 
     promo_stats = None
     promo_failed = False

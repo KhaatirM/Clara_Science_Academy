@@ -31,6 +31,14 @@
     {% endif %}
   </div>
   <div class="rh-hero-actions">
+    {% if section == 'assignments' %}
+    <button type="button" class="btn btn-grades-to-improve" data-bs-toggle="modal" data-bs-target="#lowGradesModal">
+      <i class="bi bi-graph-down-arrow me-2"></i>Grades to Improve
+      {% if low_grade_assignments %}
+      <span class="badge-gti ms-2">{{ low_grade_assignments|length }}</span>
+      {% endif %}
+    </button>
+    {% endif %}
     <span class="rh-role-badge rh-role-badge--student"><i class="bi bi-mortarboard-fill"></i> Student</span>
     {% if section != 'home' %}
     <a href="{{ url_for('student.student_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-house-door"></i> Home</a>

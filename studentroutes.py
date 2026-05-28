@@ -2712,16 +2712,16 @@ def take_quiz(assignment_id):
     if is_retake and attempts_remaining and attempts_remaining > 0:
         submission = None  # Clear submission to allow new attempt
         grade = None  # Clear grade view to allow new attempt
-        
-        # Clear old progress on retake so it doesn't interfere with new attempt
-        old_progress = QuizProgress.query.filter_by(
+        grade_data = None
+        grading_status = None
+        grade_percentage = None
+
+        # Clear all saved quiz progress so timer/answers don't carry over
+        QuizProgress.query.filter_by(
             student_id=student.id,
             assignment_id=assignment_id,
-            is_submitted=False
-        ).first()
-        if old_progress:
-            db.session.delete(old_progress)
-            db.session.commit()
+        ).delete(synchronize_session=False)
+        db.session.commit()
     
     # Load quiz questions (with section for grouping)
     from sqlalchemy.orm import joinedload
@@ -2759,7 +2759,12 @@ def take_quiz(assignment_id):
 
     # Timed quiz: compute remaining seconds (supports pausing via save & continue).
     timer_remaining_seconds = (assignment.time_limit_minutes * 60) if assignment.time_limit_minutes else None
-    if assignment.time_limit_minutes and assignment.allow_save_and_continue and not submission:
+    if (
+        assignment.time_limit_minutes
+        and assignment.allow_save_and_continue
+        and not submission
+        and not is_retake
+    ):
         now_utc = datetime.utcnow()
         progress = QuizProgress.query.filter_by(
             student_id=student.id,
@@ -2802,11 +2807,15 @@ def take_quiz(assignment_id):
     closes_at_utc = _as_utc_aware(closes_at) if closes_at else None
     server_now_utc = datetime.now(timezone.utc)
 
+    if is_retake and assignment.time_limit_minutes:
+        timer_remaining_seconds = assignment.time_limit_minutes * 60
+
     return render_template('shared/take_quiz.html', 
                          assignment=assignment,
                          questions=questions,
                          submission=submission,
                          grade=grade,
+                         is_retake=is_retake,
                          grade_data=grade_data,
                          grading_status=grading_status,
                          grade_percentage=grade_percentage,
@@ -3037,7 +3046,13 @@ def submit_quiz(assignment_id):
     # If the quiz closes while the student is actively taking it, allow a short grace window
     # so "auto-save + auto-submit on close" can complete reliably.
     from teacher_routes.assignment_utils import is_assignment_open_for_student
-    if not is_assignment_open_for_student(assignment, student.id):
+    from models import AssignmentReopening
+    active_reopening_for_submit = AssignmentReopening.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student.id,
+        is_active=True,
+    ).first()
+    if not is_assignment_open_for_student(assignment, student.id) and not active_reopening_for_submit:
         closes_at = assignment.close_date or assignment.due_date
         closes_at_utc = _as_utc_aware(closes_at) if closes_at else None
         now_utc = datetime.now(timezone.utc)

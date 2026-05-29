@@ -94,6 +94,7 @@
               <select class="form-select concerns-filter" id="concernsTypeFilter" onchange="filterConcerns()" aria-label="Filter by alert type">
                 <option value="">All alert types</option>
                 <option value="failing">Failing only</option>
+                <option value="not_submitted">Missing / not submitted</option>
                 <option value="overdue">Past due only</option>
               </select>
             </div>
@@ -153,6 +154,8 @@
                data-grade-level="{{ alert.grade_level if alert.grade_level is not none else '' }}"
                data-failing="{{ alert.failing_count }}"
                data-overdue="{{ alert.overdue_count }}"
+               data-not-submitted="{{ alert.missing_count|default(alert.not_submitted_count|default(0)) }}"
+               data-missing="{{ alert.missing_count|default(alert.not_submitted_count|default(0)) }}"
                data-alert-type="critical"
                data-details-loaded="false">
             <div class="academic-concern-header ac-concern-toggle"
@@ -195,9 +198,16 @@
                       GPA {{ '%.2f' % alert.current_gpa }}
                     </span>
                     {% if alert.failing_count > 0 %}
-                    <span class="academic-concern-badge badge-danger">
+                    <span class="academic-concern-badge badge-danger" data-badge="failing">
                       <i class="bi bi-x-octagon-fill me-1" aria-hidden="true"></i>
                       {{ alert.failing_count }} failing
+                    </span>
+                    {% endif %}
+                    {% set missing_n = alert.missing_count|default(alert.not_submitted_count|default(0)) %}
+                    {% if missing_n > 0 %}
+                    <span class="academic-concern-badge ac-badge-not-submitted" data-badge="missing" title="Assignments marked not submitted">
+                      <i class="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
+                      {{ missing_n }} missing
                     </span>
                     {% endif %}
                     {% if alert.overdue_count > 0 %}
@@ -262,18 +272,16 @@
   var ACADEMIC_DETAILS_API = "{{ academic_details_api }}";
 
   /* -------------------------------------------------------------
-     30-minute "snooze" for the bottom-right toast.
+     Snooze for the bottom-right toast (explicit dismiss only).
 
-     The partial is included on every dashboard page (per the
-     'always appear on every tab/page' rule), so each navigation
-     re-renders the toast with class="toast show". Without
-     persistence, dismissing it ever felt impossible.
+     The partial is included on every dashboard page, so each navigation
+     re-renders the toast with class="toast show". Without persistence,
+     dismissing it would feel impossible.
 
-     When the user explicitly acts on the toast (clicks ✕ OR clicks
-     "Review concerns"), we store a future timestamp in
-     localStorage. Until that timestamp passes, every page load
-     immediately strips the .show class so the toast stays hidden.
-     After ~30 minutes the toast comes back as a fresh reminder.
+     Snooze applies ONLY when the user clicks ✕ on the toast. Opening
+     "Review concerns" hides the toast while the modal is open but does
+     NOT snooze — closing the modal or navigating to another allowed tab
+     brings the toast back immediately.
      ------------------------------------------------------------- */
   var ACADEMIC_TOAST_DISMISS_KEY = 'clara:academicConcernsToastSnoozeUntil';
   var ACADEMIC_TOAST_SNOOZE_MS = 5 * 60 * 1000; // 5 minutes
@@ -294,6 +302,18 @@
       );
     } catch (e) { /* localStorage unavailable — fall through */ }
   }
+  function showAcademicToastIfAllowed() {
+    var toastElement = document.getElementById('academicAlertToast');
+    if (toastElement && !isAcademicToastSnoozed()) {
+      toastElement.classList.add('show');
+    }
+  }
+  function hideAcademicToastForModal() {
+    var toastElement = document.getElementById('academicAlertToast');
+    if (toastElement) {
+      toastElement.classList.remove('show');
+    }
+  }
 
   (function initAcademicToastSnooze() {
     function ready(fn) {
@@ -304,33 +324,18 @@
       var toastElement = document.getElementById('academicAlertToast');
       if (!toastElement) return;
 
-      // If the user dismissed recently, hide it before it animates in.
+      // If the user dismissed with ✕ recently, hide before it animates in.
       if (isAcademicToastSnoozed()) {
         toastElement.classList.remove('show');
       }
 
-      // Persist the snooze whenever Bootstrap fires the hidden event
-      // (covers both the ✕ button and toast.hide() from "Review concerns").
+      // Snooze only on explicit dismiss (✕), not when opening the modal.
       toastElement.addEventListener('hidden.bs.toast', snoozeAcademicToast);
     });
   })();
   function showAcademicDetailsModal() {
-    var toastElement = document.getElementById('academicAlertToast');
-    if (toastElement) {
-      // Use getOrCreateInstance — Bootstrap doesn't auto-create a Toast
-      // instance on page load, so getInstance() would return null and
-      // the toast would stay visible behind the modal.
-      try {
-        var toast = bootstrap.Toast.getOrCreateInstance(toastElement);
-        if (toast) toast.hide(); // also fires hidden.bs.toast → snooze
-      } catch (e) {
-        // Fallback if Bootstrap JS isn't ready: just yank the .show class
-        // so the default `.toast:not(.show){display:none}` rule hides it,
-        // and persist the snooze manually since hidden.bs.toast won't fire.
-        toastElement.classList.remove('show');
-        snoozeAcademicToast();
-      }
-    }
+    // Hide visually only — do not call toast.hide() (that would snooze).
+    hideAcademicToastForModal();
     var modalElement = document.getElementById('academicDetailsModal');
     if (!modalElement) {
       alert('Academic details modal not found. Please refresh the page.');
@@ -338,11 +343,13 @@
     }
     var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
-    modalElement.addEventListener('hidden.bs.modal', function cleanupAcademicModalBackdrop() {
+    modalElement.addEventListener('hidden.bs.modal', function onAcademicModalClosed() {
       document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
       document.body.classList.remove('modal-open');
       document.body.style.removeProperty('overflow');
       document.body.style.removeProperty('padding-right');
+      // Viewing the modal is not a dismiss — bring the toast back unless ✕ was used.
+      showAcademicToastIfAllowed();
     }, { once: true });
   }
   function toggleConcernCard(studentId, event) {
@@ -365,6 +372,67 @@
       }
     }
   }
+  function updateConcernHeaderBadges(card, counts) {
+    if (!card || !counts) return;
+    var badges = card.querySelector('.academic-concern-badges');
+    if (!badges) return;
+
+    var failing = parseInt(counts.failing, 10) || 0;
+    var missing = parseInt(counts.missing, 10) || 0;
+    card.dataset.failing = String(failing);
+    card.dataset.missing = String(missing);
+    card.dataset.notSubmitted = String(missing);
+
+    function upsertBadge(key, visible, className, title, iconClass, label) {
+      var el = badges.querySelector('[data-badge="' + key + '"]');
+      if (!visible) {
+        if (el) el.remove();
+        return;
+      }
+      if (!el) {
+        el = document.createElement('span');
+        el.className = className;
+        el.setAttribute('data-badge', key);
+        if (title) el.title = title;
+        el.innerHTML = '<i class="bi ' + iconClass + ' me-1" aria-hidden="true"></i>' +
+          '<span class="ac-badge-text"></span>';
+        var gpaBadge = badges.querySelector('.ac-badge-gpa');
+        if (key === 'failing' && gpaBadge) {
+          gpaBadge.insertAdjacentElement('afterend', el);
+        } else {
+          var failBadge = badges.querySelector('[data-badge="failing"]');
+          if (key === 'missing' && failBadge) {
+            failBadge.insertAdjacentElement('afterend', el);
+          } else if (gpaBadge) {
+            gpaBadge.insertAdjacentElement('afterend', el);
+          } else {
+            badges.appendChild(el);
+          }
+        }
+      }
+      var textEl = el.querySelector('.ac-badge-text');
+      if (textEl) textEl.textContent = label;
+      else el.lastChild.textContent = label;
+    }
+
+    upsertBadge(
+      'failing',
+      failing > 0,
+      'academic-concern-badge badge-danger',
+      '',
+      'bi-x-octagon-fill',
+      failing + ' failing'
+    );
+    upsertBadge(
+      'missing',
+      missing > 0,
+      'academic-concern-badge ac-badge-not-submitted',
+      'Assignments marked not submitted',
+      'bi-file-earmark-x',
+      missing + ' missing'
+    );
+  }
+
   function loadStudentAcademicDetails(studentId) {
     fetch(ACADEMIC_DETAILS_API + '/' + studentId + '/details/data')
       .then(response => {
@@ -383,8 +451,28 @@
             if (data.student.current_gpa != null) card.dataset.gpa = String(data.student.current_gpa);
             var ma = data.student.missing_assignments || {};
             var count = 0;
-            for (var k in ma) count += (ma[k] || []).length;
+            var notSubmitted = 0;
+            var failingFromDetails = 0;
+            for (var k in ma) {
+              (ma[k] || []).forEach(function(a) {
+                count += 1;
+                if (a.status === 'failing') failingFromDetails += 1;
+                if ((a.submission_status || 'not_submitted') !== 'submitted') {
+                  notSubmitted += 1;
+                }
+              });
+            }
             card.dataset.assignmentsCount = String(count);
+            var failingCount = data.student.failing_count != null
+              ? parseInt(data.student.failing_count, 10)
+              : failingFromDetails;
+            var missingCount = data.student.missing_count != null
+              ? parseInt(data.student.missing_count, 10)
+              : notSubmitted;
+            updateConcernHeaderBadges(card, {
+              failing: failingCount,
+              missing: missingCount
+            });
           }
           if (typeof filterConcerns === 'function') filterConcerns();
         } else {
@@ -404,23 +492,53 @@
   function printStudentConcerns(studentId) {
     const card = document.querySelector('.academic-concern-card[data-student-id="' + studentId + '"]');
     const studentName = card ? (card.getAttribute('data-student-name') || 'Student') : 'Student';
-    let student = (window._academicDetailsCache || {})[studentId];
-    if (!student) {
-      fetch(ACADEMIC_DETAILS_API + '/' + studentId + '/details/data')
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            window._academicDetailsCache = window._academicDetailsCache || {};
-            window._academicDetailsCache[studentId] = data.student;
-            doPrintStudentConcerns(data.student, studentName);
-          } else {
-            alert('Please wait for student details to load, then try again.');
-          }
-        })
-        .catch(() => alert('Error loading student details. Please try again.'));
-      return;
+    fetch(ACADEMIC_DETAILS_API + '/' + studentId + '/details/data')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          window._academicDetailsCache = window._academicDetailsCache || {};
+          window._academicDetailsCache[studentId] = data.student;
+          doPrintStudentConcerns(data.student, studentName);
+        } else {
+          alert('Please wait for student details to load, then try again.');
+        }
+      })
+      .catch(() => alert('Error loading student details. Please try again.'));
+  }
+  function concernAssignmentIsQuiz(a) {
+    if (!a) return false;
+    if (a.is_quiz) return true;
+    var t = (a.assignment_type || '').toLowerCase();
+    return t === 'quiz' || t === 'group_quiz';
+  }
+  function formatConcernAssignmentLine(a) {
+    var isQuiz = concernAssignmentIsQuiz(a);
+    var isSubmitted = (a.submission_status || 'not_submitted') === 'submitted';
+    var subStatus = isSubmitted ? 'Submitted' : 'Not Submitted';
+    if (isQuiz && !isSubmitted) {
+      subStatus = a.status === 'missing' ? 'Not taken' : 'Not Submitted';
     }
-    doPrintStudentConcerns(student, studentName);
+    var statusClass = 'missing';
+    var statusText = 'Missing';
+    if (a.status === 'failing') {
+      statusClass = 'failing';
+      var scoreLabel = a.score_label || (isQuiz ? 'Best score' : 'Score');
+      var scorePart = (a.score !== 'N/A' && a.score != null && a.score !== 'Awaiting Grade')
+        ? (scoreLabel + ': ' + a.score + '%')
+        : '—';
+      statusText = 'Failing (' + scorePart + ')';
+    } else if (a.status === 'missing') {
+      statusText = isQuiz ? 'Missing (quiz not taken)' : 'Missing';
+    } else if (a.status === 'awaiting_grade' || a.score === 'Awaiting Grade') {
+      statusClass = 'awaiting';
+      statusText = 'Awaiting Grade';
+    }
+    return {
+      statusClass: statusClass,
+      statusText: statusText,
+      subStatus: subStatus,
+      subClass: isSubmitted ? 'submission-yes' : 'submission-no'
+    };
   }
   function doPrintStudentConcerns(student, studentName) {
     const logoUrl = (typeof ACADEMIC_CONCERN_LOGO_URL !== 'undefined' && ACADEMIC_CONCERN_LOGO_URL)
@@ -439,10 +557,22 @@
     html += '.info-grid-table{width:100%;border-collapse:collapse;font-size:8.5pt}.info-grid-table td{border:none;padding:4px 6px;vertical-align:middle}';
     html += '.info-grid-table .label-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:2px solid #000;border-bottom:none;font-weight:bold;background:#fff}';
     html += '.info-grid-table .value-cell{border-left:2px solid #000;border-right:2px solid #000;border-top:none;border-bottom:2px solid #000;font-weight:normal;background:#fff}';
-    html += '.section-title{font-size:11pt;font-weight:bold;margin:1rem 0 0.5rem;border-bottom:1px solid #000;padding-bottom:3px}';
-    html += 'ul{list-style:none;padding:0;margin:0}li{padding:0.4rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}';
-    html += '.status{font-size:0.85rem}.status.failing{color:#721c24}.status.missing{color:#856404}.status.awaiting{color:#0d6efd}.status.submission-yes{color:#155724;font-weight:600}.status.submission-no{color:#6c757d;font-weight:600}';
-    html += '@media print{body{margin:0.5in}}</style></head><body style="max-width:8.5in;margin:0 auto;padding:0.5in">';
+    html += '.section-title{font-size:11pt;font-weight:bold;margin:0.75rem 0 0.35rem;border-bottom:1px solid #000;padding-bottom:3px}';
+    html += '.assignments-print-body{margin-top:0.35rem}';
+    html += '.assignments-print-body--grid{display:grid;grid-template-columns:1fr 1fr;gap:0.55rem 1rem;align-items:start}';
+    html += '.class-block{break-inside:avoid;page-break-inside:avoid;margin:0;padding:0}';
+    html += '.class-title{font-size:9.5pt;font-weight:bold;margin:0 0 0.2rem;padding-bottom:2px;border-bottom:1px solid #bbb;line-height:1.2}';
+    html += '.assignment-columns{list-style:none;padding:0;margin:0;column-gap:0.75rem}';
+    html += '.assignment-columns--2{column-count:2}';
+    html += '.assignment-columns--3{column-count:3}';
+    html += '.assignment-columns li{break-inside:avoid;page-break-inside:avoid;-webkit-column-break-inside:avoid;padding:0.18rem 0 0.28rem;margin:0;border-bottom:1px solid #eee;font-size:8.25pt;line-height:1.28}';
+    html += '.assignment-columns li:last-child{border-bottom:none}';
+    html += '.assignment-title{font-weight:bold;display:block}';
+    html += '.assignment-meta{font-size:7.75pt;margin-top:1px;color:#222}';
+    html += '.status{font-size:7.75pt}.status.failing{color:#721c24}.status.missing{color:#856404}.status.awaiting{color:#0d6efd}.status.submission-yes{color:#155724;font-weight:600}.status.submission-no{color:#6c757d;font-weight:600}';
+    html += '.print-footer{margin-top:1rem;font-size:7.5pt;color:#666}';
+    html += '@media print{body{margin:0.45in}.assignments-print-body--grid{grid-template-columns:1fr 1fr}.assignment-columns--3{column-count:3}}';
+    html += '@media print and (max-width:7in){.assignments-print-body--grid{grid-template-columns:1fr}.assignment-columns--3{column-count:2}}</style></head><body style="max-width:8.5in;margin:0 auto;padding:0.45in">';
     html += '<table class="pdf-header-table"><tr>';
     html += '<td class="student-column"><table class="info-grid-table">';
     html += '<tr><td class="label-cell" colspan="2">Student Name:</td></tr>';
@@ -462,28 +592,44 @@
     html += '</table></td></tr></table>';
     html += '<div class="section-title">Assignments Requiring Attention</div>';
     if (student.missing_assignments && Object.keys(student.missing_assignments).length > 0) {
-      for (const [className, assignments] of Object.entries(student.missing_assignments)) {
-        html += '<div class="section-title" style="margin-top:1rem">' + escapeHtml(className) + '</div><ul>';
-        assignments.forEach(a => {
-          const isAwaiting = a.status === 'awaiting_grade' || a.score === 'Awaiting Grade';
-          const statusClass = isAwaiting ? 'awaiting' : (a.status === 'failing' ? 'failing' : 'missing');
-          const statusText = isAwaiting ? 'Awaiting Grade' : (a.status === 'failing' ? ('Failing (' + (a.score !== 'N/A' && a.score != null && a.score !== 'Awaiting Grade' ? a.score + '%' : '—') + ')') : 'Missing');
-          const isSubmitted = (a.submission_status || 'not_submitted') === 'submitted';
-          const subStatus = isSubmitted ? 'Submitted' : 'Not Submitted';
-          const subClass = isSubmitted ? 'submission-yes' : 'submission-no';
+      const classEntries = Object.entries(student.missing_assignments);
+      const useClassGrid = classEntries.length > 1;
+      html += '<div class="assignments-print-body' + (useClassGrid ? ' assignments-print-body--grid' : '') + '">';
+      classEntries.forEach(function(entry) {
+        const className = entry[0];
+        const assignments = entry[1] || [];
+        const seenKeys = new Set();
+        const items = [];
+        assignments.forEach(function(a) {
+          const dedupeKey = a.assignment_id ? ('id:' + a.assignment_id) : ('title:' + (a.title || '') + '|' + (a.due_date || ''));
+          if (seenKeys.has(dedupeKey)) return;
+          seenKeys.add(dedupeKey);
+          items.push(a);
+        });
+        const colClass = items.length >= 14 ? 'assignment-columns assignment-columns--3'
+          : 'assignment-columns assignment-columns--2';
+        html += '<div class="class-block">';
+        html += '<div class="class-title">' + escapeHtml(className) + '</div>';
+        html += '<ul class="' + colClass + '">';
+        items.forEach(function(a) {
+          const line = formatConcernAssignmentLine(a);
           const typeLabel = a.assignment_type ? (a.assignment_type.replace('group_','').toUpperCase()) : '';
           const quarterLabel = a.quarter ? escapeHtml(String(a.quarter)) : '';
-          html += '<li><strong>' + escapeHtml(a.title) + '</strong>' + (typeLabel ? ' <em>(' + typeLabel + ')</em>' : '') + (quarterLabel ? ' <em>[' + quarterLabel + ']</em>' : '') + '<br>';
-          html += '<span class="status ' + statusClass + '">' + statusText + '</span>';
-          html += ' &middot; <span class="status ' + subClass + '">' + subStatus + '</span>';
-          html += ' &middot; Due: ' + escapeHtml(a.due_date || '—') + '</li>';
+          html += '<li>';
+          html += '<span class="assignment-title">' + escapeHtml(a.title) + (typeLabel ? ' <em>(' + typeLabel + ')</em>' : '') + (quarterLabel ? ' <em>[' + quarterLabel + ']</em>' : '') + '</span>';
+          html += '<div class="assignment-meta">';
+          html += '<span class="status ' + line.statusClass + '">' + escapeHtml(line.statusText) + '</span>';
+          html += ' &middot; <span class="status ' + line.subClass + '">' + escapeHtml(line.subStatus) + '</span>';
+          html += ' &middot; Due: ' + escapeHtml(a.due_date || '—');
+          html += '</div></li>';
         });
-        html += '</ul>';
-      }
+        html += '</ul></div>';
+      });
+      html += '</div>';
     } else {
       html += '<p>No missing or failing assignments found.</p>';
     }
-    html += '<p style="margin-top:2rem;font-size:0.85rem;color:#999">Printed from Clara Science Academy &middot; ' + new Date().toLocaleDateString() + '</p>';
+    html += '<p class="print-footer">Printed from Clara Science Academy &middot; ' + new Date().toLocaleDateString() + '</p>';
     html += '</body></html>';
     const w = window.open('', '_blank');
     w.document.write(html);
@@ -522,7 +668,8 @@
         }
         html += '<div class="assignment-cards-grid">';
         assignments.forEach((assignment, idx) => {
-          const isFailing = assignment.score !== null && assignment.score !== undefined && assignment.score !== 'N/A' && assignment.score <= 69;
+          const line = formatConcernAssignmentLine(assignment);
+          const isFailing = assignment.status === 'failing';
           const assignmentId = 'assignment-' + (student.student_id || 'unknown') + '-' + idx + '-' + Date.now();
           html += '<div class="assignment-concern-card ' + (isFailing ? 'card-failing' : 'card-warning') + '" id="' + assignmentId + '">';
           html += '<div class="assignment-concern-header"><div class="assignment-concern-icon ' + (isFailing ? 'icon-danger' : 'icon-warning') + '"><i class="bi bi-' + (isFailing ? 'x-circle' : 'exclamation-circle') + '-fill"></i></div>';
@@ -532,17 +679,18 @@
           if (assignment.assignment_type) {
             const typeLabels = {'pdf': 'PDF', 'quiz': 'Quiz', 'discussion': 'Discussion', 'paper': 'Paper', 'group_pdf': 'Group PDF', 'group_quiz': 'Group Quiz', 'group_discussion': 'Group Discussion'};
             const typeLabel = typeLabels[(assignment.assignment_type || '').toLowerCase()] || (assignment.assignment_type || '').toUpperCase();
-            html += '<span class="assignment-type-badge" title="Assignment type"><i class="bi bi-' + (assignment.assignment_type.toLowerCase() === 'quiz' ? 'question-circle' : assignment.assignment_type.toLowerCase() === 'discussion' ? 'chat-dots' : 'file-earmark') + '"></i>' + typeLabel + '</span>';
+            html += '<span class="assignment-type-badge" title="Assignment type"><i class="bi bi-' + (assignment.assignment_type.toLowerCase() === 'quiz' || assignment.assignment_type.toLowerCase() === 'group_quiz' ? 'question-circle' : assignment.assignment_type.toLowerCase() === 'discussion' ? 'chat-dots' : 'file-earmark') + '"></i>' + typeLabel + '</span>';
           }
           if (assignment.status) {
             html += '<span class="assignment-status-pill status-' + assignment.status + '"><i class="bi bi-' + (assignment.status === 'missing' ? 'dash-circle' : 'exclamation-triangle') + '-fill"></i>' + assignment.status + '</span>';
           }
           var subStatus = assignment.submission_status || 'not_submitted';
-          html += '<span class="assignment-submission-badge submission-' + subStatus + '" title="Submission status"><i class="bi bi-' + (subStatus === 'submitted' ? 'check-circle-fill' : 'x-circle-fill') + '"></i>' + (subStatus === 'submitted' ? 'Submitted' : 'Not Submitted') + '</span>';
+          html += '<span class="assignment-submission-badge submission-' + subStatus + '" title="Submission status"><i class="bi bi-' + (subStatus === 'submitted' ? 'check-circle-fill' : 'x-circle-fill') + '"></i>' + line.subStatus + '</span>';
           if (assignment.score !== null && assignment.score !== undefined && assignment.score !== 'N/A') {
-            html += '<span class="assignment-score-badge ' + (assignment.score <= 69 ? 'score-failing' : 'score-warning') + '">' + assignment.score + '%</span>';
+            var scorePrefix = assignment.score_label || (concernAssignmentIsQuiz(assignment) ? 'Best' : '');
+            html += '<span class="assignment-score-badge ' + (assignment.score <= 69 ? 'score-failing' : 'score-warning') + '">' + (scorePrefix ? scorePrefix + ' ' : '') + assignment.score + '%</span>';
           } else {
-            html += '<span class="assignment-score-badge score-missing">Not graded</span>';
+            html += '<span class="assignment-score-badge score-missing">' + (concernAssignmentIsQuiz(assignment) ? 'Not taken' : 'Not graded') + '</span>';
           }
           html += '</div></div>';
         });
@@ -568,11 +716,13 @@
       var className = (card.getAttribute('data-class-name') || '').toLowerCase();
       var failingCount = parseInt(card.getAttribute('data-failing'), 10) || 0;
       var overdueCount = parseInt(card.getAttribute('data-overdue'), 10) || 0;
+      var notSubmittedCount = parseInt(card.getAttribute('data-missing') || card.getAttribute('data-not-submitted'), 10) || 0;
       var detailsDiv = card.querySelector('.student-details-placeholder');
       var detailsText = detailsDiv ? (detailsDiv.textContent || '').toLowerCase() : '';
       var searchMatch = !searchTerm || studentName.indexOf(searchTerm) >= 0 || className.indexOf(searchTerm) >= 0 || detailsText.indexOf(searchTerm) >= 0;
       var typeMatch = true;
       if (typeFilter === 'failing') typeMatch = failingCount > 0;
+      else if (typeFilter === 'not_submitted') typeMatch = notSubmittedCount > 0;
       else if (typeFilter === 'overdue') typeMatch = overdueCount > 0;
       var gpaVal = parseFloat(card.getAttribute('data-gpa'));
       var gpaMatch = true;

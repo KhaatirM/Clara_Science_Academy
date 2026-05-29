@@ -4149,6 +4149,12 @@
     box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
 }
 
+.academic-concern-badge.ac-badge-not-submitted {
+    background: linear-gradient(135deg, #e8590c 0%, #d9480f 100%);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(232, 89, 12, 0.28);
+}
+
 @keyframes slideInRight {
     from {
         opacity: 0;

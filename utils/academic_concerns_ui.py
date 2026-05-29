@@ -3,6 +3,19 @@
 from flask import request
 
 
+def summarize_concern_assignments(missing_assignments_by_class):
+    """Count failing vs not-submitted items from a details API assignment map."""
+    failing = 0
+    missing = 0
+    for assignments in (missing_assignments_by_class or {}).values():
+        for item in assignments or []:
+            if item.get('status') == 'failing':
+                failing += 1
+            if (item.get('submission_status') or 'not_submitted') != 'submitted':
+                missing += 1
+    return {'failing_count': failing, 'missing_count': missing}
+
+
 def academic_concerns_popup_disabled():
     """
     Return True when the academic concerns toast should not appear on this request.

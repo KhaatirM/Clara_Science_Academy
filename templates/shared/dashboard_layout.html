@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/hub_themes.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v=2">
     {% if not disable_academic_alert_popup and academic_concerns_audience|default(false) and at_risk_alerts %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/academic_concerns.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/academic_concerns.css') }}?v=5">
     {% endif %}
     {% block extra_css %}{% endblock %}
 </head>

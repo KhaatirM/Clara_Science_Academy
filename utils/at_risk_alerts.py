@@ -23,8 +23,9 @@ ACADEMIC_CONCERN_GPA_THRESHOLD = 2.0
 # request fans out into 1k+ queries. 5 min is short enough that fresh grades show up
 # quickly; callers that mutate grades can use invalidate_at_risk_alerts_cache(user_id).
 _ALERTS_CACHE_TTL_SECONDS = 300
+_ALERTS_CACHE_VERSION = 3  # bump when alert payload shape changes
 _alerts_cache_lock = threading.Lock()
-_alerts_cache = {}  # user_id -> (expires_at_epoch, payload_tuple)
+_alerts_cache = {}  # (user_id, version) -> (expires_at_epoch, payload_tuple)
 
 
 def invalidate_at_risk_alerts_cache(user_id=None):
@@ -33,7 +34,9 @@ def invalidate_at_risk_alerts_cache(user_id=None):
         if user_id is None:
             _alerts_cache.clear()
         else:
-            _alerts_cache.pop(user_id, None)
+            stale_keys = [k for k in _alerts_cache if k[0] == user_id]
+            for key in stale_keys:
+                _alerts_cache.pop(key, None)
 
 
 def _percentage_from_grade_data(grade_data, assignment_total_points):
@@ -112,10 +115,48 @@ def _assignment_type_label(raw_type):
     return labels.get(t, t.replace('_', ' ').title())
 
 
+def _is_awaiting_grade(student_id, assignment_id, percentage):
+    """Submitted online/in-person with 0% — teacher has not entered a real grade yet."""
+    if percentage is None or percentage != 0:
+        return False
+    from models import Submission
+
+    sub = Submission.query.filter_by(
+        student_id=student_id, assignment_id=assignment_id
+    ).first()
+    return bool(sub and sub.submission_type in ('online', 'in_person'))
+
+
+def _counts_as_not_submitted(student_id, assignment_id, grade, percentage, is_past_due):
+    """True when an at-risk assignment was not effectively turned in."""
+    is_at_risk = False
+    if percentage is None:
+        if is_past_due:
+            is_at_risk = True
+    elif percentage <= 69:
+        is_at_risk = True
+    if not is_at_risk:
+        return False
+    if _is_awaiting_grade(student_id, assignment_id, percentage):
+        return False
+    from models import Submission
+    from utils.academic_concern_submission import academic_concern_effective_submitted
+
+    sub = Submission.query.filter_by(
+        student_id=student_id, assignment_id=assignment_id
+    ).first()
+    return not academic_concern_effective_submitted(
+        student_id, assignment_id, grade, sub
+    )
+
+
+FAILING_MAX_PERCENT = 69
+
+
 def _count_assignment_issues(student_id, class_ids, is_admin_user):
     """
-    Count failing / overdue assignments in scope for summary chips.
-    Returns (failing_count, overdue_count, classes_with_issues set).
+    Count failing / overdue / not-submitted assignments in scope for summary chips.
+    Returns (failing_count, overdue_count, not_submitted_count, classes_with_issues set).
     """
     from models import (
         db,
@@ -124,12 +165,16 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
         Enrollment,
         GroupAssignment,
         GroupGrade,
+        GroupSubmission,
         StudentGroup,
         StudentGroupMember,
+        Submission,
     )
+    from utils.academic_concern_submission import academic_concern_effective_submitted
 
     failing = 0
     overdue = 0
+    not_submitted = 0
     classes_with_issues = set()
     total_pts_default = 100.0
     now = datetime.utcnow()
@@ -146,36 +191,47 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
     )
     if class_ids is not None:
         grade_q = grade_q.filter(Assignment.class_id.in_(class_ids))
+
+    from utils.academic_concern_assignments import (
+        PASSING_MIN_PERCENT,
+        _is_quiz_type,
+        pick_representative_grade,
+        _percentage_for_grade,
+    )
+
+    by_assignment = {}
     for grade in grade_q.all():
         if not grade.assignment:
             continue
-        try:
-            grade_data = (
-                json.loads(grade.grade_data)
-                if isinstance(grade.grade_data, str)
-                else (grade.grade_data or {})
-            )
-        except (json.JSONDecodeError, TypeError):
-            grade_data = {}
-        total_pts = getattr(grade.assignment, 'total_points', None) or total_pts_default
-        percentage, _ = _percentage_from_grade_data(grade_data, total_pts)
-        is_past_due = grade.assignment.due_date < now
+        by_assignment.setdefault(grade.assignment_id, []).append(grade)
+
+    for _assignment_id, rows in by_assignment.items():
+        assignment = rows[0].assignment
+        rep = pick_representative_grade(rows, assignment)
+        percentage = _percentage_for_grade(rep, assignment) if rep else None
+        is_quiz = _is_quiz_type(getattr(assignment, 'assignment_type', None))
+        if is_quiz and percentage is not None and percentage >= PASSING_MIN_PERCENT:
+            continue
+        is_past_due = assignment.due_date < now
         class_name = (
-            grade.assignment.class_info.name
-            if grade.assignment.class_info
-            else None
+            assignment.class_info.name if assignment.class_info else None
         )
         if percentage is None and is_past_due:
             overdue += 1
             if class_name:
                 classes_with_issues.add(class_name)
-        elif percentage is not None and percentage <= 69:
-            # A graded assignment is not "past due" anymore even when its due
-            # date is in the past; it's just failing. Past-due is reserved for
-            # the no-grade case so badges don't double-count the same item.
+            if _counts_as_not_submitted(
+                student_id, assignment.id, rep, percentage, is_past_due
+            ):
+                not_submitted += 1
+        elif percentage is not None and percentage <= FAILING_MAX_PERCENT:
             failing += 1
             if class_name:
                 classes_with_issues.add(class_name)
+            if _counts_as_not_submitted(
+                student_id, assignment.id, rep, percentage, is_past_due
+            ):
+                not_submitted += 1
 
     if is_admin_user:
         ga_list = GroupAssignment.query.filter(GroupAssignment.status != 'Voided').all()
@@ -220,11 +276,41 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
                     overdue += 1
                     if class_name:
                         classes_with_issues.add(class_name)
+                    sub_type = grade_data.get('submission_type', '')
+                    grp_submitted = sub_type in ('online', 'in_person')
+                    if not grp_submitted:
+                        grp_sub = GroupSubmission.query.filter_by(
+                            group_assignment_id=ga.id,
+                            group_id=gg.group_id,
+                        ).first()
+                        grp_submitted = bool(
+                            grp_sub
+                            and (
+                                grp_sub.attachment_file_path
+                                or grp_sub.attachment_filename
+                            )
+                        )
+                    if not grp_submitted:
+                        not_submitted += 1
                 elif percentage is not None and percentage <= 69:
                     # Failing-and-graded should not also count as past-due.
                     failing += 1
                     if class_name:
                         classes_with_issues.add(class_name)
+                    sub_type = grade_data.get('submission_type', '')
+                    grp_submitted = sub_type in ('online', 'in_person')
+                    if percentage == 0:
+                        grp_sub = GroupSubmission.query.filter_by(
+                            group_assignment_id=ga.id,
+                            group_id=gg.group_id,
+                        ).first()
+                        if grp_sub and (
+                            grp_sub.attachment_file_path
+                            or grp_sub.attachment_filename
+                        ):
+                            grp_submitted = True
+                    if not grp_submitted:
+                        not_submitted += 1
 
     assign_q = Assignment.query.filter(
         Assignment.status == 'Active',
@@ -248,15 +334,23 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
         overdue += 1
         if assignment.class_info:
             classes_with_issues.add(assignment.class_info.name)
+        sub = Submission.query.filter_by(
+            student_id=student_id, assignment_id=assignment.id
+        ).first()
+        if not academic_concern_effective_submitted(
+            student_id, assignment.id, None, sub
+        ):
+            not_submitted += 1
 
-    return failing, overdue, classes_with_issues
+    return failing, overdue, not_submitted, classes_with_issues
 
 
 def get_at_risk_alerts_for_user():
     """
     Students with GPA below ACADEMIC_CONCERN_GPA_THRESHOLD (scoped by role).
 
-    Returns (student_concerns, failing_assignment_count, overdue_assignment_count).
+    Returns (student_concerns, failing_assignment_count, overdue_assignment_count,
+             not_submitted_assignment_count).
     Each concern dict is one row per student (not per assignment).
 
     Cached per-user for _ALERTS_CACHE_TTL_SECONDS to keep page renders fast.
@@ -268,7 +362,7 @@ def get_at_risk_alerts_for_user():
         filter_student_ids_on_roster,
     )
 
-    empty = ([], 0, 0)
+    empty = ([], 0, 0, 0)
     if not current_user.is_authenticated:
         return empty
 
@@ -286,8 +380,8 @@ def get_at_risk_alerts_for_user():
 
     # Per-user short TTL cache: the underlying queries are heavy and this runs on
     # every authenticated page render via inject_at_risk_alerts (context processor).
-    cache_key = getattr(current_user, 'id', None)
-    if cache_key is not None:
+    cache_key = (getattr(current_user, 'id', None), _ALERTS_CACHE_VERSION)
+    if cache_key[0] is not None:
         now_ts = time.time()
         with _alerts_cache_lock:
             entry = _alerts_cache.get(cache_key)
@@ -344,6 +438,7 @@ def get_at_risk_alerts_for_user():
         concerns = []
         total_failing = 0
         total_overdue = 0
+        total_not_submitted = 0
 
         from models import Student, Enrollment
 
@@ -356,11 +451,12 @@ def get_at_risk_alerts_for_user():
             if gpa is None or gpa >= ACADEMIC_CONCERN_GPA_THRESHOLD:
                 continue
 
-            fail_n, od_n, classes_set = _count_assignment_issues(
+            fail_n, od_n, ns_n, classes_set = _count_assignment_issues(
                 sid, gpa_class_ids, is_admin_user
             )
             total_failing += fail_n
             total_overdue += od_n
+            total_not_submitted += ns_n
 
             if gpa_class_ids is None:
                 enrollments = Enrollment.query.filter_by(
@@ -397,14 +493,16 @@ def get_at_risk_alerts_for_user():
                     'enrolled_class_names': enrolled_names,
                     'failing_count': fail_n,
                     'overdue_count': od_n,
+                    'not_submitted_count': ns_n,
+                    'missing_count': ns_n,
                     'issues_total': issues_total,
                     'alert_reason': 'critical',
                 }
             )
 
         concerns.sort(key=lambda c: (c['current_gpa'], c['student_name'].lower()))
-        result = (concerns, total_failing, total_overdue)
-        if cache_key is not None:
+        result = (concerns, total_failing, total_overdue, total_not_submitted)
+        if cache_key[0] is not None:
             with _alerts_cache_lock:
                 _alerts_cache[cache_key] = (
                     time.time() + _ALERTS_CACHE_TTL_SECONDS,

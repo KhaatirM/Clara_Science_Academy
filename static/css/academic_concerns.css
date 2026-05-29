@@ -477,6 +477,12 @@
   letter-spacing: 0.02em;
 }
 
+.academic-concern-badge.ac-badge-not-submitted {
+  background: linear-gradient(135deg, #e8590c 0%, #d9480f 100%);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(232, 89, 12, 0.28);
+}
+
 .academic-concern-meta {
   font-size: 0.88rem;
   line-height: 1.45;

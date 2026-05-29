@@ -1400,6 +1400,7 @@ def create_app(config_class=None):
             'at_risk_alerts': [],
             'failing_count': 0,
             'overdue_count': 0,
+            'not_submitted_count': 0,
             'academic_concerns_audience': False,
             'disable_academic_alert_popup': academic_concerns_popup_disabled(),
         }
@@ -1422,12 +1423,13 @@ def create_app(config_class=None):
             return out
         try:
             from utils.at_risk_alerts import get_at_risk_alerts_for_user
-            alerts, failing, overdue = get_at_risk_alerts_for_user()
+            alerts, failing, overdue, not_submitted = get_at_risk_alerts_for_user()
             return {
                 **out,
                 'at_risk_alerts': alerts,
                 'failing_count': failing,
                 'overdue_count': overdue,
+                'not_submitted_count': not_submitted,
             }
         except Exception as e:
             current_app.logger.warning(f"Context processor at_risk_alerts: {e}")

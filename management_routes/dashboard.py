@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from decorators import management_required, permissions_required
 from models import (
     db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo, AssignmentReopening,
-    User, ExtensionRequest
+    User, ExtensionRequest, SchoolYear
 )
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
@@ -40,14 +40,46 @@ def management_dashboard():
     from flask import current_app, flash
     
     try:
-        # Basic stats
+        active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+        empty_stats = {
+            'students': 0,
+            'teachers': 0,
+            'classes': 0,
+            'assignments': 0,
+            'active_assignments': 0,
+        }
+        empty_monthly = {'new_students': 0, 'attendance_rate': 0, 'average_grade': 0}
+        empty_weekly = {'due_assignments': 0}
+
+        if not active_school_year:
+            now = datetime.now()
+            home_display_date = now.strftime('%A, %B %d, %Y')
+            return render_template(
+                'management/role_dashboard.html',
+                stats=empty_stats,
+                monthly_stats=empty_monthly,
+                weekly_stats=empty_weekly,
+                pending_extension_count=0,
+                home_display_date=home_display_date,
+                section='home',
+                active_tab='home',
+                notifications=[],
+                recent_activity=[],
+            )
+
+        # Basic stats scoped to the active school year
+        year_classes = Class.query.filter_by(school_year_id=active_school_year.id).all()
+        year_class_ids = [c.id for c in year_classes]
+
         stats = {
             'students': Student.query.count(),
-            # Match Teachers & Staff "manage" list: exclude soft-deleted records
             'teachers': TeacherStaff.query.filter(TeacherStaff.is_deleted == False).count(),
-            'classes': Class.query.count(),
-            'assignments': Assignment.query.count(),
-            'active_assignments': Assignment.query.filter(Assignment.status == 'Active').count(),
+            'classes': len(year_classes),
+            'assignments': Assignment.query.filter_by(school_year_id=active_school_year.id).count(),
+            'active_assignments': Assignment.query.filter(
+                Assignment.status == 'Active',
+                Assignment.school_year_id == active_school_year.id,
+            ).count(),
         }
 
         pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
@@ -82,8 +114,9 @@ def management_dashboard():
         week_start = now - timedelta(days=now.weekday())
         week_end = week_start + timedelta(days=7)
         due_assignments = Assignment.query.filter(
+            Assignment.school_year_id == active_school_year.id,
             Assignment.due_date >= week_start,
-            Assignment.due_date < week_end
+            Assignment.due_date < week_end,
         ).count()
         
         # Calculate attendance rate (simplified)

@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 25, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 29, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 25, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 29, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 25</strong> ships the biggest release of the spring: a brand-new <strong>phased school-year-end workflow</strong> (1-week student window, 3-week teacher window, automatic Day-28 finalize, fail-safe extensions at the user, class, and year level), full redesigns of the <strong>report card generation form</strong>, <strong>report cards category page</strong>, and <strong>3rd-grade standards</strong> pages, a <strong>3rd-grade standards checklist</strong> database + editor with completeness tracking and per-student view, a new <strong>School Years</strong> management workspace with smarter next-year date suggestions, and a more reliable <strong>academic concerns popup</strong> with a 30-minute snooze.</p>
+                        <p class="updates-intro-text mb-0"><strong>May 29</strong> polishes the end-of-year experience: dashboards no longer show misleading live stats after a year is closed, <strong>Classes</strong> and <strong>Assignments &amp; Grades</strong> now use school-year filters (nothing lists until you pick a year), the <strong>Create class</strong> modal was redesigned with tap-to-select grade chips and searchable staff checklists (no more Ctrl/Cmd), and <strong>End-of-year closure</strong> moved to the <strong>Calendar</strong> tab where it belongs. Academic concerns stay off when no year is active.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- May 29, 2026 - Closed-year UX, filters, create class, calendar closure -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-calendar-check me-2"></i>Closed-Year Dashboards, Class Filters &amp; Calendar Closure – May 29, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>No misleading stats when the year is closed:</strong> Management, teacher, and student <strong>home</strong> pages now show a clear &ldquo;School year closed&rdquo; notice and hide live GPA, assignment, and enrollment tiles until a new active year exists. Academic concerns alerts are suppressed when there is no active school year.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Classes tab — school-year filters:</strong> Filter by school year (required), subject, and status. Class cards stay hidden until a year is selected so you never see all historical classes mixed together. Summary tiles update to match the filtered set only.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignments &amp; Grades — matching filters:</strong> Same school-year / subject / status filter bar on the class-picker view. Insight counts (classes, assignments, enrollments, teachers) reflect only visible classes. Pick a closed year to review that year&rsquo;s classes without stale totals from every year at once.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Create class modal redesign:</strong> Wider stepped layout. Grade levels are <strong>tap-to-toggle chips</strong> (Select all / Clear). Substitute and additional teachers use <strong>searchable checkbox lists</strong> — no Ctrl/Cmd multi-select. Shows which active school year the class will belong to.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>End-of-year closure on Calendar:</strong> The phased closure scheduler and dashboard links moved from Report Cards to <strong>School Calendar</strong> (<strong>End-of-year closure</strong> button). Closure workflow back-links return to Calendar instead of Report Cards.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> After closing a year, staff see an honest empty/read-only experience instead of last year&rsquo;s numbers pretending to be current. Browsing classes and assignments by year is deliberate, and scheduling year-end closure lives next to the calendar tools you already use.</p>
+                        </div>
+                    </div>
+
                     <!-- May 25, 2026 - Phased year-end, report cards, 3rd grade standards, school years -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-calendar-event me-2"></i>Phased School-Year-End Workflow – May 25, 2026</h6>
@@ -570,7 +600,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>"Manage School Years" entrypoint in the Calendar tab:</strong> The School Calendar now has a prominent gradient CTA + button linking directly to the School Years workspace, so it's easy to find from the place you'd expect to find it.
+                                <strong>"Manage School Years" entrypoint in the Calendar tab:</strong> The School Calendar has a prominent gradient CTA + button linking directly to the School Years workspace. <strong>End-of-year closure</strong> is also scheduled from Calendar (see May 29 update above).
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>

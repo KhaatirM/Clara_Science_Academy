@@ -1,0 +1,15 @@
+{# Shown on role home dashboards when no school year is active (year closed). #}
+{% if not has_active_school_year %}
+<div class="school-year-closed-banner" role="status">
+  <span class="school-year-closed-banner__icon" aria-hidden="true"><i class="bi bi-calendar-x"></i></span>
+  <div>
+    <p class="school-year-closed-banner__title">School year closed</p>
+    <p class="school-year-closed-banner__text mb-0">
+      There is no active school year. Live statistics and coursework summaries are hidden until a new year is started.
+    </p>
+    {% if latest_school_year_label %}
+    <p class="school-year-closed-banner__meta mb-0">Most recent year: {{ latest_school_year_label }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

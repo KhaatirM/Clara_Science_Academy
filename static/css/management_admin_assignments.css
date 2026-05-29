@@ -448,6 +448,49 @@
   background: var(--mgmt-asg-accent-soft) !important;
 }
 
+.mgmt-asg-content .mgmt-asg-pretty-select {
+  width: 100%;
+  position: relative;
+}
+
+.mgmt-asg-content .mgmt-asg-pretty-select-btn {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 0;
+  background: #f8fafc;
+  color: var(--mgmt-asg-text, #0f172a);
+  font-weight: 500;
+}
+
+.mgmt-asg-content .mgmt-asg-pretty-select-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mgmt-asg-content .mgmt-asg-pretty-select-menu {
+  width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.mgmt-asg-content .mgmt-asg-pretty-select-item {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.85rem;
+}
+
+.mgmt-asg-content .mgmt-asg-pretty-select-item:hover,
+.mgmt-asg-content .mgmt-asg-pretty-select-item:focus {
+  background: var(--mgmt-asg-accent-soft);
+  color: var(--mgmt-asg-accent-deep);
+}
+
 @media (max-width: 576px) {
   .mgmt-asg-hero-actions {
     width: 100%;

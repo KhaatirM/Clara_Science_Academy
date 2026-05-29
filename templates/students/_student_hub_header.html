@@ -46,8 +46,11 @@
   </div>
 </header>
 
+{% if section == 'home' and not has_active_school_year %}
+{% include 'shared/_inactive_school_year_home_notice.html' %}
+{% endif %}
 <div class="rh-insights" role="list">
-  {% if section == 'home' %}
+  {% if section == 'home' and has_active_school_year %}
   <div class="rh-insight" role="listitem">
     <span class="rh-insight-icon"><i class="bi bi-graph-up"></i></span>
     <div><div class="rh-insight-value">{{ "%.2f"|format(gpa|default(0)) }}</div><div class="rh-insight-label">GPA</div></div>

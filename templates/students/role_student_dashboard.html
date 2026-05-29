@@ -1055,6 +1055,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             </div>
         </div>
 
+        {% if has_active_school_year %}
         <!-- Up Next - Compact priority widget -->
         <div class="up-next-widget mb-3">
             <div class="up-next-card">
@@ -1147,6 +1148,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         </div>
 
         {% include 'students/_student_assistant_dashboard_banner.html' %}
+        {% endif %}
 
         {% include 'students/_student_home_main_content.html' %}
 

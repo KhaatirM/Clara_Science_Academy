@@ -875,6 +875,9 @@ def assignments_and_grades():
     from models import Enrollment
     try:
         from datetime import datetime
+        from utils.school_year_filters import get_school_year_filter_context
+
+        sy_filter = get_school_year_filter_context()
         
         # Get all classes with safety checks
         all_classes = Class.query.all()
@@ -964,7 +967,8 @@ def assignments_and_grades():
                                  extension_request_count=pending_extension_count,
                                  redo_request_count=pending_redo_count,
                                  pending_assistant_by_class=pending_assistant_by_class,
-                                 total_pending_assistant_proposals=total_pending_assistant_proposals)
+                                 total_pending_assistant_proposals=total_pending_assistant_proposals,
+                                 **sy_filter)
         
         # Get assignment counts and grade data for each class
         class_data = {}
@@ -1569,7 +1573,8 @@ def assignments_and_grades():
                              enrolled_students=enrolled_students,
                              all_assignments=all_assignments,
                              student_grades=table_student_grades,
-                             student_averages=table_student_averages)
+                             student_averages=table_student_averages,
+                             **sy_filter)
     
     except Exception as e:
         import traceback

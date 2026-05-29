@@ -37,6 +37,9 @@
       </div>
     </header>
 
+    {% include 'shared/_inactive_school_year_home_notice.html' %}
+
+    {% if has_active_school_year %}
     <div class="mgmt-home-insights" role="list">
       <div class="mgmt-home-insight" role="listitem">
         <span class="mgmt-home-insight-icon"><i class="bi bi-calendar-week" aria-hidden="true"></i></span>
@@ -128,6 +131,7 @@
         <p class="mgmt-home-stat-meta">{{ st.assignments|default(0) }} total in system</p>
       </article>
     </div>
+    {% endif %}
 
     <div class="mgmt-home-main-grid">
       <aside class="mgmt-home-profile">

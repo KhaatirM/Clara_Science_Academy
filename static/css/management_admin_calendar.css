@@ -181,6 +181,16 @@
 .mgmt-cal-btn--warn:hover {
   background: #fef3c7 !important;
 }
+.mgmt-cal-btn--danger {
+  color: #fff !important;
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+.mgmt-cal-btn--danger:hover {
+  color: #fff !important;
+  filter: brightness(1.05);
+}
 .mgmt-cal-nav-group {
   display: inline-flex;
   border-radius: 999px;

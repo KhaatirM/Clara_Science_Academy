@@ -1,6 +1,6 @@
 {# Student home: profile, goals, announcements, upcoming, notifications #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/student_announcements_modal.css') }}">
-{% if redo_opportunities %}
+{% if has_active_school_year and redo_opportunities %}
 <div class="student-redo-card mb-4">
     <div class="student-redo-header">
         <h5 class="mb-0">
@@ -72,6 +72,7 @@
         </div>
     </div>
 
+    {% if has_active_school_year %}
     <div class="student-home-announcements">
         <div class="student-home-announcements-card h-100">
             <div class="student-home-announcements-header">
@@ -236,8 +237,10 @@
         </div>
     </div>
     </div>
+    {% endif %}
 </div>
 
+{% if has_active_school_year %}
 {% set announcement_filter_classes = my_classes if my_classes is defined else (classes if classes is defined else []) %}
 
 <div class="modal fade student-announcements-all-modal" id="studentAnnouncementsAllModal" tabindex="-1" aria-labelledby="studentAnnouncementsAllModalLabel" aria-hidden="true">
@@ -463,3 +466,4 @@
     }
 })();
 </script>
+{% endif %}

@@ -168,9 +168,16 @@ def management_api_class_groups(class_id):
 
 @bp.route('/api/school-years', methods=['GET'])
 @login_required
-@management_required
 def management_api_school_years():
-    """API endpoint to list all school years for dropdown filters."""
+    """API endpoint to list all school years for dropdown filters (management & teachers)."""
+    from utils.user_roles import all_role_strings, user_has_management_entry_access
+    from decorators import is_teacher_role
+
+    is_staff = user_has_management_entry_access(current_user) or any(
+        is_teacher_role(r) for r in all_role_strings(current_user)
+    )
+    if not is_staff:
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
     years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     return jsonify({
         'success': True,

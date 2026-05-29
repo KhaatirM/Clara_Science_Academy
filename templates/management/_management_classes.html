@@ -34,22 +34,23 @@
       </div>
     </header>
 
-    <div class="mgmt-cls-insights" role="list">
+    {% include 'shared/_inactive_school_year_home_notice.html' %}
+    <div class="mgmt-cls-insights d-none" id="mgmtClsInsights" role="list" aria-live="polite">
       <div class="mgmt-cls-insight" role="listitem">
         <span class="mgmt-cls-insight-icon"><i class="bi bi-house-door-fill"></i></span>
-        <div><div class="mgmt-cls-insight-value">{{ classes|length }}</div><div class="mgmt-cls-insight-label">Total classes</div></div>
+        <div><div class="mgmt-cls-insight-value" id="mgmtClsInsightClasses">0</div><div class="mgmt-cls-insight-label">Total classes</div></div>
       </div>
       <div class="mgmt-cls-insight" role="listitem">
         <span class="mgmt-cls-insight-icon"><i class="bi bi-people-fill"></i></span>
-        <div><div class="mgmt-cls-insight-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</div><div class="mgmt-cls-insight-label">Enrollments</div></div>
+        <div><div class="mgmt-cls-insight-value" id="mgmtClsInsightEnrollments">0</div><div class="mgmt-cls-insight-label">Enrollments</div></div>
       </div>
       <div class="mgmt-cls-insight" role="listitem">
         <span class="mgmt-cls-insight-icon"><i class="bi bi-person-badge"></i></span>
-        <div><div class="mgmt-cls-insight-value">{{ classes|map(attribute='teacher')|select|unique|list|length }}</div><div class="mgmt-cls-insight-label">Teachers</div></div>
+        <div><div class="mgmt-cls-insight-value" id="mgmtClsInsightTeachers">0</div><div class="mgmt-cls-insight-label">Teachers</div></div>
       </div>
       <div class="mgmt-cls-insight" role="listitem">
         <span class="mgmt-cls-insight-icon"><i class="bi bi-journal-check"></i></span>
-        <div><div class="mgmt-cls-insight-value">{{ classes|map(attribute='assignments')|map('list')|map('length')|sum }}</div><div class="mgmt-cls-insight-label">Assignments</div></div>
+        <div><div class="mgmt-cls-insight-value" id="mgmtClsInsightAssignments">0</div><div class="mgmt-cls-insight-label">Assignments</div></div>
       </div>
     </div>
 
@@ -151,8 +152,11 @@
         <div class="col-12 col-md-6 col-lg-4 class-card mgmt-cls-grid-item" 
              data-subject="{{ class.subject }}" 
              data-teacher="{{ (class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '' }}"
+             data-teacher-key="{{ ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '')|lower }}"
              data-status="{{ 'active' if class.is_active else 'inactive' }}"
              data-school-year-id="{{ class.school_year_id or '' }}"
+             data-enrollment-count="{{ class.enrollments|selectattr('is_active')|list|length }}"
+             data-assignment-count="{{ class.assignments|list|length }}"
              data-search="{{ (class.name + ' ' + class.subject + ' ' + ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '')).lower() }}">
             
             <div class="class-card-modern h-100">
@@ -299,9 +303,9 @@
         {% endfor %}
     </div>
 
-<!-- Create Class Modal (all fields from former add-class page) -->
+<!-- Create Class Modal -->
 <div class="modal fade" id="createClassModal" tabindex="-1" aria-labelledby="createClassModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content mgmt-create-class-modal">
             <div class="modal-header mgmt-create-class-modal__header">
                 <div class="mgmt-create-class-modal__header-left">
@@ -310,110 +314,146 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="createClassModalLabel">Create class</h5>
-                        <div class="mgmt-create-class-modal__subtitle">Set up the class basics, assign teachers, and choose grade levels.</div>
+                        <p class="mgmt-create-class-modal__subtitle mb-0">Tap to select grade levels and staff — no keyboard shortcuts needed.</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="createClassForm">
+                <form id="createClassForm" novalidate>
                     <input type="hidden" id="createClassCsrfToken" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <div class="mgmt-create-class-modal__section">
-                        <div class="mgmt-create-class-modal__section-title">
-                            <i class="bi bi-info-circle"></i> Basics
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label for="className" class="form-label">Class name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="className" required placeholder="e.g., Grade 10 Biology — Section A">
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
-                                <select class="form-select" id="subject" required>
-                                    <option value="">Select subject</option>
-                                    <option value="Mathematics">Mathematics</option>
-                                    <option value="Science">Science</option>
-                                    <option value="English">English</option>
-                                    <option value="History">History</option>
-                                    <option value="Art">Art</option>
-                                    <option value="Physical Education">Physical Education</option>
-                                    <option value="Other">Other (type below)</option>
-                                </select>
-                                <input type="text" class="form-control mt-2 d-none" id="subjectOther" placeholder="Type subject…">
-                            </div>
-                        </div>
+                    {% if not has_active_school_year %}
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill mt-1" aria-hidden="true"></i>
+                        <div class="small mb-0">There is no <strong>active</strong> school year. Activate or start a year before creating classes.</div>
                     </div>
-
-                    <div class="mgmt-create-class-modal__section">
-                        <div class="mgmt-create-class-modal__section-title">
-                            <i class="bi bi-people"></i> Teachers
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label for="primaryTeacher" class="form-label">Primary teacher <span class="text-danger">*</span></label>
-                                <select class="form-select" id="primaryTeacher" required>
-                                    <option value="">Select primary teacher</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label for="substituteTeachers" class="form-label">Substitute teachers</label>
-                                <select class="form-select" id="substituteTeachers" multiple size="3"></select>
-                                <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label for="additionalTeachers" class="form-label">Additional teachers</label>
-                                <select class="form-select" id="additionalTeachers" multiple size="3"></select>
-                                <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
-                            </div>
-                        </div>
+                    {% elif active_school_year_obj %}
+                    <div class="mgmt-create-class-modal__year-pill mb-3">
+                        <i class="bi bi-calendar3" aria-hidden="true"></i>
+                        School year: <strong>{{ active_school_year_obj.name }}</strong>
                     </div>
+                    {% endif %}
 
-                    <div class="mgmt-create-class-modal__section">
-                        <div class="mgmt-create-class-modal__section-title">
-                            <i class="bi bi-mortarboard"></i> Grade levels
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label for="gradeLevels" class="form-label">Target grade levels</label>
-                                <select class="form-select" id="gradeLevels" multiple size="4">
-                                    {% for grade in range(1, 13) %}
-                                    <option value="{{ grade }}">Grade {{ grade }}</option>
-                                    {% endfor %}
-                                </select>
-                                <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                    <div class="mgmt-create-class-modal__layout">
+                        <section class="mgmt-create-class-modal__section">
+                            <div class="mgmt-create-class-modal__section-title">
+                                <span class="mgmt-create-class-modal__step">1</span>
+                                <span><i class="bi bi-info-circle"></i> Class basics</span>
                             </div>
-                        </div>
-                    </div>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="className" class="form-label">Class name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="className" required placeholder="e.g., Grade 10 Biology — Section A">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="subject" required>
+                                        <option value="">Select subject</option>
+                                        <option value="Mathematics">Mathematics</option>
+                                        <option value="Science">Science</option>
+                                        <option value="English">English</option>
+                                        <option value="History">History</option>
+                                        <option value="Art">Art</option>
+                                        <option value="Physical Education">Physical Education</option>
+                                        <option value="Other">Other (type below)</option>
+                                    </select>
+                                    <input type="text" class="form-control mt-2 d-none" id="subjectOther" placeholder="Type subject…">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="primaryTeacher" class="form-label">Primary teacher <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="primaryTeacher" required>
+                                        <option value="">Select primary teacher</option>
+                                    </select>
+                                    <small class="form-text text-muted">Lead teacher for this class</small>
+                                </div>
+                            </div>
+                        </section>
 
-                    <div class="mgmt-create-class-modal__section">
-                        <div class="mgmt-create-class-modal__section-title">
-                            <i class="bi bi-gear"></i> Optional details
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label for="roomNumber" class="form-label">Room</label>
-                                <input type="text" class="form-control" id="roomNumber" placeholder="e.g., Room 101">
+                        <section class="mgmt-create-class-modal__section">
+                            <div class="mgmt-create-class-modal__section-head">
+                                <div class="mgmt-create-class-modal__section-title mb-0">
+                                    <span class="mgmt-create-class-modal__step">2</span>
+                                    <span><i class="bi bi-mortarboard"></i> Grade levels</span>
+                                </div>
+                                <div class="mgmt-create-class-modal__chip-actions">
+                                    <button type="button" class="btn btn-sm btn-link p-0" id="gradeLevelsSelectAll">Select all</button>
+                                    <span class="text-muted">·</span>
+                                    <button type="button" class="btn btn-sm btn-link p-0" id="gradeLevelsClearAll">Clear</button>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label for="schedule" class="form-label">Schedule</label>
-                                <input type="text" class="form-control" id="schedule" placeholder="e.g., Mon/Wed/Fri 9:00–10:00">
+                            <p class="mgmt-create-class-modal__hint">Click each grade this class serves.</p>
+                            <div class="mgmt-create-class-chips" id="gradeLevelChips" role="group" aria-label="Grade levels">
+                                {% for grade in range(1, 13) %}
+                                <label class="mgmt-create-class-chip">
+                                    <input type="checkbox" class="mgmt-create-class-chip-input" name="grade_levels_ui" value="{{ grade }}">
+                                    <span class="mgmt-create-class-chip-label">Grade {{ grade }}</span>
+                                </label>
+                                {% endfor %}
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label for="maxStudents" class="form-label">Max students</label>
-                                <input type="number" class="form-control" id="maxStudents" value="30" min="1" max="50">
+                            <div class="mgmt-create-class-selection-summary" id="gradeLevelsSummary" aria-live="polite">No grades selected</div>
+                        </section>
+
+                        <section class="mgmt-create-class-modal__section mgmt-create-class-modal__section--wide">
+                            <div class="mgmt-create-class-modal__section-title">
+                                <span class="mgmt-create-class-modal__step">3</span>
+                                <span><i class="bi bi-people"></i> Additional staff</span>
                             </div>
-                            <div class="col-12">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" rows="2" placeholder="Optional class description…"></textarea>
+                            <p class="mgmt-create-class-modal__hint">Optional. Primary teacher is excluded from these lists.</p>
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="mgmt-create-class-checklist-card">
+                                        <div class="mgmt-create-class-checklist-card__head">
+                                            <label class="form-label mb-0" for="substituteTeacherSearch">Substitute teachers</label>
+                                            <span class="mgmt-create-class-checklist-count" id="substituteTeachersCount">0 selected</span>
+                                        </div>
+                                        <input type="search" class="form-control form-control-sm" id="substituteTeacherSearch" placeholder="Search by name…" autocomplete="off">
+                                        <div class="mgmt-create-class-checklist" id="substituteTeachersList" role="group" aria-label="Substitute teachers"></div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <div class="mgmt-create-class-checklist-card">
+                                        <div class="mgmt-create-class-checklist-card__head">
+                                            <label class="form-label mb-0" for="additionalTeacherSearch">Additional teachers</label>
+                                            <span class="mgmt-create-class-checklist-count" id="additionalTeachersCount">0 selected</span>
+                                        </div>
+                                        <input type="search" class="form-control form-control-sm" id="additionalTeacherSearch" placeholder="Search by name…" autocomplete="off">
+                                        <div class="mgmt-create-class-checklist" id="additionalTeachersList" role="group" aria-label="Additional teachers"></div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </section>
+
+                        <section class="mgmt-create-class-modal__section">
+                            <div class="mgmt-create-class-modal__section-title">
+                                <span class="mgmt-create-class-modal__step">4</span>
+                                <span><i class="bi bi-gear"></i> Optional details</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6 col-lg-3">
+                                    <label for="roomNumber" class="form-label">Room</label>
+                                    <input type="text" class="form-control" id="roomNumber" placeholder="Room 101">
+                                </div>
+                                <div class="col-12 col-sm-6 col-lg-5">
+                                    <label for="schedule" class="form-label">Schedule</label>
+                                    <input type="text" class="form-control" id="schedule" placeholder="Mon/Wed/Fri 9:00–10:00">
+                                </div>
+                                <div class="col-12 col-sm-6 col-lg-2">
+                                    <label for="maxStudents" class="form-label">Max students</label>
+                                    <input type="number" class="form-control" id="maxStudents" value="30" min="1" max="50">
+                                </div>
+                                <div class="col-12 col-lg-12">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" rows="2" placeholder="Optional notes for staff…"></textarea>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </form>
             </div>
             <div class="modal-footer mgmt-create-class-modal__footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="createClass()">
+                <button type="button" class="btn mgmt-create-class-submit" onclick="createClass()" {% if not has_active_school_year %}disabled title="No active school year"{% endif %}>
                     <i class="bi bi-plus-circle me-2"></i>Create class
                 </button>
             </div>
@@ -538,8 +578,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = searchInput.value.toLowerCase();
         const selectedYear = (schoolYearFilter && schoolYearFilter.value) ? String(schoolYearFilter.value) : '';
         const yearChosen = !!selectedYear;
-        const selectedSubject = yearChosen ? subjectFilter.value : '';
-        const selectedStatus = yearChosen ? statusFilter.value : '';
+        const selectedSubject = subjectFilter.value;
+        const selectedStatus = statusFilter.value;
         
         let shown = 0;
         let total = 0;
@@ -550,7 +590,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const status = card.dataset.status;
             const schoolYearId = String(card.dataset.schoolYearId || '');
             
-            let show = true;
+            // No year selected → show nothing until admin picks a school year.
+            let show = yearChosen;
+            
+            if (!show) {
+                card.style.display = 'none';
+                return;
+            }
             
             if (searchTerm && !searchData.includes(searchTerm)) {
                 show = false;
@@ -564,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 show = false;
             }
 
-            if (selectedYear && schoolYearId !== selectedYear) {
+            if (schoolYearId !== selectedYear) {
                 show = false;
             }
             
@@ -574,7 +620,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (shownCountEl) {
-            shownCountEl.textContent = total ? `(${shown} shown)` : '';
+            if (!yearChosen) {
+                shownCountEl.textContent = '(select a school year)';
+            } else {
+                shownCountEl.textContent = total ? `(${shown} shown)` : '';
+            }
+        }
+
+        const insights = document.getElementById('mgmtClsInsights');
+        if (insights) {
+            insights.classList.toggle('d-none', !yearChosen);
+            if (yearChosen) {
+                let enrollments = 0;
+                let assignments = 0;
+                const teacherKeys = new Set();
+                document.querySelectorAll('.class-card').forEach((card) => {
+                    if (card.style.display === 'none') return;
+                    enrollments += parseInt(card.getAttribute('data-enrollment-count') || '0', 10) || 0;
+                    assignments += parseInt(card.getAttribute('data-assignment-count') || '0', 10) || 0;
+                    const tk = card.getAttribute('data-teacher-key') || '';
+                    if (tk.trim()) teacherKeys.add(tk.trim());
+                });
+                const elC = document.getElementById('mgmtClsInsightClasses');
+                const elE = document.getElementById('mgmtClsInsightEnrollments');
+                const elT = document.getElementById('mgmtClsInsightTeachers');
+                const elA = document.getElementById('mgmtClsInsightAssignments');
+                if (elC) elC.textContent = String(shown);
+                if (elE) elE.textContent = String(enrollments);
+                if (elT) elT.textContent = String(teacherKeys.size);
+                if (elA) elA.textContent = String(assignments);
+            }
         }
     }
     
@@ -635,6 +710,12 @@ function removeClass(classId, className) {
     }
 }
 
+function getCheckedTeacherIds(listId) {
+    const list = document.getElementById(listId);
+    if (!list) return [];
+    return Array.from(list.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+}
+
 function createClass() {
     const name = document.getElementById('className').value.trim();
     const subjectSelect = document.getElementById('subject');
@@ -650,7 +731,7 @@ function createClass() {
     const description = document.getElementById('description').value.trim();
 
     if (!name || !subject || !teacher_id) {
-        alert('Please fill in Class Name, Subject, and Primary Teacher.');
+        alert('Please fill in class name, subject, and primary teacher.');
         return;
     }
 
@@ -659,7 +740,7 @@ function createClass() {
     form.action = '/management/add-class';
 
     const fields = { name, subject, teacher_id, room_number, schedule, max_students, description };
-    Object.keys(fields).forEach(key => {
+    Object.keys(fields).forEach((key) => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = key;
@@ -676,30 +757,29 @@ function createClass() {
         form.appendChild(csrfInput);
     }
 
-    const gradeLevels = document.getElementById('gradeLevels');
-    for (let i = 0; i < gradeLevels.selectedOptions.length; i++) {
+    document.querySelectorAll('#gradeLevelChips input.mgmt-create-class-chip-input:checked').forEach((cb) => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'grade_levels';
-        input.value = gradeLevels.selectedOptions[i].value;
+        input.value = cb.value;
         form.appendChild(input);
-    }
-    const substituteTeachers = document.getElementById('substituteTeachers');
-    for (let i = 0; i < substituteTeachers.selectedOptions.length; i++) {
+    });
+
+    getCheckedTeacherIds('substituteTeachersList').forEach((id) => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'substitute_teachers';
-        input.value = substituteTeachers.selectedOptions[i].value;
+        input.value = id;
         form.appendChild(input);
-    }
-    const additionalTeachers = document.getElementById('additionalTeachers');
-    for (let i = 0; i < additionalTeachers.selectedOptions.length; i++) {
+    });
+
+    getCheckedTeacherIds('additionalTeachersList').forEach((id) => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'additional_teachers';
-        input.value = additionalTeachers.selectedOptions[i].value;
+        input.value = id;
         form.appendChild(input);
-    }
+    });
 
     document.body.appendChild(form);
     form.submit();
@@ -721,45 +801,155 @@ document.addEventListener('DOMContentLoaded', function () {
     syncSubjectOther();
 });
 
-// Load teachers for primary, substitute, and additional dropdowns
-document.addEventListener('DOMContentLoaded', function() {
-    fetch('/management/api/teachers')
-        .then(response => response.json())
-        .then(teachers => {
-            const primarySelect = document.getElementById('primaryTeacher');
-            const substituteSelect = document.getElementById('substituteTeachers');
-            const additionalSelect = document.getElementById('additionalTeachers');
-            teachers.forEach(teacher => {
-                const text = (teacher.first_name + ' ' + teacher.last_name).trim();
-                const option = document.createElement('option');
-                option.value = teacher.id;
-                option.textContent = text;
-                primarySelect.appendChild(option);
-                const subOpt = document.createElement('option');
-                subOpt.value = teacher.id;
-                subOpt.textContent = text;
-                substituteSelect.appendChild(subOpt);
-                const addOpt = document.createElement('option');
-                addOpt.value = teacher.id;
-                addOpt.textContent = text;
-                additionalSelect.appendChild(addOpt);
-            });
-        })
-        .catch(error => console.error('Error loading teachers:', error));
+// Create class modal: grade chips + searchable teacher checklists
+(function initCreateClassModal() {
+    let teachersCache = [];
 
-    // Open modal when URL has ?open=create (e.g. from dashboard "Create New Class" link)
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('open') === 'create') {
-        const modalEl = document.getElementById('createClassModal');
-        if (modalEl) {
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
-            const url = new URL(window.location.href);
-            url.searchParams.delete('open');
-            window.history.replaceState({}, '', url.toString());
+    function updateGradeLevelsSummary() {
+        const summary = document.getElementById('gradeLevelsSummary');
+        const checked = document.querySelectorAll('#gradeLevelChips input:checked');
+        if (!summary) return;
+        if (!checked.length) {
+            summary.textContent = 'No grades selected';
+            return;
+        }
+        const labels = Array.from(checked).map((cb) => `Grade ${cb.value}`);
+        summary.textContent = labels.length <= 4
+            ? labels.join(', ')
+            : `${labels.length} grades selected (${labels.slice(0, 3).join(', ')}…)`;
+    }
+
+    function renderTeacherChecklist(listId, searchId, countId, roleName) {
+        const list = document.getElementById(listId);
+        const search = document.getElementById(searchId);
+        const countEl = document.getElementById(countId);
+        const primaryId = (document.getElementById('primaryTeacher') || {}).value || '';
+        const query = (search && search.value) ? search.value.trim().toLowerCase() : '';
+
+        if (!list) return;
+        list.innerHTML = '';
+
+        const filtered = teachersCache.filter((t) => {
+            if (String(t.id) === String(primaryId)) return false;
+            const name = `${t.first_name || ''} ${t.last_name || ''}`.trim().toLowerCase();
+            return !query || name.includes(query);
+        });
+
+        if (!filtered.length) {
+            const empty = document.createElement('p');
+            empty.className = 'mgmt-create-class-checklist-empty';
+            empty.textContent = query ? 'No staff match your search.' : 'No other staff available.';
+            list.appendChild(empty);
+        } else {
+            filtered.forEach((t) => {
+                const name = `${t.first_name || ''} ${t.last_name || ''}`.trim();
+                const label = document.createElement('label');
+                label.className = 'mgmt-create-class-checklist-item';
+                label.setAttribute('data-teacher-name', name.toLowerCase());
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'form-check-input';
+                cb.value = String(t.id);
+                cb.setAttribute('data-role', roleName);
+
+                const span = document.createElement('span');
+                span.className = 'mgmt-create-class-checklist-item__name';
+                span.textContent = name;
+
+                label.appendChild(cb);
+                label.appendChild(span);
+                list.appendChild(label);
+            });
+        }
+
+        if (countEl) {
+            const n = list.querySelectorAll('input[type="checkbox"]:checked').length;
+            countEl.textContent = `${n} selected`;
         }
     }
-});
+
+    function refreshTeacherLists() {
+        renderTeacherChecklist('substituteTeachersList', 'substituteTeacherSearch', 'substituteTeachersCount', 'substitute');
+        renderTeacherChecklist('additionalTeachersList', 'additionalTeacherSearch', 'additionalTeachersCount', 'additional');
+    }
+
+    function bindChecklistCounts() {
+        ['substituteTeachersList', 'additionalTeachersList'].forEach((listId) => {
+            const list = document.getElementById(listId);
+            if (!list) return;
+            list.addEventListener('change', () => {
+                const countId = listId === 'substituteTeachersList' ? 'substituteTeachersCount' : 'additionalTeachersCount';
+                const countEl = document.getElementById(countId);
+                if (countEl) {
+                    const n = list.querySelectorAll('input[type="checkbox"]:checked').length;
+                    countEl.textContent = `${n} selected`;
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const gradeChips = document.getElementById('gradeLevelChips');
+        if (gradeChips) {
+            gradeChips.addEventListener('change', updateGradeLevelsSummary);
+            document.getElementById('gradeLevelsSelectAll')?.addEventListener('click', () => {
+                gradeChips.querySelectorAll('input').forEach((cb) => { cb.checked = true; });
+                updateGradeLevelsSummary();
+            });
+            document.getElementById('gradeLevelsClearAll')?.addEventListener('click', () => {
+                gradeChips.querySelectorAll('input').forEach((cb) => { cb.checked = false; });
+                updateGradeLevelsSummary();
+            });
+            updateGradeLevelsSummary();
+        }
+
+        const primarySelect = document.getElementById('primaryTeacher');
+        if (primarySelect) {
+            primarySelect.addEventListener('change', refreshTeacherLists);
+        }
+
+        ['substituteTeacherSearch', 'additionalTeacherSearch'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('input', refreshTeacherLists);
+        });
+
+        fetch('/management/api/teachers')
+            .then((response) => response.json())
+            .then((teachers) => {
+                teachersCache = Array.isArray(teachers) ? teachers : [];
+                if (primarySelect) {
+                    teachersCache.forEach((teacher) => {
+                        const text = `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim();
+                        const option = document.createElement('option');
+                        option.value = teacher.id;
+                        option.textContent = text;
+                        primarySelect.appendChild(option);
+                    });
+                }
+                refreshTeacherLists();
+                bindChecklistCounts();
+            })
+            .catch((error) => console.error('Error loading teachers:', error));
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('open') === 'create') {
+            const modalEl = document.getElementById('createClassModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                const url = new URL(window.location.href);
+                url.searchParams.delete('open');
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+
+        document.getElementById('createClassModal')?.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('createClassForm')?.reset();
+            document.getElementById('subjectOther')?.classList.add('d-none');
+            updateGradeLevelsSummary();
+            refreshTeacherLists();
+        });
+    });
+})();
 </script>
 
     </div>

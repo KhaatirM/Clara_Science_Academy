@@ -144,13 +144,36 @@ def teacher_dashboard():
                              teacher_data={}, 
                              monthly_stats={}, 
                              weekly_stats={})
+
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_school_year:
+        return render_template(
+            'management/role_teacher_dashboard.html',
+            teacher=teacher,
+            teacher_data={'classes': [], 'total_students': 0, 'active_assignments': 0, 'total_assignments': 0, 'grades_entered': 0},
+            classes=[],
+            classes_json=[],
+            recent_assignments=[],
+            recent_grades=[],
+            recent_activity=[],
+            notifications=[],
+            total_students=0,
+            active_assignments=0,
+            monthly_stats={'grades_entered': 0},
+            weekly_stats={'due_assignments': 0},
+            section='home',
+            active_tab='home',
+            is_admin=is_admin(),
+        )
     
     # Directors and School Administrators see all classes, teachers only see their assigned classes
     if is_admin():
-        classes = Class.query.all()
+        classes = Class.query.filter_by(school_year_id=active_school_year.id).all()
         class_ids = [c.id for c in classes]
-        recent_assignments = Assignment.query.order_by(Assignment.due_date.desc()).limit(5).all()
-        assignments = Assignment.query.all()
+        recent_assignments = Assignment.query.filter(
+            Assignment.school_year_id == active_school_year.id
+        ).order_by(Assignment.due_date.desc()).limit(5).all()
+        assignments = Assignment.query.filter_by(school_year_id=active_school_year.id).all()
     else:
         # Check if teacher object exists
         if teacher is None:
@@ -160,10 +183,19 @@ def teacher_dashboard():
             recent_assignments = []
             assignments = []
         else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+            classes = Class.query.filter_by(
+                teacher_id=teacher.id,
+                school_year_id=active_school_year.id,
+            ).all()
             class_ids = [c.id for c in classes]
-            recent_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).limit(5).all()
-            assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+            recent_assignments = Assignment.query.filter(
+                Assignment.class_id.in_(class_ids),
+                Assignment.school_year_id == active_school_year.id,
+            ).order_by(Assignment.due_date.desc()).limit(5).all()
+            assignments = Assignment.query.filter(
+                Assignment.class_id.in_(class_ids),
+                Assignment.school_year_id == active_school_year.id,
+            ).all()
     
     # Get recent grades (simplified)
     recent_grades = []
@@ -756,6 +788,11 @@ def assignments_and_grades():
     """Combined view of assignments and grades for teachers"""
     import json
     try:
+        from utils.school_year_filters import get_school_year_filter_context
+
+        sy_filter = get_school_year_filter_context()
+        active_school_year = sy_filter.get('active_school_year')
+
         # Get teacher object or None for administrators
         teacher = get_teacher_or_admin()
         
@@ -869,7 +906,8 @@ def assignments_and_grades():
                                  extension_request_count=pending_extension_count,
                                  redo_request_count=pending_redo_count,
                                  pending_assistant_by_class=pending_assistant_by_class,
-                                 total_pending_assistant_proposals=total_pending_assistant_proposals)
+                                 total_pending_assistant_proposals=total_pending_assistant_proposals,
+                                 **sy_filter)
         
         # Handle class filter
         selected_class = None
@@ -1465,7 +1503,8 @@ def assignments_and_grades():
                              enrolled_students=enrolled_students,
                              student_grades=table_student_grades if view_mode == 'table' else {},
                              student_averages=table_student_averages if view_mode == 'table' else {},
-                             all_assignments=all_assignments_list)
+                             all_assignments=all_assignments_list,
+                             **sy_filter)
     
     except Exception as e:
         current_app.logger.error(f"Error in assignments_and_grades route: {e}")

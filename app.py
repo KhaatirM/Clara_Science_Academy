@@ -1373,9 +1373,23 @@ def create_app(config_class=None):
             from models import SchoolYear
             years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
             active = next((y for y in years if getattr(y, "is_active", False)), None)
-            return {"all_school_years": years, "active_school_year_obj": active}
+            latest_label = None
+            if not active and years:
+                y = years[0]
+                latest_label = y.name + (" (Closed)" if not getattr(y, "is_active", False) else "")
+            return {
+                "all_school_years": years,
+                "active_school_year_obj": active,
+                "has_active_school_year": active is not None,
+                "latest_school_year_label": latest_label,
+            }
         except Exception:
-            return {"all_school_years": [], "active_school_year_obj": None}
+            return {
+                "all_school_years": [],
+                "active_school_year_obj": None,
+                "has_active_school_year": False,
+                "latest_school_year_label": None,
+            }
 
     # Inject at_risk_alerts for teacher/admin dashboard pages (shown on all tabs)
     @app.context_processor

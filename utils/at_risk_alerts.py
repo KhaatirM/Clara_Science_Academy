@@ -272,6 +272,10 @@ def get_at_risk_alerts_for_user():
     if not current_user.is_authenticated:
         return empty
 
+    from models import SchoolYear
+    if not SchoolYear.query.filter_by(is_active=True).first():
+        return empty
+
     from utils.user_roles import all_role_strings, user_has_management_entry_access
     from decorators import is_teacher_role
 

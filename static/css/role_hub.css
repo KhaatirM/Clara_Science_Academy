@@ -26,6 +26,41 @@
   --rh-accent-soft: var(--hub-student-accent-soft, rgba(124, 58, 237, 0.12));
 }
 
+.school-year-closed-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: var(--rh-text, #0f172a);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.school-year-closed-banner__icon {
+  font-size: 1.5rem;
+  color: #64748b;
+  line-height: 1;
+}
+
+.school-year-closed-banner__title {
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.school-year-closed-banner__text,
+.school-year-closed-banner__meta {
+  font-size: 0.875rem;
+  color: var(--rh-muted, #64748b);
+}
+
+.school-year-closed-banner__meta {
+  margin-top: 0.35rem;
+}
+
 .rh-shell {
   background: var(--rh-bg);
   border-radius: 24px;

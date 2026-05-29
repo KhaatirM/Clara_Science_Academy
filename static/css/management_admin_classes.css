@@ -1367,6 +1367,219 @@ CLASSES TAB STYLES ==================== */
   background: #fff;
   border-top: 1px solid rgba(148, 163, 184, 0.25);
   padding: 0.95rem 1.25rem;
+  gap: 0.75rem;
+}
+
+#createClassModal .mgmt-create-class-submit {
+  background: linear-gradient(135deg, var(--mgmt-cls-accent), var(--mgmt-cls-accent-deep));
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.55rem 1.35rem;
+}
+
+#createClassModal .mgmt-create-class-submit:hover:not(:disabled) {
+  filter: brightness(1.05);
+  color: #fff;
+}
+
+#createClassModal .mgmt-create-class-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+#createClassModal .mgmt-create-class-modal__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+#createClassModal .mgmt-create-class-modal__year-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--mgmt-cls-accent-deep);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+#createClassModal .mgmt-create-class-modal__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+#createClassModal .mgmt-create-class-modal__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--mgmt-cls-accent-soft);
+  color: var(--mgmt-cls-accent-deep);
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+#createClassModal .mgmt-create-class-modal__section-title {
+  gap: 0.55rem;
+}
+
+#createClassModal .mgmt-create-class-modal__hint {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 0.65rem;
+}
+
+#createClassModal .mgmt-create-class-modal__chip-actions .btn-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mgmt-cls-accent-deep);
+  text-decoration: none;
+}
+
+#createClassModal .mgmt-create-class-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+#createClassModal .mgmt-create-class-chip {
+  margin: 0;
+  cursor: pointer;
+}
+
+#createClassModal .mgmt-create-class-chip-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#createClassModal .mgmt-create-class-chip-label {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+
+#createClassModal .mgmt-create-class-chip-input:checked + .mgmt-create-class-chip-label {
+  background: var(--mgmt-cls-accent-soft);
+  border-color: var(--mgmt-cls-accent);
+  color: var(--mgmt-cls-accent-deep);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.12);
+}
+
+#createClassModal .mgmt-create-class-chip-input:focus-visible + .mgmt-create-class-chip-label {
+  outline: 2px solid var(--mgmt-cls-accent);
+  outline-offset: 2px;
+}
+
+#createClassModal .mgmt-create-class-selection-summary {
+  margin-top: 0.65rem;
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+#createClassModal .mgmt-create-class-checklist-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.75rem;
+  height: 100%;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#createClassModal .mgmt-create-class-checklist-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+#createClassModal .mgmt-create-class-checklist-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mgmt-cls-accent-deep);
+  background: var(--mgmt-cls-accent-soft);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+#createClassModal .mgmt-create-class-checklist {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-right: 0.15rem;
+}
+
+#createClassModal .mgmt-create-class-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid transparent;
+  cursor: pointer;
+  margin: 0;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+#createClassModal .mgmt-create-class-checklist-item:hover {
+  border-color: #cbd5e1;
+  background: #fff;
+}
+
+#createClassModal .mgmt-create-class-checklist-item:has(input:checked) {
+  border-color: var(--mgmt-cls-accent);
+  background: var(--mgmt-cls-accent-soft);
+}
+
+#createClassModal .mgmt-create-class-checklist-item__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+#createClassModal .mgmt-create-class-checklist-empty {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-align: center;
+  padding: 1.25rem 0.5rem;
+  margin: 0;
+}
+
+@media (max-width: 576px) {
+  #createClassModal .modal-dialog {
+    margin: 0.5rem;
+  }
+  #createClassModal .mgmt-create-class-checklist-card {
+    min-height: 180px;
+  }
 }
 
 .mgmt-cls-content .classes-grid-header {

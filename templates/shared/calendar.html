@@ -19,7 +19,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_calendar.css') }}">
 {% if use_mgmt_cal_hub %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_calendar.css') }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_calendar.css') }}?v=4">
 {% elif use_role_cal_hub %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=2">
 {% endif %}
@@ -46,6 +46,15 @@
         <span class="mgmt-cal-role-badge mgmt-cal-role-badge--director"><i class="bi bi-award-fill"></i> Director</span>
         {% elif has_mgmt_role_access %}
         <span class="mgmt-cal-role-badge mgmt-cal-role-badge--admin"><i class="bi bi-shield-fill"></i> Administrator</span>
+        {% endif %}
+        {% if has_mgmt_role_access and 'school_year_closure.schedule' in current_app.view_functions %}
+        <a href="{{ url_for('school_year_closure.schedule') }}" class="mgmt-cal-btn mgmt-cal-btn--danger">
+          <i class="bi bi-flag-fill" aria-hidden="true"></i> End-of-year closure
+        </a>
+        {% elif has_mgmt_role_access %}
+        <a href="{{ url_for('management.close_school_year') }}" class="mgmt-cal-btn mgmt-cal-btn--danger">
+          <i class="bi bi-flag-fill" aria-hidden="true"></i> End-of-year closure
+        </a>
         {% endif %}
         <div class="mgmt-cal-nav-group" role="group">
           <a href="{{ url_for('management.calendar', month=prev_month.month, year=prev_month.year) }}" class="mgmt-cal-btn mgmt-cal-btn--ghost"><i class="bi bi-chevron-left"></i> Prev</a>

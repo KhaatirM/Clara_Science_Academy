@@ -30,8 +30,8 @@
           <i class="bi bi-shield-fill" aria-hidden="true"></i> Administrator
         </span>
         {% endif %}
-        <a href="{{ url_for('management.report_cards') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">
-          <i class="bi bi-arrow-left" aria-hidden="true"></i> Report cards
+        <a href="{{ url_for('management.calendar') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> School calendar
         </a>
       </div>
     </header>
@@ -191,7 +191,7 @@
         </div>
 
         <div class="mgmt-syc-actions">
-          <a href="{{ url_for('management.report_cards') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">Cancel</a>
+          <a href="{{ url_for('management.calendar') }}" class="mgmt-syc-btn mgmt-syc-btn--ghost">Cancel</a>
           <button type="submit" class="mgmt-syc-btn mgmt-syc-btn--primary">
             <i class="bi bi-calendar-check" aria-hidden="true"></i> Schedule closure
           </button>

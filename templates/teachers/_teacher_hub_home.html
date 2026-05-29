@@ -11,6 +11,8 @@
     {% endif %}
   </div>
 </header>
+{% include 'shared/_inactive_school_year_home_notice.html' %}
+{% if has_active_school_year %}
 <div class="rh-insights" role="list">
   <div class="rh-insight" role="listitem">
     <span class="rh-insight-icon"><i class="bi bi-house-door-fill"></i></span>
@@ -29,3 +31,4 @@
     <div><div class="rh-insight-value">{{ notifications|length if notifications else 0 }}</div><div class="rh-insight-label">Notifications</div></div>
   </div>
 </div>
+{% endif %}

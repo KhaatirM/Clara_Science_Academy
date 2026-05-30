@@ -469,6 +469,15 @@ def grade_assignment(assignment_id):
                          min_replies=min_replies)
 
 
+@bp.route('/grade/group-assignment/<int:assignment_id>', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def grade_group_assignment(assignment_id):
+    """Grade a group assignment — uses shared handler (authorized teachers allowed)."""
+    from management_routes.assignments import admin_grade_group_assignment
+    return admin_grade_group_assignment(assignment_id)
+
+
 @bp.route('/grade/assignment/<int:assignment_id>/student/<int:student_id>', methods=['POST'])
 @login_required
 @teacher_required

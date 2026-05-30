@@ -589,11 +589,9 @@
                                         <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-eye me-2"></i>View Assignment
                                         </a>
-                                        {% if use_management_assignments_urls %}
-                                        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+                                        <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-success btn-sm">
                                             <i class="fas fa-edit me-2"></i>Grade
                                         </a>
-                                        {% endif %}
                                         <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=group_assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=group_assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-users me-2"></i>View Class
                                         </a>
@@ -879,11 +877,9 @@
                                                     <a href="{% if use_management_assignments_urls %}{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=assignment.id) }}{% endif %}" class="btn btn-sm grades-ba-btn" title="View group assignment">
                                                         <i class="bi bi-eye"></i><span class="d-none d-xl-inline ms-1">View</span>
                                                     </a>
-                                                    {% if use_management_assignments_urls %}
-                                                    <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" class="btn btn-sm grades-ba-btn grades-ba-btn-primary" title="Grade group submissions">
+                                                    <button type="button" class="btn btn-sm grades-ba-btn grades-ba-btn-primary" onclick="gradeGroupAssignment({{ assignment.id }})" title="Grade group submissions">
                                                         <i class="bi bi-pencil-square"></i><span class="d-none d-xl-inline ms-1">Grade</span>
-                                                    </a>
-                                                    {% endif %}
+                                                    </button>
                                                     {% endif %}
                                                     <a href="{% if use_management_assignments_urls %}{{ url_for('management.view_class', class_id=assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}{% endif %}" class="btn btn-sm grades-ba-btn" title="Open class">
                                                         <i class="bi bi-people"></i><span class="d-none d-xl-inline ms-1">Class</span>
@@ -1029,6 +1025,18 @@ function gradeAssignment(assignmentId) {
         {% endif %}
     } else {
         console.error('Invalid assignment ID:', assignmentId);
+    }
+}
+
+function gradeGroupAssignment(assignmentId) {
+    if (assignmentId && assignmentId !== '') {
+        {% if use_management_assignments_urls %}
+        window.location.href = `{{ url_for('management.admin_grade_group_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
+        {% else %}
+        window.location.href = `{{ url_for('teacher.grading.grade_group_assignment', assignment_id=999999) }}`.replace('999999', assignmentId);
+        {% endif %}
+    } else {
+        console.error('Invalid group assignment ID:', assignmentId);
     }
 }
 

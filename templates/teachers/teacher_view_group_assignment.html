@@ -33,7 +33,7 @@
     <div class="card-body p-4">
       <h5 class="mb-3"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
       <div class="compact-action-grid">
-        <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" 
+        <a href="{% if admin_view %}{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" 
            class="btn btn-compact btn-compact-edit">
           <i class="bi bi-pencil-square"></i>
           <span>Edit</span>
@@ -45,7 +45,7 @@
           <span>Submissions</span>
         </button>
         
-        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" 
+        <a href="{% if admin_view %}{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" 
            class="btn btn-compact btn-compact-grade">
           <i class="bi bi-check-circle-fill"></i>
           <span>Grade</span>
@@ -341,7 +341,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+        <a href="{% if admin_view %}{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-success btn-sm">
           <i class="bi bi-check-circle me-1"></i>Go to Grade
         </a>
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>

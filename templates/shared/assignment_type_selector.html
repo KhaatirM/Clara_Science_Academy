@@ -114,6 +114,34 @@
                 </div>
             </div>
         </div>
+
+        <!-- Group Assignment -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 assignment-type-card assignment-type-card--group" data-type="group">
+                <div class="card-body text-center p-4">
+                    <div class="assignment-type-icon mb-3">
+                        <i class="bi bi-people-fill text-success assignment-type-icon-large"></i>
+                    </div>
+                    <h5 class="card-title mb-3">Group Assignment</h5>
+                    <p class="card-text text-muted mb-4">
+                        Collaborative work assigned to class groups. One submission per group with shared grading for all members.
+                    </p>
+                    <div class="features-list text-start mb-4">
+                        <h6 class="text-primary mb-2">Features:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Assign to selected groups</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Group submission tracking</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Per-student grades</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>File attachments</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Paper or online submissions</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline-success w-100 select-assignment-type" data-type="group">
+                        <i class="bi bi-people-fill me-2"></i>Create Group Assignment
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Additional Information -->
@@ -124,7 +152,7 @@
                     <i class="bi bi-info-circle"></i>Assignment Type Guidelines
                 </h6>
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-6 col-lg-3">
                         <div class="guideline-item" style="border-left-color: #dc3545;">
                             <h6 class="text-danger">
                                 <i class="bi bi-file-earmark-pdf"></i>PDF/Paper Assignments
@@ -132,7 +160,7 @@
                             <p>Best for essays, reports, projects, and creative work. Students upload completed documents for review and grading.</p>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6 col-lg-3">
                         <div class="guideline-item" style="border-left-color: #ffc107;">
                             <h6 class="text-warning">
                                 <i class="bi bi-question-circle"></i>Quiz Assignments
@@ -140,12 +168,20 @@
                             <p>Perfect for assessments, knowledge checks, and practice tests. Questions are automatically graded with immediate feedback.</p>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6 col-lg-3">
                         <div class="guideline-item" style="border-left-color: #0dcaf0;">
                             <h6 class="text-info">
                                 <i class="bi bi-chat-dots"></i>Discussion Assignments
                             </h6>
                             <p>Ideal for critical thinking, analysis, and collaborative learning. Students engage in meaningful academic discourse.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="guideline-item" style="border-left-color: #198754;">
+                            <h6 class="text-success">
+                                <i class="bi bi-people-fill"></i>Group Assignments
+                            </h6>
+                            <p>Collaborative projects assigned to class groups. Students work together and submit as a team.</p>
                         </div>
                     </div>
                 </div>
@@ -209,9 +245,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = "{{ url_for('teacher.create_discussion_assignment') }}";
                 {% endif %}
                 break;
+            case 'group':
+                redirectToGroupAssignmentFlow();
+                break;
             default:
                 console.error('Unknown assignment type:', type);
         }
+    }
+
+    function redirectToGroupAssignmentFlow() {
+        {% if can_assignments_admin_ui %}
+            {% if preselected_class_id %}
+            window.location.href = "{{ url_for('management.admin_group_assignment_type_selector', class_id=preselected_class_id) }}";
+            {% else %}
+            window.location.href = "{{ url_for('management.group_assignment_type_selector') }}";
+            {% endif %}
+        {% else %}
+            {% if preselected_class_id %}
+            window.location.href = "{{ url_for('teacher.group_assignment_type_selector', class_id=preselected_class_id) }}";
+            {% else %}
+            window.location.href = "{{ url_for('teacher.groups.group_assignment_select_class') }}";
+            {% endif %}
+        {% endif %}
     }
 
     function showAssignmentTargetModal() {
@@ -288,19 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show assignment context modal (In-Class vs Homework)
                     showAssignmentContextModal();
                 } else if (target === 'group') {
-                    {% if can_assignments_admin_ui %}
-                        {% if preselected_class_id %}
-                        window.location.href = "{{ url_for('management.admin_group_assignment_type_selector', class_id=preselected_class_id) }}";
-                        {% else %}
-                        window.location.href = "{{ url_for('management.group_assignment_type_selector') }}";
-                        {% endif %}
-                    {% else %}
-                        {% if preselected_class_id %}
-                        window.location.href = "{{ url_for('teacher.group_assignment_type_selector', class_id=preselected_class_id) }}";
-                        {% else %}
-                        window.location.href = "{{ url_for('teacher.groups.group_assignment_select_class') }}";
-                        {% endif %}
-                    {% endif %}
+                    redirectToGroupAssignmentFlow();
                 }
             });
         });

@@ -5,8 +5,8 @@ Group management routes for teachers.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from flask_login import login_required, current_user
 from decorators import teacher_required
-from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
-from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, Enrollment, Student, SchoolYear, GroupAssignmentMemberSnapshot
+from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_teacher_accessible_classes
+from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, GroupGrade, Enrollment, Student, SchoolYear, GroupAssignmentMemberSnapshot
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import json
@@ -334,6 +334,39 @@ def delete_group(group_id):
     
     return redirect(url_for('teacher.groups.class_groups', class_id=class_id))
 
+@bp.route('/class/<int:class_id>/group-assignments')
+@login_required
+@teacher_required
+def class_group_assignments(class_id):
+    """View all group assignments for a specific class."""
+    class_obj = Class.query.get_or_404(class_id)
+
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to view group assignments for this class.", "danger")
+        return redirect(url_for('teacher.dashboard.my_classes'))
+
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(
+        GroupAssignment.due_date.desc()
+    ).all()
+
+    for assignment in group_assignments:
+        group_grades = GroupGrade.query.filter_by(
+            group_assignment_id=assignment.id, is_voided=False
+        ).all()
+        if group_grades:
+            assignment.graded_status = 'Graded'
+        elif assignment.status == 'Inactive':
+            assignment.graded_status = 'Inactive'
+        else:
+            assignment.graded_status = 'Active'
+
+    return render_template(
+        'teachers/teacher_class_group_assignments.html',
+        class_obj=class_obj,
+        group_assignments=group_assignments,
+        moment=datetime.utcnow(),
+    )
+
 @bp.route('/group-assignment/select-class')
 @login_required
 @teacher_required
@@ -345,10 +378,7 @@ def group_assignment_select_class():
     if is_admin():
         classes = Class.query.all()
     else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        classes = get_teacher_accessible_classes(teacher) if teacher else []
     
     # If teacher has only 1 class, skip selection and go directly to creation
     if not is_admin() and len(classes) == 1:

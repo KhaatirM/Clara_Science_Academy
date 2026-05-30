@@ -105,6 +105,25 @@ def is_admin():
     """Helper function to check if user is an administrator."""
     return current_user.role in ['Director', 'School Administrator']
 
+
+def get_teacher_accessible_classes(teacher):
+    """Return classes where the teacher is primary, additional, or substitute."""
+    if not teacher:
+        return []
+    return Class.query.filter(
+        or_(
+            Class.teacher_id == teacher.id,
+            Class.id.in_(
+                db.session.query(class_additional_teachers.c.class_id)
+                .filter(class_additional_teachers.c.teacher_id == teacher.id)
+            ),
+            Class.id.in_(
+                db.session.query(class_substitute_teachers.c.class_id)
+                .filter(class_substitute_teachers.c.teacher_id == teacher.id)
+            ),
+        )
+    ).all()
+
 def get_current_quarter():
     """Get the current quarter based on AcademicPeriod dates"""
     try:

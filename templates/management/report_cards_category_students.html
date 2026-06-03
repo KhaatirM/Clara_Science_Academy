@@ -25,9 +25,14 @@
 {% set _ns = namespace(total_reports=0, with_reports=0) %}
 {% if students %}
   {% for s in students %}
-    {% if s.report_cards and s.report_cards|length > 0 %}
+    {% if student_reports is defined %}
+      {% set _rc_list = student_reports.get(s.id, []) %}
+    {% else %}
+      {% set _rc_list = s.report_cards if s.report_cards else [] %}
+    {% endif %}
+    {% if _rc_list|length > 0 %}
       {% set _ns.with_reports = _ns.with_reports + 1 %}
-      {% set _ns.total_reports = _ns.total_reports + (s.report_cards|length) %}
+      {% set _ns.total_reports = _ns.total_reports + (_rc_list|length) %}
     {% endif %}
   {% endfor %}
 {% endif %}
@@ -35,6 +40,14 @@
 {% block dashboard_content %}
 <div class="mgmt-rcc container-fluid px-0 px-md-1" data-category="{{ category }}">
   <div class="mgmt-rcc-shell{% if is_director %} mgmt-rcc-shell--director{% endif %}">
+
+    {% if report_saved %}
+    <div class="alert alert-success alert-dismissible fade show mx-3 mt-3 mb-0" role="status">
+      <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+      Report card saved. It is listed under <strong>Recent</strong> on the student card below.
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
 
     {# ===== Hero ===== #}
     <header class="mgmt-rcc-hero">
@@ -160,13 +173,19 @@
       {% for student in students %}
       {% set _initials = (student.first_name[0] if student.first_name else '?') ~ (student.last_name[0] if student.last_name else '') %}
       {% set _enrollments = student.enrollments|length if student.enrollments else 0 %}
+      {% if student_reports is defined %}
+      {% set _student_reports = student_reports.get(student.id, []) %}
+      {% else %}
       {% set _student_reports = student.report_cards|sort(attribute='generated_at', reverse=True)|list if student.report_cards else [] %}
+      {% endif %}
       {% set _report_count = _student_reports|length %}
+      {% set _expand_recent = highlight_student_id is defined and highlight_student_id == student.id %}
       <article class="mgmt-rcc-student"
                data-name="{{ (student.first_name ~ ' ' ~ student.last_name)|lower }}"
                data-id="{{ student.student_id|default('', true)|lower }}"
                data-grade="{{ student.grade_level }}"
-               data-reports="{{ _report_count }}">
+               data-reports="{{ _report_count }}"
+               {% if _expand_recent %}data-highlight-recent="1"{% endif %}>
         <div class="mgmt-rcc-student-stripe" aria-hidden="true"></div>
         <div class="mgmt-rcc-student-body">
 
@@ -200,14 +219,16 @@
 
           <div class="mgmt-rcc-student-actions">
             <a href="{{ url_for('management.generate_report_card_for_student', student_id=student.id, category=category) }}"
-               class="mgmt-rcc-btn mgmt-rcc-btn--band">
+               class="mgmt-rcc-btn mgmt-rcc-btn--band"
+               target="_blank"
+               rel="noopener">
               <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Generate report card
             </a>
           </div>
 
           {% if _report_count > 0 %}
-          <div class="mgmt-rcc-recent" data-recent>
-            <button type="button" class="mgmt-rcc-recent-toggle" aria-expanded="false">
+          <div class="mgmt-rcc-recent{% if _expand_recent %} is-open{% endif %}" data-recent>
+            <button type="button" class="mgmt-rcc-recent-toggle" aria-expanded="{% if _expand_recent %}true{% else %}false{% endif %}">
               <span>
                 <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
                 Recent ({{ _report_count }})
@@ -217,9 +238,9 @@
             <div class="mgmt-rcc-recent-list">
               {% for report in _student_reports[:5] %}
               <div class="mgmt-rcc-recent-row">
-                <span class="mgmt-rcc-recent-meta" title="{{ report.quarter }} — {{ report.school_year.name if report.school_year else 'N/A' }}">
+                <span class="mgmt-rcc-recent-meta" title="{{ report.quarter }} — {{ report.school_year.name if report.school_year else 'N/A' }}{% if report.generated_at %} — {{ report.generated_at.strftime('%b %d, %Y %I:%M %p') }}{% endif %}">
                   <i class="bi bi-calendar2-week" aria-hidden="true"></i>
-                  {{ report.quarter }} · {{ report.school_year.name if report.school_year else 'N/A' }}
+                  {{ report.quarter }} · {{ report.school_year.name if report.school_year else 'N/A' }}{% if report.generated_at %} · {{ report.generated_at.strftime('%m/%d/%Y') }}{% endif %}
                 </span>
                 <span class="mgmt-rcc-recent-actions">
                   <a class="mgmt-rcc-icon-btn"
@@ -346,6 +367,12 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   });
+
+  // After generating from this category, scroll to the student and expand Recents
+  const highlighted = document.querySelector('[data-highlight-recent="1"]');
+  if (highlighted) {
+    highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 });
 </script>
 {% endblock %}

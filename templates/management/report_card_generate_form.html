@@ -65,8 +65,11 @@
       </div>
     </nav>
 
-    <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" novalidate target="_blank">
+    <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" novalidate target="{% if category %}_self{% else %}_blank{% endif %}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      {% if category %}
+      <input type="hidden" name="return_category" value="{{ category }}">
+      {% endif %}
 
       {# =========================================================
          Step 1 — Student
@@ -826,7 +829,9 @@ document.addEventListener('DOMContentLoaded', function() {
       return false;
     }
 
-    form.target = '_blank';
+    if (!{{ 'true' if category else 'false' }}) {
+      form.target = '_blank';
+    }
     generateBtn.disabled = true;
     generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating…';
     setTimeout(() => {

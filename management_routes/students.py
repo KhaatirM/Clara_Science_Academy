@@ -26,6 +26,48 @@ from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
 
 
+def enrolled_students_payload_for_class(class_id, *, include_archived_fallback=True):
+    """
+    Roster for void/bulk-void modals.
+    Prefer active enrollments; if none (e.g. year-end closure archived them), include
+    inactive enrollments so staff can still void for selected students.
+    """
+    try:
+        class_id = int(class_id)
+    except (TypeError, ValueError):
+        return [], False
+
+    active_rows = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    rows = active_rows
+    used_archived_fallback = False
+    if include_archived_fallback and not rows:
+        rows = Enrollment.query.filter_by(class_id=class_id, is_active=False).all()
+        used_archived_fallback = bool(rows)
+
+    students_data = []
+    seen_ids = set()
+    for enrollment in rows:
+        student = enrollment.student
+        if not student or getattr(student, 'is_deleted', False):
+            continue
+        if student.id in seen_ids:
+            continue
+        seen_ids.add(student.id)
+        students_data.append({
+            'id': student.id,
+            'first_name': student.first_name or '',
+            'last_name': student.last_name or '',
+            'grade_level': student.grade_level,
+            'student_id': student.student_id,
+            'enrollment_active': bool(enrollment.is_active),
+        })
+
+    students_data.sort(
+        key=lambda s: ((s.get('last_name') or '').lower(), (s.get('first_name') or '').lower())
+    )
+    return students_data, used_archived_fallback
+
+
 def _remove_uploaded_student_photo(filename: str) -> None:
     """Delete a prior student_* upload from static/uploads when replacing photo."""
     if not filename or "/" in filename or "\\" in filename or ".." in filename:
@@ -519,23 +561,16 @@ def add_student():
 @login_required
 @management_required
 def get_enrolled_students_json(class_id):
-    """Get enrolled students for a class as JSON (for void modal)"""
+    """Get enrolled students for a class as JSON (for void/bulk-void modals)."""
     try:
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        students_data = []
-        
-        for enrollment in enrollments:
-            if enrollment.student:
-                students_data.append({
-                    'id': enrollment.student.id,
-                    'first_name': enrollment.student.first_name,
-                    'last_name': enrollment.student.last_name,
-                    'grade_level': enrollment.student.grade_level,
-                    'student_id': enrollment.student.student_id
-                })
-        
-        return jsonify({'success': True, 'students': students_data})
+        students_data, used_archived = enrolled_students_payload_for_class(class_id)
+        return jsonify({
+            'success': True,
+            'students': students_data,
+            'used_archived_enrollments': used_archived,
+        })
     except Exception as e:
+        current_app.logger.exception('get_enrolled_students_json failed for class %s', class_id)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 

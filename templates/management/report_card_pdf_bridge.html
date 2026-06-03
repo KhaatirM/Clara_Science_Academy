@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Report card saved</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      color: #334155;
+    }
+    .box {
+      text-align: center;
+      padding: 2rem;
+      max-width: 28rem;
+    }
+    .spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 3px solid #e2e8f0;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Report card saved for <strong>{{ student_name }}</strong>.</p>
+    <p class="small" style="color:#64748b;font-size:0.9rem;">Opening PDF…</p>
+    <p class="small" style="margin-top:1rem;">
+      <a id="returnLink" href="{{ return_url }}" style="color:#4f46e5;">Return to student roster</a>
+      ·
+      <a id="pdfLink" href="{{ pdf_url }}" style="color:#4f46e5;">Open PDF again</a>
+    </p>
+  </div>
+  <script>
+    (function () {
+      var returnUrl = {{ return_url|tojson }};
+      var pdfUrl = {{ pdf_url|tojson }};
+      var reloaded = false;
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.location.assign(returnUrl);
+          reloaded = true;
+        }
+      } catch (e) { /* blocked */ }
+      if (!reloaded) {
+        document.getElementById('returnLink').style.fontWeight = '700';
+      }
+      window.location.replace(pdfUrl);
+    })();
+  </script>
+</body>
+</html>

@@ -1125,21 +1125,21 @@ def unvoid_assignment_for_students(assignment_id):
 def get_enrolled_students_json(class_id):
     """Get enrolled students for a class as JSON (for void/bulk-void modal). Teacher must be authorized for the class."""
     from models import Class
+    from management_routes.students import enrolled_students_payload_for_class
+
     class_obj = Class.query.get_or_404(class_id)
     if not is_authorized_for_class(class_obj):
         return jsonify({'success': False, 'message': 'Not authorized for this class.'}), 403
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students_data = []
-    for enrollment in enrollments:
-        if enrollment.student:
-            students_data.append({
-                'id': enrollment.student.id,
-                'first_name': enrollment.student.first_name,
-                'last_name': enrollment.student.last_name,
-                'grade_level': enrollment.student.grade_level,
-                'student_id': enrollment.student.student_id
-            })
-    return jsonify({'success': True, 'students': students_data})
+    try:
+        students_data, used_archived = enrolled_students_payload_for_class(class_id)
+        return jsonify({
+            'success': True,
+            'students': students_data,
+            'used_archived_enrollments': used_archived,
+        })
+    except Exception as e:
+        current_app.logger.exception('get_enrolled_students_json failed for class %s', class_id)
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/bulk-void-assignments', methods=['POST'])
 @login_required

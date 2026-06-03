@@ -503,7 +503,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated May 29, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated June 2, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +515,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – May 29, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – June 2, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>May 29</strong> polishes the end-of-year experience: dashboards no longer show misleading live stats after a year is closed, <strong>Classes</strong> and <strong>Assignments &amp; Grades</strong> now use school-year filters (nothing lists until you pick a year), the <strong>Create class</strong> modal was redesigned with tap-to-select grade chips and searchable staff checklists (no more Ctrl/Cmd), and <strong>End-of-year closure</strong> moved to the <strong>Calendar</strong> tab where it belongs. Academic concerns stay off when no year is active.</p>
+                        <p class="updates-intro-text mb-0"><strong>June 2</strong> improves day-to-day grading and assignment workflows: a redesigned <strong>Create assignment</strong> carousel, <strong>Quarter</strong> labels on Assignments &amp; Grades, more reliable <strong>report card PDFs</strong> and <strong>Recent</strong> history, and a stronger <strong>bulk void</strong> experience for teachers and admins.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- June 2, 2026 - Create assignment carousel, grades quarter, report cards, bulk void -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-plus-circle me-2"></i>Create Assignment, Grades &amp; Report Cards – June 2, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Create assignment carousel:</strong> Choosing PDF/Paper, Quiz, Discussion, or Group assignment is now a horizontal card carousel with matching side previews and animated transitions — no more scrolling through stacked cards. Tips for each type stay visible below the carousel.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignments &amp; Grades — quarter column:</strong> Class grades tables and assignment cards now show which <strong>quarter</strong> each assignment belongs to. Column headers in the grades view are centered for easier scanning.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report card PDFs:</strong> Opening a saved report card PDF no longer shows <strong>N/A</strong> for quarters and comments when the data exists. Saved snapshots merge with live grades when needed, and class lookups work whether IDs were stored as numbers or text.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report cards — Recent list:</strong> Each new generation adds a row under <strong>Recent</strong> on category student cards (with date), so directors can find and reopen the latest PDF without hunting through old records only.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Bulk void improvements:</strong> Teachers and admins can void grades for many students at once with a clearer stepped modal, search, select-all, and archived-enrollment badges. Rosters include students from closed years when active enrollments are empty (common right after year-end closure).
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Faster assignment setup, clearer grading context by quarter, trustworthy report card PDFs, and bulk void that works through closure without empty student lists.</p>
+                        </div>
+                    </div>
+
                     <!-- May 29, 2026 - Closed-year UX, filters, create class, calendar closure -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-calendar-check me-2"></i>Closed-Year Dashboards, Class Filters &amp; Calendar Closure – May 29, 2026</h6>
@@ -1944,11 +1974,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownMay25_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJun2_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownMay25_2026', 'true');
+            sessionStorage.setItem('updateModalShownJun2_2026', 'true');
         }, 500);
     }
 });

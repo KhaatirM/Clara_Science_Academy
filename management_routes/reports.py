@@ -222,6 +222,145 @@ def _calculate_expected_grad_from_student(student):
         return getattr(student, 'expected_grad_date', None) or None
 
 
+def _try_class_id_key(key):
+    """Parse a JSON/dict key as a class id when possible."""
+    if key is None:
+        return None
+    if isinstance(key, int):
+        return key
+    if isinstance(key, str) and key.isdigit():
+        return int(key)
+    try:
+        return int(key)
+    except (TypeError, ValueError):
+        return None
+
+
+def _class_name_to_id_map(class_objects):
+    """Map class display name -> id for legacy snapshots keyed by subject name."""
+    out = {}
+    for class_obj in class_objects or []:
+        if class_obj and getattr(class_obj, 'name', None):
+            out[class_obj.name] = class_obj.id
+    return out
+
+
+def _normalize_quarter_grades_map(quarter_map, class_objects):
+    """
+    Re-key one quarter's grades to integer class_id.
+    JSON snapshots use string ids ('12') or legacy class names as keys.
+    """
+    if not isinstance(quarter_map, dict):
+        return {}
+    name_to_id = _class_name_to_id_map(class_objects)
+    normalized = {}
+    for key, value in quarter_map.items():
+        if not isinstance(value, dict):
+            continue
+        class_id = _try_class_id_key(key)
+        if class_id is None:
+            class_id = name_to_id.get(key)
+        if class_id is None:
+            continue
+        if class_id in normalized and isinstance(normalized[class_id], dict):
+            normalized[class_id] = {**normalized[class_id], **value}
+        else:
+            normalized[class_id] = value
+    return normalized
+
+
+def _normalize_grades_by_quarter(grades_by_quarter, class_objects):
+    """Normalize all quarters in grades_by_quarter to int class_id keys."""
+    if not isinstance(grades_by_quarter, dict):
+        return {}
+    result = {}
+    for quarter_key, quarter_map in grades_by_quarter.items():
+        q = quarter_key
+        if isinstance(q, str) and not q.startswith('Q'):
+            q = f'Q{q}'
+        result[q] = _normalize_quarter_grades_map(quarter_map, class_objects)
+    return result
+
+
+def _merge_grades_by_quarter(saved_gbq, fresh_gbq, class_objects):
+    """
+    Combine saved snapshot with live quarter grades.
+    Saved values win when present; DB fills gaps (empty/partial snapshots).
+    """
+    saved_norm = _normalize_grades_by_quarter(saved_gbq or {}, class_objects)
+    fresh_norm = _normalize_grades_by_quarter(fresh_gbq or {}, class_objects)
+    merged = {}
+    for quarter in ('Q1', 'Q2', 'Q3', 'Q4'):
+        saved_q = saved_norm.get(quarter, {})
+        fresh_q = fresh_norm.get(quarter, {})
+        combined = dict(fresh_q) if isinstance(fresh_q, dict) else {}
+        if isinstance(saved_q, dict):
+            for class_id, grade in saved_q.items():
+                if _quarter_has_any_grade(grade):
+                    combined[class_id] = grade
+        merged[quarter] = combined
+    return merged
+
+
+def _selected_quarters_from_report_card(report_card, report_card_data):
+    """Resolve which quarters this report card covers."""
+    saved_quarters = report_card_data.get('selected_quarters') if isinstance(report_card_data, dict) else None
+    if saved_quarters and isinstance(saved_quarters, list):
+        return [
+            q if isinstance(q, str) and q.startswith('Q') else f'Q{q}'
+            for q in saved_quarters
+        ]
+
+    quarter_str = (report_card.quarter or '').strip()
+    if not quarter_str:
+        return []
+    if '-' in quarter_str:
+        parts = [p.strip() for p in quarter_str.split('-') if p.strip()]
+        if len(parts) == 2:
+            try:
+                lo = int(parts[0].replace('Q', '')) if parts[0].startswith('Q') else int(parts[0])
+                hi = int(parts[1].replace('Q', '')) if parts[1].startswith('Q') else int(parts[1])
+                return [f'Q{i}' for i in range(lo, hi + 1)]
+            except (ValueError, TypeError):
+                return [p if p.startswith('Q') else f'Q{p}' for p in parts]
+        return [p if p.startswith('Q') else f'Q{p}' for p in parts]
+    if quarter_str.startswith('Q'):
+        return [quarter_str]
+    try:
+        return [f'Q{int(quarter_str)}']
+    except (ValueError, TypeError):
+        return [quarter_str]
+
+
+def _sort_report_cards_newest_first(report_cards):
+    """Stable newest-first ordering; null generated_at sorts last."""
+    from datetime import datetime as _dt_min
+
+    def _key(rc):
+        ga = getattr(rc, 'generated_at', None)
+        return (ga is None, ga or _dt_min.min)
+
+    return sorted(report_cards or [], key=_key, reverse=True)
+
+
+def _load_report_card_comments(student_id, school_year_id, class_ids_int):
+    """Load teacher/management comments keyed by class id string."""
+    from models import ReportCardComment
+
+    comments_by_class = {}
+    q = ReportCardComment.query.filter_by(
+        student_id=student_id,
+        school_year_id=school_year_id,
+        quarter='ALL',
+    )
+    if class_ids_int:
+        q = q.filter(ReportCardComment.class_id.in_(class_ids_int))
+    for row in q.all():
+        if row.comment_text and str(row.comment_text).strip():
+            comments_by_class[str(row.class_id)] = row.comment_text.strip()
+    return comments_by_class
+
+
 def _sanitize_letter_grades_for_report(obj):
     """
     Recursively normalize legacy failing letter grades to 'E' in report data.
@@ -464,18 +603,14 @@ def persist_report_card_record(
         else:
             calculated_grades = calculated_grades_by_quarter.get(quarters_clean[0], {})
 
-        report_card = ReportCard.query.filter_by(
+        # Each generation is a new snapshot so Recents/history show every run
+        # (regenerating Q1–Q4 does not silently overwrite the prior list entry).
+        report_card = ReportCard(
             student_id=student_id_int,
             school_year_id=school_year_id_int,
             quarter=quarter_str,
-        ).first()
-
-        if not report_card:
-            report_card = ReportCard()
-            report_card.student_id = student_id_int
-            report_card.school_year_id = school_year_id_int
-            report_card.quarter = quarter_str
-            db.session.add(report_card)
+        )
+        db.session.add(report_card)
 
         report_card_data = {
             'classes': valid_class_ids,
@@ -596,6 +731,8 @@ def persist_report_card_record(
 
         report_card.grades_details = json.dumps(report_card_data)
         report_card.generated_at = datetime.utcnow()
+        if getattr(current_user, 'id', None):
+            report_card.generated_by_user_id = current_user.id
         db.session.commit()
 
         if notify_admins:
@@ -775,6 +912,24 @@ def generate_report_card_form():
             quarters_to_include,
             rc_result.get('quarter_str'),
         )
+
+        return_category = (request.form.get('return_category') or '').strip()
+        if return_category in REPORT_CARD_CATEGORIES:
+            # Reload the category roster (opener) so Recents updates, then open PDF in this tab.
+            return render_template(
+                'management/report_card_pdf_bridge.html',
+                pdf_url=url_for(
+                    'management.generate_report_card_pdf',
+                    report_card_id=report_card.id,
+                ),
+                return_url=url_for(
+                    'management.report_cards_by_category',
+                    category=return_category,
+                    highlight=student.id,
+                    saved=1,
+                ),
+                student_name=f"{student.first_name} {student.last_name}".strip(),
+            )
 
         # Generate and return PDF directly
         try:
@@ -1069,26 +1224,50 @@ def generate_report_card_pdf(report_card_id):
             include_comments = False
             comments_by_class = {}
 
-        # Only fetch fresh quarter grades from DB when we have no saved snapshot
-        if not grades_by_quarter or not isinstance(grades_by_quarter, dict):
-            from utils.quarter_grade_calculator import get_quarter_grades_for_report
-            grades_by_quarter = get_quarter_grades_for_report(
-                student_id=student.id,
-                school_year_id=report_card.school_year_id,
-                class_ids=selected_classes if selected_classes else None
+        # Build class list early — needed to normalize JSON snapshot keys (string id / class name)
+        class_objects = []
+        class_ids_int = []
+        if selected_classes:
+            for class_id in selected_classes:
+                try:
+                    cid = int(class_id)
+                except (TypeError, ValueError):
+                    continue
+                class_ids_int.append(cid)
+                class_obj = Class.query.get(cid)
+                if class_obj:
+                    class_objects.append(class_obj)
+
+        from utils.quarter_grade_calculator import get_quarter_grades_for_report
+        fresh_grades_by_quarter = get_quarter_grades_for_report(
+            student_id=student.id,
+            school_year_id=report_card.school_year_id,
+            class_ids=class_ids_int if class_ids_int else None,
+        )
+
+        if isinstance(grades_by_quarter, dict) and grades_by_quarter:
+            grades_by_quarter = _merge_grades_by_quarter(
+                grades_by_quarter, fresh_grades_by_quarter, class_objects
+            )
+        else:
+            grades_by_quarter = _normalize_grades_by_quarter(
+                fresh_grades_by_quarter, class_objects
             )
 
         # Sanitize legacy failing letters to 'E' for report cards
         grades = _sanitize_letter_grades_for_report(grades)
         grades_by_quarter = _sanitize_letter_grades_for_report(grades_by_quarter)
-        
-        # Get class objects
-        class_objects = []
-        if selected_classes:
-            for class_id in selected_classes:
-                class_obj = Class.query.get(class_id)
-                if class_obj:
-                    class_objects.append(class_obj)
+
+        # Older snapshots stored include_comments=False even when comments exist
+        if comments_by_class and any((v or '').strip() for v in comments_by_class.values()):
+            include_comments = True
+        elif not comments_by_class or not any((v or '').strip() for v in comments_by_class.values()):
+            db_comments = _load_report_card_comments(
+                student.id, report_card.school_year_id, class_ids_int
+            )
+            if db_comments:
+                comments_by_class = {**db_comments, **(comments_by_class or {})}
+                include_comments = True
         
         # Prepare student data for template (robust date handling)
         from datetime import datetime, date as date_type
@@ -1142,35 +1321,7 @@ def generate_report_card_pdf(report_card_id):
             if 'expected_grad_date' in saved_student:
                 student_data['expected_grad_date'] = saved_student.get('expected_grad_date') or 'N/A'
 
-        # Which quarter(s) this report card is for (PDF template uses this to show grades)
-        # Prefer saved list so Q1+Q2+Q3+Q4 all show; parsing "Q1-Q4" would only give [Q1, Q4]
-        saved_quarters = report_card_data.get('selected_quarters') if isinstance(report_card_data, dict) else None
-        if saved_quarters and isinstance(saved_quarters, list):
-            selected_quarters = [q if isinstance(q, str) and q.startswith('Q') else f'Q{q}' for q in saved_quarters]
-        else:
-            quarter_str = (report_card.quarter or '').strip()
-            if not quarter_str:
-                selected_quarters = []
-            elif '-' in quarter_str:
-                # Range e.g. "Q1-Q4" -> expand to all quarters in range so Q2, Q3 not lost
-                parts = [p.strip() for p in quarter_str.split('-') if p.strip()]
-                if len(parts) == 2:
-                    try:
-                        lo = int(parts[0].replace('Q', '')) if parts[0].startswith('Q') else int(parts[0])
-                        hi = int(parts[1].replace('Q', '')) if parts[1].startswith('Q') else int(parts[1])
-                        selected_quarters = [f'Q{i}' for i in range(lo, hi + 1)]
-                    except (ValueError, TypeError):
-                        selected_quarters = [p if p.startswith('Q') else f'Q{p}' for p in parts]
-                else:
-                    selected_quarters = [p if p.startswith('Q') else f'Q{p}' for p in parts]
-            else:
-                if quarter_str.startswith('Q'):
-                    selected_quarters = [quarter_str]
-                else:
-                    try:
-                        selected_quarters = [f'Q{int(quarter_str)}']
-                    except (ValueError, TypeError):
-                        selected_quarters = [quarter_str]
+        selected_quarters = _selected_quarters_from_report_card(report_card, report_card_data)
 
         # Choose template based on grade level and report type
         template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
@@ -1325,8 +1476,9 @@ def report_cards():
     if selected_student_id:
         query = query.filter_by(student_id=selected_student_id)
     
-    # Order by most recent first
-    report_cards_list = query.order_by(ReportCard.generated_at.desc()).all()
+    # Order by most recent first (null generated_at last)
+    from sqlalchemy import desc, nullslast
+    report_cards_list = query.order_by(nullslast(desc(ReportCard.generated_at))).all()
     
     # Get data for filters
     school_years = [sy.name for sy in SchoolYear.query.order_by(SchoolYear.name.desc()).all()]
@@ -1371,24 +1523,40 @@ def report_cards_by_category(category):
         return redirect(url_for('management.report_cards'))
 
     category_info = REPORT_CARD_CATEGORIES[category]
-    
-    # Get students in this grade category
+
+    from sqlalchemy.orm import selectinload
+
+    # Get students in this grade category (eager-load report cards + school year for Recents)
     students = (
-        Student.query.filter(
+        Student.query.options(
+            selectinload(Student.report_cards).selectinload(ReportCard.school_year)
+        )
+        .filter(
             Student.is_deleted == False,
             Student.grade_level.in_(category_info['grades']),
         )
         .order_by(Student.last_name, Student.first_name)
         .all()
     )
+
+    student_reports = {
+        s.id: _sort_report_cards_newest_first(s.report_cards)[:5]
+        for s in students
+    }
+
+    highlight_student_id = request.args.get('highlight', type=int)
+    report_saved = request.args.get('saved') == '1'
     
     return render_template('management/report_cards_category_students.html',
                          students=students,
+                         student_reports=student_reports,
                          category=category,
                          category_name=category_info['name'],
                          category_icon=category_info['icon'],
                          category_color=category_info['color'],
-                         grade_levels=category_info['grades'])
+                         grade_levels=category_info['grades'],
+                         highlight_student_id=highlight_student_id,
+                         report_saved=report_saved)
 
 
 

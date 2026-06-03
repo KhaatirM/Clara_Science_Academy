@@ -405,6 +405,12 @@
                                     </small>
                                 </div>
                                 <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-journal-text me-1"></i>
+                                        Quarter: {{ assignment.quarter or 'N/A' }}
+                                    </small>
+                                </div>
+                                <div class="mb-2">
                                     <span class="badge bg-warning text-dark">{{ assignment.total_points }} pts</span>
                                 </div>
                                 <div class="mb-2">
@@ -796,12 +802,13 @@
                             <table class="table mb-0 grades-by-assignment-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col"><i class="bi bi-journal-text me-1"></i>Assignment</th>
-                                        <th scope="col"><i class="bi bi-calendar-event me-1"></i>Due</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-journal-text me-1"></i>Assignment</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-calendar-event me-1"></i>Due</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-calendar-range me-1"></i>Quarter</th>
                                         <th scope="col" class="text-center"><i class="bi bi-inbox me-1"></i>Submissions</th>
                                         <th scope="col" class="text-center"><i class="bi bi-check2-circle me-1"></i>Graded</th>
                                         <th scope="col" class="text-center"><i class="bi bi-graph-up-arrow me-1"></i>Average</th>
-                                        <th scope="col"><i class="bi bi-lightning-charge me-1"></i>Actions</th>
+                                        <th scope="col" class="text-center"><i class="bi bi-lightning-charge me-1"></i>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -831,6 +838,13 @@
                                                 <span class="grades-ba-date-pill"><i class="bi bi-calendar3 me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
                                                 {% else %}
                                                 <span class="text-muted small">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                {% if assignment.quarter %}
+                                                <span class="grades-ba-quarter-pill">{{ assignment.quarter }}</span>
+                                                {% else %}
+                                                <span class="text-muted small">N/A</span>
                                                 {% endif %}
                                             </td>
                                             <td class="align-middle text-center">
@@ -890,7 +904,7 @@
                                         {% endfor %}
                                     {% else %}
                                     <tr>
-                                        <td colspan="6" class="grades-by-assignment-empty text-center py-5">
+                                        <td colspan="7" class="grades-by-assignment-empty text-center py-5">
                                             <div class="grades-by-assignment-empty-icon mb-3"><i class="bi bi-inbox"></i></div>
                                             <p class="text-muted mb-0 fw-semibold">No assignments in this class yet</p>
                                             <p class="text-muted small mb-0 mt-1">Create an assignment or check another class.</p>
@@ -1464,30 +1478,34 @@ function enrolledStudentsUrlForClass(classId) {
 }
 function loadStudentsForVoid(classId) {
     const studentsContainer = document.getElementById('void_students_list');
+    if (!studentsContainer || !classId) return;
     studentsContainer.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading students...</div>';
     const url = enrolledStudentsUrlForClass(classId);
     fetch(url)
         .then(response => response.json())
         .then(data => {
+            if (data.success === false) {
+                studentsContainer.innerHTML = '<p class="text-danger mb-0">' + escapeHtmlBv(data.message || 'Could not load students.') + '</p>';
+                return;
+            }
             if (data.students && data.students.length > 0) {
-                let html = '';
-                data.students.forEach(student => {
-                    html += `
-                        <div class="form-check">
-                            <input class="form-check-input void-student-checkbox" type="checkbox" value="${student.id}" id="void_student_${student.id}">
-                            <label class="form-check-label" for="void_student_${student.id}">
-                                ${student.first_name} ${student.last_name} (Grade ${student.grade_level})
-                            </label>
-                        </div>
-                    `;
-                });
-                studentsContainer.innerHTML = html;
+                studentsContainer.innerHTML = data.students.map(student => {
+                    const name = escapeHtmlBv(student.first_name + ' ' + student.last_name);
+                    const grade = student.grade_level != null ? escapeHtmlBv(student.grade_level) : '';
+                    const archived = student.enrollment_active === false;
+                    return `<div class="form-check">` +
+                        `<input class="form-check-input void-student-checkbox" type="checkbox" value="${student.id}" id="void_student_${student.id}">` +
+                        `<label class="form-check-label" for="void_student_${student.id}">${name}` +
+                        (grade ? ` <span class="text-muted">(Grade ${grade})</span>` : '') +
+                        (archived ? ' <span class="badge bg-secondary-subtle text-secondary">Archived</span>' : '') +
+                        `</label></div>`;
+                }).join('');
             } else {
-                studentsContainer.innerHTML = '<p class="text-muted">No students enrolled</p>';
+                studentsContainer.innerHTML = '<p class="text-muted mb-0">No students found for this class.</p>';
             }
         })
-        .catch(error => {
-            studentsContainer.innerHTML = '<p class="text-danger">Error loading students</p>';
+        .catch(() => {
+            studentsContainer.innerHTML = '<p class="text-danger mb-0">Error loading students</p>';
         });
 }
 
@@ -1606,22 +1624,31 @@ function submitVoidAssignment() {
 
 <!-- Bulk Void Assignments Modal (only when a class is selected) -->
 {% if selected_class %}
-<div class="modal fade" id="bulkVoidModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-slash-circle me-2"></i>Bulk Void Assignments
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<div class="modal fade bulk-void-modal" id="bulkVoidModal" tabindex="-1" aria-labelledby="bulkVoidModalTitle">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content bulk-void-modal-content">
+            <div class="modal-header bulk-void-modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="bulkVoidModalTitle">
+                        <i class="bi bi-slash-circle me-2"></i>Bulk void assignments
+                    </h5>
+                    <small class="bulk-void-modal-subtitle">{{ selected_class.name }}</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> Voiding will exclude selected assignments from grade calculations. Quarter grades will be recalculated. You can still void individual assignments from each assignment view.
+                <div class="bulk-void-notice">
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                    <span>Voided work is excluded from grade averages. Quarter grades recalculate automatically.</span>
                 </div>
-                <p class="mb-2 fw-bold">Select assignments to void:</p>
-                <div class="border rounded p-3 mb-3" style="max-height: 220px; overflow-y: auto;">
+
+                <section class="bulk-void-section">
+                    <div class="bulk-void-section-head">
+                        <span class="bulk-void-step">1</span>
+                        <h6 class="bulk-void-section-title">Assignments</h6>
+                        <button type="button" class="btn btn-sm btn-link bulk-void-link-btn" id="bulkVoidToggleAllAssignments">Select all</button>
+                    </div>
+                    <div class="bulk-void-scroll-panel">
                     <div class="row g-2" id="bulkVoidAssignmentList">
                         {% for assignment in class_assignments %}
                         <div class="col-12">
@@ -1645,9 +1672,14 @@ function submitVoidAssignment() {
                     {% if not class_assignments and not group_assignments %}
                     <p class="text-muted mb-0">No assignments in this class.</p>
                     {% endif %}
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Void for:</label>
+                    </div>
+                </section>
+
+                <section class="bulk-void-section">
+                    <div class="bulk-void-section-head">
+                        <span class="bulk-void-step">2</span>
+                        <h6 class="bulk-void-section-title">Students</h6>
+                    </div>
                     <label class="void-scope-card" for="bulk_void_all">
                         <input class="void-scope-card-input" type="radio" name="bulk_void_scope" id="bulk_void_all" value="all" checked>
                         <span class="void-scope-card-text">
@@ -1662,22 +1694,31 @@ function submitVoidAssignment() {
                             <small class="text-muted d-block">Pick students in the list below</small>
                         </span>
                     </label>
-                </div>
-                <div id="bulkVoidStudentSelection" class="mb-3" style="display: none;">
-                    <label class="form-label fw-bold">Select students:</label>
-                    <div class="border rounded p-3" style="max-height: 180px; overflow-y: auto;" id="bulk_void_students_list">
-                        <div class="text-center text-muted">Loading...</div>
+                </section>
+
+                <div id="bulkVoidStudentSelection" class="bulk-void-student-panel" style="display: none;">
+                    <div class="bulk-void-student-toolbar">
+                        <input type="search" class="form-control form-control-sm" id="bulkVoidStudentSearch" placeholder="Search students…" autocomplete="off">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="bulkVoidSelectAllStudents">Select all</button>
+                    </div>
+                    <p class="bulk-void-student-hint text-muted small mb-2" id="bulkVoidStudentHint"></p>
+                    <div class="bulk-void-scroll-panel bulk-void-scroll-panel--students" id="bulk_void_students_list">
+                        <div class="text-center text-muted py-3">Choose “Selected students” to load the roster.</div>
                     </div>
                 </div>
-                <div class="mb-0">
-                    <label for="bulk_void_reason" class="form-label fw-bold">Reason for voiding:</label>
-                    <textarea class="form-control" id="bulk_void_reason" rows="2" placeholder="e.g. Assignment canceled, Late enrollment"></textarea>
-                </div>
+
+                <section class="bulk-void-section mb-0">
+                    <div class="bulk-void-section-head">
+                        <span class="bulk-void-step">3</span>
+                        <h6 class="bulk-void-section-title">Reason</h6>
+                    </div>
+                    <textarea class="form-control" id="bulk_void_reason" rows="2" placeholder="e.g. Assignment canceled, late enrollment, school closure"></textarea>
+                </section>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer bulk-void-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" id="bulkVoidSubmitBtn" onclick="submitBulkVoid()">
-                    <i class="bi bi-slash-circle me-1"></i>Void Selected Assignments
+                    <i class="bi bi-slash-circle me-1"></i>Void selected
                 </button>
             </div>
         </div>
@@ -1704,39 +1745,95 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Bulk void modal: toggle student list and load students when opened
     const bulkVoidModal = document.getElementById('bulkVoidModal');
+    const bulkVoidClassId = {{ selected_class.id if selected_class else 'null' }};
     if (bulkVoidModal) {
         document.querySelectorAll('input[name="bulk_void_scope"]').forEach(radio => {
             radio.addEventListener('change', function() {
                 const el = document.getElementById('bulkVoidStudentSelection');
                 if (el) el.style.display = this.value === 'specific' ? 'block' : 'none';
-                if (this.value === 'specific') loadStudentsForBulkVoid({{ selected_class.id if selected_class else 'null' }});
+                if (this.value === 'specific') loadStudentsForBulkVoid(bulkVoidClassId);
             });
         });
         bulkVoidModal.addEventListener('shown.bs.modal', function() {
             if (document.getElementById('bulk_void_specific') && document.getElementById('bulk_void_specific').checked) {
-                loadStudentsForBulkVoid({{ selected_class.id if selected_class else 'null' }});
+                loadStudentsForBulkVoid(bulkVoidClassId);
             }
         });
+        const toggleAssignBtn = document.getElementById('bulkVoidToggleAllAssignments');
+        if (toggleAssignBtn) {
+            toggleAssignBtn.addEventListener('click', function() {
+                const boxes = document.querySelectorAll('.bulk-void-assignment-cb');
+                const allChecked = Array.from(boxes).every(cb => cb.checked);
+                boxes.forEach(cb => { cb.checked = !allChecked; });
+                toggleAssignBtn.textContent = allChecked ? 'Select all' : 'Clear all';
+            });
+        }
+        const selectAllStudentsBtn = document.getElementById('bulkVoidSelectAllStudents');
+        if (selectAllStudentsBtn) {
+            selectAllStudentsBtn.addEventListener('click', function() {
+                const visible = document.querySelectorAll('.bulk-void-student-row:not([hidden]) .bulk-void-student-cb');
+                const allChecked = visible.length && Array.from(visible).every(cb => cb.checked);
+                visible.forEach(cb => { cb.checked = !allChecked; });
+                selectAllStudentsBtn.textContent = allChecked ? 'Select all' : 'Clear all';
+            });
+        }
+        const studentSearch = document.getElementById('bulkVoidStudentSearch');
+        if (studentSearch) {
+            studentSearch.addEventListener('input', filterBulkVoidStudentRows);
+        }
     }
 });
 
+function escapeHtmlBv(text) {
+    return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function filterBulkVoidStudentRows() {
+    const q = (document.getElementById('bulkVoidStudentSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('.bulk-void-student-row').forEach(row => {
+        const hay = (row.getAttribute('data-search') || '').toLowerCase();
+        row.hidden = q.length > 0 && !hay.includes(q);
+    });
+}
+
 function loadStudentsForBulkVoid(classId) {
     const container = document.getElementById('bulk_void_students_list');
+    const hint = document.getElementById('bulkVoidStudentHint');
     if (!container || !classId) return;
-    container.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading...</div>';
+    container.innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Loading students…</div>';
+    if (hint) hint.textContent = '';
     const url = enrolledStudentsUrlForClass(classId);
     fetch(url)
         .then(r => r.json())
         .then(data => {
+            if (data.success === false) {
+                container.innerHTML = '<p class="text-danger mb-0">' + escapeHtmlBv(data.message || 'Could not load students.') + '</p>';
+                return;
+            }
             if (data.students && data.students.length > 0) {
-                container.innerHTML = data.students.map(s =>
-                    `<div class="form-check"><input class="form-check-input bulk-void-student-cb" type="checkbox" value="${s.id}" id="bv_st_${s.id}"><label class="form-check-label" for="bv_st_${s.id}">${s.first_name} ${s.last_name}</label></div>`
-                ).join('');
+                if (hint) {
+                    hint.textContent = data.used_archived_enrollments
+                        ? 'Showing roster from archived enrollments (e.g. after year closure). Active enrollments were empty.'
+                        : data.students.length + ' student' + (data.students.length === 1 ? '' : 's') + ' in this class.';
+                }
+                container.innerHTML = data.students.map(s => {
+                    const name = escapeHtmlBv((s.first_name || '') + ' ' + (s.last_name || '')).trim();
+                    const searchKey = ((s.first_name || '') + ' ' + (s.last_name || '') + ' ' + (s.student_id || '')).toLowerCase();
+                    const archived = s.enrollment_active === false;
+                    return `<label class="bulk-void-student-row" data-search="${escapeHtmlBv(searchKey)}" for="bv_st_${s.id}">` +
+                        `<input class="form-check-input bulk-void-student-cb" type="checkbox" value="${s.id}" id="bv_st_${s.id}">` +
+                        `<span class="bulk-void-student-name">${name}</span>` +
+                        (archived ? '<span class="badge bg-secondary-subtle text-secondary bulk-void-archived-badge">Archived</span>' : '') +
+                        `</label>`;
+                }).join('');
+                filterBulkVoidStudentRows();
             } else {
-                container.innerHTML = '<p class="text-muted mb-0">No students enrolled.</p>';
+                container.innerHTML = '<p class="text-muted mb-0">No students found for this class. If the school year is in closure, check that this class still has roster records.</p>';
             }
         })
-        .catch(() => { container.innerHTML = '<p class="text-danger mb-0">Error loading students.</p>'; });
+        .catch(() => { container.innerHTML = '<p class="text-danger mb-0">Error loading students. Refresh and try again.</p>'; });
 }
 
 function submitBulkVoid() {

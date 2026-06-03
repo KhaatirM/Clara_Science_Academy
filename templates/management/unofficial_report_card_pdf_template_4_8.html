@@ -178,7 +178,7 @@
                                     <td style="text-align: center;">-</td>
                                 {% elif grades_by_quarter and grades_by_quarter.get(quarter) %}
                                     {% set q_grades = grades_by_quarter.get(quarter, {}) %}
-                                    {% set class_grade = q_grades.get(class_obj.id, {}) if q_grades else {} %}
+                                    {% set class_grade = (q_grades.get(class_obj.id) or q_grades.get(class_obj.id|string) or q_grades.get(class_obj.name, {})) if q_grades else {} %}
                                     {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
                                     <td style="text-align: center;">{{ letter_grade if letter_grade else 'N/A' }}</td>
                                 {% else %}
@@ -187,7 +187,7 @@
                             {% endfor %}
                             {# Show single comment per class (snapshotted during generation) #}
                             <td style="font-size: 8.5pt;">
-                                {% set comment = (comments_by_class.get(class_obj.id|string, '') if comments_by_class else '') %}
+                                {% set comment = (comments_by_class.get(class_obj.id|string) or comments_by_class.get(class_obj.id) or '') if comments_by_class else '' %}
                                 {% if include_comments and comment %}
                                     {{ comment|nl2br }}
                                 {% else %}

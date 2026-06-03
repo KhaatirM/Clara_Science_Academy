@@ -598,6 +598,7 @@
     white-space: nowrap;
     padding: 0.75rem 0.85rem;
     vertical-align: middle;
+    text-align: center;
 }
 
 .grades-by-assignment-table tbody td {
@@ -625,6 +626,18 @@
     font-weight: 600;
     line-height: 1.2;
     padding: 0.28rem 0.5rem;
+}
+
+.grades-ba-quarter-pill {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    white-space: nowrap;
 }
 
 .grades-ba-date-pill {
@@ -885,4 +898,129 @@
     min-width: 0;
     user-select: none;
     cursor: pointer;
+}
+
+/* Bulk void modal */
+.bulk-void-modal .bulk-void-modal-header {
+    background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 55%, #dc2626 100%);
+    color: #fff;
+    border-bottom: none;
+    padding: 1.1rem 1.25rem;
+}
+.bulk-void-modal .bulk-void-modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
+.bulk-void-modal-subtitle {
+    display: block;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+}
+.bulk-void-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+.bulk-void-notice i {
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+.bulk-void-section {
+    margin-bottom: 1.1rem;
+}
+.bulk-void-section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+}
+.bulk-void-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.bulk-void-section-title {
+    margin: 0;
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.bulk-void-link-btn {
+    padding: 0;
+    font-size: 0.8rem;
+    text-decoration: none;
+}
+.bulk-void-scroll-panel {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.65rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+.bulk-void-scroll-panel--students {
+    max-height: 200px;
+    padding: 0.35rem;
+}
+.bulk-void-student-panel {
+    margin: 0.5rem 0 1rem;
+    padding: 0.75rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+}
+.bulk-void-student-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+.bulk-void-student-toolbar .form-control {
+    flex: 1;
+    min-width: 140px;
+}
+.bulk-void-student-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.55rem;
+    margin: 0.15rem 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.bulk-void-student-row:hover {
+    background: #f1f5f9;
+}
+.bulk-void-student-name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+}
+.bulk-void-archived-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+.bulk-void-modal-footer {
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
 }

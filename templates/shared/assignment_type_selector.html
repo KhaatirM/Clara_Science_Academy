@@ -1,19 +1,18 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/assignment_type_selector.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assignment_type_selector.css') }}?v=4">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-3 px-md-4 px-lg-5">
-    <!-- Enhanced Header Section -->
+<div class="container-fluid px-3 px-md-4 px-lg-5 assignment-type-page">
     <div class="assignment-selector-header">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
                 <h3 class="mb-2 mb-md-0">
                     <i class="bi bi-plus-circle me-2"></i>Create New Assignment
                 </h3>
-                <p class="mb-0">Choose the type of assignment you want to create</p>
+                <p class="mb-0">Browse types with the arrows — tap a card to select it</p>
             </div>
             <div>
                 {% if can_assignments_admin_ui %}
@@ -29,208 +28,247 @@
         </div>
     </div>
 
-    <!-- Assignment Type Selection Cards -->
-    <div class="row g-4">
-        <!-- PDF/Paper Assignment -->
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 assignment-type-card" data-type="pdf">
-                <div class="card-body text-center p-4">
-                    <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-file-earmark-pdf text-danger assignment-type-icon-large"></i>
-                    </div>
-                    <h5 class="card-title mb-3">PDF/Paper Assignment</h5>
-                    <p class="card-text text-muted mb-4">
-                        Traditional assignment with document upload. Students can submit PDFs, Word documents, or other files.
-                    </p>
-                    <div class="features-list text-start mb-4">
-                        <h6 class="text-primary mb-2">Features:</h6>
-                        <ul class="list-unstyled small">
-                            <li><i class="bi bi-check-circle text-success me-2"></i>File upload support</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Multiple file formats</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Due date tracking</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Grade submission</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Comments & feedback</li>
+    <div class="assignment-type-carousel" id="assignmentTypeCarousel">
+        <button type="button" class="carousel-nav carousel-nav--prev" id="carouselPrev" aria-label="Previous assignment type">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        </button>
+
+        <div class="carousel-viewport" id="carouselViewport">
+            <div class="carousel-track" id="carouselTrack">
+                <!-- PDF/Paper -->
+                <article class="carousel-slide assignment-type-card" data-type="pdf" data-index="0">
+                    <div class="carousel-slide-inner carousel-slide-inner--pdf">
+                        <div class="carousel-slide-icon"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></div>
+                        <h4 class="carousel-slide-title">PDF / Paper</h4>
+                        <p class="carousel-slide-desc">Upload documents; students submit files for grading.</p>
+                        <ul class="carousel-slide-features">
+                            <li><i class="bi bi-check2"></i> PDF, Word, and more</li>
+                            <li><i class="bi bi-check2"></i> Due dates &amp; feedback</li>
+                            <li><i class="bi bi-check2"></i> Individual or group target</li>
                         </ul>
+                        <button type="button" class="btn carousel-slide-cta carousel-slide-cta--pdf select-assignment-type" data-type="pdf">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>Create PDF assignment
+                        </button>
                     </div>
-                    <button class="btn btn-outline-primary w-100 select-assignment-type" data-type="pdf">
-                        <i class="bi bi-file-earmark-pdf me-2"></i>Create PDF Assignment
-                    </button>
-                </div>
+                </article>
+
+                <!-- Quiz -->
+                <article class="carousel-slide assignment-type-card" data-type="quiz" data-index="1">
+                    <div class="carousel-slide-inner carousel-slide-inner--quiz">
+                        <div class="carousel-slide-icon"><i class="bi bi-question-circle" aria-hidden="true"></i></div>
+                        <h4 class="carousel-slide-title">Quiz</h4>
+                        <p class="carousel-slide-desc">Auto-graded questionnaires with multiple question types.</p>
+                        <ul class="carousel-slide-features">
+                            <li><i class="bi bi-check2"></i> Multiple choice &amp; short answer</li>
+                            <li><i class="bi bi-check2"></i> Optional time limits</li>
+                            <li><i class="bi bi-check2"></i> Instant feedback</li>
+                        </ul>
+                        <button type="button" class="btn carousel-slide-cta carousel-slide-cta--quiz select-assignment-type" data-type="quiz">
+                            <i class="bi bi-question-circle me-2"></i>Create quiz assignment
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Discussion -->
+                <article class="carousel-slide assignment-type-card" data-type="discussion" data-index="2">
+                    <div class="carousel-slide-inner carousel-slide-inner--discussion">
+                        <div class="carousel-slide-icon"><i class="bi bi-chat-dots" aria-hidden="true"></i></div>
+                        <h4 class="carousel-slide-title">Discussion</h4>
+                        <p class="carousel-slide-desc">Rubric-based dialogue and critical thinking prompts.</p>
+                        <ul class="carousel-slide-features">
+                            <li><i class="bi bi-check2"></i> Threaded responses</li>
+                            <li><i class="bi bi-check2"></i> Rubric grading</li>
+                            <li><i class="bi bi-check2"></i> Quality indicators</li>
+                        </ul>
+                        <button type="button" class="btn carousel-slide-cta carousel-slide-cta--discussion select-assignment-type" data-type="discussion">
+                            <i class="bi bi-chat-dots me-2"></i>Create discussion assignment
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Group -->
+                <article class="carousel-slide assignment-type-card" data-type="group" data-index="3">
+                    <div class="carousel-slide-inner carousel-slide-inner--group">
+                        <div class="carousel-slide-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
+                        <h4 class="carousel-slide-title">Group assignment</h4>
+                        <p class="carousel-slide-desc">Collaborative work per class group—one submission per team.</p>
+                        <ul class="carousel-slide-features">
+                            <li><i class="bi bi-check2"></i> Assign to class groups</li>
+                            <li><i class="bi bi-check2"></i> Shared group submission</li>
+                            <li><i class="bi bi-check2"></i> Per-member grades</li>
+                        </ul>
+                        <button type="button" class="btn carousel-slide-cta carousel-slide-cta--group select-assignment-type" data-type="group">
+                            <i class="bi bi-people-fill me-2"></i>Create group assignment
+                        </button>
+                    </div>
+                </article>
             </div>
         </div>
 
-        <!-- Questionnaire/Quiz Assignment -->
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 assignment-type-card" data-type="quiz">
-                <div class="card-body text-center p-4">
-                    <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-question-circle text-warning assignment-type-icon-large"></i>
-                    </div>
-                    <h5 class="card-title mb-3">Questionnaire/Quiz Assignment</h5>
-                    <p class="card-text text-muted mb-4">
-                        Interactive quiz with multiple choice, true/false, and short answer questions. Auto-graded with instant feedback.
-                    </p>
-                    <div class="features-list text-start mb-4">
-                        <h6 class="text-primary mb-2">Features:</h6>
-                        <ul class="list-unstyled small">
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Multiple question types</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Auto-grading system</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Time limits</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Instant feedback</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Question bank</li>
-                        </ul>
-                    </div>
-                    <button class="btn btn-outline-warning w-100 select-assignment-type" data-type="quiz">
-                        <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Discussion Assignment -->
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 assignment-type-card" data-type="discussion">
-                <div class="card-body text-center p-4">
-                    <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-chat-dots text-info assignment-type-icon-large"></i>
-                    </div>
-                    <h5 class="card-title mb-3">Discussion Assignment</h5>
-                    <p class="card-text text-muted mb-4">
-                        Open-ended discussion topics with rubrics. Students engage in thoughtful dialogue and critical thinking.
-                    </p>
-                    <div class="features-list text-start mb-4">
-                        <h6 class="text-primary mb-2">Features:</h6>
-                        <ul class="list-unstyled small">
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Rubric-based grading</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Peer interaction</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Response tracking</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Quality indicators</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Discussion threads</li>
-                        </ul>
-                    </div>
-                    <button class="btn btn-outline-info w-100 select-assignment-type" data-type="discussion">
-                        <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Group Assignment -->
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 assignment-type-card assignment-type-card--group" data-type="group">
-                <div class="card-body text-center p-4">
-                    <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-people-fill text-success assignment-type-icon-large"></i>
-                    </div>
-                    <h5 class="card-title mb-3">Group Assignment</h5>
-                    <p class="card-text text-muted mb-4">
-                        Collaborative work assigned to class groups. One submission per group with shared grading for all members.
-                    </p>
-                    <div class="features-list text-start mb-4">
-                        <h6 class="text-primary mb-2">Features:</h6>
-                        <ul class="list-unstyled small">
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Assign to selected groups</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Group submission tracking</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Per-student grades</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>File attachments</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Paper or online submissions</li>
-                        </ul>
-                    </div>
-                    <button class="btn btn-outline-success w-100 select-assignment-type" data-type="group">
-                        <i class="bi bi-people-fill me-2"></i>Create Group Assignment
-                    </button>
-                </div>
-            </div>
-        </div>
+        <button type="button" class="carousel-nav carousel-nav--next" id="carouselNext" aria-label="Next assignment type">
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
     </div>
 
-    <!-- Additional Information -->
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="guidelines-card">
-                <h6 class="card-title">
-                    <i class="bi bi-info-circle"></i>Assignment Type Guidelines
-                </h6>
-                <div class="row g-3">
-                    <div class="col-md-6 col-lg-3">
-                        <div class="guideline-item" style="border-left-color: #dc3545;">
-                            <h6 class="text-danger">
-                                <i class="bi bi-file-earmark-pdf"></i>PDF/Paper Assignments
-                            </h6>
-                            <p>Best for essays, reports, projects, and creative work. Students upload completed documents for review and grading.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="guideline-item" style="border-left-color: #ffc107;">
-                            <h6 class="text-warning">
-                                <i class="bi bi-question-circle"></i>Quiz Assignments
-                            </h6>
-                            <p>Perfect for assessments, knowledge checks, and practice tests. Questions are automatically graded with immediate feedback.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="guideline-item" style="border-left-color: #0dcaf0;">
-                            <h6 class="text-info">
-                                <i class="bi bi-chat-dots"></i>Discussion Assignments
-                            </h6>
-                            <p>Ideal for critical thinking, analysis, and collaborative learning. Students engage in meaningful academic discourse.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="guideline-item" style="border-left-color: #198754;">
-                            <h6 class="text-success">
-                                <i class="bi bi-people-fill"></i>Group Assignments
-                            </h6>
-                            <p>Collaborative projects assigned to class groups. Students work together and submit as a team.</p>
-                        </div>
-                    </div>
-                </div>
+    <div class="carousel-footer">
+        <div class="carousel-dots" id="carouselDots" role="tablist" aria-label="Assignment type">
+            <button type="button" class="carousel-dot is-active" data-index="0" role="tab" aria-selected="true" aria-label="PDF Paper"></button>
+            <button type="button" class="carousel-dot" data-index="1" role="tab" aria-selected="false" aria-label="Quiz"></button>
+            <button type="button" class="carousel-dot" data-index="2" role="tab" aria-selected="false" aria-label="Discussion"></button>
+            <button type="button" class="carousel-dot" data-index="3" role="tab" aria-selected="false" aria-label="Group"></button>
+        </div>
+        <p class="carousel-type-label" id="carouselTypeLabel">PDF / Paper</p>
+    </div>
+
+    <section class="assignment-guidelines-panel" aria-labelledby="assignmentGuidelinesHeading">
+        <div class="assignment-guidelines-panel__head">
+            <h4 class="assignment-guidelines-panel__title" id="assignmentGuidelinesHeading">
+                <i class="bi bi-info-circle me-2" aria-hidden="true"></i>Assignment type tips
+            </h4>
+            <p class="assignment-guidelines-panel__lead" id="assignmentGuidelinesLead">
+                PDF / Paper works well for essays, lab reports, and uploaded documents with teacher feedback.
+            </p>
+        </div>
+        <div class="assignment-guidelines-grid">
+            <div class="guideline-chip guideline-chip--pdf" data-guideline-index="0">
+                <strong><i class="bi bi-file-earmark-pdf me-1"></i>PDF / Paper</strong>
+                <span>Upload a handout or prompt; students submit files. Choose individual students or class groups, then in-class or homework.</span>
+            </div>
+            <div class="guideline-chip guideline-chip--quiz" data-guideline-index="1">
+                <strong><i class="bi bi-question-circle me-1"></i>Quiz</strong>
+                <span>Build multiple-choice and short-answer questions with optional time limits and automatic scoring.</span>
+            </div>
+            <div class="guideline-chip guideline-chip--discussion" data-guideline-index="2">
+                <strong><i class="bi bi-chat-dots me-1"></i>Discussion</strong>
+                <span>Post a prompt for threaded replies; grade with a rubric and participation indicators.</span>
+            </div>
+            <div class="guideline-chip guideline-chip--group" data-guideline-index="3">
+                <strong><i class="bi bi-people-fill me-1"></i>Group</strong>
+                <span>Assign to existing class groups—one submission per team, with grades per member when needed.</span>
             </div>
         </div>
-    </div>
+    </section>
 </div>
-
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const assignmentTypeCards = document.querySelectorAll('.assignment-type-card');
-    const selectButtons = document.querySelectorAll('.select-assignment-type');
-    
-    // Add hover effects and selection
-    assignmentTypeCards.forEach(card => {
-        const type = card.dataset.type;
-        
-        card.addEventListener('mouseenter', function() {
-            this.classList.add('selected');
+    const TYPE_LABELS = ['PDF / Paper', 'Quiz', 'Discussion', 'Group assignment'];
+    const GUIDELINE_LEADS = [
+        'PDF / Paper works well for essays, lab reports, and uploaded documents with teacher feedback.',
+        'Quizzes are ideal for quick checks, unit tests, and auto-graded review with optional timers.',
+        'Discussions encourage critical thinking—use rubrics to grade quality of replies, not just participation.',
+        'Group assignments tie to your class groups; teams share one submission and can receive individual grades.'
+    ];
+    const slideCount = 4;
+    let currentIndex = 0;
+
+    const slides = document.querySelectorAll('.carousel-slide');
+    const viewport = document.getElementById('carouselViewport');
+    const dots = document.querySelectorAll('.carousel-dot');
+    const labelEl = document.getElementById('carouselTypeLabel');
+    const guidelinesLead = document.getElementById('assignmentGuidelinesLead');
+    const guidelineChips = document.querySelectorAll('.guideline-chip[data-guideline-index]');
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+
+    function slideRole(slideIndex) {
+        if (slideIndex === currentIndex) return 'center';
+        const diff = (slideIndex - currentIndex + slideCount) % slideCount;
+        if (diff === 1) return 'next';
+        if (diff === slideCount - 1) return 'prev';
+        return 'hidden';
+    }
+
+    function goTo(index) {
+        currentIndex = ((index % slideCount) + slideCount) % slideCount;
+        slides.forEach(function(slide, i) {
+            slide.classList.remove('is-center', 'is-prev', 'is-next', 'is-hidden', 'is-active-slide');
+            const role = slideRole(i);
+            slide.classList.add('is-' + role);
+            if (role === 'center') slide.classList.add('is-active-slide');
         });
-        
-        card.addEventListener('mouseleave', function() {
-            this.classList.remove('selected');
+        dots.forEach(function(dot, i) {
+            const active = i === currentIndex;
+            dot.classList.toggle('is-active', active);
+            dot.setAttribute('aria-selected', active ? 'true' : 'false');
         });
-        
-        card.addEventListener('click', function() {
-            const type = this.dataset.type;
-            handleAssignmentTypeSelection(type);
+        if (labelEl) labelEl.textContent = TYPE_LABELS[currentIndex];
+        if (guidelinesLead) guidelinesLead.textContent = GUIDELINE_LEADS[currentIndex];
+        guidelineChips.forEach(function(chip) {
+            const idx = parseInt(chip.getAttribute('data-guideline-index'), 10);
+            chip.classList.toggle('is-highlighted', idx === currentIndex);
+        });
+    }
+
+    function step(delta) {
+        goTo(currentIndex + delta, true);
+    }
+
+    if (prevBtn) prevBtn.addEventListener('click', function() { step(-1); });
+    if (nextBtn) nextBtn.addEventListener('click', function() { step(1); });
+
+    dots.forEach(function(dot) {
+        dot.addEventListener('click', function() {
+            goTo(parseInt(this.getAttribute('data-index'), 10), true);
         });
     });
-    
-        selectButtons.forEach(button => {
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') step(-1);
+        if (e.key === 'ArrowRight') step(1);
+    });
+
+    // Touch / drag swipe
+    if (viewport) {
+        let startX = 0;
+        let dragging = false;
+        viewport.addEventListener('pointerdown', function(e) {
+            dragging = true;
+            startX = e.clientX;
+        });
+        viewport.addEventListener('pointerup', function(e) {
+            if (!dragging) return;
+            dragging = false;
+            const dx = e.clientX - startX;
+            if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
+        });
+        viewport.addEventListener('pointercancel', function() { dragging = false; });
+    }
+
+    goTo(0);
+
+    guidelineChips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            goTo(parseInt(this.getAttribute('data-guideline-index'), 10));
+        });
+        chip.style.cursor = 'pointer';
+    });
+
+    document.querySelectorAll('.assignment-type-card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('.select-assignment-type')) return;
+            const idx = parseInt(this.getAttribute('data-index'), 10);
+            if (idx !== currentIndex) {
+                goTo(idx);
+                return;
+            }
+            handleAssignmentTypeSelection(this.dataset.type);
+        });
+    });
+
+    document.querySelectorAll('.select-assignment-type').forEach(function(button) {
         button.addEventListener('click', function(e) {
             e.stopPropagation();
-            const type = this.dataset.type;
-            handleAssignmentTypeSelection(type);
+            handleAssignmentTypeSelection(this.dataset.type);
         });
     });
-    
+
     function handleAssignmentTypeSelection(type) {
-        // Redirect to the appropriate assignment creation page
         switch(type) {
             case 'pdf':
-                // Show popup to ask group vs individual
                 showAssignmentTargetModal();
                 break;
             case 'quiz':
-                // Redirect to quiz creation page (?compose=new avoids reusing another quiz's local draft in the same tab)
                 {% if can_assignments_admin_ui %}
                 window.location.href = "{{ url_for('management.create_quiz_assignment') }}?compose=new";
                 {% else %}
@@ -238,7 +276,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% endif %}
                 break;
             case 'discussion':
-                // Redirect to discussion creation page
                 {% if can_assignments_admin_ui %}
                 window.location.href = "{{ url_for('management.create_discussion_assignment') }}";
                 {% else %}
@@ -270,200 +307,116 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showAssignmentTargetModal() {
-        // Create and show modal for assignment target selection
         const modalHtml = `
             <div class="modal fade" id="assignmentTargetModal" tabindex="-1" aria-labelledby="assignmentTargetModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content" style="border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-                        <div class="modal-header bg-primary text-white" style="border: none; padding: 2rem;">
-                            <h5 class="modal-title" id="assignmentTargetModalLabel" style="font-size: 1.5rem; font-weight: 700;">
+                    <div class="modal-content assignment-modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="assignmentTargetModalLabel">
                                 <i class="bi bi-people-fill me-2"></i>Assignment Target
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body" style="padding: 2rem;">
-                            <p class="mb-4" style="font-size: 1.1rem; color: #4a5568;">Choose how students will work on this PDF/Paper assignment:</p>
+                        <div class="modal-body">
+                            <p class="mb-4 text-secondary">Choose how students will work on this PDF/Paper assignment:</p>
                             <div class="row g-4">
                                 <div class="col-12 col-md-6">
-                                    <div class="card h-100 assignment-target-card" data-target="individual" style="cursor: pointer; border: 2px solid #e2e8f0;">
+                                    <div class="card h-100 assignment-target-card" data-target="individual">
                                         <div class="card-body text-center p-4">
-                                            <div class="mb-3">
-                                                <i class="bi bi-person-fill text-primary" style="font-size: 4rem;"></i>
-                                            </div>
-                                            <h5 class="card-title text-primary" style="font-weight: 700; font-size: 1.25rem;">Individual Students</h5>
-                                            <p class="card-text text-muted mb-0" style="line-height: 1.6;">
-                                                Each student works independently and submits their own work.
-                                            </p>
+                                            <i class="bi bi-person-fill text-primary assignment-modal-icon"></i>
+                                            <h5 class="card-title text-primary mt-3">Individual Students</h5>
+                                            <p class="card-text text-muted mb-0">Each student submits their own work.</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-6">
-                                    <div class="card h-100 assignment-target-card" data-target="group" style="cursor: pointer; border: 2px solid #e2e8f0;">
+                                    <div class="card h-100 assignment-target-card" data-target="group">
                                         <div class="card-body text-center p-4">
-                                            <div class="mb-3">
-                                                <i class="bi bi-people-fill text-success" style="font-size: 4rem;"></i>
-                                            </div>
-                                            <h5 class="card-title text-success" style="font-weight: 700; font-size: 1.25rem;">Class Groups</h5>
-                                            <p class="card-text text-muted mb-0" style="line-height: 1.6;">
-                                                Students work in assigned groups and collaborate on submissions.
-                                            </p>
+                                            <i class="bi bi-people-fill text-success assignment-modal-icon"></i>
+                                            <h5 class="card-title text-success mt-3">Class Groups</h5>
+                                            <p class="card-text text-muted mb-0">Teams collaborate on one submission.</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer" style="border: none; padding: 1.5rem 2rem; background: #f8fafc;">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 10px; padding: 10px 24px;">
-                                <i class="bi bi-x-circle me-1"></i>Cancel
-                            </button>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         </div>
                     </div>
                 </div>
             </div>
         `;
-
-        // Remove existing modal if it exists
         const existingModal = document.getElementById('assignmentTargetModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        // Add modal to body
+        if (existingModal) existingModal.remove();
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // Add click handlers for target cards
-        document.querySelectorAll('.assignment-target-card').forEach(card => {
+        document.querySelectorAll('.assignment-target-card').forEach(function(card) {
             card.addEventListener('click', function() {
                 const target = this.dataset.target;
-                const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentTargetModal'));
-                modal.hide();
-                
-                // Redirect based on target selection
-                if (target === 'individual') {
-                    // Show assignment context modal (In-Class vs Homework)
-                    showAssignmentContextModal();
-                } else if (target === 'group') {
-                    redirectToGroupAssignmentFlow();
-                }
+                bootstrap.Modal.getInstance(document.getElementById('assignmentTargetModal')).hide();
+                if (target === 'individual') showAssignmentContextModal();
+                else if (target === 'group') redirectToGroupAssignmentFlow();
             });
         });
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('assignmentTargetModal'));
-        modal.show();
+        new bootstrap.Modal(document.getElementById('assignmentTargetModal')).show();
     }
-    
+
     function showAssignmentContextModal() {
-        // Create and show modal for assignment context selection (In-Class vs Homework)
         const modalHtml = `
             <div class="modal fade" id="assignmentContextModal" tabindex="-1" aria-labelledby="assignmentContextModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content" style="border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-                        <div class="modal-header bg-info text-white" style="border: none; padding: 2rem;">
-                            <h5 class="modal-title" id="assignmentContextModalLabel" style="font-size: 1.5rem; font-weight: 700;">
+                    <div class="modal-content assignment-modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title" id="assignmentContextModalLabel">
                                 <i class="bi bi-clock-history me-2"></i>Assignment Context
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body" style="padding: 2rem;">
-                            <p class="mb-4" style="font-size: 1.1rem; color: #4a5568;">Where will students complete this assignment?</p>
+                        <div class="modal-body">
+                            <p class="mb-4 text-secondary">Where will students complete this assignment?</p>
                             <div class="row g-4">
                                 <div class="col-12 col-md-6">
-                                    <div class="card h-100 assignment-context-card" data-context="in-class" style="cursor: pointer; border: 2px solid #e2e8f0;">
+                                    <div class="card h-100 assignment-context-card" data-context="in-class">
                                         <div class="card-body text-center p-4">
-                                            <div class="mb-3">
-                                                <i class="bi bi-building text-info" style="font-size: 4rem;"></i>
-                                            </div>
-                                            <h5 class="card-title text-info" style="font-weight: 700; font-size: 1.25rem;">In-Class Assignment</h5>
-                                            <p class="card-text text-muted mb-3" style="line-height: 1.6;">
-                                                Students complete this during class time.
-                                            </p>
-                                            <div class="alert alert-info mb-0" style="font-size: 0.85rem; padding: 0.75rem;">
-                                                <i class="bi bi-info-circle me-1"></i>Due date will automatically be set to 4:00 PM EST today
-                                            </div>
+                                            <i class="bi bi-building text-info assignment-modal-icon"></i>
+                                            <h5 class="card-title text-info mt-3">In-Class</h5>
+                                            <p class="card-text text-muted small">Due today at 4:00 PM EST automatically.</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-6">
-                                    <div class="card h-100 assignment-context-card" data-context="homework" style="cursor: pointer; border: 2px solid #e2e8f0;">
+                                    <div class="card h-100 assignment-context-card" data-context="homework">
                                         <div class="card-body text-center p-4">
-                                            <div class="mb-3">
-                                                <i class="bi bi-house-door text-warning" style="font-size: 4rem;"></i>
-                                            </div>
-                                            <h5 class="card-title text-warning" style="font-weight: 700; font-size: 1.25rem;">Homework Assignment</h5>
-                                            <p class="card-text text-muted mb-3" style="line-height: 1.6;">
-                                                Students complete this outside of class.
-                                            </p>
-                                            <div class="alert alert-warning mb-0" style="font-size: 0.85rem; padding: 0.75rem;">
-                                                <i class="bi bi-info-circle me-1"></i>You will set the due date manually
-                                            </div>
+                                            <i class="bi bi-house-door text-warning assignment-modal-icon"></i>
+                                            <h5 class="card-title text-warning mt-3">Homework</h5>
+                                            <p class="card-text text-muted small">You set the due date manually.</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer" style="border: none; padding: 1.5rem 2rem; background: #f8fafc;">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 10px; padding: 10px 24px;">
-                                <i class="bi bi-arrow-left me-1"></i>Back
-                            </button>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
                         </div>
                     </div>
                 </div>
             </div>
         `;
-
-        // Remove existing modal if it exists
         const existingModal = document.getElementById('assignmentContextModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        // Add modal to body
+        if (existingModal) existingModal.remove();
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // Add hover effects for target cards
-        document.querySelectorAll('.assignment-target-card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-5px) scale(1.02)';
-                this.style.boxShadow = '0 12px 30px rgba(0,0,0,0.15)';
-            });
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0) scale(1)';
-                this.style.boxShadow = '';
-            });
-        });
-        
-        // Add hover effects for context cards
-        document.querySelectorAll('.assignment-context-card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-5px) scale(1.02)';
-                this.style.boxShadow = '0 12px 30px rgba(0,0,0,0.15)';
-            });
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0) scale(1)';
-                this.style.boxShadow = '';
-            });
-        });
-
-        // Add click handlers for context cards
-        document.querySelectorAll('.assignment-context-card').forEach(card => {
+        document.querySelectorAll('.assignment-context-card').forEach(function(card) {
             card.addEventListener('click', function() {
                 const context = this.dataset.context;
-                const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentContextModal'));
-                modal.hide();
-                
-                // Redirect based on context selection
+                bootstrap.Modal.getInstance(document.getElementById('assignmentContextModal')).hide();
                 {% if can_assignments_admin_ui %}
-                    window.location.href = `{{ url_for('management.add_assignment') }}?context=${context}`;
+                window.location.href = "{{ url_for('management.add_assignment') }}?context=" + context;
                 {% else %}
-                    window.location.href = `{{ url_for('teacher.assignments.add_assignment') }}?context=${context}`;
+                window.location.href = "{{ url_for('teacher.assignments.add_assignment') }}?context=" + context;
                 {% endif %}
             });
         });
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('assignmentContextModal'));
-        modal.show();
+        new bootstrap.Modal(document.getElementById('assignmentContextModal')).show();
     }
 });
 </script>

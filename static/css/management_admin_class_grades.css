@@ -860,6 +860,7 @@
     white-space: nowrap;
     padding: 0.75rem 0.85rem;
     vertical-align: middle;
+    text-align: center;
 }
 
 .mgmt-grd-content .grades-by-assignment-table tbody td {
@@ -887,6 +888,18 @@
     font-weight: 600;
     line-height: 1.2;
     padding: 0.28rem 0.5rem;
+}
+
+.mgmt-grd-content .grades-ba-quarter-pill {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    white-space: nowrap;
 }
 
 .mgmt-grd-content .grades-ba-date-pill {

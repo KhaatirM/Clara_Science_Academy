@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>1st Grade Progress Report - Clara Science Academy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='report_card_styles.css') }}">
+</head>
+<body class="grade3-report-card grade1-report-card">
+    {% from 'management/_report_card_grade3_standards_table.html' import render_grade3_standards_table %}
+
+    {# Page 1 — Summary #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+        {% include 'management/_report_card_grade1_page1.html' %}
+    </div>
+
+    {# Page 2 — Language Arts #}
+    <div class="grade3-page grade1-standards-page">
+        {% include 'management/_report_card_header.html' %}
+        {{ render_grade3_standards_table(grade1_language_arts, grade1_language_arts_marks, grade1_quarter_columns) }}
+    </div>
+
+    {# Page 3 — Math #}
+    <div class="grade3-page grade1-standards-page">
+        {% include 'management/_report_card_header.html' %}
+        {{ render_grade3_standards_table(grade1_math, grade1_math_marks, grade1_quarter_columns) }}
+    </div>
+
+    {# Page 4 — Assignment grades, comments, signatures #}
+    <div class="grade3-page grade3-page-last">
+        {% include 'management/_report_card_header.html' %}
+
+        <div class="section-title">Assignment Grades ({{ report_card.quarter }}):</div>
+        {% set ns = namespace(has_assignments=false) %}
+        {% if grades %}
+            {% for subject, grade_info in grades.items() %}
+                {% if grade_info is mapping and grade_info.get('assignments') and grade_info.get('assignments')|length > 0 %}
+                    {% set ns.has_assignments = true %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% if ns.has_assignments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject/Course</th>
+                        <th>Assignment Title</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject, grade_info in grades.items() %}
+                        {% if grade_info is mapping and grade_info.get('assignments') %}
+                            {% for assignment in grade_info.get('assignments', []) %}
+                                <tr>
+                                    <td>{{ subject }}</td>
+                                    <td>{{ assignment.get('title', 'N/A') }}</td>
+                                    <td>{{ assignment.get('grade', 'N/A') }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No individual assignment grades recorded for this quarter.</p>
+        {% endif %}
+
+        <div class="section-title">Teacher Comments:</div>
+        <div class="comments-box">
+            {% if include_comments and class_objects %}
+                {% set any_comment = false %}
+                {% for class_obj in class_objects %}
+                    {% set comment = (comments_by_class.get(class_obj.id|string, '') if comments_by_class else '') %}
+                    {% if comment %}
+                        {% set any_comment = true %}
+                        <p style="margin: 0 0 6px 0;"><strong>{{ class_obj.name }}:</strong> {{ comment|nl2br }}</p>
+                    {% endif %}
+                {% endfor %}
+                {% if not any_comment %}
+                    <p>N/A</p>
+                {% endif %}
+            {% else %}
+                <p>N/A</p>
+            {% endif %}
+        </div>
+
+        <div class="section-title" style="margin-top: 0.6cm;">Additional Comment/Concern:</div>
+        <div class="comments-box">
+            <p>{% if additional_comments %}{{ additional_comments|nl2br }}{% else %}N/A{% endif %}</p>
+        </div>
+
+        <div class="footer">
+            <p>Parent Signature: ___________________________________ Date: _________________</p>
+            <p>Academy Director: ___________________________________ Date: _________________</p>
+        </div>
+    </div>
+</body>
+</html>

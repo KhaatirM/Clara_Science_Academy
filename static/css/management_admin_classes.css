@@ -1220,6 +1220,12 @@ CLASSES TAB STYLES ==================== */
   margin: 0 0 0.35rem;
 }
 
+.mgmt-cls-content .mgmt-cls-filters-row-2 {
+  padding-top: 0.65rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
 /* "Pretty" dropdowns for the filters panel (custom menu instead of native <select>). */
 .mgmt-cls-content .mgmt-cls-pretty-select {
   width: 100%;

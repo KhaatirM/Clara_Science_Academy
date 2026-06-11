@@ -81,6 +81,7 @@ def _remove_uploaded_student_photo(filename: str) -> None:
         except OSError:
             pass
 from utils.credential_modal import student_grade3_plus_modal_payload, student_k2_modal_payload
+from utils.parent_portal import parent_portal_status_for_student, sync_student_parent_portal
 from services.google_directory_service import create_google_user
 from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
 
@@ -467,6 +468,7 @@ def add_student():
                 user.is_temporary_password = True
                 user.password_changed_at = None
                 db.session.add(user)
+                sync_student_parent_portal(student)
                 db.session.commit()
 
                 google_warning = None
@@ -529,6 +531,7 @@ def add_student():
                 )
                 flash("Student saved. Use the credential summary popup to copy login details.", "success")
             else:
+                sync_student_parent_portal(student)
                 db.session.commit()
                 session["credential_modal"] = student_k2_modal_payload(
                     first_name=first_name,
@@ -635,8 +638,8 @@ def get_student_classes(student_id):
             class_info = enrollment.class_info
             if class_info:
                 if window_start and window_end:
-                    from management_routes.reports import _enrollment_overlaps_window
-                    if not _enrollment_overlaps_window(enrollment, window_start, window_end):
+                    from management_routes.reports import _enrollment_eligible_for_report_card
+                    if not _enrollment_eligible_for_report_card(enrollment, window_start, window_end):
                         continue
                 classes_data.append({
                     'id': class_info.id,
@@ -1395,14 +1398,19 @@ def generate_report_card_for_student(student_id):
     
     classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
     
-    return render_template('management/report_card_generate_form.html',
-                         student=student,
-                         students=[student],  # For compatibility with existing template
-                         school_years=school_years,
-                         classes=classes,
-                         category=category,
-                         pre_selected_student=student_id,
-                         entrance_school_year_options=_build_entrance_school_year_options())
+    from utils.report_card_warnings import report_card_warnings_template_context
+
+    return render_template(
+        'management/report_card_generate_form.html',
+        student=student,
+        students=[student],
+        school_years=school_years,
+        classes=classes,
+        category=category,
+        pre_selected_student=student_id,
+        entrance_school_year_options=_build_entrance_school_year_options(),
+        **report_card_warnings_template_context(),
+    )
 
 
 
@@ -2092,7 +2100,8 @@ def view_student(student_id):
         'apt_unit': student.apt_unit,
         'city': student.city,
         'state': student.state,
-        'zip_code': student.zip_code
+        'zip_code': student.zip_code,
+        'parent_portal': parent_portal_status_for_student(student),
     })
 
 
@@ -2232,6 +2241,8 @@ def edit_student(student_id):
             new_creds = _provision_student_login_if_needed(student)
             if getattr(student, "user", None):
                 _ensure_student_google_workspace_email(student)
+
+        parent_creds = sync_student_parent_portal(student)
 
         db.session.commit()
         # Google Directory sync immediately after commit (Save → Workspace updated in one step)
@@ -3329,6 +3340,10 @@ def view_student_details_data(student_id):
     
     try:
         from utils.at_risk_alerts import _percentage_from_grade_data
+        from utils.school_year_filters import (
+            active_school_year_class_ids,
+            get_active_school_year,
+        )
 
         student = Student.query.get_or_404(student_id)
 
@@ -3338,6 +3353,29 @@ def view_student_details_data(student_id):
                 'success': False,
                 'error': 'This student is no longer on the active school roster.',
             }), 404
+
+        active_school_year = get_active_school_year()
+        if not active_school_year:
+            return jsonify({
+                'success': False,
+                'error': 'No active school year.',
+            }), 404
+
+        year_class_ids = active_school_year_class_ids()
+        if not year_class_ids:
+            return jsonify({
+                'success': True,
+                'student': {
+                    'name': f"{student.first_name} {student.last_name}",
+                    'student_id': student.id,
+                    'current_gpa': 0.0,
+                    'hypothetical_gpa': 0.0,
+                    'missing_assignments': {},
+                    'class_gpa': {},
+                    'failing_count': 0,
+                    'missing_count': 0,
+                },
+            })
         
         # --- GPA IMPACT ANALYSIS ---
         current_gpa = None
@@ -3346,16 +3384,18 @@ def view_student_details_data(student_id):
         all_missing_assignments = []
         class_gpa_breakdown = {}
 
-        # Get all non-voided grades for the student
+        # Grades and enrollments scoped to the active school year only
         all_grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student.id,
+            Assignment.class_id.in_(year_class_ids),
             Assignment.status != 'Voided',
         ).filter(
             db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
         ).all()
         
-        # Get all classes this student is enrolled in
-        enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
+        enrollments = Enrollment.query.filter_by(
+            student_id=student.id, is_active=True
+        ).filter(Enrollment.class_id.in_(year_class_ids)).all()
         student_classes = {enrollment.class_id: enrollment.class_info for enrollment in enrollments if enrollment.class_info}
         student_class_ids = list(student_classes.keys())
         

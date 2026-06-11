@@ -720,11 +720,13 @@ def create_discussion_assignment():
 @login_required
 @management_required
 def view_extension_requests():
-    """View all extension requests for assignments"""
+    """View all extension requests for assignments in the active school year"""
     from datetime import datetime
-    
-    # Administrators see all extension requests
-    extension_requests = ExtensionRequest.query.order_by(ExtensionRequest.requested_at.desc()).all()
+    from utils.school_year_filters import extension_requests_query
+
+    extension_requests = extension_requests_query().order_by(
+        ExtensionRequest.requested_at.desc()
+    ).all()
     
     # Group requests by status
     pending_requests = [req for req in extension_requests if req.status == 'Pending']
@@ -939,9 +941,13 @@ def assignments_and_grades():
                             unique_student_ids.add(enrollment.student_id)
             unique_student_count = len(unique_student_ids)
             
-            # Get pending extension request count and redo request count
-            pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
-            pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
+            from utils.school_year_filters import (
+                count_pending_extension_requests,
+                count_pending_redo_requests,
+            )
+
+            pending_extension_count = count_pending_extension_requests()
+            pending_redo_count = count_pending_redo_requests()
 
             from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
             pending_assistant_by_class = {}
@@ -1342,9 +1348,13 @@ def assignments_and_grades():
             sorted_assignments = []
         
         from datetime import date
-        # Get pending extension request count and redo request count
-        pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
-        pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
+        from utils.school_year_filters import (
+            count_pending_extension_requests,
+            count_pending_redo_requests,
+        )
+
+        pending_extension_count = count_pending_extension_requests()
+        pending_redo_count = count_pending_redo_requests()
         
         # Create combined assignments list for grades and table views
         class_assignments_data = list(class_assignments) if class_assignments else []

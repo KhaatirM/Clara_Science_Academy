@@ -432,7 +432,8 @@ body:has(.mgmt-rcf) {
 /* -------------------------------------------------------------
    Confirmation panel (synced student / school info)
    ------------------------------------------------------------- */
-.mgmt-rcf-confirm-banner {
+.mgmt-rcf-confirm-banner,
+.mgmt-rcf-unfinalized-banner {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
@@ -444,7 +445,12 @@ body:has(.mgmt-rcf) {
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }
-.mgmt-rcf-confirm-banner i { font-size: 1rem; line-height: 1.2; }
+.mgmt-rcf-confirm-banner i,
+.mgmt-rcf-unfinalized-banner i { font-size: 1rem; line-height: 1.2; }
+
+.mgmt-rcf-unfinalized-banner {
+  margin-top: 0.25rem;
+}
 
 .mgmt-rcf-confirm-grid {
   display: grid;

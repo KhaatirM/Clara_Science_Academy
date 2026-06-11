@@ -6,7 +6,7 @@ Behavior:
 - Students (grade 3+ only; K–2 are skipped — no Directory sync):
   - Only rows where User.google_workspace_email is already set in the database
   - Ensure Google account exists for that email (create if missing)
-  - Ensure OU matches policy derived from grade_level + expected_graduation_year / grad_year (and removal/alumni rules).
+  - Ensure OU matches policy (active division OUs, Alumni/{Elementary|Middle|High}, or Transferred & Removed).
     Cohort folders are Org Units only (e.g. ``/Students/High School/Class of 2030``), not Google Groups named ``2030@…``.
 - Staff:
   - Ensure Google account exists for User.google_workspace_email (create if missing)
@@ -107,14 +107,16 @@ def main() -> int:
             get_google_group,
             get_google_user,
             move_user_to_ou,
+            suspend_user,
             sync_user_groups,
-            sync_user_suspension_with_db_is_active,
         )
         from services.google_ou_policy import (
             STAFF_OU_TERMINATED_REMOVED,
             get_staff_ou_path,
             resolve_student_ou,
             school_level_group_for_grade,
+            sync_staff_google_suspension,
+            sync_student_google_suspension,
         )
     except Exception as e:
         print(f"[ERROR] Failed to import required modules: {e}")
@@ -134,7 +136,6 @@ def main() -> int:
         student_q = (
             db.session.query(Student, User)
             .join(User, User.student_id == Student.id)
-            .filter(Student.is_deleted.is_(False))
             .filter(User.google_workspace_email.isnot(None))
             .filter(User.google_workspace_email != "")
             .order_by(Student.last_name, Student.first_name)
@@ -144,8 +145,8 @@ def main() -> int:
         student_rows = student_q.all()
 
         print(
-            f"\n[Students] {len(student_rows)} row(s): not deleted, with User.google_workspace_email set "
-            "(inactive still included for suspension sync when grade ≥ 3)."
+            f"\n[Students] {len(student_rows)} row(s) with User.google_workspace_email set "
+            "(includes inactive/deleted for Alumni / Transferred & Removed OU moves when grade >= 3)."
         )
 
         for student, u in student_rows:
@@ -163,51 +164,73 @@ def main() -> int:
 
             print(f"[DEBUG] Syncing database record for: {email}")
 
-            if apply_changes:
-                sync_user_suspension_with_db_is_active(email, bool(getattr(student, "is_active", True)))
-                _sleep_ms(sleep_ms)
+            db_active = bool(getattr(student, "is_active", True))
+            marked_for_removal = bool(getattr(student, "marked_for_removal", False))
+            is_deleted = bool(getattr(student, "is_deleted", False))
 
-            if not getattr(student, "is_active", True):
-                continue
-
-            # Compute desired OU (expected_graduation_year > grad_year > expected_grad_date > infer from grade)
             decision = resolve_student_ou(
                 grade_level=getattr(student, "grade_level", None),
                 grad_year=getattr(student, "grad_year", None),
                 expected_grad_date=getattr(student, "expected_grad_date", None),
-                is_active=bool(getattr(student, "is_active", True)),
-                marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+                is_active=db_active,
+                marked_for_removal=marked_for_removal,
+                is_deleted=is_deleted,
                 status_updated_at=getattr(student, "status_updated_at", None),
                 expected_graduation_year=getattr(student, "expected_graduation_year", None),
             )
+
+            if apply_changes:
+                sync_student_google_suspension(
+                    email,
+                    decision=decision,
+                    is_active=db_active,
+                    marked_for_removal=marked_for_removal,
+                    is_deleted=is_deleted,
+                )
+                _sleep_ms(sleep_ms)
 
             g_user = get_google_user(email)
             _sleep_ms(sleep_ms)
 
             if not g_user:
-                # Auto-create missing account
-                if apply_changes:
-                    created = create_google_user(
-                        {
-                            "primaryEmail": email,
-                            "name": {"givenName": student.first_name, "familyName": student.last_name},
-                            "password": DEFAULT_TEMP_PASSWORD,
-                            "orgUnitPath": decision.target_ou_path,
-                            "changePasswordAtNextLogin": True,
-                        }
-                    )
-                    _sleep_ms(sleep_ms)
-                    if created:
-                        created_users += 1
-                        print(f"[CREATE] student {email} in OU {decision.target_ou_path}")
+                if db_active and not marked_for_removal and not is_deleted:
+                    if apply_changes:
+                        if not ensure_ou_exists(decision.target_ou_path):
+                            errors += 1
+                            print(f"[ERROR] could not ensure OU for student {email}: {decision.target_ou_path}")
+                            continue
+                        created = create_google_user(
+                            {
+                                "primaryEmail": email,
+                                "name": {"givenName": student.first_name, "familyName": student.last_name},
+                                "password": DEFAULT_TEMP_PASSWORD,
+                                "orgUnitPath": decision.target_ou_path,
+                                "changePasswordAtNextLogin": True,
+                            }
+                        )
+                        _sleep_ms(sleep_ms)
+                        if created:
+                            created_users += 1
+                            print(f"[CREATE] student {email} in OU {decision.target_ou_path}")
+                        else:
+                            errors += 1
+                            print(f"[ERROR] failed to create student {email}")
                     else:
-                        errors += 1
-                        print(f"[ERROR] failed to create student {email}")
-                        continue
-                else:
-                    print(f"[DRY] would create student {email} in OU {decision.target_ou_path}")
-                    continue
+                        print(f"[DRY] would create student {email} in OU {decision.target_ou_path}")
+                continue
             else:
+                if apply_changes and decision.reason in (
+                    "alumni_completed_level",
+                    "transferred_removed",
+                ) and not getattr(student, "status_updated_at", None):
+                    from datetime import datetime
+
+                    try:
+                        student.status_updated_at = datetime.utcnow()
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+
                 current_ou = g_user.get("orgUnitPath")
                 if current_ou != decision.target_ou_path:
                     if apply_changes:
@@ -224,7 +247,15 @@ def main() -> int:
                     else:
                         print(f"[DRY] would move student {email}: {current_ou} -> {decision.target_ou_path}")
 
-            # School-level groups: exactly one of Elementary/Middle/High + Student Assembly for all active students
+                if apply_changes and decision.should_suspend_now and not bool(g_user.get("suspended", False)):
+                    if suspend_user(email):
+                        print(f"[SUSPEND] student {email} ({decision.reason})")
+                    else:
+                        errors += 1
+                        print(f"[ERROR] failed to suspend student {email}")
+                    _sleep_ms(sleep_ms)
+
+            # School-level groups: exactly one of Elementary/Middle/High + Student Assembly for active students
             level_key = school_level_group_for_grade(getattr(student, "grade_level", None))
             level_email = None
             if level_key == "elementary":
@@ -238,29 +269,30 @@ def main() -> int:
             if level_email:
                 desired_school_groups.insert(0, level_email)
 
-            if apply_changes:
-                if create_missing_groups:
-                    for g in desired_school_groups:
-                        if not get_google_group(g):
-                            create_google_group(
-                                g,
-                                name=g.split("@", 1)[0].replace("_", " ").title(),
-                                description="Auto-created by CSA sync.",
-                            )
-                            _sleep_ms(sleep_ms)
+            if db_active and not marked_for_removal and not is_deleted:
+                if apply_changes:
+                    if create_missing_groups:
+                        for g in desired_school_groups:
+                            if not get_google_group(g):
+                                create_google_group(
+                                    g,
+                                    name=g.split("@", 1)[0].replace("_", " ").title(),
+                                    description="Auto-created by CSA sync.",
+                                )
+                                _sleep_ms(sleep_ms)
 
-                sg_res = sync_user_groups(email, desired_school_groups)
-                if sg_res is True:
-                    group_adds += 1
-                    print(f"[GROUP] synced school-level groups for {email} -> {', '.join(desired_school_groups)}")
-                elif sg_res is False:
-                    errors += 1
-                    print(f"[ERROR] failed syncing school-level groups for {email}")
+                    sg_res = sync_user_groups(email, desired_school_groups)
+                    if sg_res is True:
+                        group_adds += 1
+                        print(f"[GROUP] synced school-level groups for {email} -> {', '.join(desired_school_groups)}")
+                    elif sg_res is False:
+                        errors += 1
+                        print(f"[ERROR] failed syncing school-level groups for {email}")
+                    else:
+                        print(f"[INFO] Skipping protected/admin user: {email}")
+                    _sleep_ms(sleep_ms)
                 else:
-                    print(f"[INFO] Skipping protected/admin user: {email}")
-                _sleep_ms(sleep_ms)
-            else:
-                print(f"[DRY] would sync school-level groups for {email} -> {', '.join(desired_school_groups)}")
+                    print(f"[DRY] would sync school-level groups for {email} -> {', '.join(desired_school_groups)}")
 
         # ------------------------
         # Staff (Teachers/Staff)
@@ -294,7 +326,7 @@ def main() -> int:
             print(f"[DEBUG] Syncing database record for: {email} (staff OU -> {target_staff_ou})")
 
             if apply_changes:
-                sync_user_suspension_with_db_is_active(email, bool(getattr(staff, "is_active", True)))
+                sync_staff_google_suspension(email, staff)
                 _sleep_ms(sleep_ms)
 
             g_user = get_google_user(email)

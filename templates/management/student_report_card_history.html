@@ -78,6 +78,7 @@
                     <th>Quarter</th>
                     <th>Generated Date</th>
                     <th>Classes Included</th>
+                    <th>Family Portal</th>
                     <th class="text-center">Actions</th>
                   </tr>
                 </thead>
@@ -101,6 +102,16 @@
                         <span class="badge bg-secondary">{{ class_ids|length }} class{{ 'es' if class_ids|length != 1 else '' }}</span>
                       {% else %}
                         <span class="text-muted">All enrolled classes</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% set rc_type = report_data.get('report_type', 'official') if report_data else 'official' %}
+                      {% if rc_type == 'unofficial' %}
+                        <span class="badge bg-secondary">Unofficial</span>
+                      {% elif rc.director_approved %}
+                        <span class="badge bg-success">Published</span>
+                      {% else %}
+                        <span class="badge bg-warning text-dark">Pending approval</span>
                       {% endif %}
                     </td>
                     <td class="text-center">

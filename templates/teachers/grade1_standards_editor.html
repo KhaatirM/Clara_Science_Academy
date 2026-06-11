@@ -1,0 +1,476 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/grade3_standards.css') }}">
+{% endblock %}
+
+{% macro percent_tier(p) -%}
+  {%- if p == 0 -%}zero
+  {%- elif p < 25 -%}low
+  {%- elif p < 60 -%}mid
+  {%- elif p < 100 -%}high
+  {%- else -%}full
+  {%- endif -%}
+{%- endmacro %}
+
+{# Defensive defaults so a context/code-version mismatch can't 500 the page. #}
+{% set _empty_quarter_stat = {'filled': 0, 'total': 0, 'percent': 0} %}
+{% set _empty_overall = {
+  'overall': _empty_quarter_stat,
+  'quarters': {'Q1': _empty_quarter_stat, 'Q2': _empty_quarter_stat, 'Q3': _empty_quarter_stat, 'Q4': _empty_quarter_stat},
+  'last_updated': None,
+  'students_count': 0,
+  'standards_count': 0,
+  'total_cells_per_quarter': 0,
+} %}
+{% set overall_stats = overall_stats|default(_empty_overall, true) %}
+{% set section_stats = section_stats|default({}, true) %}
+{% set marks_student_view = marks_student_view|default({}, true) %}
+{% set view_mode = view_mode|default('grid', true) %}
+{% set selected_student_id = selected_student_id|default(None) %}
+{% set is_admin = is_admin|default(False) %}
+
+{% set q_stats = overall_stats.quarters.get(quarter, _empty_quarter_stat) %}
+{% set q_tier = percent_tier(q_stats.percent) %}
+{% set overall_tier = percent_tier(overall_stats.overall.percent) %}
+{% set is_la = subject_key == 'language_arts' %}
+
+{% block dashboard_content %}
+<div class="g3-hub container-fluid px-0 px-md-1">
+  <div class="g3-shell">
+
+    <header class="g3-hero">
+      <div>
+        <div class="g3-breadcrumb">
+          <a href="{{ url_for('teacher.grade1_standards.grade1_standards_index') }}">
+            <i class="bi bi-arrow-left"></i> All 1st grade classes
+          </a>
+        </div>
+        <p class="g3-eyebrow">{{ subject_catalog.subject }} · 1st Grade Standards</p>
+        <h1 class="g3-title">{{ class_obj.name }}</h1>
+        <p class="g3-subtitle">
+          <i class="bi bi-people-fill"></i>
+          {{ students|length }} student{{ '' if students|length == 1 else 's' }}
+          · {{ standards|length }} standard{{ '' if standards|length == 1 else 's' }}
+          · {{ school_year.name }}
+        </p>
+      </div>
+      <div class="g3-hero-actions">
+        {% if is_admin %}
+          <span class="g3-role-badge"><i class="bi bi-shield-fill"></i> Admin view</span>
+        {% endif %}
+        <a class="g3-btn g3-btn--ghost" href="{{ url_for('teacher.grade1_standards.grade1_standards_index') }}">
+          <i class="bi bi-grid"></i> All classes
+        </a>
+      </div>
+    </header>
+
+    <div class="g3-insights" role="list">
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-bar-chart-line-fill"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ overall_stats.overall.percent }}%</div>
+          <div class="g3-insight-label">Year-to-date complete</div>
+          <div class="g3-insight-mini">{{ overall_stats.overall.filled }} / {{ overall_stats.overall.total }} cells</div>
+        </div>
+      </div>
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-calendar3"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ q_stats.percent }}%</div>
+          <div class="g3-insight-label">{{ quarter }} complete</div>
+          <div class="g3-insight-mini">{{ q_stats.filled }} / {{ q_stats.total }} cells</div>
+        </div>
+      </div>
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-clock-history"></i></span>
+        <div>
+          <div class="g3-insight-value" style="font-size: 0.95rem;">
+            {% if overall_stats.last_updated %}{{ overall_stats.last_updated.strftime('%b %d, %I:%M %p') }}{% else %}—{% endif %}
+          </div>
+          <div class="g3-insight-label">Last edit</div>
+        </div>
+      </div>
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-collection"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ standards|length }}</div>
+          <div class="g3-insight-label">Standards in catalog</div>
+        </div>
+      </div>
+    </div>
+
+    {# ============================ TOOLBAR ============================ #}
+    <div class="g3-toolbar">
+      <div class="g3-toolbar-group">
+        <span class="g3-toolbar-label">Quarter</span>
+        <div class="g3-quarter-pills" role="tablist">
+          {% for q in quarter_columns %}
+            {% set qs = overall_stats.quarters[q] %}
+            <a class="g3-quarter-pill {% if q == quarter %}is-active{% endif %}"
+               data-tier="{{ percent_tier(qs.percent) }}"
+               href="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=class_obj.id, quarter=q, view=view_mode, student_id=selected_student_id) }}"
+               title="{{ q }} · {{ qs.filled }}/{{ qs.total }} cells">
+              <span class="g3-dot"></span>{{ q }}
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="g3-toolbar-group">
+        <span class="g3-toolbar-label">View</span>
+        <div class="g3-view-toggle">
+          <a class="{% if view_mode == 'grid' %}is-active{% endif %}"
+             href="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=class_obj.id, quarter=quarter, view='grid') }}">
+            <i class="bi bi-grid-3x3"></i> Grid
+          </a>
+          <a class="{% if view_mode == 'student' %}is-active{% endif %}"
+             href="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=class_obj.id, quarter=quarter, view='student', student_id=selected_student_id) }}">
+            <i class="bi bi-person-vcard"></i> Per student
+          </a>
+        </div>
+      </div>
+
+      {% if other_classes and other_classes|length > 1 %}
+        <div class="g3-toolbar-group">
+          <span class="g3-toolbar-label">Class</span>
+          <select id="g3-class-switcher" class="g3-class-switch">
+            {% for c in other_classes %}
+              <option value="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=c.id, quarter=quarter, view=view_mode) }}"
+                      {% if c.id == class_obj.id %}selected{% endif %}>
+                {{ c.name }} · {{ c.subject }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
+
+      <div class="g3-search-wrap">
+        <i class="bi bi-search"></i>
+        <input id="g3-standard-search" type="search"
+               placeholder="Search standards (e.g. fraction, comprehension)"
+               aria-label="Search standards"/>
+      </div>
+
+      <div class="g3-legend">
+        <span class="g3-legend-chip m">M</span>Mastered
+        <span class="g3-legend-chip w">W</span>Working on
+        <span class="g3-legend-chip na">NA</span>Not Assessed
+        <span class="g3-legend-chip ua">UA</span>Unable to Assess
+      </div>
+    </div>
+
+    {# Section progress strip — current quarter only #}
+    {% if section_stats %}
+    <div class="g3-section-progress" aria-label="Section progress for {{ quarter }}">
+      {% for title, stats in section_stats.items() %}
+      <div class="g3-section-card">
+        <div class="g3-section-card-title">{{ title }}</div>
+        <div class="g3-section-card-bar">
+          <span class="g3-section-card-bar-fill" style="width: {{ stats.percent }}%;"></span>
+        </div>
+        <div class="g3-section-card-meta">
+          <span>{{ quarter }}</span>
+          <span>{{ stats.filled }} / {{ stats.total }} · {{ stats.percent }}%</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ============================ FORM ============================ #}
+    {% if not students %}
+      <div class="alert alert-warning g3-flash">No students are currently enrolled in this class.</div>
+    {% elif not standards %}
+      <div class="alert alert-warning g3-flash">No standards are defined for this subject.</div>
+    {% else %}
+
+    <form method="POST" id="g3-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="quarter" value="{{ quarter }}"/>
+      <input type="hidden" name="view" value="{{ view_mode }}"/>
+      {% if view_mode == 'student' and selected_student_id %}
+        <input type="hidden" name="student_id" value="{{ selected_student_id }}"/>
+      {% endif %}
+
+      {# ====================== GRID VIEW ====================== #}
+      {% if view_mode == 'grid' %}
+      <div class="g3-grid-wrap">
+        <div class="g3-grid-scroll">
+          <table class="g3-grid">
+            <thead>
+              <tr>
+                <th class="g3-std-col">Standard</th>
+                {% for student in students %}
+                  <th>
+                    <div class="g3-student-name" title="{{ student.first_name }} {{ student.last_name }}">
+                      {{ student.first_name }} {{ student.last_name }}
+                    </div>
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% set current_section = namespace(title='') %}
+              {% set section_index = namespace(i=0) %}
+              {% for std in standards %}
+                {% if std.section and std.section != current_section.title %}
+                  {% set section_index.i = section_index.i + 1 %}
+                  {% set current_section.title = std.section %}
+                  {% set sect_stats = section_stats.get(std.section, {'filled':0,'total':0,'percent':0}) %}
+                  <tr class="is-section-row" data-section-id="sect-{{ section_index.i }}"
+                      onclick="g3ToggleSection('sect-{{ section_index.i }}', this)">
+                    <td class="g3-std-col" colspan="{{ students|length + 1 }}">
+                      <i class="bi bi-chevron-down g3-section-chevron"></i>
+                      <span>{{ std.section }}</span>
+                      <span class="g3-section-progress-mini">{{ sect_stats.filled }} / {{ sect_stats.total }} · {{ sect_stats.percent }}%</span>
+                    </td>
+                  </tr>
+                {% endif %}
+                <tr class="g3-std-row" data-section-id="sect-{{ section_index.i }}"
+                    data-std-text="{{ std.text|lower }} {{ (std.section or '')|lower }}">
+                  <td class="g3-std-col">{{ std.text }}</td>
+                  {% for student in students %}
+                    {% set value = marks_grid.get(student.id, {}).get(std.id, '') %}
+                    <td>
+                      <select name="mark__{{ student.id }}__{{ std.id }}"
+                              class="g3-mark{% if value %} has-{{ value|lower }}{% endif %}"
+                              data-current="{{ value }}">
+                        <option value="" {% if not value %}selected{% endif %}>—</option>
+                        {% for opt in valid_marks %}
+                          <option value="{{ opt }}" {% if value == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div id="g3-no-results" class="g3-no-results" hidden>No standards match your search.</div>
+      </div>
+      {% endif %}
+
+      {# ====================== PER-STUDENT VIEW ====================== #}
+      {% if view_mode == 'student' %}
+      <div class="g3-student-picker">
+        <label class="g3-toolbar-label">Student</label>
+        <select id="g3-student-picker">
+          {% for s in students %}
+            <option value="{{ s.id }}" {% if s.id == selected_student_id %}selected{% endif %}>
+              {{ s.first_name }} {{ s.last_name }}
+            </option>
+          {% endfor %}
+        </select>
+        <span class="text-muted small">Enter all 4 quarters at once for this student. Changes save when you press Save.</span>
+      </div>
+
+      {% if selected_student_id %}
+        {% set selected = None %}
+        {% for s in students %}{% if s.id == selected_student_id %}{% set selected = s %}{% endif %}{% endfor %}
+        {% set per_std_marks = marks_student_view.get(selected_student_id, {}) %}
+
+        <div class="g3-student-card">
+          <div class="g3-student-card-header">
+            <div class="g3-student-avatar">
+              {{ (selected.first_name[0] if selected and selected.first_name else '?')|upper }}{{ (selected.last_name[0] if selected and selected.last_name else '')|upper }}
+            </div>
+            <div>
+              <h3 class="g3-student-card-name">{{ selected.first_name }} {{ selected.last_name }}</h3>
+              <div class="g3-student-card-meta">{{ subject_catalog.subject }} · {{ class_obj.name }}</div>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+          <table class="g3-student-table">
+            <thead>
+              <tr>
+                <th>Standard</th>
+                {% for q in quarter_columns %}
+                  <th>{{ q }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% set current_section_s = namespace(title='') %}
+              {% set sect_idx_s = namespace(i=0) %}
+              {% for std in standards %}
+                {% if std.section and std.section != current_section_s.title %}
+                  {% set sect_idx_s.i = sect_idx_s.i + 1 %}
+                  {% set current_section_s.title = std.section %}
+                  <tr class="is-section" data-section-id="sects-{{ sect_idx_s.i }}"
+                      onclick="g3ToggleSection('sects-{{ sect_idx_s.i }}', this)">
+                    <td colspan="{{ quarter_columns|length + 1 }}">
+                      <i class="bi bi-chevron-down g3-section-chevron"></i>
+                      {{ std.section }}
+                    </td>
+                  </tr>
+                {% endif %}
+                <tr class="g3-std-row" data-section-id="sects-{{ sect_idx_s.i }}"
+                    data-std-text="{{ std.text|lower }} {{ (std.section or '')|lower }}">
+                  <td>{{ std.text }}</td>
+                  {% for q in quarter_columns %}
+                    {% set value = per_std_marks.get(std.id, {}).get(q, '') %}
+                    <td class="g3-mark-cell">
+                      <select name="markq__{{ selected_student_id }}__{{ std.id }}__{{ q }}"
+                              class="g3-mark{% if value %} has-{{ value|lower }}{% endif %}"
+                              data-current="{{ value }}">
+                        <option value="" {% if not value %}selected{% endif %}>—</option>
+                        {% for opt in valid_marks %}
+                          <option value="{{ opt }}" {% if value == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="g3-no-results">No students in this class.</div>
+      {% endif %}
+      {% endif %}
+
+      {# ====================== STICKY SAVE BAR ====================== #}
+      <div class="g3-savebar" role="region" aria-label="Save controls">
+        <span class="g3-savebar-status" id="g3-savebar-status" data-state="clean">
+          <i class="bi bi-check-circle"></i> All changes saved
+        </span>
+        <div class="g3-savebar-actions">
+          {% if can_copy_previous and view_mode == 'grid' %}
+          <button class="g3-btn g3-btn--outline" type="submit" name="bulk_action" value="copy_previous"
+                  formnovalidate
+                  onclick="return confirm('Copy any blank cells from the previous quarter into {{ quarter }}? Filled cells stay unchanged.');">
+            <i class="bi bi-arrow-down-square"></i> Copy from previous
+          </button>
+          {% endif %}
+
+          {% if view_mode == 'grid' %}
+          <div class="dropdown">
+            <button class="g3-btn g3-btn--outline dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-stars"></i> Mark all
+            </button>
+            <ul class="dropdown-menu">
+              <li><button class="dropdown-item" type="submit" name="bulk_action" value="mark_all_m" formnovalidate
+                  onclick="return confirm('Set every cell on this page to M (Mastered) for {{ quarter }}?');">Mark all M</button></li>
+              <li><button class="dropdown-item" type="submit" name="bulk_action" value="mark_all_w" formnovalidate
+                  onclick="return confirm('Set every cell on this page to W (Working on) for {{ quarter }}?');">Mark all W</button></li>
+              <li><button class="dropdown-item" type="submit" name="bulk_action" value="mark_all_na" formnovalidate
+                  onclick="return confirm('Set every cell on this page to NA (Not Assessed) for {{ quarter }}?');">Mark all NA</button></li>
+              <li><button class="dropdown-item" type="submit" name="bulk_action" value="mark_all_ua" formnovalidate
+                  onclick="return confirm('Set every cell on this page to UA (Unable to Assess) for {{ quarter }}?');">Mark all UA</button></li>
+            </ul>
+          </div>
+
+          <button class="g3-btn g3-btn--danger" type="submit" name="bulk_action" value="clear_all" formnovalidate
+                  onclick="return confirm('Clear every mark on this page for {{ quarter }}?');">
+            <i class="bi bi-trash3"></i> Clear {{ quarter }}
+          </button>
+          {% endif %}
+
+          <button class="g3-btn g3-btn--primary" type="submit" id="g3-save-btn">
+            <i class="bi bi-save"></i> Save {{ quarter if view_mode == 'grid' else 'changes' }}
+          </button>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+(function () {
+  // Color-code mark dropdowns
+  function colorize(sel) {
+    sel.classList.remove('has-m', 'has-w', 'has-na', 'has-ua');
+    var v = (sel.value || '').toLowerCase();
+    if (v) sel.classList.add('has-' + v);
+  }
+
+  // Dirty tracking — show "unsaved changes" in the sticky bar
+  var statusEl = document.getElementById('g3-savebar-status');
+  var dirty = false;
+
+  function markDirty() {
+    if (dirty) return;
+    dirty = true;
+    if (statusEl) {
+      statusEl.setAttribute('data-state', 'dirty');
+      statusEl.innerHTML = '<i class="bi bi-exclamation-circle"></i> Unsaved changes';
+    }
+  }
+
+  document.querySelectorAll('select.g3-mark').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      colorize(sel);
+      markDirty();
+    });
+  });
+
+  // Saving indicator on submit
+  var form = document.getElementById('g3-form');
+  if (form) {
+    form.addEventListener('submit', function () {
+      if (statusEl) {
+        statusEl.setAttribute('data-state', 'saving');
+        statusEl.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Saving…';
+      }
+    });
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+  }
+
+  // Class switcher
+  var switcher = document.getElementById('g3-class-switcher');
+  if (switcher) {
+    switcher.addEventListener('change', function () {
+      if (switcher.value) window.location.href = switcher.value;
+    });
+  }
+
+  // Per-student picker (reload with new student_id)
+  var picker = document.getElementById('g3-student-picker');
+  if (picker) {
+    picker.addEventListener('change', function () {
+      if (!picker.value) return;
+      var url = new URL(window.location.href);
+      url.searchParams.set('student_id', picker.value);
+      url.searchParams.set('view', 'student');
+      window.location.href = url.toString();
+    });
+  }
+
+  // Search filter
+  var search = document.getElementById('g3-standard-search');
+  var noResultsEl = document.getElementById('g3-no-results');
+  if (search) {
+    search.addEventListener('input', function () {
+      var q = search.value.trim().toLowerCase();
+      var visibleCount = 0;
+      document.querySelectorAll('.g3-std-row').forEach(function (row) {
+        var match = !q || (row.getAttribute('data-std-text') || '').indexOf(q) !== -1;
+        row.classList.toggle('is-hidden', !match);
+        if (match) visibleCount++;
+      });
+      if (noResultsEl) noResultsEl.hidden = visibleCount > 0;
+    });
+  }
+
+  // Section collapsing
+  window.g3ToggleSection = function (sectionId, headerEl) {
+    var collapsed = headerEl.classList.toggle('is-collapsed');
+    document.querySelectorAll('.g3-std-row[data-section-id="' + sectionId + '"]').forEach(function (row) {
+      row.classList.toggle('is-hidden', collapsed);
+    });
+  };
+})();
+</script>
+{% endblock %}

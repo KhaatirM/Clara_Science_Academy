@@ -51,6 +51,15 @@
           <div class="mgmt-rc-insight-label">Report cards generated</div>
         </div>
       </div>
+      {% if is_director and pending_parent_approval is defined and pending_parent_approval > 0 %}
+      <div class="mgmt-rc-insight" role="listitem">
+        <span class="mgmt-rc-insight-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+        <div>
+          <div class="mgmt-rc-insight-value">{{ pending_parent_approval }}</div>
+          <div class="mgmt-rc-insight-label">Awaiting parent release</div>
+        </div>
+      </div>
+      {% endif %}
       <div class="mgmt-rc-insight" role="listitem">
         <span class="mgmt-rc-insight-icon"><i class="bi bi-calendar-range" aria-hidden="true"></i></span>
         <div>
@@ -109,6 +118,7 @@
           <li>Choose a student from the roster</li>
           <li>Pick school year, classes, and quarters</li>
           <li>Review and generate the PDF report card</li>
+          <li>Director approves the official card for the Family Portal</li>
         </ol>
         <ul class="mgmt-rc-guide-features">
           <li><i class="bi bi-check2-circle" aria-hidden="true"></i> Custom class selection</li>
@@ -142,6 +152,12 @@
                 <i class="bi bi-building" aria-hidden="true"></i>
                 <span>High school roster</span>
               </a>
+              {% if 'teacher.grade1_standards.grade1_standards_index' in current_app.view_functions %}
+              <a href="{{ url_for('teacher.grade1_standards.grade1_standards_index') }}" class="mgmt-rc-action">
+                <i class="bi bi-check2-square" aria-hidden="true"></i>
+                <span>1st grade standards</span>
+              </a>
+              {% endif %}
               {% if 'teacher.grade3_standards.grade3_standards_index' in current_app.view_functions %}
               <a href="{{ url_for('teacher.grade3_standards.grade3_standards_index') }}" class="mgmt-rc-action">
                 <i class="bi bi-check2-square" aria-hidden="true"></i>
@@ -206,6 +222,15 @@
                   Date unavailable
                 {% endif %}
               </time>
+              {% set recent_data = report.grades_details|from_json if report.grades_details else {} %}
+              {% set recent_type = recent_data.get('report_type', 'official') if recent_data else 'official' %}
+              {% if recent_type != 'unofficial' %}
+                {% if report.director_approved %}
+                <span class="mgmt-rc-status mgmt-rc-status--published">Published to parents</span>
+                {% else %}
+                <span class="mgmt-rc-status mgmt-rc-status--pending">Awaiting Director approval</span>
+                {% endif %}
+              {% endif %}
             </div>
             <div class="mgmt-rc-recent-actions">
               <a href="{{ url_for('management.student_report_card_history', student_id=report.student.id) }}" class="mgmt-rc-icon-btn" title="View history">

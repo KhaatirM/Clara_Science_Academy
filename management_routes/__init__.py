@@ -129,6 +129,8 @@ from . import (
 # Register all blueprints with the main management blueprint
 management_blueprint.register_blueprint(dashboard.bp, url_prefix='')
 management_blueprint.register_blueprint(students.bp, url_prefix='')
+from . import parents as parents_module
+management_blueprint.register_blueprint(parents_module.bp, url_prefix='')
 management_blueprint.register_blueprint(teachers.bp, url_prefix='')
 management_blueprint.register_blueprint(classes.bp, url_prefix='')
 management_blueprint.register_blueprint(assignments.bp, url_prefix='')
@@ -225,7 +227,17 @@ from .assignments import (
 )
 from .attendance import unified_attendance as unified_attendance_func, attendance_reports as attendance_reports_func, attendance_analytics as attendance_analytics_func
 from .attendance import attendance as attendance_func, school_day_attendance as school_day_attendance_func
-from .reports import report_cards as report_cards_func, generate_report_card_form as generate_report_card_form_func, report_cards_by_category as report_cards_by_category_func, view_report_card as view_report_card_func, generate_report_card_pdf as generate_report_card_pdf_func, delete_report_card as delete_report_card_func, close_school_year as close_school_year_func
+from .reports import (
+    report_cards as report_cards_func,
+    generate_report_card_form as generate_report_card_form_func,
+    report_cards_by_category as report_cards_by_category_func,
+    view_report_card as view_report_card_func,
+    generate_report_card_pdf as generate_report_card_pdf_func,
+    delete_report_card as delete_report_card_func,
+    approve_report_card_for_parents_route as approve_report_card_for_parents_func,
+    revoke_report_card_for_parents_route as revoke_report_card_for_parents_func,
+    close_school_year as close_school_year_func,
+)
 from .communications import (
     communications as communications_func,
     management_messages as management_messages_func,
@@ -681,6 +693,19 @@ def generate_report_card_pdf_route(report_card_id):
 def delete_report_card_route(report_card_id):
     """Delete report card route - delegates to reports module"""
     return delete_report_card_func(report_card_id)
+
+# Director-only: publish or revoke official report cards for the Family Portal
+@management_blueprint.route('/report-cards/approve/<int:report_card_id>', methods=['POST'], endpoint='approve_report_card_for_parents_route')
+@login_required
+@management_required
+def approve_report_card_for_parents_route(report_card_id):
+    return approve_report_card_for_parents_func(report_card_id)
+
+@management_blueprint.route('/report-cards/revoke/<int:report_card_id>', methods=['POST'], endpoint='revoke_report_card_for_parents_route')
+@login_required
+@management_required
+def revoke_report_card_for_parents_route(report_card_id):
+    return revoke_report_card_for_parents_func(report_card_id)
 
 # Add alias for attendance analytics route
 @management_blueprint.route('/attendance-analytics', endpoint='attendance_analytics')

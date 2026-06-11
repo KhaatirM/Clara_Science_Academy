@@ -7,19 +7,8 @@ from extensions import db
 from models import SubjectRequirement
 
 
-# Same subject lists as in services/grade_calculation.py (source of truth before DB)
-SUBJECTS_1_2 = [
-    "Reading Comprehension", "Language Arts", "Spelling", "Handwriting",
-    "Math", "Science", "Social Studies", "Art", "Physical Education"
-]
-SUBJECTS_3 = [
-    "Reading", "English", "Spelling", "Math", "Science", "Social Studies",
-    "Art", "Physical Education", "Islamic Studies", "Quran", "Arabic"
-]
-SUBJECTS_4_8 = [
-    "Reading", "English", "Spelling", "Vocabulary", "Math", "Science",
-    "Social Studies", "Art", "Physical Education", "Islamic Studies", "Quran", "Arabic"
-]
+# Same subject lists as services/grade_calculation.py fallback (source of truth before DB)
+from services.grade_calculation import _fallback_subjects_for_grade_level
 
 
 def run():
@@ -28,18 +17,15 @@ def run():
     if SubjectRequirement.query.first():
         print("SubjectRequirement already has data; skipping insert.")
         return
-    order = 0
-    for name in SUBJECTS_1_2:
-        order += 1
-        db.session.add(SubjectRequirement(grade_level_min=1, grade_level_max=2, subject_name=name, display_order=order))
-    order = 0
-    for name in SUBJECTS_3:
-        order += 1
-        db.session.add(SubjectRequirement(grade_level_min=3, grade_level_max=3, subject_name=name, display_order=order))
-    order = 0
-    for name in SUBJECTS_4_8:
-        order += 1
-        db.session.add(SubjectRequirement(grade_level_min=4, grade_level_max=8, subject_name=name, display_order=order))
+    for gl in (1, 2, 3, 4, 5, 6, 7, 8):
+        subjects = _fallback_subjects_for_grade_level(gl)
+        for order, name in enumerate(subjects, start=1):
+            db.session.add(SubjectRequirement(
+                grade_level_min=gl,
+                grade_level_max=gl,
+                subject_name=name,
+                display_order=order,
+            ))
     db.session.commit()
     print(f"Inserted {SubjectRequirement.query.count()} subject requirements.")
 

@@ -6,8 +6,20 @@ import json
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required, permissions_required
+from decorators import admin_required, management_required, permissions_required
 from models import db, ReportCard, SchoolYear, Class, Student, Enrollment
+from utils.report_card_portal import (
+    approve_report_card_for_parents,
+    count_pending_parent_approval,
+    is_official_report_card,
+    report_card_report_type,
+    revoke_report_card_parent_access,
+)
+from utils.user_roles import canonical_role_label
+from utils.report_card_warnings import (
+    report_card_unfinalized_banner_message,
+    report_card_warnings_template_context,
+)
 
 
 bp = Blueprint('reports', __name__)
@@ -83,6 +95,52 @@ def _grade3_pdf_extras(student, school_year_id, selected_quarters, class_objects
     )
 
 
+def _grade1_pdf_extras(student, school_year_id, selected_quarters, class_objects, grades, include_attendance,
+                       report_card_data=None):
+    """Context variables for 1st grade progress report (director page-1 layout)."""
+    if not student or getattr(student, 'grade_level', None) != 1:
+        return {}
+    from utils.report_card_grade1 import grade1_full_template_context
+    sid = student.id if hasattr(student, 'id') else student
+    return grade1_full_template_context(
+        sid,
+        school_year_id,
+        selected_quarters,
+        class_objects,
+        grades,
+        include_attendance=include_attendance,
+        report_card_data=report_card_data,
+    )
+
+
+def _elementary_pdf_extras(student, school_year_id, selected_quarters, class_objects, grades, include_attendance,
+                           report_card_data=None):
+    """Merge grade-specific PDF context (1st and 3rd grade)."""
+    ctx = {}
+    ctx.update(_grade1_pdf_extras(
+        student, school_year_id, selected_quarters, class_objects, grades,
+        include_attendance, report_card_data,
+    ))
+    ctx.update(_grade3_pdf_extras(
+        student, school_year_id, selected_quarters, class_objects, grades,
+        include_attendance, report_card_data,
+    ))
+    return ctx
+
+
+def _report_card_template_name(grade_level, template_prefix):
+    """Pick the PDF template for a student's grade level."""
+    if grade_level == 1:
+        return f'management/{template_prefix}_report_card_pdf_template_1.html'
+    if grade_level == 2:
+        return f'management/{template_prefix}_report_card_pdf_template_1_2.html'
+    if grade_level == 0:
+        return f'management/{template_prefix}_report_card_pdf_template_1_2.html'
+    if grade_level == 3:
+        return f'management/{template_prefix}_report_card_pdf_template_3.html'
+    return f'management/{template_prefix}_report_card_pdf_template_4_8.html'
+
+
 def _selected_quarters_date_window(school_year_id, quarters_clean):
     """
     Return (start_date, end_date) for the union window of selected quarters.
@@ -139,6 +197,22 @@ def _enrollment_overlaps_window(enrollment, window_start, window_end):
     if enrolled_at is None:
         enrolled_at = window_start  # unknown start: assume on/before window
     return enrolled_at <= window_end and dropped_at >= window_start
+
+
+def _enrollment_eligible_for_report_card(enrollment, window_start, window_end):
+    """
+    Whether a class enrollment should be offered on the report card form / PDF.
+
+    Active enrollments are always included so newly created classes and late
+    roster adds still appear even when ``enrolled_at`` falls after the selected
+    quarter window (e.g. class created after Q4 end date). Inactive enrollments
+    still require date overlap with the selected period.
+    """
+    if getattr(enrollment, 'is_active', True):
+        return True
+    if not window_start or not window_end:
+        return True
+    return _enrollment_overlaps_window(enrollment, window_start, window_end)
 
 
 @bp.route('/api/report-card/comments')
@@ -538,9 +612,8 @@ def persist_report_card_record(
                 f"in class ID {class_id}."
             )
             continue
-        # Overlap check (active-at-that-time)
         if window_start and window_end:
-            if not any(_enrollment_overlaps_window(e, window_start, window_end) for e in enrollments):
+            if not any(_enrollment_eligible_for_report_card(e, window_start, window_end) for e in enrollments):
                 out['warnings'].append(
                     f"Student enrollment does not overlap selected period for class ID {class_id}."
                 )
@@ -900,6 +973,9 @@ def generate_report_card_form():
             )
 
         student = rc_result['student']
+        unfinalized_msg = report_card_unfinalized_banner_message(student.grade_level)
+        if unfinalized_msg:
+            flash(unfinalized_msg, 'warning')
         report_card = rc_result['report_card']
         valid_class_ids = rc_result['valid_class_ids']
         calculated_grades = rc_result['calculated_grades']
@@ -988,12 +1064,7 @@ def generate_report_card_form():
             
             # Choose template based on grade level and report type
             template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
-            if student.grade_level in [0, 1, 2]:
-                template_name = f'management/{template_prefix}_report_card_pdf_template_1_2.html'
-            elif student.grade_level == 3:
-                template_name = f'management/{template_prefix}_report_card_pdf_template_3.html'
-            else:  # Grades 4-8
-                template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
+            template_name = _report_card_template_name(student.grade_level, template_prefix)
             
             # Sanitize legacy failing letters to 'E' for report cards
             calculated_grades = _sanitize_letter_grades_for_report(calculated_grades)
@@ -1016,7 +1087,7 @@ def generate_report_card_form():
                 generated_date=datetime.utcnow(),
                 report_type=report_type,
                 template_prefix=template_prefix,
-                **_grade3_pdf_extras(
+                **_elementary_pdf_extras(
                     student,
                     school_year_id_int,
                     quarters_to_include,
@@ -1121,7 +1192,8 @@ def generate_report_card_form():
         'management/report_card_generate_form.html',
         students=students,
         school_years=school_years,
-        entrance_school_year_options=_build_entrance_school_year_options()
+        entrance_school_year_options=_build_entrance_school_year_options(),
+        **report_card_warnings_template_context(),
     )
 
 
@@ -1171,14 +1243,19 @@ def view_report_card(report_card_id):
             if class_obj:
                 class_objects.append(class_obj)
 
-    return render_template('management/report_card_detail.html', 
-                         report_card=report_card, 
-                         grades=grades, 
-                         attendance=attendance,
-                         selected_classes=selected_classes,
-                         class_objects=class_objects,
-                         include_attendance=include_attendance,
-                         include_comments=include_comments)
+    return render_template(
+        'management/report_card_detail.html',
+        report_card=report_card,
+        grades=grades,
+        attendance=attendance,
+        selected_classes=selected_classes,
+        class_objects=class_objects,
+        include_attendance=include_attendance,
+        include_comments=include_comments,
+        is_director=canonical_role_label(current_user.role) == 'Director',
+        is_official=is_official_report_card(report_card),
+        report_type=report_card_report_type(report_card),
+    )
 
 
 
@@ -1187,255 +1264,253 @@ def view_report_card(report_card_id):
 # Function: generate_report_card_pdf
 # ============================================================
 
+def build_report_card_pdf_response(report_card):
+    """Render a stored report card snapshot as a PDF download response."""
+    from weasyprint import HTML
+    from io import BytesIO
+    from flask import make_response
+
+    student = report_card.student
+    
+    # Parse report card data
+    report_card_data = json.loads(report_card.grades_details) if report_card.grades_details else {}
+    
+    # Extract data from new structure (backward compatible)
+    if isinstance(report_card_data, dict) and 'grades' in report_card_data:
+        grades = report_card_data.get('grades', {})
+        # Use saved grades_by_quarter so PDF shows what was generated, not fresh DB
+        grades_by_quarter = report_card_data.get('grades_by_quarter')
+        attendance = report_card_data.get('attendance', {})
+        selected_classes = report_card_data.get('classes', [])
+        report_type = report_card_data.get('report_type', 'official')
+        include_attendance = report_card_data.get('include_attendance', False)
+        include_comments = report_card_data.get('include_comments', False)
+        comments_by_class = report_card_data.get('comments_by_class', {}) if isinstance(report_card_data, dict) else {}
+    else:
+        grades = report_card_data if report_card_data else {}
+        grades_by_quarter = None
+        attendance = {}
+        selected_classes = []
+        report_type = 'official'  # Default for old report cards
+        include_attendance = False
+        include_comments = False
+        comments_by_class = {}
+
+    # Build class list early — needed to normalize JSON snapshot keys (string id / class name)
+    class_objects = []
+    class_ids_int = []
+    if selected_classes:
+        for class_id in selected_classes:
+            try:
+                cid = int(class_id)
+            except (TypeError, ValueError):
+                continue
+            class_ids_int.append(cid)
+            class_obj = Class.query.get(cid)
+            if class_obj:
+                class_objects.append(class_obj)
+
+    from utils.quarter_grade_calculator import get_quarter_grades_for_report
+    fresh_grades_by_quarter = get_quarter_grades_for_report(
+        student_id=student.id,
+        school_year_id=report_card.school_year_id,
+        class_ids=class_ids_int if class_ids_int else None,
+    )
+
+    if isinstance(grades_by_quarter, dict) and grades_by_quarter:
+        grades_by_quarter = _merge_grades_by_quarter(
+            grades_by_quarter, fresh_grades_by_quarter, class_objects
+        )
+    else:
+        grades_by_quarter = _normalize_grades_by_quarter(
+            fresh_grades_by_quarter, class_objects
+        )
+
+    # Sanitize legacy failing letters to 'E' for report cards
+    grades = _sanitize_letter_grades_for_report(grades)
+    grades_by_quarter = _sanitize_letter_grades_for_report(grades_by_quarter)
+
+    # Older snapshots stored include_comments=False even when comments exist
+    if comments_by_class and any((v or '').strip() for v in comments_by_class.values()):
+        include_comments = True
+    elif not comments_by_class or not any((v or '').strip() for v in comments_by_class.values()):
+        db_comments = _load_report_card_comments(
+            student.id, report_card.school_year_id, class_ids_int
+        )
+        if db_comments:
+            comments_by_class = {**db_comments, **(comments_by_class or {})}
+            include_comments = True
+    
+    # Prepare student data for template (robust date handling)
+    from datetime import datetime, date as date_type
+    
+    def _format_date_value(value):
+        try:
+            if value is None:
+                return 'N/A'
+            # If already a date/datetime object
+            if isinstance(value, (date_type, datetime)):
+                return value.strftime('%m/%d/%Y')
+            # If it's a string, try common formats, otherwise return as-is
+            if isinstance(value, str):
+                for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
+                    try:
+                        return datetime.strptime(value, fmt).strftime('%m/%d/%Y')
+                    except Exception:
+                        continue
+                return value
+            return 'N/A'
+        except Exception:
+            return 'N/A'
+    
+    student_data = {
+        'name': f"{student.first_name} {student.last_name}",
+        'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
+        'ssn': getattr(student, 'ssn', None),
+        'dob': _format_date_value(getattr(student, 'dob', None)),
+        'grade': student.grade_level,
+        'gender': getattr(student, 'gender', 'N/A'),
+        'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
+        'phone': getattr(student, 'phone', ''),
+        'entrance_date': getattr(student, 'entrance_date', None) or 'N/A',
+        'expected_grad_date': _calculate_expected_grad_from_student(student) or 'N/A',
+    }
+    # Override with saved confirmation data from when report was generated
+    saved_student = report_card_data.get('student_display') if isinstance(report_card_data, dict) else None
+    if saved_student:
+        if saved_student.get('name'):
+            student_data['name'] = saved_student['name']
+        if saved_student.get('gender') not in (None, ''):
+            student_data['gender'] = saved_student['gender']
+        if saved_student.get('address') not in (None, ''):
+            student_data['address'] = saved_student['address']
+        if saved_student.get('dob'):
+            student_data['dob'] = saved_student['dob']
+        if saved_student.get('phone') is not None:
+            student_data['phone'] = saved_student['phone'] or ''
+        if 'entrance_date' in saved_student:
+            student_data['entrance_date'] = saved_student.get('entrance_date') or 'N/A'
+        if 'expected_grad_date' in saved_student:
+            student_data['expected_grad_date'] = saved_student.get('expected_grad_date') or 'N/A'
+
+    selected_quarters = _selected_quarters_from_report_card(report_card, report_card_data)
+
+    # Choose template based on grade level and report type
+    template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
+    template_name = _report_card_template_name(student.grade_level, template_prefix)
+    
+    # Render the HTML template
+    # Backward-compat: older snapshots used comments_by_quarter; collapse to comments_by_class if needed.
+    if not comments_by_class and isinstance(report_card_data, dict):
+        legacy = report_card_data.get('comments_by_quarter')
+        if isinstance(legacy, dict):
+            # pick first non-empty comment per class across any quarters present
+            tmp = {}
+            for qmap in legacy.values():
+                if not isinstance(qmap, dict):
+                    continue
+                for cid, txt in qmap.items():
+                    if cid not in tmp and txt:
+                        tmp[str(cid)] = txt
+            comments_by_class = tmp
+
+    html_content = render_template(
+        template_name,
+        report_card=report_card,
+        student=student_data,
+        grades=grades,
+        grades_by_quarter=grades_by_quarter,  # Cumulative quarter data
+        selected_quarters=selected_quarters,  # So template shows grades for this report's quarter
+        attendance=attendance,
+        class_objects=class_objects,
+        include_attendance=include_attendance,
+        include_comments=include_comments,
+        comments_by_class=comments_by_class,
+        additional_comments=report_card_data.get('additional_comments', '') if isinstance(report_card_data, dict) else '',
+        generated_date=report_card.generated_at or datetime.utcnow(),
+        report_type=report_type,
+        template_prefix=template_prefix,
+        **_elementary_pdf_extras(
+            student,
+            report_card.school_year_id,
+            selected_quarters,
+            class_objects,
+            grades,
+            include_attendance,
+            report_card_data,
+        ),
+    )
+    
+    # Read CSS file from filesystem and inject it into the HTML
+    import os
+    css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
+    try:
+        with open(css_path, 'r', encoding='utf-8') as f:
+            css_content = f.read()
+        # Inject CSS into the HTML (replace the link tag with embedded style)
+        html_content = html_content.replace(
+            '<link rel="stylesheet" href="{{ url_for(\'static\', filename=\'report_card_styles.css\') }}">',
+            f'<style>{css_content}</style>'
+        )
+        # Also handle already-rendered link tags
+        import re
+        html_content = re.sub(
+            r'<link rel="stylesheet" href="[^"]*report_card_styles\.css[^"]*">',
+            f'<style>{css_content}</style>',
+            html_content
+        )
+    except Exception as e:
+        current_app.logger.warning(f'Could not load CSS file: {str(e)}')
+    
+    # Read logo file and convert to base64 for embedding
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'clara_logo.png')
+    try:
+        import base64
+        with open(logo_path, 'rb') as f:
+            logo_data = base64.b64encode(f.read()).decode('utf-8')
+        # Replace logo src with base64 data
+        html_content = re.sub(
+            r'<img src="[^"]*clara_logo\.png[^"]*"',
+            f'<img src="data:image/png;base64,{logo_data}"',
+            html_content
+        )
+    except Exception as e:
+        current_app.logger.warning(f'Could not load logo file: {str(e)}')
+    
+    # Ensure any remaining /static asset URLs resolve without HTTP fetches.
+    try:
+        static_root = os.path.join(current_app.root_path, 'static').replace('\\', '/')
+        html_content = re.sub(r'href=\"/static/', f'href=\"file:///{static_root}/', html_content)
+        html_content = re.sub(r'src=\"/static/', f'src=\"file:///{static_root}/', html_content)
+    except Exception:
+        pass
+
+    # Generate PDF
+    pdf_buffer = BytesIO()
+    HTML(string=html_content, base_url=current_app.root_path).write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+    
+    # Create response
+    response = make_response(pdf_buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    filename = f"ReportCard_{student.first_name}_{student.last_name}_{report_card.school_year.name.replace('/', '_')}_{report_card.quarter}.pdf"
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
 @bp.route('/report/card/pdf/<int:report_card_id>')
 @login_required
 @permissions_required('report_cards:generate')
 def generate_report_card_pdf(report_card_id):
-    """Generate and download a PDF report card based on student's grade level"""
+    """Generate and download a PDF report card based on student's grade level."""
+    report_card = ReportCard.query.get_or_404(report_card_id)
     try:
-        from weasyprint import HTML
-        from io import BytesIO
-        from flask import make_response
-        
-        report_card = ReportCard.query.get_or_404(report_card_id)
-        student = report_card.student
-        
-        # Parse report card data
-        report_card_data = json.loads(report_card.grades_details) if report_card.grades_details else {}
-        
-        # Extract data from new structure (backward compatible)
-        if isinstance(report_card_data, dict) and 'grades' in report_card_data:
-            grades = report_card_data.get('grades', {})
-            # Use saved grades_by_quarter so PDF shows what was generated, not fresh DB
-            grades_by_quarter = report_card_data.get('grades_by_quarter')
-            attendance = report_card_data.get('attendance', {})
-            selected_classes = report_card_data.get('classes', [])
-            report_type = report_card_data.get('report_type', 'official')
-            include_attendance = report_card_data.get('include_attendance', False)
-            include_comments = report_card_data.get('include_comments', False)
-            comments_by_class = report_card_data.get('comments_by_class', {}) if isinstance(report_card_data, dict) else {}
-        else:
-            grades = report_card_data if report_card_data else {}
-            grades_by_quarter = None
-            attendance = {}
-            selected_classes = []
-            report_type = 'official'  # Default for old report cards
-            include_attendance = False
-            include_comments = False
-            comments_by_class = {}
-
-        # Build class list early — needed to normalize JSON snapshot keys (string id / class name)
-        class_objects = []
-        class_ids_int = []
-        if selected_classes:
-            for class_id in selected_classes:
-                try:
-                    cid = int(class_id)
-                except (TypeError, ValueError):
-                    continue
-                class_ids_int.append(cid)
-                class_obj = Class.query.get(cid)
-                if class_obj:
-                    class_objects.append(class_obj)
-
-        from utils.quarter_grade_calculator import get_quarter_grades_for_report
-        fresh_grades_by_quarter = get_quarter_grades_for_report(
-            student_id=student.id,
-            school_year_id=report_card.school_year_id,
-            class_ids=class_ids_int if class_ids_int else None,
-        )
-
-        if isinstance(grades_by_quarter, dict) and grades_by_quarter:
-            grades_by_quarter = _merge_grades_by_quarter(
-                grades_by_quarter, fresh_grades_by_quarter, class_objects
-            )
-        else:
-            grades_by_quarter = _normalize_grades_by_quarter(
-                fresh_grades_by_quarter, class_objects
-            )
-
-        # Sanitize legacy failing letters to 'E' for report cards
-        grades = _sanitize_letter_grades_for_report(grades)
-        grades_by_quarter = _sanitize_letter_grades_for_report(grades_by_quarter)
-
-        # Older snapshots stored include_comments=False even when comments exist
-        if comments_by_class and any((v or '').strip() for v in comments_by_class.values()):
-            include_comments = True
-        elif not comments_by_class or not any((v or '').strip() for v in comments_by_class.values()):
-            db_comments = _load_report_card_comments(
-                student.id, report_card.school_year_id, class_ids_int
-            )
-            if db_comments:
-                comments_by_class = {**db_comments, **(comments_by_class or {})}
-                include_comments = True
-        
-        # Prepare student data for template (robust date handling)
-        from datetime import datetime, date as date_type
-        
-        def _format_date_value(value):
-            try:
-                if value is None:
-                    return 'N/A'
-                # If already a date/datetime object
-                if isinstance(value, (date_type, datetime)):
-                    return value.strftime('%m/%d/%Y')
-                # If it's a string, try common formats, otherwise return as-is
-                if isinstance(value, str):
-                    for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
-                        try:
-                            return datetime.strptime(value, fmt).strftime('%m/%d/%Y')
-                        except Exception:
-                            continue
-                    return value
-                return 'N/A'
-            except Exception:
-                return 'N/A'
-        
-        student_data = {
-            'name': f"{student.first_name} {student.last_name}",
-            'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
-            'ssn': getattr(student, 'ssn', None),
-            'dob': _format_date_value(getattr(student, 'dob', None)),
-            'grade': student.grade_level,
-            'gender': getattr(student, 'gender', 'N/A'),
-            'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
-            'phone': getattr(student, 'phone', ''),
-            'entrance_date': getattr(student, 'entrance_date', None) or 'N/A',
-            'expected_grad_date': _calculate_expected_grad_from_student(student) or 'N/A',
-        }
-        # Override with saved confirmation data from when report was generated
-        saved_student = report_card_data.get('student_display') if isinstance(report_card_data, dict) else None
-        if saved_student:
-            if saved_student.get('name'):
-                student_data['name'] = saved_student['name']
-            if saved_student.get('gender') not in (None, ''):
-                student_data['gender'] = saved_student['gender']
-            if saved_student.get('address') not in (None, ''):
-                student_data['address'] = saved_student['address']
-            if saved_student.get('dob'):
-                student_data['dob'] = saved_student['dob']
-            if saved_student.get('phone') is not None:
-                student_data['phone'] = saved_student['phone'] or ''
-            if 'entrance_date' in saved_student:
-                student_data['entrance_date'] = saved_student.get('entrance_date') or 'N/A'
-            if 'expected_grad_date' in saved_student:
-                student_data['expected_grad_date'] = saved_student.get('expected_grad_date') or 'N/A'
-
-        selected_quarters = _selected_quarters_from_report_card(report_card, report_card_data)
-
-        # Choose template based on grade level and report type
-        template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
-        if student.grade_level in [0, 1, 2]:
-            template_name = f'management/{template_prefix}_report_card_pdf_template_1_2.html'
-        elif student.grade_level == 3:
-            template_name = f'management/{template_prefix}_report_card_pdf_template_3.html'
-        else:  # Grades 4-8
-            template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
-        
-        # Render the HTML template
-        # Backward-compat: older snapshots used comments_by_quarter; collapse to comments_by_class if needed.
-        if not comments_by_class and isinstance(report_card_data, dict):
-            legacy = report_card_data.get('comments_by_quarter')
-            if isinstance(legacy, dict):
-                # pick first non-empty comment per class across any quarters present
-                tmp = {}
-                for qmap in legacy.values():
-                    if not isinstance(qmap, dict):
-                        continue
-                    for cid, txt in qmap.items():
-                        if cid not in tmp and txt:
-                            tmp[str(cid)] = txt
-                comments_by_class = tmp
-
-        html_content = render_template(
-            template_name,
-            report_card=report_card,
-            student=student_data,
-            grades=grades,
-            grades_by_quarter=grades_by_quarter,  # Cumulative quarter data
-            selected_quarters=selected_quarters,  # So template shows grades for this report's quarter
-            attendance=attendance,
-            class_objects=class_objects,
-            include_attendance=include_attendance,
-            include_comments=include_comments,
-            comments_by_class=comments_by_class,
-            additional_comments=report_card_data.get('additional_comments', '') if isinstance(report_card_data, dict) else '',
-            generated_date=report_card.generated_at or datetime.utcnow(),
-            report_type=report_type,
-            template_prefix=template_prefix,
-            **_grade3_pdf_extras(
-                student,
-                report_card.school_year_id,
-                selected_quarters,
-                class_objects,
-                grades,
-                include_attendance,
-                report_card_data,
-            ),
-        )
-        
-        # Read CSS file from filesystem and inject it into the HTML
-        import os
-        css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
-        try:
-            with open(css_path, 'r', encoding='utf-8') as f:
-                css_content = f.read()
-            # Inject CSS into the HTML (replace the link tag with embedded style)
-            html_content = html_content.replace(
-                '<link rel="stylesheet" href="{{ url_for(\'static\', filename=\'report_card_styles.css\') }}">',
-                f'<style>{css_content}</style>'
-            )
-            # Also handle already-rendered link tags
-            import re
-            html_content = re.sub(
-                r'<link rel="stylesheet" href="[^"]*report_card_styles\.css[^"]*">',
-                f'<style>{css_content}</style>',
-                html_content
-            )
-        except Exception as e:
-            current_app.logger.warning(f'Could not load CSS file: {str(e)}')
-        
-        # Read logo file and convert to base64 for embedding
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'clara_logo.png')
-        try:
-            import base64
-            with open(logo_path, 'rb') as f:
-                logo_data = base64.b64encode(f.read()).decode('utf-8')
-            # Replace logo src with base64 data
-            html_content = re.sub(
-                r'<img src="[^"]*clara_logo\.png[^"]*"',
-                f'<img src="data:image/png;base64,{logo_data}"',
-                html_content
-            )
-        except Exception as e:
-            current_app.logger.warning(f'Could not load logo file: {str(e)}')
-        
-        # Ensure any remaining /static asset URLs resolve without HTTP fetches.
-        try:
-            static_root = os.path.join(current_app.root_path, 'static').replace('\\', '/')
-            html_content = re.sub(r'href=\"/static/', f'href=\"file:///{static_root}/', html_content)
-            html_content = re.sub(r'src=\"/static/', f'src=\"file:///{static_root}/', html_content)
-        except Exception:
-            pass
-
-        # Generate PDF
-        pdf_buffer = BytesIO()
-        HTML(string=html_content, base_url=current_app.root_path).write_pdf(pdf_buffer)
-        pdf_buffer.seek(0)
-        
-        # Create response
-        response = make_response(pdf_buffer.getvalue())
-        response.headers['Content-Type'] = 'application/pdf'
-        filename = f"ReportCard_{student.first_name}_{student.last_name}_{report_card.school_year.name.replace('/', '_')}_{report_card.quarter}.pdf"
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        return response
-        
+        return build_report_card_pdf_response(report_card)
     except ImportError:
         flash('PDF generation requires WeasyPrint. Please install it: pip install weasyprint', 'error')
         return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
     except Exception as e:
-        # Let normal HTTP 404/403/redirect handling behave normally.
         from werkzeug.exceptions import HTTPException
         if isinstance(e, HTTPException):
             raise
@@ -1443,6 +1518,49 @@ def generate_report_card_pdf(report_card_id):
         flash(f'Error generating PDF: {str(e)}', 'danger')
         return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
 
+
+@bp.route('/report-cards/approve/<int:report_card_id>', methods=['POST'])
+@login_required
+@admin_required
+def approve_report_card_for_parents_route(report_card_id):
+    """Director publishes an official report card to the Family Portal."""
+    report_card = ReportCard.query.get_or_404(report_card_id)
+    try:
+        approve_report_card_for_parents(report_card, current_user.id)
+        flash(
+            f'Report card approved for Family Portal: '
+            f'{report_card.student.first_name} {report_card.student.last_name} '
+            f'({report_card.quarter}, {report_card.school_year.name}).',
+            'success',
+        )
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('Report card approval failed: %s', exc)
+        flash('Could not approve report card for parents.', 'danger')
+    return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
+
+
+@bp.route('/report-cards/revoke/<int:report_card_id>', methods=['POST'])
+@login_required
+@admin_required
+def revoke_report_card_for_parents_route(report_card_id):
+    """Director removes a report card from the Family Portal."""
+    report_card = ReportCard.query.get_or_404(report_card_id)
+    try:
+        revoke_report_card_parent_access(report_card)
+        flash(
+            f'Report card removed from Family Portal: '
+            f'{report_card.student.first_name} {report_card.student.last_name} '
+            f'({report_card.quarter}).',
+            'success',
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('Report card revoke failed: %s', exc)
+        flash('Could not revoke parent access to this report card.', 'danger')
+    return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
 
 
 # ============================================================
@@ -1495,14 +1613,17 @@ def report_cards():
         for key, info in REPORT_CARD_CATEGORIES.items()
     }
     
-    return render_template('management/report_cards_enhanced.html', 
-                         report_cards=report_cards_list,
-                         recent_reports=report_cards_list[:10],
-                         school_years=SchoolYear.query.all(),
-                         students=all_students,
-                         classes=all_classes,
-                         quarters=quarters,
-                         category_counts=category_counts)
+    return render_template(
+        'management/report_cards_enhanced.html',
+        report_cards=report_cards_list,
+        recent_reports=report_cards_list[:10],
+        school_years=SchoolYear.query.all(),
+        students=all_students,
+        classes=all_classes,
+        quarters=quarters,
+        category_counts=category_counts,
+        pending_parent_approval=count_pending_parent_approval(),
+    )
 
 
 
@@ -1547,16 +1668,19 @@ def report_cards_by_category(category):
     highlight_student_id = request.args.get('highlight', type=int)
     report_saved = request.args.get('saved') == '1'
     
-    return render_template('management/report_cards_category_students.html',
-                         students=students,
-                         student_reports=student_reports,
-                         category=category,
-                         category_name=category_info['name'],
-                         category_icon=category_info['icon'],
-                         category_color=category_info['color'],
-                         grade_levels=category_info['grades'],
-                         highlight_student_id=highlight_student_id,
-                         report_saved=report_saved)
+    return render_template(
+        'management/report_cards_category_students.html',
+        students=students,
+        student_reports=student_reports,
+        category=category,
+        category_name=category_info['name'],
+        category_icon=category_info['icon'],
+        category_color=category_info['color'],
+        grade_levels=category_info['grades'],
+        highlight_student_id=highlight_student_id,
+        report_saved=report_saved,
+        **report_card_warnings_template_context(),
+    )
 
 
 

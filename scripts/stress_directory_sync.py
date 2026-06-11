@@ -137,6 +137,7 @@ def main() -> int:
                 expected_grad_date=getattr(student, "expected_grad_date", None),
                 is_active=bool(getattr(student, "is_active", True)),
                 marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+                is_deleted=bool(getattr(student, "is_deleted", False)),
                 status_updated_at=getattr(student, "status_updated_at", None),
                 expected_graduation_year=getattr(student, "expected_graduation_year", None),
             )

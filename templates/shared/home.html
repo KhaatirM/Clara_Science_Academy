@@ -5,363 +5,13 @@
 {% endblock title %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/home-redesign.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-redesign.css') }}?v=8">
 {% endblock extra_css %}
 
+{% block main_classes %}csa-home-main{% endblock %}
+
 {% block content %}
-<!-- Hero: image background + content -->
-<div class="home-hero-wrap">
-    <div class="home-hero-bg" aria-hidden="true">
-        <div class="home-hero-bg-slide active" style="background-image: url('/static/img/backimg/image1.png');" loading="eager"></div>
-        <div class="home-hero-bg-slide" style="background-image: url('/static/img/backimg/image2.png');" loading="lazy"></div>
-        <div class="home-hero-bg-slide" style="background-image: url('/static/img/backimg/image3.png');" loading="lazy"></div>
-        <div class="home-hero-bg-slide" style="background-image: url('/static/img/backimg/image4.png');" loading="lazy"></div>
-        <div class="home-hero-bg-overlay"></div>
-    </div>
-    <section class="home-hero">
-    <div class="container text-center">
-        <h1>Empowering Minds, Shaping Futures</h1>
-        <p class="lead">
-            Welcome to Clara Science Academy's comprehensive student management portal.<br class="d-none d-md-block">
-            A centralized hub for academic excellence, seamless administration, and educational innovation.
-        </p>
-        <div class="home-hero-features">
-            <span class="home-hero-feature"><i class="bi bi-mortarboard-fill"></i> Academic Excellence</span>
-            <span class="home-hero-feature"><i class="bi bi-people-fill"></i> Community Focus</span>
-            <span class="home-hero-feature"><i class="bi bi-graph-up-arrow"></i> Data-Driven Results</span>
-        </div>
-        {% if current_user.is_authenticated %}
-            {% if dual_dashboard_staff %}
-                {% set dashboard_url = url_for('auth.dashboard') %}
-            {% else %}
-                {% set role_name = current_user.role|lower|replace(' ', '_') %}
-                {% if role_name == 'school_administrator' %}
-                    {% set dashboard_url = url_for('management.management_dashboard') %}
-                {% elif role_name == 'director' %}
-                    {% set dashboard_url = url_for('management.management_dashboard') %}
-                {% elif role_name == 'teacher' %}
-                    {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
-                {% elif role_name == 'student' %}
-                    {% set dashboard_url = url_for('student.student_dashboard') %}
-                {% elif role_name == 'tech' %}
-                    {% set dashboard_url = url_for('tech.tech_dashboard') %}
-                {% elif role_name == 'it_support' %}
-                    {% set dashboard_url = url_for('tech.tech_dashboard') %}
-                {% else %}
-                    {% set dashboard_url = url_for('auth.dashboard') %}
-                {% endif %}
-            {% endif %}
-            <div class="home-hero-actions">
-                <p>Welcome back, {{ current_user.username }}! ({{ current_user.role }})</p>
-                <div class="home-hero-buttons">
-                    <a class="home-hero-btn home-hero-btn-primary" href="{{ dashboard_url }}" role="button">
-                        <i class="bi bi-speedometer2"></i> Go to Your Dashboard
-                    </a>
-                    {% if dual_dashboard_staff %}
-                    <a class="home-hero-btn home-hero-btn-outline" href="{{ url_for('auth.switch_staff_dashboard') }}" role="button">
-                        <i class="bi bi-shuffle"></i> Switch dashboard
-                    </a>
-                    {% endif %}
-                    <a class="home-hero-btn home-hero-btn-outline" href="{{ url_for('auth.logout') }}" role="button">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
-                </div>
-            </div>
-        {% else %}
-            <div class="home-hero-actions">
-                <p>Access your personalized educational portal</p>
-                <div class="home-hero-buttons">
-                    <a class="home-hero-btn home-hero-btn-primary" href="{{ url_for('auth.login') }}" role="button">
-                        <i class="bi bi-box-arrow-in-right"></i> Secure Login
-                    </a>
-                    <button class="home-hero-btn home-hero-btn-outline" type="button" data-bs-toggle="modal" data-bs-target="#contactModal">
-                        <i class="bi bi-envelope"></i> Contact Us
-                    </button>
-                    <button class="home-hero-btn home-hero-btn-accent" type="button" data-bs-toggle="modal" data-bs-target="#updateModal">
-                        <i class="bi bi-megaphone"></i> View Updates
-                    </button>
-                </div>
-            </div>
-        {% endif %}
-    </div>
-</section>
-</div>
-
-<!-- About Section -->
-<section class="home-section home-section-alt">
-    <div class="container">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-7">
-                <h2 class="home-section-title">About Clara Science Academy</h2>
-                <p class="home-section-subtitle">Excellence in Education Since Our Founding</p>
-                <div class="home-about-text">
-                    <p class="lead">Clara Science Academy is a premier educational institution dedicated to fostering academic excellence, critical thinking, and scientific inquiry. Our comprehensive curriculum and innovative teaching methods prepare students for success in an ever-evolving world.</p>
-                    <p>We believe that every student has the potential to achieve greatness when provided with the right tools, guidance, and environment. Our commitment to personalized education ensures that each student receives the attention and support they need to thrive.</p>
-                    <div class="home-stat-cards">
-                        <div class="home-stat-card">
-                            <i class="bi bi-person-badge"></i>
-                            <div>
-                                <div class="home-stat-number">150+</div>
-                                <p class="home-stat-label">Students Enrolled</p>
-                            </div>
-                        </div>
-                        <div class="home-stat-card">
-                            <i class="bi bi-person-video2"></i>
-                            <div>
-                                <div class="home-stat-number">25+</div>
-                                <p class="home-stat-label">Expert Teachers</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-5">
-                <div class="home-campus-card">
-                    <div class="mb-3"><i class="bi bi-building" style="font-size: 2rem; opacity: 0.9;"></i></div>
-                    <h4>Academy Campus</h4>
-                    <p class="subtitle">State-of-the-art facilities designed for modern learning</p>
-                    <ul class="home-campus-list">
-                        <li><i class="bi bi-check-circle-fill"></i> Modern Classrooms</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Science Labs</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Technology Centers</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Features Section -->
-<section class="home-section">
-    <div class="container">
-        <h2 class="home-section-title text-center">Why Choose Clara Science Academy?</h2>
-        <p class="home-section-subtitle text-center mx-auto">Comprehensive tools and features designed for modern education management</p>
-        <div class="home-features-grid">
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-person-badge"></i></div>
-                <h3>Student Management</h3>
-                <p>Easily manage student records, enrollment, and academic progress all in one place with our intuitive dashboard.</p>
-            </div>
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-person-video2"></i></div>
-                <h3>Teacher & Class Tools</h3>
-                <p>Empower teachers with advanced tools for class management, assignments, grading, and student engagement. Now featuring interactive quiz assignments with Google Forms integration!</p>
-            </div>
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-question-circle"></i></div>
-                <h3>Interactive Quiz System</h3>
-                <p>Create engaging quizzes with multiple question types, auto-grading, time limits, and Google Forms integration. Comprehensive quiz management and grading tools for educators.</p>
-            </div>
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-pie-chart"></i></div>
-                <h3>Comprehensive Reporting</h3>
-                <p>Generate detailed reports for attendance, grades, and overall school performance with real-time analytics.</p>
-            </div>
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-graph-up-arrow"></i></div>
-                <h3>Advanced Analytics</h3>
-                <p>Track student performance trends and identify areas for improvement with data-driven insights and visualizations.</p>
-            </div>
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-chat-dots"></i></div>
-                <h3>Communication Hub</h3>
-                <p>Seamless communication between students, teachers, and parents through integrated messaging and notifications.</p>
-            </div>
-            <div class="home-feature-card">
-                <div class="icon-wrap"><i class="bi bi-shield-check"></i></div>
-                <h3>Secure Platform</h3>
-                <p>Enterprise-grade security ensures student data privacy and platform reliability with advanced encryption.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Programs Section -->
-<section class="home-section home-section-alt">
-    <div class="container">
-        <h2 class="home-section-title text-center">Our Academic Programs</h2>
-        <p class="home-section-subtitle text-center mx-auto">Comprehensive curriculum designed to prepare students for future success</p>
-        <div class="home-programs-grid">
-            <div class="home-program-card">
-                <div class="icon-wrap"><i class="bi bi-mortarboard"></i></div>
-                <h4>Science & Technology</h4>
-                <p>Advanced courses in physics, chemistry, biology, and computer science with hands-on laboratory experiences and modern equipment.</p>
-            </div>
-            <div class="home-program-card">
-                <div class="icon-wrap"><i class="bi bi-calculator"></i></div>
-                <h4>Mathematics</h4>
-                <p>Comprehensive math curriculum from basic arithmetic to advanced calculus, statistics, and problem-solving methodologies.</p>
-            </div>
-            <div class="home-program-card">
-                <div class="icon-wrap"><i class="bi bi-journal-text"></i></div>
-                <h4>Language Arts</h4>
-                <p>Literature, writing, and communication skills development for academic and professional success with creative expression.</p>
-            </div>
-            <div class="home-program-card">
-                <div class="icon-wrap"><i class="bi bi-globe2"></i></div>
-                <h4>Social Sciences</h4>
-                <p>History, geography, civics, and social studies to develop well-rounded global citizens with cultural awareness.</p>
-            </div>
-            <div class="home-program-card">
-                <div class="icon-wrap"><i class="bi bi-code-slash"></i></div>
-                <h4>Programming</h4>
-                <p>Modern programming languages, software development, web technologies, and computational thinking skills for the digital age.</p>
-            </div>
-            <div class="home-program-card">
-                <div class="icon-wrap"><i class="bi bi-palette"></i></div>
-                <h4>Arts & Creativity</h4>
-                <p>Visual arts, music, drama, and creative expression to foster imagination and artistic development in our students.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Technology Section -->
-<section class="home-section">
-    <div class="container">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-7 order-lg-2">
-                <h2 class="home-section-title">Cutting-Edge Technology</h2>
-                <p class="home-section-subtitle">Digital Innovation in Education</p>
-                <div class="home-tech-content">
-                    <p>Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
-                    <ul class="home-tech-list">
-                        <li><i class="bi bi-check-circle-fill"></i> Real-time attendance tracking and monitoring</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Digital grade books and automated report cards</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Interactive quiz system with auto-grading</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Google Forms integration and synchronization</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Mobile-responsive design for all devices</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Secure cloud-based platform with 99.9% uptime</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Advanced analytics and performance insights</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Integrated communication and notification system</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="col-lg-5 order-lg-1">
-                <div class="home-tech-stack">
-                    <h4><i class="bi bi-rocket-takeoff"></i> Powered By</h4>
-                    <div class="grid">
-                        <div class="home-tech-stack-item"><i class="bi bi-laptop"></i> Desktop</div>
-                        <div class="home-tech-stack-item"><i class="bi bi-phone"></i> Mobile</div>
-                        <div class="home-tech-stack-item"><i class="bi bi-cloud"></i> Cloud</div>
-                        <div class="home-tech-stack-item"><i class="bi bi-shield-check"></i> Secure</div>
-                    </div>
-                    <div class="home-tech-badge"><i class="bi bi-check-circle"></i> Modern Technology Platform</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Leadership Section -->
-<section class="home-section home-section-alt">
-    <div class="container">
-        <h2 class="home-section-title text-center">Our Leadership Team</h2>
-        <p class="home-section-subtitle text-center mx-auto">Meet the dedicated professionals leading Clara Science Academy</p>
-        <div class="home-leadership-grid">
-            <div class="home-leadership-card">
-                <div class="quote-icon"><i class="bi bi-quote"></i></div>
-                <p class="content">"Leading Clara Science Academy with a vision for educational excellence and innovation. We are committed to providing the best learning environment for our students and preparing them for future success."</p>
-                <div class="author">
-                    <div class="author-avatar"><i class="bi bi-person-badge"></i></div>
-                    <div>
-                        <h5 class="author-name">Omar. P</h5>
-                        <p class="author-role">Board of Directors</p>
-                    </div>
-                </div>
-            </div>
-            <div class="home-leadership-card">
-                <div class="quote-icon"><i class="bi bi-quote"></i></div>
-                <p class="content">"As Director, I ensure that every student receives the highest quality education and support. Our comprehensive management system helps us achieve this goal effectively while maintaining personal connections."</p>
-                <div class="author">
-                    <div class="author-avatar"><i class="bi bi-person-shield"></i></div>
-                    <div>
-                        <h5 class="author-name">Varsty. C</h5>
-                        <p class="author-role">Director</p>
-                    </div>
-                </div>
-            </div>
-            <div class="home-leadership-card">
-                <div class="quote-icon"><i class="bi bi-quote"></i></div>
-                <p class="content">"Technology is the backbone of modern education. Our advanced student management system ensures seamless operations and enhanced learning experiences for all stakeholders in our educational community."</p>
-                <div class="author">
-                    <div class="author-avatar"><i class="bi bi-laptop"></i></div>
-                    <div>
-                        <h5 class="author-name">Khaatir. H</h5>
-                        <p class="author-role">IT Department Head</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Contact Section -->
-<section class="home-section">
-    <div class="container">
-        <h2 class="home-section-title text-center">Contact Clara Science Academy</h2>
-        <p class="home-section-subtitle text-center mx-auto">Get in touch with us for more information</p>
-        <div class="home-contact-grid">
-            <div class="home-contact-card">
-                <div class="icon-wrap"><i class="bi bi-geo-alt"></i></div>
-                <h4>Visit Us</h4>
-                <p>3015 East Bessemer Ave.<br>Greensboro, NC 27405</p>
-            </div>
-            <div class="home-contact-card">
-                <div class="icon-wrap"><i class="bi bi-telephone"></i></div>
-                <h4>Call Us</h4>
-                <p><a href="tel:1-800-567-5110">1-800-567-5110</a></p>
-            </div>
-            <div class="home-contact-card">
-                <div class="icon-wrap"><i class="bi bi-envelope"></i></div>
-                <h4>Email Us</h4>
-                <p><a href="mailto:info@clarascienceacademy.com">info@clarascienceacademy.com</a></p>
-            </div>
-            <div class="home-contact-card">
-                <div class="icon-wrap"><i class="bi bi-globe2"></i></div>
-                <h4>Visit Website</h4>
-                <p><a href="https://www.clarascienceacademy.com" target="_blank">clarascienceacademy.com</a></p>
-            </div>
-        </div>
-        <div class="home-office-hours">
-            <h4><i class="bi bi-clock"></i> Office Hours</h4>
-            <div class="row-item">
-                <span>Monday - Thursday</span>
-                <span>8:00 AM - 3:30 PM</span>
-            </div>
-            <div class="row-item">
-                <span>Friday</span>
-                <span>8:00 AM - 12:00 PM</span>
-            </div>
-            <div class="row-item closed">
-                <span>Saturday & Sunday</span>
-                <span>Closed</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA Section -->
-<section class="home-cta">
-    <div class="container text-center">
-        <h2>Ready to Get Started?</h2>
-        <p class="lead">Join Clara Science Academy and experience the future of education management.</p>
-        <div class="btn-group">
-            {% if not current_user.is_authenticated %}
-            <a class="btn btn-light" href="{{ url_for('auth.login') }}" role="button">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Login to Portal
-            </a>
-            {% endif %}
-            <button class="btn btn-outline-light" type="button" data-bs-toggle="modal" data-bs-target="#contactModal">
-                <i class="bi bi-envelope me-2"></i>Contact Us
-            </button>
-            <a class="btn btn-outline-light" href="https://www.clarascienceacademy.com" target="_blank" role="button">
-                <i class="bi bi-globe2 me-2"></i>Visit Our Website
-            </a>
-        </div>
-    </div>
-</section>
-
+{% include 'shared/_home_page_body.html' %}
 <!-- Contact Modal -->
 <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -503,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated June 2, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated June 10, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -515,13 +165,51 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – June 2, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – June 10, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>June 2</strong> improves day-to-day grading and assignment workflows: a redesigned <strong>Create assignment</strong> carousel, <strong>Quarter</strong> labels on Assignments &amp; Grades, more reliable <strong>report card PDFs</strong> and <strong>Recent</strong> history, and a stronger <strong>bulk void</strong> experience for teachers and admins.</p>
+                        <p class="updates-intro-text mb-0"><strong>June 10</strong> (<strong>{{ app_version_display }}</strong>) launches the <strong>Family Portal</strong> for parents and guardians, refreshes the <strong>sign-in page</strong> with CSA teal branding and family guidance, and adds <strong>Director-approved report cards</strong> so families only download official cards the Director has released.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- June 10, 2026 - Login refresh, Family Portal, report card approval -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-box-arrow-in-right me-2"></i>Sign-In Page, Family Portal &amp; Report Cards – June 10, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Sign-in page redesign:</strong> The login screen now matches the public home and Family Portal look (teal + amber, school logo, role hints for Students / Families / Teachers / Staff). Families see a short <strong>Family Portal</strong> note, flash messages display inline, and the current portal version appears in the card footer.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Family Portal for parents:</strong> New <strong>Parent</strong> role with a dedicated dashboard at <code>/parent/dashboard</code>. Parents see a child picker (all linked students), insight tiles (GPA, classes, attendance), and quick links for <strong>Grades</strong>, <strong>Attendance</strong>, <strong>Classes</strong>, <strong>Report Cards</strong>, and <strong>Settings</strong>.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Parent account provisioning:</strong> School staff create parent logins from student records (<strong>Family portal access</strong> on the student edit screen) or bulk-provision from <strong>Management → Family Portal</strong>. One parent email can be linked to multiple children in the same family.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Director-approved report cards:</strong> Official report cards are <em>not</em> visible to parents until the <strong>Director</strong> opens the report card detail page and clicks <strong>Approve for parents</strong>. The Family Portal <strong>Report Cards</strong> tab then lists approved cards with a <strong>Download PDF</strong> button. Unapproved and unofficial copies stay hidden from families.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Management visibility:</strong> Report card detail, student history, and the Report Cards hub show <strong>Published</strong> / <strong>Awaiting Director approval</strong> status. Directors see a count of cards waiting for parent release.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Parent themes:</strong> Parents can choose from the same 20 portal themes (Default, Light, Dark, seasonal, and color palettes) under <strong>Settings → Appearance</strong>. The choice saves instantly and applies across the site while logged in.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Workspace — Parents OU:</strong> Prepare a top-level <code>/Parents</code> organizational unit in Google Admin for future parent account sync. Student and staff OU lifecycle rules (Alumni, Transferred &amp; Removed, Terminated &amp; Removed) were also refined in this release.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Families can follow school progress in one place without seeing draft report cards. Directors keep final say on what goes home. Staff provision logins from existing parent contact fields and hand off credentials securely (automatic parent welcome email is planned for a follow-up).</p>
+                        </div>
+                    </div>
+
                     <!-- June 2, 2026 - Create assignment carousel, grades quarter, report cards, bulk void -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-plus-circle me-2"></i>Create Assignment, Grades &amp; Report Cards – June 2, 2026</h6>
@@ -864,7 +552,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Student OUs (including cohorts):</strong> Active students are organized under <strong>/Students</strong> by school level and <strong>Class of YYYY</strong> as an <strong>organizational unit path</strong>. Alumni and removal paths are supported for lifecycle and suspension rules. <strong>Graduation cohorts are not maintained as Google Groups mailing lists</strong> (<code>Class of YYYY@</code>); use school-level lists, <code>studentassembly@</code>, or per-class groups for mail. Legacy cohort groups in Admin may need a one-time cleanup.
+                                <strong>Student OUs (including cohorts):</strong> Active students live under <strong>/Students/Elementary</strong>, <strong>Middle School</strong>, or <strong>High School</strong> (or <strong>/Students/Alumni/Middle</strong> for grades 9–12 until high school launches). Students who complete a division and leave over the summer go to <strong>/Students/Alumni/{Elementary|Middle|High}</strong> (1-year grace before Google deactivation). Mid-year or early departures go to <strong>/Students/Transferred &amp; Removed</strong> (immediate deactivation). Staff offboarding uses <strong>/Staff/Terminated &amp; Removed</strong> (immediate). <strong>Graduation cohorts are not Google Groups</strong> (<code>Class of YYYY@</code>); use school-level lists, <code>studentassembly@</code>, or per-class groups for mail.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -1945,10 +1633,59 @@
     </div>
 </div>
 
+{# Fixed version badge — bottom right #}
+<button type="button"
+        class="csa-version-fab"
+        data-bs-toggle="modal"
+        data-bs-target="#versionModal"
+        aria-label="Portal version {{ app_version_display }}">
+  <i class="bi bi-layers-fill" aria-hidden="true"></i>
+  <span>{{ app_version_display }}</span>
+</button>
+
+<div class="modal fade" id="versionModal" tabindex="-1" aria-labelledby="versionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content csa-version-modal">
+      <div class="modal-header csa-version-modal__head">
+        <div>
+          <p class="csa-version-modal__eyebrow">Release info</p>
+          <h5 class="modal-title" id="versionModalLabel">{{ app_version_product_name }}</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body csa-version-modal__body">
+        <div class="csa-version-modal__badge">{{ app_version_display }}</div>
+        <p class="csa-version-modal__line">
+          <span class="csa-version-modal__label">Started at</span>
+          <strong>v {{ app_version_origin }}</strong>
+        </p>
+        <p class="csa-version-modal__line">
+          <span class="csa-version-modal__label">Improvements</span>
+          <strong>{{ "{:,}".format(app_version_updates_estimate) }}+</strong> updates shipped
+        </p>
+        <p class="csa-version-modal__line">
+          <span class="csa-version-modal__label">Release window</span>
+          <strong>{{ app_version_release_label }}</strong>
+        </p>
+        <p class="csa-version-modal__note">
+          This number honors where we began—a blank <strong>v {{ app_version_origin }}</strong> prototype—and the
+          {{ "{:,}".format(app_version_updates_estimate) }}+ fixes, features, and design passes that shaped today's portal.
+        </p>
+      </div>
+      <div class="modal-footer csa-version-modal__foot">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm csa-version-modal__updates-btn">
+          <i class="bi bi-megaphone me-1"></i> Latest changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Hero background slideshow
-    var slides = document.querySelectorAll('.home-hero-bg-slide');
+    var slides = document.querySelectorAll('.csa-hero-slide');
     var current = 0;
     if (slides.length > 0) {
         setInterval(function() {
@@ -1972,13 +1709,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    var versionUpdatesBtn = document.querySelector('.csa-version-modal__updates-btn');
+    if (versionUpdatesBtn) {
+        versionUpdatesBtn.addEventListener('click', function () {
+            var versionModalEl = document.getElementById('versionModal');
+            var updateModalEl = document.getElementById('updateModal');
+            if (!updateModalEl) return;
+            var versionModal = versionModalEl ? bootstrap.Modal.getInstance(versionModalEl) : null;
+            if (versionModal) versionModal.hide();
+            setTimeout(function () {
+                var updateModal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl);
+                updateModal.show();
+            }, 280);
+        });
+    }
+
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJun2_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJun10_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJun2_2026', 'true');
+            sessionStorage.setItem('updateModalShownJun10_2026_v2', 'true');
         }, 500);
     }
 });

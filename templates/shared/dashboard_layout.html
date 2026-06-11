@@ -75,6 +75,7 @@
                 {% if sidebar_role_canonical == 'Director' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.students' %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.parents.parents_hub' %}active{% endif %}" href="{{ url_for('management.parents.parents_hub') }}"><i class="bi bi-people-fill"></i><span> Family Portal</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.classes' %}active{% endif %}" href="{{ url_for('management.classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.assignments_and_grades' %}active{% endif %}" href="{{ url_for('management.assignments_and_grades') }}"><i class="bi bi-journal-check"></i><span> Assignments & Grades</span></a></li>
@@ -90,6 +91,7 @@
                 {% elif sidebar_role_canonical == 'School Administrator' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.students' %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.parents.parents_hub' %}active{% endif %}" href="{{ url_for('management.parents.parents_hub') }}"><i class="bi bi-people-fill"></i><span> Family Portal</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Staff</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.classes' %}active{% endif %}" href="{{ url_for('management.classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.assignments_and_grades' %}active{% endif %}" href="{{ url_for('management.assignments_and_grades') }}"><i class="bi bi-journal-check"></i><span> Assignments & Grades</span></a></li>
@@ -105,6 +107,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     {% if has_perm('students:view') or has_perm('students:edit') %}
                         <li class="nav-item"><a class="nav-link {% if request.endpoint in ['management.students','management.view_student','management.add_student','management.edit_student'] %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.parents.parents_hub' %}active{% endif %}" href="{{ url_for('management.parents.parents_hub') }}"><i class="bi bi-people-fill"></i><span> Family Portal</span></a></li>
                     {% endif %}
                     {% if has_perm('teachers_staff:manage') %}
                         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Staff</span></a></li>
@@ -164,6 +167,19 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.settings' %}active{% endif %}" href="{{ url_for('teacher.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
                     
                 {# --- STUDENT TABS --- #}
+                {% elif sidebar_role_canonical == 'Parent' %}
+                    <li class="nav-item px-3 py-2 d-none d-md-block">
+                        <small class="text-muted text-uppercase" style="letter-spacing:0.08em;font-size:0.65rem;">Family Portal</small>
+                    </li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.parent_dashboard' %}active{% endif %}" href="{{ url_for('parent.parent_dashboard') }}"><i class="bi bi-house-heart-fill"></i><span> Home</span></a></li>
+                    {% if active_child_id is defined and active_child_id %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.child_grades' %}active{% endif %}" href="{{ url_for('parent.child_grades', student_id=active_child_id) }}"><i class="bi bi-card-checklist"></i><span> Grades</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.child_attendance' %}active{% endif %}" href="{{ url_for('parent.child_attendance', student_id=active_child_id) }}"><i class="bi bi-calendar-check"></i><span> Attendance</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.child_classes' %}active{% endif %}" href="{{ url_for('parent.child_classes', student_id=active_child_id) }}"><i class="bi bi-journal-bookmark"></i><span> Classes</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.child_report_cards' %}active{% endif %}" href="{{ url_for('parent.child_report_cards', student_id=active_child_id) }}"><i class="bi bi-file-earmark-text-fill"></i><span> Report Cards</span></a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.parent_settings' %}active{% endif %}" href="{{ url_for('parent.parent_settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
+
                 {% elif sidebar_role_canonical == 'Student' %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_dashboard' %}active{% endif %}" href="{{ url_for('student.student_dashboard') }}"><i class="bi bi-house-door-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_assignments' %}active{% endif %}" href="{{ url_for('student.student_assignments') }}"><i class="bi bi-file-earmark-text-fill"></i><span> Assignments</span></a></li>

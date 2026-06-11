@@ -363,3 +363,19 @@ def student_required(f):
             return redirect(url_for('auth.dashboard'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+def parent_required(f):
+    """Restricts access to users with the 'Parent' role."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401)
+        if canonical_role_label(current_user.role) != 'Parent':
+            flash(
+                'The family portal is only for parent/guardian accounts.',
+                'warning',
+            )
+            return redirect(url_for('auth.dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function

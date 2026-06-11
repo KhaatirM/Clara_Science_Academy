@@ -65,6 +65,11 @@
       </div>
     </nav>
 
+    <div class="mgmt-rcf-unfinalized-banner" id="rcfUnfinalizedBanner" hidden role="alert">
+      <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+      <span id="rcfUnfinalizedBannerText"></span>
+    </div>
+
     <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" novalidate target="{% if category %}_self{% else %}_blank{% endif %}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       {% if category %}
@@ -436,6 +441,53 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  const RCF_UNFINALIZED_GRADES = new Set({{ report_card_unfinalized_grades | tojson }});
+  const RCF_UNFINALIZED_CONFIRM = {{ report_card_unfinalized_confirm_messages | tojson }};
+  const RCF_UNFINALIZED_BANNER = {{ report_card_unfinalized_banner_messages | tojson }};
+
+  function normalizeGradeLevel(value) {
+    if (value === '' || value == null) return null;
+    const n = parseInt(String(value).trim(), 10);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  function updateUnfinalizedBanner(gradeLevel) {
+    const banner = document.getElementById('rcfUnfinalizedBanner');
+    const textEl = document.getElementById('rcfUnfinalizedBannerText');
+    if (!banner || !textEl) return;
+    const g = normalizeGradeLevel(gradeLevel);
+    const key = g == null ? '' : String(g);
+    const msg = RCF_UNFINALIZED_BANNER[key];
+    if (msg) {
+      textEl.textContent = msg;
+      banner.hidden = false;
+    } else {
+      textEl.textContent = '';
+      banner.hidden = true;
+    }
+  }
+
+  function confirmUnfinalizedGrade(gradeLevel) {
+    const g = normalizeGradeLevel(gradeLevel);
+    if (g == null || !RCF_UNFINALIZED_GRADES.has(g)) return true;
+    const msg = RCF_UNFINALIZED_CONFIRM[String(g)];
+    return msg ? window.confirm(msg) : true;
+  }
+
+  function currentStudentGradeLevel() {
+    const confirmGrade = document.getElementById('confirm_grade');
+    if (confirmGrade && (confirmGrade.value || '').trim() !== '') {
+      return confirmGrade.value;
+    }
+    {% if pre_selected_student and students %}
+    {% set selected_student = students|selectattr('id', 'equalto', pre_selected_student)|first %}
+    {% if selected_student %}
+    return {{ selected_student.grade_level | tojson }};
+    {% endif %}
+    {% endif %}
+    return null;
+  }
+
   // -----------------------------------------------------------
   // Element references (preserve all IDs the backend expects)
   // -----------------------------------------------------------
@@ -590,6 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
         classesContainer.style.display = 'none';
         noClassesMessage.style.display = 'flex';
         classesList.innerHTML = '';
+        updateUnfinalizedBanner(null);
       }
       recomputeProgress();
     });
@@ -617,6 +670,8 @@ document.addEventListener('DOMContentLoaded', function() {
   if (studentSelect && studentSelect.value) {
     loadStudentDetails(studentSelect.value);
     loadStudentClasses(studentSelect.value);
+  } else {
+    updateUnfinalizedBanner(currentStudentGradeLevel());
   }
 
   function loadStudentDetails(studentId) {
@@ -628,7 +683,8 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('confirm_first_name').value = s.first_name || '';
           document.getElementById('confirm_last_name').value  = s.last_name  || '';
           document.getElementById('confirm_student_id').value = s.student_id || 'N/A';
-          document.getElementById('confirm_grade').value      = s.grade_level || '';
+          document.getElementById('confirm_grade').value      = s.grade_level ?? '';
+          updateUnfinalizedBanner(s.grade_level);
           document.getElementById('confirm_state_id').value   = s.state_id   || 'N/A';
           document.getElementById('confirm_expected_grad_date').value = s.expected_grad_date || '';
           document.getElementById('confirm_gender').value     = s.gender   || '';
@@ -826,6 +882,12 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       alert('Student profile is missing required confirmation fields (Gender and/or Entrance School Year). Please update the student profile first.');
       sectionsByStep.confirm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+
+    const gradeForWarning = document.getElementById('confirm_grade')?.value ?? currentStudentGradeLevel();
+    if (!confirmUnfinalizedGrade(gradeForWarning)) {
+      e.preventDefault();
       return false;
     }
 

@@ -1,0 +1,38 @@
+<header class="rh-hero">
+  <div>
+    {% if section == 'home' %}
+    <p class="rh-eyebrow">Family portal</p>
+    <h1 class="rh-title">Welcome, {{ parent_display_name }}</h1>
+    <p class="rh-subtitle"><i class="bi bi-heart-fill" style="color: var(--rh-warm, #c47a1a);"></i> Follow your children's progress at Clara Science Academy</p>
+    {% elif section == 'grades' and child %}
+    <p class="rh-eyebrow">Academic progress</p>
+    <h1 class="rh-title">Grades</h1>
+    <p class="rh-subtitle"><i class="bi bi-person-fill"></i> {{ child.first_name }} {{ child.last_name }}</p>
+    {% elif section == 'attendance' and child %}
+    <p class="rh-eyebrow">Attendance</p>
+    <h1 class="rh-title">Attendance</h1>
+    <p class="rh-subtitle"><i class="bi bi-person-fill"></i> {{ child.first_name }} {{ child.last_name }}</p>
+    {% elif section == 'classes' and child %}
+    <p class="rh-eyebrow">Enrollments</p>
+    <h1 class="rh-title">Classes</h1>
+    <p class="rh-subtitle"><i class="bi bi-person-fill"></i> {{ child.first_name }} {{ child.last_name }}</p>
+    {% elif section == 'settings' %}
+    <p class="rh-eyebrow">Account</p>
+    <h1 class="rh-title">Settings</h1>
+    <p class="rh-subtitle"><i class="bi bi-shield-check"></i> Your family portal account</p>
+    {% endif %}
+  </div>
+  <div class="rh-hero-actions">
+    <span class="rh-role-badge rh-role-badge--parent"><i class="bi bi-people-fill"></i> Parent</span>
+    {% if section != 'home' %}
+    <a href="{{ url_for('parent.parent_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-house-door"></i> Home</a>
+    {% endif %}
+  </div>
+</header>
+
+{% if not has_active_school_year and section == 'home' %}
+<div class="pp-alert-banner pp-alert-banner--warn">
+  <i class="bi bi-calendar-x fs-5"></i>
+  <span>No active school year — some information may be unavailable until the year is open.</span>
+</div>
+{% endif %}

@@ -1526,6 +1526,62 @@
             '</select>';
     }
 
+    function renderParentPortalStatus(portal) {
+        function line(slot, elId) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const p = portal && portal['parent' + slot];
+            if (!p || !p.has_email) {
+                el.innerHTML = '<span class="text-warning">No email on file</span>';
+                return;
+            }
+            if (p.has_login && p.is_linked) {
+                el.innerHTML = '<span class="text-success">Login ready</span><br><code>' + (p.username || '') + '</code>';
+            } else if (p.has_login) {
+                el.innerHTML = '<span class="text-info">Account exists — click to link</span>';
+            } else {
+                el.innerHTML = '<span class="text-muted">No login yet</span>';
+            }
+        }
+        line(1, 'parentPortalStatus1');
+        line(2, 'parentPortalStatus2');
+    }
+
+    function provisionParentLogin(studentId, slot) {
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const fd = new FormData();
+        fd.append('slot', String(slot));
+        if (csrfMeta && csrfMeta.content) fd.append('csrf_token', csrfMeta.content);
+        fetch('/management/parents/provision/' + studentId, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(csrfMeta && csrfMeta.content ? { 'X-CSRFToken': csrfMeta.content } : {})
+            },
+            body: fd
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (!result.success) {
+                showToast(result.message || 'Could not provision parent login.', 'danger');
+                return;
+            }
+            let detail = result.message || 'Parent login ready.';
+            if (result.results && result.results.length) {
+                result.results.forEach(row => {
+                    if (row.portal_password) {
+                        detail += ' ' + (row.parent_name || 'Parent') + ': ' + row.username + ' / ' + row.portal_password;
+                    }
+                });
+            }
+            showToast(detail, 'success');
+            fetch('/management/view-student/' + studentId)
+                .then(r => r.json())
+                .then(d => renderParentPortalStatus(d.parent_portal));
+        })
+        .catch(() => showToast('Could not provision parent login.', 'danger'));
+    }
+
     function editStudent(studentId) {
         if (!studentId) return;
         showProfileModalLoading('profileEditModal', 'Edit Student');
@@ -1655,6 +1711,26 @@
                       </select>
                     </div>
                   </div>
+
+                  <h6 class='mt-4 mb-3'><i class='bi bi-people-fill me-2'></i>Family portal access</h6>
+                  <p class='text-muted small'>Create parent/guardian logins from the emails above. One account can access every linked child.</p>
+                  <div class='row g-2 mb-3' id='parentPortalStatusRow'>
+                    <div class='col-md-6'>
+                      <div class='border rounded p-2 small'>
+                        <strong>Parent 1</strong>
+                        <div id='parentPortalStatus1' class='text-muted'>Loading…</div>
+                        <button type='button' class='btn btn-sm btn-outline-primary mt-2' onclick='provisionParentLogin(${data.id}, 1)'>Create / link Parent 1 login</button>
+                      </div>
+                    </div>
+                    <div class='col-md-6'>
+                      <div class='border rounded p-2 small'>
+                        <strong>Parent 2</strong>
+                        <div id='parentPortalStatus2' class='text-muted'>Loading…</div>
+                        <button type='button' class='btn btn-sm btn-outline-primary mt-2' onclick='provisionParentLogin(${data.id}, 2)'>Create / link Parent 2 login</button>
+                      </div>
+                    </div>
+                  </div>
+                  <button type='button' class='btn btn-sm btn-primary mb-3' onclick='provisionParentLogin(${data.id}, "both")'>Provision both parents</button>
                   
                   <h6 class='mt-4 mb-3'>Emergency Contact</h6>
                   <div class='row'>
@@ -1721,8 +1797,9 @@
                     const isSelected = (data.entrance_date || '') === schoolYear ? 'selected' : '';
                     optionsHtml += `<option value='${schoolYear}' ${isSelected}>${schoolYear}</option>`;
                   }
-                  entranceSelect.innerHTML = optionsHtml;
+                    entranceSelect.innerHTML = optionsHtml;
                 }
+                renderParentPortalStatus(data.parent_portal);
                 form.onsubmit = function(e) {
                   e.preventDefault();
                   let formData = new FormData(form);

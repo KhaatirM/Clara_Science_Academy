@@ -29,6 +29,7 @@ from . import (
     reflection_journals,
     conflict_resolution,
     grade3_standards,
+    grade1_standards,
 )
 from .utils import get_teacher_or_admin, is_authorized_for_class
 from models import Class
@@ -48,6 +49,7 @@ teacher_blueprint.register_blueprint(communications.bp, url_prefix='')
 teacher_blueprint.register_blueprint(analytics.bp, url_prefix='')
 teacher_blueprint.register_blueprint(templates.bp, url_prefix='')
 teacher_blueprint.register_blueprint(grade3_standards.bp, url_prefix='')
+teacher_blueprint.register_blueprint(grade1_standards.bp, url_prefix='')
 
 # Add route directly to main blueprint for backward compatibility with templates
 @teacher_blueprint.route('/group-assignment/type-selector/<int:class_id>')

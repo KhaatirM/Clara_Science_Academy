@@ -6,6 +6,60 @@
 
 {% block dashboard_content %}
 <div class="container-fluid py-4 report-card-detail-page">
+  {% if is_official %}
+  <div class="row mb-3">
+    <div class="col-12">
+      {% if report_card.director_approved %}
+      <div class="alert alert-success border-0 shadow-sm d-flex flex-wrap justify-content-between align-items-center gap-3 mb-0">
+        <div>
+          <strong><i class="bi bi-check-circle-fill me-1"></i>Published to Family Portal</strong>
+          <div class="small mt-1">
+            Parents can view and download this official report card.
+            {% if report_card.approved_at %}
+              Approved {{ report_card.approved_at.strftime('%B %d, %Y at %I:%M %p') }}
+              {% if report_card.approved_by %}by {{ report_card.approved_by.username }}{% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% if is_director %}
+        <form method="POST" action="{{ url_for('management.revoke_report_card_for_parents_route', report_card_id=report_card.id) }}" onsubmit="return confirm('Remove this report card from the Family Portal? Parents will no longer see or download it.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-eye-slash me-1"></i>Revoke parent access
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="alert alert-warning border-0 shadow-sm d-flex flex-wrap justify-content-between align-items-center gap-3 mb-0">
+        <div>
+          <strong><i class="bi bi-hourglass-split me-1"></i>Awaiting Director approval</strong>
+          <div class="small mt-1">This official report card is not visible to parents until the Director confirms it is the final, correct version.</div>
+        </div>
+        {% if is_director %}
+        <form method="POST" action="{{ url_for('management.approve_report_card_for_parents_route', report_card_id=report_card.id) }}" onsubmit="return confirm('Approve this report card for the Family Portal? Parents linked to this student will be able to download it.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-send-check me-1"></i>Approve for parents
+          </button>
+        </form>
+        {% else %}
+        <span class="badge bg-secondary">Director review required</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% elif report_type == 'unofficial' %}
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="alert alert-secondary border-0 shadow-sm mb-0">
+        <i class="bi bi-info-circle me-1"></i>Unofficial copy — not eligible for Family Portal release.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Header -->
   <div class="row">
     <div class="col-12">

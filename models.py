@@ -82,6 +82,39 @@ class User(db.Model, UserMixin):
         return f"User('{self.username}', '{self.role}')"
 
 
+class ParentStudentLink(db.Model):
+    """
+    Links a Parent ``User`` account to one or more ``Student`` records.
+    One parent login can access every child they are linked to.
+    """
+    __tablename__ = 'parent_student_link'
+
+    id = db.Column(db.Integer, primary_key=True)
+    parent_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    relationship = db.Column(db.String(50), nullable=True)
+    parent_slot = db.Column(db.Integer, nullable=True)  # 1 = parent1 on student, 2 = parent2
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    parent_user = db.relationship(
+        'User',
+        backref=db.backref('parent_student_links', lazy=True, cascade='all, delete-orphan'),
+        foreign_keys=[parent_user_id],
+    )
+    student = db.relationship(
+        'Student',
+        backref=db.backref('parent_student_links', lazy=True, cascade='all, delete-orphan'),
+        foreign_keys=[student_id],
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('parent_user_id', 'student_id', name='uq_parent_student_link'),
+    )
+
+    def __repr__(self):
+        return f"ParentStudentLink(parent_user_id={self.parent_user_id}, student_id={self.student_id})"
+
+
 class Student(db.Model):
     """
     Model for storing student information.
@@ -1251,9 +1284,14 @@ class ReportCard(db.Model):
     is_auto_generated = db.Column(db.Boolean, default=False, nullable=False)
     # Optional: which user triggered generation (null for cron/system).
     generated_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    # Director must approve before official cards appear in the Family Portal.
+    director_approved = db.Column(db.Boolean, default=False, nullable=False)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    approved_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     school_year = db.relationship('SchoolYear', backref='report_cards', lazy=True)
     generated_by = db.relationship('User', foreign_keys=[generated_by_user_id])
+    approved_by = db.relationship('User', foreign_keys=[approved_by_user_id])
 
     def __repr__(self):
         return f"ReportCard(Student ID: {self.student_id}, Quarter: {self.quarter})"
@@ -1330,6 +1368,41 @@ class Grade3StandardMark(db.Model):
 
     def __repr__(self):
         return f"Grade3StandardMark(student={self.student_id}, std={self.standard_id}, {self.quarter}, mark={self.mark})"
+
+
+class Grade1StandardMark(db.Model):
+    """
+    Teacher-entered marks for the 1st grade Language Arts / Math standards checklist.
+    Stored per-student, per-standard, per-school-year, per-quarter.
+    `standard_id` matches the catalog in utils/report_card_grade1_standards.py.
+    `mark` is one of: 'M', 'W', 'NA', 'UA'.
+    """
+    __tablename__ = 'grade1_standard_mark'
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    standard_id = db.Column(db.String(50), nullable=False, index=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False, index=True)
+    quarter = db.Column(db.String(4), nullable=False)  # 'Q1'..'Q4'
+    mark = db.Column(db.String(4), nullable=False)  # 'M' | 'W' | 'NA' | 'UA'
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    student = db.relationship('Student', backref='grade1_standard_marks', lazy=True)
+    school_year = db.relationship('SchoolYear', backref='grade1_standard_marks', lazy=True)
+    editor = db.relationship('User', backref='edited_grade1_standard_marks', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'student_id', 'standard_id', 'school_year_id', 'quarter',
+            name='uq_grade1_standard_mark_key',
+        ),
+    )
+
+    def __repr__(self):
+        return f"Grade1StandardMark(student={self.student_id}, std={self.standard_id}, {self.quarter}, mark={self.mark})"
 
 
 class SubjectRequirement(db.Model):

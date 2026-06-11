@@ -24,6 +24,9 @@
         </span>
         {% endif %}
         {% if has_mgmt_role_access %}
+        <a href="{{ url_for('management.classes.core_class_setup') }}" class="mgmt-cls-btn mgmt-cls-btn--ghost">
+          <i class="bi bi-journal-check" aria-hidden="true"></i> Core class setup
+        </a>
         <button type="button" class="mgmt-cls-btn mgmt-cls-btn--primary" data-bs-toggle="modal" data-bs-target="#createClassModal">
           <i class="bi bi-plus-circle" aria-hidden="true"></i> Create class
         </button>
@@ -108,12 +111,6 @@
                         <label for="subjectFilter" class="mgmt-cls-filter-label">Subject</label>
                         <select class="form-select border-0 bg-light d-none" id="subjectFilter">
                             <option value="">All subjects</option>
-                            <option value="Mathematics">Mathematics</option>
-                            <option value="Science">Science</option>
-                            <option value="English">English</option>
-                            <option value="History">History</option>
-                            <option value="Art">Art</option>
-                            <option value="Physical Education">Physical Education</option>
                         </select>
                         <div class="dropdown mgmt-cls-pretty-select" data-select-id="subjectFilter">
                           <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
@@ -128,6 +125,70 @@
                             <option value="inactive">Inactive</option>
                         </select>
                         <div class="dropdown mgmt-cls-pretty-select" data-select-id="statusFilter">
+                          <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                          <ul class="dropdown-menu mgmt-cls-pretty-select-menu"></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-end mt-1 mgmt-cls-filters-row-2">
+                    <div class="col-12 col-md-2">
+                        <label for="gradeFilter" class="mgmt-cls-filter-label">Grade</label>
+                        <select class="form-select border-0 bg-light d-none" id="gradeFilter">
+                            <option value="">All grades</option>
+                            <option value="0">Kindergarten</option>
+                            {% for g in range(1, 9) %}
+                            <option value="{{ g }}">{{ g }}{% if g == 1 %}st{% elif g == 2 %}nd{% elif g == 3 %}rd{% else %}th{% endif %} Grade</option>
+                            {% endfor %}
+                        </select>
+                        <div class="dropdown mgmt-cls-pretty-select" data-select-id="gradeFilter">
+                          <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                          <ul class="dropdown-menu mgmt-cls-pretty-select-menu"></ul>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label for="teacherFilter" class="mgmt-cls-filter-label">Teacher</label>
+                        <select class="form-select border-0 bg-light d-none" id="teacherFilter">
+                            <option value="">All teachers</option>
+                        </select>
+                        <div class="dropdown mgmt-cls-pretty-select" data-select-id="teacherFilter">
+                          <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                          <ul class="dropdown-menu mgmt-cls-pretty-select-menu"></ul>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label for="enrollmentFilter" class="mgmt-cls-filter-label">Students</label>
+                        <select class="form-select border-0 bg-light d-none" id="enrollmentFilter">
+                            <option value="">Any</option>
+                            <option value="with">With students</option>
+                            <option value="empty">No students</option>
+                        </select>
+                        <div class="dropdown mgmt-cls-pretty-select" data-select-id="enrollmentFilter">
+                          <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                          <ul class="dropdown-menu mgmt-cls-pretty-select-menu"></ul>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label for="assignmentFilter" class="mgmt-cls-filter-label">Assignments</label>
+                        <select class="form-select border-0 bg-light d-none" id="assignmentFilter">
+                            <option value="">Any</option>
+                            <option value="with">Has assignments</option>
+                            <option value="none">No assignments</option>
+                        </select>
+                        <div class="dropdown mgmt-cls-pretty-select" data-select-id="assignmentFilter">
+                          <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                          <ul class="dropdown-menu mgmt-cls-pretty-select-menu"></ul>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label for="sortFilter" class="mgmt-cls-filter-label">Sort by</label>
+                        <select class="form-select border-0 bg-light d-none" id="sortFilter">
+                            <option value="name_asc">Class name (A–Z)</option>
+                            <option value="name_desc">Class name (Z–A)</option>
+                            <option value="teacher_asc">Teacher (A–Z)</option>
+                            <option value="students_desc">Most students</option>
+                            <option value="assignments_desc">Most assignments</option>
+                        </select>
+                        <div class="dropdown mgmt-cls-pretty-select" data-select-id="sortFilter">
                           <button class="btn mgmt-cls-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
                           <ul class="dropdown-menu mgmt-cls-pretty-select-menu"></ul>
                         </div>
@@ -150,14 +211,16 @@
     <div class="row mgmt-cls-grid g-4" id="classesGrid">
         {% for class in classes %}
         <div class="col-12 col-md-6 col-lg-4 class-card mgmt-cls-grid-item" 
+             data-class-name="{{ class.name|lower }}"
              data-subject="{{ class.subject }}" 
              data-teacher="{{ (class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '' }}"
              data-teacher-key="{{ ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '')|lower }}"
              data-status="{{ 'active' if class.is_active else 'inactive' }}"
              data-school-year-id="{{ class.school_year_id or '' }}"
+             data-grade-levels="{{ class.get_grade_levels()|join(',') }}"
              data-enrollment-count="{{ class.enrollments|selectattr('is_active')|list|length }}"
              data-assignment-count="{{ class.assignments|list|length }}"
-             data-search="{{ (class.name + ' ' + class.subject + ' ' + ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '')).lower() }}">
+             data-search="{{ (class.name + ' ' + class.subject + ' ' + ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '') ~ ' ' ~ (class.get_grade_levels_display() or '')).lower() }}">
             
             <div class="class-card-modern h-100">
                 <div class="class-card-header-modern">
@@ -469,8 +532,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const subjectFilter = document.getElementById('subjectFilter');
     const statusFilter = document.getElementById('statusFilter');
     const schoolYearFilter = document.getElementById('schoolYearFilter');
+    const gradeFilter = document.getElementById('gradeFilter');
+    const teacherFilter = document.getElementById('teacherFilter');
+    const enrollmentFilter = document.getElementById('enrollmentFilter');
+    const assignmentFilter = document.getElementById('assignmentFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const classesGrid = document.getElementById('classesGrid');
     const resetBtn = document.getElementById('resetFilters');
     const shownCountEl = document.getElementById('classesShownCount');
+
+    const dependentFilters = [subjectFilter, statusFilter, gradeFilter, teacherFilter, enrollmentFilter, assignmentFilter, sortFilter];
     
     function prettySelectWrapper(selectEl) {
         if (!selectEl) return null;
@@ -554,32 +625,118 @@ document.addEventListener('DOMContentLoaded', function() {
         filterClasses();
     });
 
+    function repopulateSelectOptions(selectEl, placeholderLabel, items) {
+        if (!selectEl) return;
+        const prev = selectEl.value;
+        selectEl.innerHTML = '';
+        const base = document.createElement('option');
+        base.value = '';
+        base.textContent = placeholderLabel;
+        selectEl.appendChild(base);
+        items.forEach((item) => {
+            const opt = document.createElement('option');
+            opt.value = item.value;
+            opt.textContent = item.label;
+            selectEl.appendChild(opt);
+        });
+        if (prev && Array.from(selectEl.options).some((o) => o.value === prev)) {
+            selectEl.value = prev;
+        } else {
+            selectEl.value = '';
+        }
+        const wrap = prettySelectWrapper(selectEl);
+        if (wrap) initPrettySelect(wrap);
+    }
+
+    function rebuildYearDependentOptions() {
+        const selectedYear = (schoolYearFilter && schoolYearFilter.value) ? String(schoolYearFilter.value) : '';
+        if (!selectedYear) return;
+
+        const subjects = new Set();
+        const teachers = new Map();
+        document.querySelectorAll('.class-card').forEach((card) => {
+            if (String(card.dataset.schoolYearId || '') !== selectedYear) return;
+            const subj = (card.dataset.subject || '').trim();
+            if (subj) subjects.add(subj);
+            const tk = (card.dataset.teacherKey || '').trim();
+            const tn = (card.dataset.teacher || '').trim();
+            if (tk) teachers.set(tk, tn || tk);
+        });
+
+        repopulateSelectOptions(
+            subjectFilter,
+            'All subjects',
+            Array.from(subjects).sort((a, b) => a.localeCompare(b)).map((s) => ({ value: s, label: s }))
+        );
+        repopulateSelectOptions(
+            teacherFilter,
+            'All teachers',
+            Array.from(teachers.entries())
+                .sort((a, b) => a[1].localeCompare(b[1]))
+                .map(([value, label]) => ({ value, label }))
+        );
+    }
+
     function syncDependentFilters() {
         const hasYear = !!((schoolYearFilter && schoolYearFilter.value) ? String(schoolYearFilter.value).trim() : '');
 
-        // Subject/status only enabled once a year is chosen
-        setPrettySelectEnabled(subjectFilter, hasYear);
-        setPrettySelectEnabled(statusFilter, hasYear);
+        dependentFilters.forEach((el) => setPrettySelectEnabled(el, hasYear));
 
-        // If year cleared, also clear dependent selections
-        if (!hasYear) {
-            if (subjectFilter) subjectFilter.value = '';
-            if (statusFilter) statusFilter.value = '';
-
-            // Refresh pretty select labels
-            const sw = prettySelectWrapper(subjectFilter);
-            const stw = prettySelectWrapper(statusFilter);
-            if (sw) initPrettySelect(sw);
-            if (stw) initPrettySelect(stw);
+        if (hasYear) {
+            rebuildYearDependentOptions();
+        } else {
+            dependentFilters.forEach((el) => {
+                if (!el || el === sortFilter) return;
+                el.value = '';
+            });
+            if (sortFilter) sortFilter.value = 'name_asc';
+            dependentFilters.forEach((el) => {
+                const wrap = prettySelectWrapper(el);
+                if (wrap) initPrettySelect(wrap);
+            });
         }
+    }
+
+    function sortVisibleClassCards() {
+        if (!classesGrid || !sortFilter) return;
+        const sortBy = sortFilter.value || 'name_asc';
+        const cards = Array.from(classesGrid.querySelectorAll('.class-card'));
+        const visible = cards.filter((c) => c.style.display !== 'none');
+        const hidden = cards.filter((c) => c.style.display === 'none');
+
+        visible.sort((a, b) => {
+            const nameA = (a.dataset.className || a.dataset.search || '').toLowerCase();
+            const nameB = (b.dataset.className || b.dataset.search || '').toLowerCase();
+            const teacherA = (a.dataset.teacher || '').toLowerCase();
+            const teacherB = (b.dataset.teacher || '').toLowerCase();
+            const studentsA = parseInt(a.dataset.enrollmentCount || '0', 10) || 0;
+            const studentsB = parseInt(b.dataset.enrollmentCount || '0', 10) || 0;
+            const assignmentsA = parseInt(a.dataset.assignmentCount || '0', 10) || 0;
+            const assignmentsB = parseInt(b.dataset.assignmentCount || '0', 10) || 0;
+
+            switch (sortBy) {
+                case 'name_desc': return nameB.localeCompare(nameA);
+                case 'teacher_asc': return teacherA.localeCompare(teacherB) || nameA.localeCompare(nameB);
+                case 'students_desc': return studentsB - studentsA || nameA.localeCompare(nameB);
+                case 'assignments_desc': return assignmentsB - assignmentsA || nameA.localeCompare(nameB);
+                default: return nameA.localeCompare(nameB);
+            }
+        });
+
+        visible.forEach((card) => classesGrid.appendChild(card));
+        hidden.forEach((card) => classesGrid.appendChild(card));
     }
 
     function filterClasses() {
         const searchTerm = searchInput.value.toLowerCase();
         const selectedYear = (schoolYearFilter && schoolYearFilter.value) ? String(schoolYearFilter.value) : '';
         const yearChosen = !!selectedYear;
-        const selectedSubject = subjectFilter.value;
-        const selectedStatus = statusFilter.value;
+        const selectedSubject = subjectFilter ? subjectFilter.value : '';
+        const selectedStatus = statusFilter ? statusFilter.value : '';
+        const selectedGrade = gradeFilter ? gradeFilter.value : '';
+        const selectedTeacher = teacherFilter ? teacherFilter.value : '';
+        const selectedEnrollment = enrollmentFilter ? enrollmentFilter.value : '';
+        const selectedAssignment = assignmentFilter ? assignmentFilter.value : '';
         
         let shown = 0;
         let total = 0;
@@ -589,8 +746,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const subject = card.dataset.subject;
             const status = card.dataset.status;
             const schoolYearId = String(card.dataset.schoolYearId || '');
+            const gradeLevels = (card.dataset.gradeLevels || '').split(',').map((g) => g.trim()).filter(Boolean);
+            const teacherKey = (card.dataset.teacherKey || '').trim();
+            const enrollmentCount = parseInt(card.dataset.enrollmentCount || '0', 10) || 0;
+            const assignmentCount = parseInt(card.dataset.assignmentCount || '0', 10) || 0;
             
-            // No year selected → show nothing until admin picks a school year.
             let show = yearChosen;
             
             if (!show) {
@@ -598,26 +758,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (searchTerm && !searchData.includes(searchTerm)) {
-                show = false;
-            }
+            if (searchTerm && !searchData.includes(searchTerm)) show = false;
+            if (selectedSubject && subject !== selectedSubject) show = false;
+            if (selectedStatus && status !== selectedStatus) show = false;
+            if (schoolYearId !== selectedYear) show = false;
+            if (selectedGrade && !gradeLevels.includes(selectedGrade)) show = false;
+            if (selectedTeacher && teacherKey !== selectedTeacher) show = false;
+            if (selectedEnrollment === 'with' && enrollmentCount <= 0) show = false;
+            if (selectedEnrollment === 'empty' && enrollmentCount > 0) show = false;
+            if (selectedAssignment === 'with' && assignmentCount <= 0) show = false;
+            if (selectedAssignment === 'none' && assignmentCount > 0) show = false;
             
-            if (selectedSubject && subject !== selectedSubject) {
-                show = false;
-            }
-            
-            if (selectedStatus && status !== selectedStatus) {
-                show = false;
-            }
-
-            if (schoolYearId !== selectedYear) {
-                show = false;
-            }
-            
-            // Use the CSS default display for grid columns when showing.
             card.style.display = show ? '' : 'none';
             if (show) shown += 1;
         });
+
+        sortVisibleClassCards();
 
         if (shownCountEl) {
             if (!yearChosen) {
@@ -654,8 +810,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     searchInput.addEventListener('input', filterClasses);
-    subjectFilter.addEventListener('change', filterClasses);
-    statusFilter.addEventListener('change', filterClasses);
+    dependentFilters.forEach((el) => {
+        if (el) el.addEventListener('change', filterClasses);
+    });
     if (schoolYearFilter) schoolYearFilter.addEventListener('change', function () {
         syncDependentFilters();
         filterClasses();
@@ -663,9 +820,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     resetBtn.addEventListener('click', function() {
         searchInput.value = '';
-        subjectFilter.value = '';
-        statusFilter.value = '';
         if (schoolYearFilter) schoolYearFilter.value = '';
+        dependentFilters.forEach((el) => {
+            if (!el) return;
+            el.value = (el === sortFilter) ? 'name_asc' : '';
+        });
         syncDependentFilters();
         filterClasses();
     });

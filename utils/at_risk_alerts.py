@@ -23,7 +23,7 @@ ACADEMIC_CONCERN_GPA_THRESHOLD = 2.0
 # request fans out into 1k+ queries. 5 min is short enough that fresh grades show up
 # quickly; callers that mutate grades can use invalidate_at_risk_alerts_cache(user_id).
 _ALERTS_CACHE_TTL_SECONDS = 300
-_ALERTS_CACHE_VERSION = 3  # bump when alert payload shape changes
+_ALERTS_CACHE_VERSION = 4  # bump when alert payload shape / scope changes
 _alerts_cache_lock = threading.Lock()
 _alerts_cache = {}  # (user_id, version) -> (expires_at_epoch, payload_tuple)
 
@@ -153,7 +153,7 @@ def _counts_as_not_submitted(student_id, assignment_id, grade, percentage, is_pa
 FAILING_MAX_PERCENT = 69
 
 
-def _count_assignment_issues(student_id, class_ids, is_admin_user):
+def _count_assignment_issues(student_id, class_ids):
     """
     Count failing / overdue / not-submitted assignments in scope for summary chips.
     Returns (failing_count, overdue_count, not_submitted_count, classes_with_issues set).
@@ -233,9 +233,7 @@ def _count_assignment_issues(student_id, class_ids, is_admin_user):
             ):
                 not_submitted += 1
 
-    if is_admin_user:
-        ga_list = GroupAssignment.query.filter(GroupAssignment.status != 'Voided').all()
-    elif class_ids:
+    if class_ids:
         ga_list = GroupAssignment.query.filter(
             GroupAssignment.class_id.in_(class_ids),
             GroupAssignment.status != 'Voided',
@@ -356,7 +354,7 @@ def get_at_risk_alerts_for_user():
     Cached per-user for _ALERTS_CACHE_TTL_SECONDS to keep page renders fast.
     """
     from flask_login import current_user
-    from models import db, Class
+    from models import db
     from utils.student_roster import (
         active_roster_student_ids,
         filter_student_ids_on_roster,
@@ -366,8 +364,19 @@ def get_at_risk_alerts_for_user():
     if not current_user.is_authenticated:
         return empty
 
-    from models import SchoolYear
-    if not SchoolYear.query.filter_by(is_active=True).first():
+    from utils.school_year_filters import (
+        active_school_year_class_ids,
+        get_active_school_year,
+        student_ids_enrolled_in_school_year,
+        teacher_class_ids_active_school_year,
+    )
+
+    active_school_year = get_active_school_year()
+    if not active_school_year:
+        return empty
+
+    year_class_ids = active_school_year_class_ids()
+    if not year_class_ids:
         return empty
 
     from utils.user_roles import all_role_strings, user_has_management_entry_access
@@ -380,7 +389,11 @@ def get_at_risk_alerts_for_user():
 
     # Per-user short TTL cache: the underlying queries are heavy and this runs on
     # every authenticated page render via inject_at_risk_alerts (context processor).
-    cache_key = (getattr(current_user, 'id', None), _ALERTS_CACHE_VERSION)
+    cache_key = (
+        getattr(current_user, 'id', None),
+        _ALERTS_CACHE_VERSION,
+        active_school_year.id,
+    )
     if cache_key[0] is not None:
         now_ts = time.time()
         with _alerts_cache_lock:
@@ -389,32 +402,20 @@ def get_at_risk_alerts_for_user():
                 return entry[1]
 
     try:
-        class_ids = None
         if is_admin_user:
             student_ids = active_roster_student_ids(require_active_enrollment=True)
+            student_ids = student_ids_enrolled_in_school_year(
+                active_school_year.id,
+                student_ids,
+                class_ids=year_class_ids,
+            )
+            class_ids = year_class_ids
         else:
             from teacher_routes.utils import get_teacher_or_admin
-            from sqlalchemy import or_
-            from models import class_additional_teachers, class_substitute_teachers
 
             teacher = get_teacher_or_admin()
             if teacher:
-                classes = Class.query.filter(
-                    or_(
-                        Class.teacher_id == teacher.id,
-                        Class.id.in_(
-                            db.session.query(class_additional_teachers.c.class_id).filter(
-                                class_additional_teachers.c.teacher_id == teacher.id
-                            )
-                        ),
-                        Class.id.in_(
-                            db.session.query(class_substitute_teachers.c.class_id).filter(
-                                class_substitute_teachers.c.teacher_id == teacher.id
-                            )
-                        ),
-                    )
-                ).all()
-                class_ids = [c.id for c in classes]
+                class_ids = teacher_class_ids_active_school_year(teacher.id)
             else:
                 class_ids = []
             if class_ids:
@@ -434,7 +435,7 @@ def get_at_risk_alerts_for_user():
         if not student_ids:
             return empty
 
-        gpa_class_ids = None if is_admin_user else class_ids
+        gpa_class_ids = class_ids
         concerns = []
         total_failing = 0
         total_overdue = 0
@@ -452,22 +453,17 @@ def get_at_risk_alerts_for_user():
                 continue
 
             fail_n, od_n, ns_n, classes_set = _count_assignment_issues(
-                sid, gpa_class_ids, is_admin_user
+                sid, gpa_class_ids
             )
             total_failing += fail_n
             total_overdue += od_n
             total_not_submitted += ns_n
 
-            if gpa_class_ids is None:
-                enrollments = Enrollment.query.filter_by(
-                    student_id=sid, is_active=True
-                ).all()
-            else:
-                enrollments = Enrollment.query.filter(
-                    Enrollment.student_id == sid,
-                    Enrollment.class_id.in_(gpa_class_ids),
-                    Enrollment.is_active.is_(True),
-                ).all()
+            enrollments = Enrollment.query.filter(
+                Enrollment.student_id == sid,
+                Enrollment.class_id.in_(gpa_class_ids),
+                Enrollment.is_active.is_(True),
+            ).all()
             enrolled_names = []
             for e in enrollments:
                 if e.class_info and e.class_info.name:

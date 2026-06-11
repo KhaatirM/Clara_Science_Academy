@@ -22,6 +22,8 @@ _ROLE_CANON_ALIASES = {
     "it support": "IT Support",
     "it_support": "IT Support",
     "student": "Student",
+    "parent": "Parent",
+    "guardian": "Parent",
     "other staff": "Other Staff",
     "other_staff": "Other Staff",
 }

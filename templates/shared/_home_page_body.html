@@ -1,0 +1,341 @@
+<div class="csa-home">
+
+  {# ── Hero: split panel + shaped image frame ── #}
+  <section class="csa-hero" aria-label="Welcome">
+    <div class="csa-hero__mesh" aria-hidden="true">
+      <span class="csa-blob csa-blob--1"></span>
+      <span class="csa-blob csa-blob--2"></span>
+      <span class="csa-blob csa-blob--3"></span>
+      <span class="csa-ring csa-ring--1"></span>
+      <span class="csa-ring csa-ring--2"></span>
+    </div>
+
+    <div class="container csa-hero__grid">
+      <div class="csa-hero__copy">
+        <p class="csa-kicker"><i class="bi bi-stars"></i> Clara Science Academy · Greensboro, NC</p>
+        <h1 class="csa-hero__title">Where curiosity becomes <em>capability</em></h1>
+        <p class="csa-hero__lead">
+          A modern K–8 learning community with a secure student portal for families, teachers, and school leadership—built for clarity, care, and academic momentum.
+        </p>
+
+        <ul class="csa-pill-row" role="list">
+          <li><i class="bi bi-mortarboard-fill"></i> Rigorous academics</li>
+          <li><i class="bi bi-people-fill"></i> Small-community feel</li>
+          <li><i class="bi bi-shield-check"></i> Secure portal</li>
+        </ul>
+
+        {% if current_user.is_authenticated %}
+          {% if dual_dashboard_staff %}
+            {% set dashboard_url = url_for('auth.dashboard') %}
+          {% else %}
+            {% set role_name = current_user.role|lower|replace(' ', '_') %}
+            {% if role_name == 'school_administrator' %}
+              {% set dashboard_url = url_for('management.management_dashboard') %}
+            {% elif role_name == 'director' %}
+              {% set dashboard_url = url_for('management.management_dashboard') %}
+            {% elif role_name == 'teacher' %}
+              {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
+            {% elif role_name == 'student' %}
+              {% set dashboard_url = url_for('student.student_dashboard') %}
+            {% elif role_name == 'tech' %}
+              {% set dashboard_url = url_for('tech.tech_dashboard') %}
+            {% elif role_name == 'it_support' %}
+              {% set dashboard_url = url_for('tech.tech_dashboard') %}
+            {% else %}
+              {% set dashboard_url = url_for('auth.dashboard') %}
+            {% endif %}
+          {% endif %}
+          <p class="csa-hero__welcome">Welcome back, <strong>{{ current_user.username }}</strong> <span class="csa-muted">({{ current_user.role }})</span></p>
+          <div class="csa-btn-row">
+            <a class="csa-btn csa-btn--solid" href="{{ dashboard_url }}"><i class="bi bi-speedometer2"></i> Open dashboard</a>
+            {% if dual_dashboard_staff %}
+            <a class="csa-btn csa-btn--ghost" href="{{ url_for('auth.switch_staff_dashboard') }}"><i class="bi bi-shuffle"></i> Switch dashboard</a>
+            {% endif %}
+            <a class="csa-btn csa-btn--line" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+          </div>
+        {% else %}
+          <p class="csa-hero__welcome">Families &amp; staff — sign in to your personalized portal</p>
+          <div class="csa-btn-row">
+            <a class="csa-btn csa-btn--solid" href="{{ url_for('auth.login') }}"><i class="bi bi-box-arrow-in-right"></i> Secure login</a>
+            <button class="csa-btn csa-btn--line" type="button" data-bs-toggle="modal" data-bs-target="#contactModal"><i class="bi bi-envelope"></i> Contact us</button>
+            <button class="csa-btn csa-btn--accent" type="button" data-bs-toggle="modal" data-bs-target="#updateModal"><i class="bi bi-megaphone"></i> What's new</button>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="csa-hero__visual">
+        <div class="csa-hero__frame">
+          <div class="csa-hero__slides" aria-hidden="true">
+            <div class="csa-hero-slide active" style="background-image: url('/static/img/backimg/image1.png');"></div>
+            <div class="csa-hero-slide" style="background-image: url('/static/img/backimg/image2.png');"></div>
+            <div class="csa-hero-slide" style="background-image: url('/static/img/backimg/image3.png');"></div>
+            <div class="csa-hero-slide" style="background-image: url('/static/img/backimg/image4.png');"></div>
+          </div>
+          <div class="csa-hero__frame-shade"></div>
+        </div>
+        <div class="csa-orbit csa-orbit--a"><span>150+</span><small>Students</small></div>
+        <div class="csa-orbit csa-orbit--b"><span>25+</span><small>Educators</small></div>
+        <div class="csa-orbit csa-orbit--c"><span>K–8</span><small>Grades</small></div>
+      </div>
+    </div>
+
+    <div class="csa-hero__wave" aria-hidden="true"></div>
+  </section>
+
+  {# ── Quick facts strip ── #}
+  <section class="csa-strip" aria-label="At a glance">
+    <div class="container">
+      <div class="csa-strip__track">
+        <div class="csa-strip__item"><i class="bi bi-building"></i><div><strong>On-campus learning</strong><span>Modern classrooms &amp; labs</span></div></div>
+        <div class="csa-strip__item"><i class="bi bi-laptop"></i><div><strong>Digital-first tools</strong><span>Grades, attendance, reports</span></div></div>
+        <div class="csa-strip__item"><i class="bi bi-heart"></i><div><strong>Whole-child focus</strong><span>Arts, PE &amp; community</span></div></div>
+        <div class="csa-strip__item"><i class="bi bi-geo-alt"></i><div><strong>Greensboro, NC</strong><span>3015 E. Bessemer Ave.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  {# ── About: bento mosaic ── #}
+  <section class="csa-section" id="about">
+    <div class="container">
+      <header class="csa-head">
+        <p class="csa-kicker csa-kicker--dark">Our school</p>
+        <h2 class="csa-head__title">About Clara Science Academy</h2>
+        <p class="csa-head__sub">Excellence in education with a personal touch—STEM-forward thinking in a nurturing K–8 environment.</p>
+      </header>
+
+      <div class="csa-bento">
+        <article class="csa-bento__main">
+          <h3>Learning that meets every student</h3>
+          <p>Clara Science Academy fosters academic excellence, critical thinking, and scientific inquiry. Our curriculum and teaching methods prepare students for an evolving world while keeping class sizes and relationships human-scale.</p>
+          <p class="csa-bento__note">We believe every student can achieve greatness with the right tools, guidance, and environment.</p>
+        </article>
+        <article class="csa-bento__tile csa-bento__tile--stat">
+          <i class="bi bi-person-badge"></i>
+          <div class="csa-bento__num">150+</div>
+          <p>Students enrolled</p>
+        </article>
+        <article class="csa-bento__tile csa-bento__tile--stat">
+          <i class="bi bi-person-video2"></i>
+          <div class="csa-bento__num">25+</div>
+          <p>Expert teachers</p>
+        </article>
+        <article class="csa-bento__tile csa-bento__tile--campus">
+          <h4><i class="bi bi-building"></i> Campus highlights</h4>
+          <ul>
+            <li><i class="bi bi-check-lg"></i> Modern classrooms</li>
+            <li><i class="bi bi-check-lg"></i> Science laboratories</li>
+            <li><i class="bi bi-check-lg"></i> Technology centers</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# ── Portal features: staggered panels ── #}
+  <section class="csa-section csa-section--tint" id="portal">
+    <div class="container">
+      <header class="csa-head csa-head--center">
+        <p class="csa-kicker csa-kicker--dark">Student portal</p>
+        <h2 class="csa-head__title">Built for modern school operations</h2>
+        <p class="csa-head__sub mx-auto">The same platform families see on the home page powers day-to-day teaching, grading, and reporting inside the academy.</p>
+      </header>
+
+      <div class="csa-stack">
+        <article class="csa-stack__row">
+          <div class="csa-stack__icon"><i class="bi bi-person-badge"></i></div>
+          <div>
+            <h3>Student management</h3>
+            <p>Enrollment, records, and academic progress in one intuitive hub for administrators and teachers.</p>
+          </div>
+        </article>
+        <article class="csa-stack__row csa-stack__row--flip">
+          <div class="csa-stack__icon"><i class="bi bi-person-video2"></i></div>
+          <div>
+            <h3>Teacher &amp; class tools</h3>
+            <p>Assignments, grading, attendance, and engagement—including interactive quizzes with Google Forms integration.</p>
+          </div>
+        </article>
+        <article class="csa-stack__row">
+          <div class="csa-stack__icon"><i class="bi bi-question-circle"></i></div>
+          <div>
+            <h3>Interactive assessments</h3>
+            <p>Multiple question types, auto-grading, time limits, and streamlined quiz management for educators.</p>
+          </div>
+        </article>
+        <article class="csa-stack__row csa-stack__row--flip">
+          <div class="csa-stack__icon"><i class="bi bi-pie-chart"></i></div>
+          <div>
+            <h3>Reporting &amp; analytics</h3>
+            <p>Report cards, attendance summaries, and performance trends with real-time insights for leadership.</p>
+          </div>
+        </article>
+        <article class="csa-stack__row">
+          <div class="csa-stack__icon"><i class="bi bi-chat-dots"></i></div>
+          <div>
+            <h3>Communication</h3>
+            <p>Integrated messaging and notifications keep students, teachers, and families aligned.</p>
+          </div>
+        </article>
+        <article class="csa-stack__row csa-stack__row--flip">
+          <div class="csa-stack__icon"><i class="bi bi-shield-check"></i></div>
+          <div>
+            <h3>Enterprise security</h3>
+            <p>Encryption and role-based access protect student data across every device.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# ── Programs: hex tile grid ── #}
+  <section class="csa-section" id="programs">
+    <div class="container">
+      <header class="csa-head csa-head--center">
+        <p class="csa-kicker csa-kicker--dark">Curriculum</p>
+        <h2 class="csa-head__title">Academic programs</h2>
+        <p class="csa-head__sub mx-auto">A balanced K–8 course of study—core subjects, enrichment, and room to grow.</p>
+      </header>
+
+      <div class="csa-hex-grid">
+        <article class="csa-hex"><div class="csa-hex__inner"><i class="bi bi-mortarboard"></i><h4>Science &amp; Technology</h4><p>Physics pathways, labs, and hands-on inquiry.</p></div></article>
+        <article class="csa-hex"><div class="csa-hex__inner"><i class="bi bi-calculator"></i><h4>Mathematics</h4><p>From foundations through middle-school readiness.</p></div></article>
+        <article class="csa-hex"><div class="csa-hex__inner"><i class="bi bi-journal-text"></i><h4>Language Arts</h4><p>Reading, writing, and communication skills.</p></div></article>
+        <article class="csa-hex"><div class="csa-hex__inner"><i class="bi bi-globe2"></i><h4>History &amp; Social Studies</h4><p>Civics, geography, and cultural awareness.</p></div></article>
+        <article class="csa-hex"><div class="csa-hex__inner"><i class="bi bi-code-slash"></i><h4>Programming</h4><p>Computational thinking and digital literacy.</p></div></article>
+        <article class="csa-hex"><div class="csa-hex__inner"><i class="bi bi-palette"></i><h4>Arts &amp; Creativity</h4><p>Visual arts, music, and creative expression.</p></div></article>
+      </div>
+    </div>
+  </section>
+
+  {# ── Technology: diagonal split ── #}
+  <section class="csa-section csa-section--slant" id="technology">
+    <div class="container csa-tech">
+      <div class="csa-tech__copy">
+        <p class="csa-kicker">Platform</p>
+        <h2 class="csa-head__title csa-head__title--light">Technology that supports teaching</h2>
+        <p>Real-time attendance, digital grade books, automated report cards, interactive quizzes, and mobile-friendly access—so educators spend less time on paperwork and more time with students.</p>
+        <ul class="csa-checklist">
+          <li><i class="bi bi-check-circle-fill"></i> Live attendance tracking</li>
+          <li><i class="bi bi-check-circle-fill"></i> Quarter-based grades &amp; report cards</li>
+          <li><i class="bi bi-check-circle-fill"></i> Google Forms quiz sync</li>
+          <li><i class="bi bi-check-circle-fill"></i> Cloud hosting with secure roles</li>
+          <li><i class="bi bi-check-circle-fill"></i> Analytics for school leadership</li>
+        </ul>
+      </div>
+      <div class="csa-tech__deck">
+        <div class="csa-tech-card"><i class="bi bi-laptop"></i><span>Desktop</span></div>
+        <div class="csa-tech-card"><i class="bi bi-phone"></i><span>Mobile</span></div>
+        <div class="csa-tech-card"><i class="bi bi-cloud"></i><span>Cloud</span></div>
+        <div class="csa-tech-card csa-tech-card--accent"><i class="bi bi-shield-check"></i><span>Secure</span></div>
+      </div>
+    </div>
+  </section>
+
+  {# ── Leadership: offset cards ── #}
+  <section class="csa-section csa-section--tint csa-leadership" id="leadership">
+    <div class="csa-leadership__mesh" aria-hidden="true">
+      <span class="csa-leadership__ring"></span>
+      <span class="csa-leadership__dot csa-leadership__dot--1"></span>
+      <span class="csa-leadership__dot csa-leadership__dot--2"></span>
+    </div>
+    <div class="container csa-leadership__inner">
+      <header class="csa-head csa-head--center">
+        <p class="csa-kicker csa-kicker--dark">Leadership</p>
+        <h2 class="csa-head__title">Guiding our academy</h2>
+        <p class="csa-head__sub mx-auto">Voices from the team shaping Clara Science Academy—governance, instruction, and the platform families rely on.</p>
+      </header>
+
+      <div class="csa-leaders">
+        <article class="csa-leader csa-leader--board">
+          <div class="csa-leader__accent" aria-hidden="true"></div>
+          <div class="csa-leader__watermark" aria-hidden="true"><i class="bi bi-quote"></i></div>
+          <span class="csa-leader__role-pill">Governance</span>
+          <blockquote class="csa-leader__quote">Leading Clara Science Academy with a vision for educational excellence and innovation—committed to the best learning environment for every student.</blockquote>
+          <footer class="csa-leader__foot">
+            <span class="csa-leader__avatar csa-leader__avatar--board"><i class="bi bi-person-badge"></i></span>
+            <div class="csa-leader__ident">
+              <strong>Omar. P</strong>
+              <span>Board of Directors</span>
+            </div>
+          </footer>
+        </article>
+
+        <article class="csa-leader csa-leader--featured csa-leader--offset">
+          <div class="csa-leader__accent" aria-hidden="true"></div>
+          <div class="csa-leader__watermark" aria-hidden="true"><i class="bi bi-quote"></i></div>
+          <span class="csa-leader__role-pill csa-leader__role-pill--featured">School leadership</span>
+          <blockquote class="csa-leader__quote">As Director, I ensure every student receives the highest quality education. Our management system helps us stay personal at scale.</blockquote>
+          <footer class="csa-leader__foot">
+            <span class="csa-leader__avatar csa-leader__avatar--director"><i class="bi bi-person-shield"></i></span>
+            <div class="csa-leader__ident">
+              <strong>Varsty. C</strong>
+              <span>Director</span>
+            </div>
+          </footer>
+        </article>
+
+        <article class="csa-leader csa-leader--tech">
+          <div class="csa-leader__accent" aria-hidden="true"></div>
+          <div class="csa-leader__watermark" aria-hidden="true"><i class="bi bi-quote"></i></div>
+          <span class="csa-leader__role-pill">Technology</span>
+          <blockquote class="csa-leader__quote">Technology is the backbone of modern education. Our platform keeps operations seamless for the whole CSA community.</blockquote>
+          <footer class="csa-leader__foot">
+            <span class="csa-leader__avatar csa-leader__avatar--tech"><i class="bi bi-laptop"></i></span>
+            <div class="csa-leader__ident">
+              <strong>Khaatir. H</strong>
+              <span>IT Department Head</span>
+            </div>
+          </footer>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# ── Contact: mosaic ── #}
+  <section class="csa-section" id="contact">
+    <div class="container">
+      <header class="csa-head csa-head--center">
+        <p class="csa-kicker csa-kicker--dark">Reach us</p>
+        <h2 class="csa-head__title">Contact &amp; hours</h2>
+      </header>
+
+      <div class="csa-contact-mosaic">
+        <a class="csa-contact-tile" href="https://maps.google.com/?q=3015+East+Bessemer+Ave+Greensboro+NC+27405" target="_blank" rel="noopener">
+          <i class="bi bi-geo-alt"></i><h4>Visit</h4><p>3015 East Bessemer Ave.<br>Greensboro, NC 27405</p>
+        </a>
+        <a class="csa-contact-tile" href="tel:1-800-567-5110">
+          <i class="bi bi-telephone"></i><h4>Call</h4><p>1-800-567-5110</p>
+        </a>
+        <a class="csa-contact-tile" href="mailto:info@clarascienceacademy.com">
+          <i class="bi bi-envelope"></i><h4>Email</h4><p>info@clarascienceacademy.com</p>
+        </a>
+        <a class="csa-contact-tile" href="https://www.clarascienceacademy.com" target="_blank" rel="noopener">
+          <i class="bi bi-globe2"></i><h4>Website</h4><p>clarascienceacademy.com</p>
+        </a>
+        <aside class="csa-hours-panel">
+          <h4><i class="bi bi-clock"></i> Office hours</h4>
+          <div class="csa-hours-row"><span>Mon – Thu</span><span>8:00 AM – 3:30 PM</span></div>
+          <div class="csa-hours-row"><span>Friday</span><span>8:00 AM – 12:00 PM</span></div>
+          <div class="csa-hours-row csa-hours-row--muted"><span>Sat &amp; Sun</span><span>Closed</span></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  {# ── CTA band ── #}
+  <section class="csa-cta">
+    <div class="csa-cta__shape" aria-hidden="true"></div>
+    <div class="container csa-cta__inner">
+      <h2>Ready to step inside the portal?</h2>
+      <p>Join Clara Science Academy and experience thoughtful school management—from the classroom to the report card.</p>
+      <div class="csa-btn-row csa-btn-row--center">
+        {% if not current_user.is_authenticated %}
+        <a class="csa-btn csa-btn--solid csa-btn--on-teal" href="{{ url_for('auth.login') }}"><i class="bi bi-box-arrow-in-right"></i> Login to portal</a>
+        {% endif %}
+        <button class="csa-btn csa-btn--line csa-btn--on-teal" type="button" data-bs-toggle="modal" data-bs-target="#contactModal"><i class="bi bi-envelope"></i> Contact us</button>
+        <a class="csa-btn csa-btn--line csa-btn--on-teal" href="https://www.clarascienceacademy.com" target="_blank" rel="noopener"><i class="bi bi-globe2"></i> Public website</a>
+      </div>
+    </div>
+  </section>
+
+</div>

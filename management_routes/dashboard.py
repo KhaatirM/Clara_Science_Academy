@@ -82,7 +82,9 @@ def management_dashboard():
             ).count(),
         }
 
-        pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+        from utils.school_year_filters import count_pending_extension_requests
+
+        pending_extension_count = count_pending_extension_requests()
         
         # Calculate monthly stats
         now = datetime.now()
@@ -166,8 +168,10 @@ def management_dashboard():
         ).order_by(Notification.timestamp.desc()).limit(5).all()
 
         recent_activity = []
-        # Extension requests (requested or reviewed in last 7 days)
-        for ext in ExtensionRequest.query.filter(
+        # Extension requests (requested or reviewed in last 7 days, active school year)
+        from utils.school_year_filters import extension_requests_query
+
+        for ext in extension_requests_query().filter(
             or_(ExtensionRequest.requested_at >= activity_cutoff, and_(ExtensionRequest.reviewed_at.isnot(None), ExtensionRequest.reviewed_at >= activity_cutoff))
         ).order_by(ExtensionRequest.requested_at.desc()).limit(5).all():
             try:
@@ -278,12 +282,36 @@ def redo_dashboard():
     """Dashboard showing all active redo opportunities, reopenings, and pending redo requests from students"""
     from datetime import datetime, timezone
     from teacher_routes.assignment_utils import _as_utc_aware
-    from models import AssignmentRedo, AssignmentReopening, Assignment, Class, TeacherStaff, RedoRequest
+    from models import Assignment, AssignmentRedo, AssignmentReopening, TeacherStaff, RedoRequest
     from sqlalchemy.orm import joinedload
+    from utils.school_year_filters import (
+        assignment_redos_query,
+        assignment_reopenings_query,
+        classes_for_active_school_year,
+        get_active_school_year,
+        redo_requests_query,
+        teacher_class_ids_active_school_year,
+    )
+
+    active_school_year = get_active_school_year()
+    if not active_school_year:
+        return render_template(
+            'management/redo_dashboard.html',
+            redos=[],
+            reopenings=[],
+            redo_requests=[],
+            classes=[],
+            active_redos=0,
+            completed_redos=0,
+            active_reopenings=0,
+            improvement_rate=0,
+            overdue_redos=0,
+            now=datetime.now(timezone.utc),
+        )
     
     # Role/visibility rules:
     # - Teachers: only students/classes they are attached to (primary, additional, or substitute teacher)
-    # - School admins: see all
+    # - School admins: see all classes in the active school year
     is_school_admin = current_user.role in ('Director', 'School Administrator')
     is_teacher_user = (not is_school_admin) and bool(getattr(current_user, 'teacher_staff_id', None))
 
@@ -294,45 +322,31 @@ def redo_dashboard():
             flash('Teacher record not found.', 'danger')
             return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
-        teacher_classes_query = Class.query.filter(
-            (Class.teacher_id == teacher.id) |
-            (Class.additional_teachers.any(TeacherStaff.id == teacher.id)) |
-            (Class.substitute_teachers.any(TeacherStaff.id == teacher.id))
-        )
-        classes = teacher_classes_query.all()
-        class_ids = [c.id for c in classes]
+        class_ids = teacher_class_ids_active_school_year(teacher.id)
+        classes = classes_for_active_school_year(class_ids=class_ids)
 
-        # Get redos for teacher's classes only
-        redos = AssignmentRedo.query.join(Assignment).join(Class).filter(
-            Class.id.in_(class_ids)
-        ).options(
+        redos = assignment_redos_query(class_ids=class_ids).options(
             joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
             joinedload(AssignmentRedo.student)
         ).order_by(AssignmentRedo.redo_deadline.asc()).all()
 
-        # Get reopenings for teacher's classes only
-        reopenings = AssignmentReopening.query.join(Assignment).join(Class).filter(
-            Class.id.in_(class_ids),
-            AssignmentReopening.is_active == True
-        ).options(
+        reopenings = assignment_reopenings_query(class_ids=class_ids).options(
             joinedload(AssignmentReopening.assignment).joinedload(Assignment.class_info),
             joinedload(AssignmentReopening.student)
         ).order_by(AssignmentReopening.reopened_at.desc()).all()
     else:
-        # Directors and School Administrators (and non-teacher users) see all redos and reopenings
-        redos = AssignmentRedo.query.options(
+        classes = classes_for_active_school_year()
+        class_ids = [c.id for c in classes]
+
+        redos = assignment_redos_query().options(
             joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
             joinedload(AssignmentRedo.student)
         ).order_by(AssignmentRedo.redo_deadline.asc()).all()
         
-        reopenings = AssignmentReopening.query.filter(
-            AssignmentReopening.is_active == True
-        ).options(
+        reopenings = assignment_reopenings_query().options(
             joinedload(AssignmentReopening.assignment).joinedload(Assignment.class_info),
             joinedload(AssignmentReopening.student)
         ).order_by(AssignmentReopening.reopened_at.desc()).all()
-        
-        classes = Class.query.all()
     
     # Filter out records with missing assignments or students (data integrity check)
     redos = [r for r in redos if r.assignment and r.student]
@@ -362,28 +376,16 @@ def redo_dashboard():
     
     improvement_rate = round(sum(improvements) / len(improvements), 1) if improvements else 0
     
-    # Pending redo requests from students (for inactive assignments)
+    # Pending redo requests from students (active school year only)
     if is_teacher_user and teacher:
-        if classes:
-            assignment_ids = Assignment.query.filter(Assignment.class_id.in_(class_ids)).with_entities(Assignment.id).all()
-            assignment_ids = [a[0] for a in assignment_ids]
-        else:
-            assignment_ids = []
-
-        if assignment_ids:
-            redo_requests = RedoRequest.query.filter(
-                RedoRequest.status == 'Pending',
-                RedoRequest.assignment_id.in_(assignment_ids)
-            ).options(
-                joinedload(RedoRequest.assignment).joinedload(Assignment.class_info),
-                joinedload(RedoRequest.student)
-            ).order_by(RedoRequest.requested_at.desc()).all()
-        else:
-            redo_requests = []
-    else:
-        redo_requests = RedoRequest.query.filter(
-            RedoRequest.status == 'Pending'
+        redo_requests = redo_requests_query(
+            class_ids=class_ids, status='Pending'
         ).options(
+            joinedload(RedoRequest.assignment).joinedload(Assignment.class_info),
+            joinedload(RedoRequest.student)
+        ).order_by(RedoRequest.requested_at.desc()).all()
+    else:
+        redo_requests = redo_requests_query(status='Pending').options(
             joinedload(RedoRequest.assignment).joinedload(Assignment.class_info),
             joinedload(RedoRequest.student)
         ).order_by(RedoRequest.requested_at.desc()).all()

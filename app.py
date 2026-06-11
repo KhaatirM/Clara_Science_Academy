@@ -670,12 +670,36 @@ def create_app(config_class=None):
                         ))
                         conn.commit()
                         print("Added report_card.generated_by_user_id column.")
+                    if 'director_approved' not in cols:
+                        conn.execute(text(
+                            "ALTER TABLE report_card ADD COLUMN director_approved INTEGER NOT NULL DEFAULT 0"
+                        ))
+                        conn.commit()
+                        print("Added report_card.director_approved column.")
+                    if 'approved_at' not in cols:
+                        conn.execute(text(
+                            "ALTER TABLE report_card ADD COLUMN approved_at DATETIME"
+                        ))
+                        conn.commit()
+                        print("Added report_card.approved_at column.")
+                    if 'approved_by_user_id' not in cols:
+                        conn.execute(text(
+                            "ALTER TABLE report_card ADD COLUMN approved_by_user_id INTEGER"
+                        ))
+                        conn.commit()
+                        print("Added report_card.approved_by_user_id column.")
                 elif dialect == 'postgresql':
                     for col_name, col_sql in (
                         ('is_auto_generated',
                          'ALTER TABLE "report_card" ADD COLUMN is_auto_generated BOOLEAN NOT NULL DEFAULT false'),
                         ('generated_by_user_id',
                          'ALTER TABLE "report_card" ADD COLUMN generated_by_user_id INTEGER'),
+                        ('director_approved',
+                         'ALTER TABLE "report_card" ADD COLUMN director_approved BOOLEAN NOT NULL DEFAULT false'),
+                        ('approved_at',
+                         'ALTER TABLE "report_card" ADD COLUMN approved_at TIMESTAMP'),
+                        ('approved_by_user_id',
+                         'ALTER TABLE "report_card" ADD COLUMN approved_by_user_id INTEGER'),
                     ):
                         r = conn.execute(text(
                             "SELECT 1 FROM information_schema.columns "
@@ -762,6 +786,20 @@ def create_app(config_class=None):
                         """))
                         conn.commit()
                         print("Created school_year_closure_event table.")
+                    if not _has_table('parent_student_link'):
+                        conn.execute(text("""
+                            CREATE TABLE parent_student_link (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                parent_user_id INTEGER NOT NULL REFERENCES user(id),
+                                student_id INTEGER NOT NULL REFERENCES student(id),
+                                relationship VARCHAR(50),
+                                parent_slot INTEGER,
+                                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                CONSTRAINT uq_parent_student_link UNIQUE (parent_user_id, student_id)
+                            )
+                        """))
+                        conn.commit()
+                        print("Created parent_student_link table.")
                 elif dialect == 'postgresql':
                     def _has_table_pg(name):
                         return conn.execute(text(
@@ -832,6 +870,20 @@ def create_app(config_class=None):
                         """))
                         conn.commit()
                         print("Created school_year_closure_event table.")
+                    if not _has_table_pg('parent_student_link'):
+                        conn.execute(text("""
+                            CREATE TABLE parent_student_link (
+                                id SERIAL PRIMARY KEY,
+                                parent_user_id INTEGER NOT NULL REFERENCES "user"(id),
+                                student_id INTEGER NOT NULL REFERENCES student(id),
+                                relationship VARCHAR(50),
+                                parent_slot INTEGER,
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                CONSTRAINT uq_parent_student_link UNIQUE (parent_user_id, student_id)
+                            )
+                        """))
+                        conn.commit()
+                        print("Created parent_student_link table.")
         except Exception as e:
             print(f"Note: school_year_closure table check failed (may already exist): {e}")
 
@@ -900,6 +952,7 @@ def create_app(config_class=None):
     # Import and register blueprints
     from authroutes import auth_blueprint
     from studentroutes import student_blueprint
+    from parentroutes import parent_blueprint
     from teacher_routes import teacher_blueprint  # Using new modular teacher_routes package
     from management_routes import management_blueprint  # Using new modular management_routes package
     from management_routes.school_year_closure import school_year_closure_bp
@@ -910,6 +963,7 @@ def create_app(config_class=None):
 
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(student_blueprint, url_prefix='/student')
+    app.register_blueprint(parent_blueprint, url_prefix='/parent')
     app.register_blueprint(teacher_blueprint, url_prefix='/teacher')
     app.register_blueprint(management_blueprint, url_prefix='/management')
     app.register_blueprint(school_year_closure_bp)  # Phased year-end workflow (own url_prefix)
@@ -1181,6 +1235,11 @@ def create_app(config_class=None):
                     pass
                 current_app.logger.warning("inject_theme failed; falling back to default theme: %s", e)
         return {'effective_theme': effective}
+
+    @app.context_processor
+    def inject_app_version():
+        from utils.app_version import app_version_context
+        return app_version_context()
 
     @app.context_processor
     def inject_permissions_helpers():
@@ -1477,6 +1536,8 @@ def create_app(config_class=None):
                     return redirect(url_for('teacher.dashboard.teacher_dashboard'))
             elif role in ['Tech', 'IT Support']:
                 return redirect(url_for('tech.tech_dashboard'))
+            elif role == 'Parent':
+                return redirect(url_for('parent.parent_dashboard'))
         
         # If not authenticated, redirect to login
         return redirect(url_for('auth.login'))

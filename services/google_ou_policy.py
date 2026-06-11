@@ -9,7 +9,25 @@ if TYPE_CHECKING:
     from models import User as UserModel
 
 
-REMOVAL_SUSPEND_AFTER_DAYS = 183  # ~6 months
+# --- Student lifecycle timers ---
+ALUMNI_SUSPEND_AFTER_DAYS = 365  # 1 year in Alumni before Google deactivation
+REMOVAL_SUSPEND_AFTER_DAYS = 183  # legacy alias; transferred departures suspend immediately
+
+# Set True when /Students/High School is live; until then grades 9–12 use Alumni/Middle.
+HIGH_SCHOOL_OU_ENABLED = False
+
+STUDENT_OU_TRANSFERRED_REMOVED = "Transferred & Removed"
+STUDENT_OU_ALUMNI = "Alumni"
+ALUMNI_SUB_ELEMENTARY = "Elementary"
+ALUMNI_SUB_MIDDLE = "Middle"
+ALUMNI_SUB_HIGH = "High"
+
+# Top grade of each division before promotion to the next (5→6, 8→9, 12→done).
+_DIVISION_TOP_GRADE = {
+    ALUMNI_SUB_ELEMENTARY: 5,
+    ALUMNI_SUB_MIDDLE: 8,
+    ALUMNI_SUB_HIGH: 12,
+}
 
 
 @dataclass(frozen=True)
@@ -25,6 +43,12 @@ def _sanitize_ou_path(path: str) -> str:
         return "/"
     out = path.rstrip("/")
     return out if out else "/"
+
+
+def _parse_grade_level(grade_level) -> Optional[int]:
+    from utils.student_login_policy import parse_grade_level_for_policy
+
+    return parse_grade_level_for_policy(grade_level)
 
 
 def _legacy_stored_grad_year(
@@ -49,7 +73,6 @@ def _infer_grad_year_from_grade(grade_level: Optional[int], reference_year: int)
     """
     Graduation calendar year when only grade is reliable:
     Graduation Year = reference_year + (12 - grade). K=0 … 12th=12.
-    Example: reference_year 2026, grade 5 -> 2026 + (12 - 5) = 2033; grade 4 -> 2034.
     """
     if grade_level is None:
         return None
@@ -77,7 +100,7 @@ def _effective_grad_year(
     Resolution order (OU + groups):
     1. expected_graduation_year (authoritative when set)
     2. Calculated: reference_year + (12 - grade) when grade is known
-    3. Legacy: grad_year, then expected_grad_date (e.g. missing grade on old records)
+    3. Legacy: grad_year, then expected_grad_date
     """
     if expected_graduation_year is not None:
         try:
@@ -132,55 +155,174 @@ def school_level_group_for_grade(grade_level: Optional[int]) -> Optional[str]:
     return None
 
 
-def _after_alumni_cutoff(today: date, grad_year: int) -> bool:
+def break_window_for_date(
+    as_of: date,
+    *,
+    prior_school_year_end: Optional[date] = None,
+    next_school_year_start: Optional[date] = None,
+) -> Tuple[Optional[date], Optional[date]]:
     """
-    Alumni rule: move after June 30 of grad_year.
+    Return (prior_end, next_start) when ``as_of`` falls in the summer gap between two school years.
+    Uses explicit dates when provided; otherwise queries SchoolYear rows; finally Jul–Aug fallback.
     """
-    cutoff = date(int(grad_year), 6, 30)
-    return today > cutoff
+    if prior_school_year_end and next_school_year_start:
+        if prior_school_year_end < next_school_year_start and prior_school_year_end < as_of < next_school_year_start:
+            return prior_school_year_end, next_school_year_start
+        return None, None
+
+    try:
+        from models import SchoolYear
+
+        years = SchoolYear.query.order_by(SchoolYear.start_date).all()
+        for idx in range(len(years) - 1):
+            y1, y2 = years[idx], years[idx + 1]
+            if y1.end_date < as_of < y2.start_date:
+                return y1.end_date, y2.start_date
+    except Exception:
+        pass
+
+    if as_of.month in (7, 8):
+        return date(as_of.year, 6, 30), date(as_of.year, 8, 31)
+    return None, None
+
+
+def _in_summer_break_window(
+    as_of: date,
+    *,
+    prior_school_year_end: Optional[date] = None,
+    next_school_year_start: Optional[date] = None,
+) -> bool:
+    prior_end, next_start = break_window_for_date(
+        as_of,
+        prior_school_year_end=prior_school_year_end,
+        next_school_year_start=next_school_year_start,
+    )
+    return bool(prior_end and next_start)
+
+
+def _class_suffix(effective: Optional[int]) -> str:
+    return f"Class of {effective}" if effective else "Unknown Class Year"
+
+
+def _alumni_path(alumni_sub: str, effective: Optional[int]) -> str:
+    return _sanitize_ou_path(
+        f"/Students/{STUDENT_OU_ALUMNI}/{alumni_sub}/{_class_suffix(effective)}"
+    )
+
+
+def _transferred_path(effective: Optional[int]) -> str:
+    return _sanitize_ou_path(
+        f"/Students/{STUDENT_OU_TRANSFERRED_REMOVED}/{_class_suffix(effective)}"
+    )
+
+
+def _alumni_sub_for_summer_departure(grade: int) -> Optional[str]:
+    """
+    Alumni tier when a student leaves during the summer gap after completing a division.
+
+    - Finished 5th (grade 5) or promoted to 6th → Elementary alumni
+    - Finished 8th (grade 8) or promoted to 9th–11th → Middle alumni
+    - Finished 12th (grade 12) → High alumni
+    """
+    if grade == _DIVISION_TOP_GRADE[ALUMNI_SUB_ELEMENTARY] or grade == 6:
+        return ALUMNI_SUB_ELEMENTARY
+    if grade == _DIVISION_TOP_GRADE[ALUMNI_SUB_MIDDLE] or (9 <= grade <= 11):
+        return ALUMNI_SUB_MIDDLE
+    if grade >= _DIVISION_TOP_GRADE[ALUMNI_SUB_HIGH]:
+        return ALUMNI_SUB_HIGH
+    return None
+
+
+def _active_student_ou_path(grade: Optional[int], effective: Optional[int]) -> Tuple[str, str]:
+    """OU for enrolled, active students."""
+    if grade is None:
+        school_level = "Students"
+        if effective is not None:
+            return _sanitize_ou_path(f"/Students/{school_level}/{_class_suffix(effective)}"), "active_missing_grade"
+        return _sanitize_ou_path(f"/Students/{school_level}"), "active_missing_grade"
+
+    if grade <= 5:
+        path = _sanitize_ou_path(f"/Students/Elementary/{_class_suffix(effective)}")
+        return path, "active_elementary"
+
+    if grade <= 8:
+        path = _sanitize_ou_path(f"/Students/Middle School/{_class_suffix(effective)}")
+        return path, "active_middle_school"
+
+    # Grades 9–12: High School OU when launched; otherwise Middle alumni cohort (no HS yet).
+    if HIGH_SCHOOL_OU_ENABLED:
+        path = _sanitize_ou_path(f"/Students/High School/{_class_suffix(effective)}")
+        return path, "active_high_school"
+
+    return _alumni_path(ALUMNI_SUB_MIDDLE, effective), "active_promoted_middle_alumni"
+
+
+def _departure_ou_path_and_reason(
+    *,
+    grade: Optional[int],
+    effective: Optional[int],
+    event_date: date,
+    prior_school_year_end: Optional[date],
+    next_school_year_start: Optional[date],
+) -> Tuple[str, str]:
+    """
+    Classify a departing student:
+
+    - **Summer gap** after completing a division (5th→6th, 8th→9th, 12th done) → Alumni/{tier}
+    - **Mid-year** or left before that milestone → Transferred & Removed
+    """
+    if grade is None:
+        return _transferred_path(effective), "transferred_removed"
+
+    in_summer = _in_summer_break_window(
+        event_date,
+        prior_school_year_end=prior_school_year_end,
+        next_school_year_start=next_school_year_start,
+    )
+
+    if in_summer:
+        alumni_sub = _alumni_sub_for_summer_departure(grade)
+        if alumni_sub:
+            return _alumni_path(alumni_sub, effective), "alumni_completed_level"
+
+    return _transferred_path(effective), "transferred_removed"
+
+
+def _is_departing(*, is_active: bool, marked_for_removal: bool, is_deleted: bool) -> bool:
+    return bool(is_deleted or marked_for_removal or not is_active)
 
 
 def _compute_ou_path_and_reason(
     *,
-    grade_level: Optional[int],
+    grade_level,
     expected_graduation_year: Optional[int],
     grad_year: Optional[int],
     expected_grad_date: Optional[str],
     is_active: bool,
     marked_for_removal: bool,
+    is_deleted: bool,
+    status_updated_at: Optional[datetime],
     today: date,
+    prior_school_year_end: Optional[date],
+    next_school_year_start: Optional[date],
 ) -> Tuple[str, str]:
     reference_year = today.year
+    grade = _parse_grade_level(grade_level)
     effective = _effective_grad_year(
-        grade_level, expected_graduation_year, grad_year, expected_grad_date, reference_year
+        grade, expected_graduation_year, grad_year, expected_grad_date, reference_year
     )
 
-    grade_display = grade_level if grade_level is not None else "unknown"
+    if _is_departing(is_active=is_active, marked_for_removal=marked_for_removal, is_deleted=is_deleted):
+        event_date = status_updated_at.date() if status_updated_at else today
+        return _departure_ou_path_and_reason(
+            grade=grade,
+            effective=effective,
+            event_date=event_date,
+            prior_school_year_end=prior_school_year_end,
+            next_school_year_start=next_school_year_start,
+        )
 
-    # Removal / inactive overrides
-    if marked_for_removal or (is_active is False):
-        class_suffix = f"Class of {effective}" if effective else "Unknown Class Year"
-        path = _sanitize_ou_path(f"/Students/Marked for Removal/{class_suffix}")
-        print(f"[DEBUG] Calculated OU for {grade_display} grade student: {path}")
-        return path, "marked_for_removal_or_inactive"
-
-    # Alumni (still "active" in workflow sense — uses graduation year from DB or inference)
-    if effective is not None and _after_alumni_cutoff(today, int(effective)):
-        path = _sanitize_ou_path(f"/Students/Alumni/Class of {int(effective)}")
-        print(f"[DEBUG] Calculated OU for {grade_display} grade student: {path}")
-        return path, "after_grad_year_cutoff"
-
-    # Active students: /Students/[SchoolLevel]/Class of [Year] when we have a year (DB or inferred)
-    school_level = _school_level_from_grade(grade_level) or "Students"
-    if effective is not None:
-        path = _sanitize_ou_path(f"/Students/{school_level}/Class of {int(effective)}")
-        print(f"[DEBUG] Calculated OU for {grade_display} grade student: {path}")
-        return path, "active_by_grade_and_grad_year"
-
-    # No grade and no grad data: cannot infer — last resort without class folder
-    path = _sanitize_ou_path(f"/Students/{school_level}")
-    print(f"[DEBUG] Calculated OU for {grade_display} grade student: {path}")
-    return path, "active_missing_grad_year"
+    return _active_student_ou_path(grade, effective)
 
 
 def get_student_ou_path(
@@ -190,16 +332,22 @@ def get_student_ou_path(
     expected_grad_date: Optional[str],
     is_active: bool,
     marked_for_removal: bool,
+    is_deleted: bool = False,
     expected_graduation_year: Optional[int] = None,
     today: Optional[date] = None,
 ) -> str:
     """
     Compute the Google Workspace orgUnitPath for a student.
 
-    - ``expected_graduation_year`` (when set) is the primary graduation year for ``/Class of [Year]``.
-    - Then ``grad_year``, then ``expected_grad_date``; otherwise the year may be inferred from grade.
-    - School level: K–5 Elementary, 6–8 Middle School, 9–12 High School.
-    - Paths are normalized (no trailing slash).
+    Active paths:
+    - /Students/Elementary/Class of YYYY (K–5)
+    - /Students/Middle School/Class of YYYY (6–8)
+    - /Students/High School/Class of YYYY (9–12 when HIGH_SCHOOL_OU_ENABLED)
+    - /Students/Alumni/Middle/Class of YYYY (9–12 while high school OU is not live)
+
+    Departure paths:
+    - /Students/Alumni/{Elementary|Middle|High}/Class of YYYY — completed a division (summer leave)
+    - /Students/Transferred & Removed/Class of YYYY — mid-year or left before division completion
     """
     path, _ = _compute_ou_path_and_reason(
         grade_level=grade_level,
@@ -208,7 +356,11 @@ def get_student_ou_path(
         expected_grad_date=expected_grad_date,
         is_active=is_active,
         marked_for_removal=marked_for_removal,
+        is_deleted=is_deleted,
+        status_updated_at=None,
         today=today or date.today(),
+        prior_school_year_end=None,
+        next_school_year_start=None,
     )
     return path
 
@@ -222,17 +374,18 @@ def resolve_student_ou(
     marked_for_removal: bool,
     status_updated_at: Optional[datetime],
     expected_graduation_year: Optional[int] = None,
+    is_deleted: bool = False,
     today: Optional[date] = None,
+    prior_school_year_end: Optional[date] = None,
+    next_school_year_start: Optional[date] = None,
 ) -> StudentOuDecision:
     """
     Single source of truth for student OU placement + suspension rule.
 
-    OU structure assumed (matches your Admin Console):
-    - /Students/Elementary/Class of YYYY
-    - /Students/Middle School/Class of YYYY
-    - /Students/High School/Class of YYYY
-    - /Students/Alumni/Class of YYYY
-    - /Students/Marked for Removal/Class of YYYY
+    Suspension:
+    - **Transferred & Removed** — immediate Google suspension when departing
+    - **Alumni** (completed division) — 1 year after ``status_updated_at``, then suspend
+    - **Active** — never suspended via this policy
     """
     today = today or date.today()
     target_ou_path, reason = _compute_ou_path_and_reason(
@@ -242,21 +395,76 @@ def resolve_student_ou(
         expected_grad_date=expected_grad_date,
         is_active=is_active,
         marked_for_removal=marked_for_removal,
+        is_deleted=is_deleted,
+        status_updated_at=status_updated_at,
         today=today,
+        prior_school_year_end=prior_school_year_end,
+        next_school_year_start=next_school_year_start,
     )
 
     should_suspend = False
-    if reason == "marked_for_removal_or_inactive":
+    if reason == "alumni_completed_level":
         if status_updated_at:
-            should_suspend = (datetime.utcnow() - status_updated_at) >= timedelta(days=REMOVAL_SUSPEND_AFTER_DAYS)
-        else:
-            should_suspend = False
+            as_of = datetime.combine(today, datetime.min.time())
+            if status_updated_at.tzinfo is not None and as_of.tzinfo is None:
+                as_of = as_of.replace(tzinfo=status_updated_at.tzinfo)
+            should_suspend = (as_of - status_updated_at) >= timedelta(days=ALUMNI_SUSPEND_AFTER_DAYS)
+    elif reason == "transferred_removed":
+        should_suspend = True
 
     return StudentOuDecision(
         target_ou_path=target_ou_path,
         should_suspend_now=should_suspend,
         reason=reason,
     )
+
+
+def staff_should_suspend_immediately(staff: "TeacherStaffModel") -> bool:
+    """Staff deactivation is immediate (OU + Google suspended), never hard-deleted by sync."""
+    return (
+        bool(getattr(staff, "is_deleted", False))
+        or not bool(getattr(staff, "is_active", True))
+        or bool(getattr(staff, "marked_for_removal", False))
+    )
+
+
+def sync_student_google_suspension(
+    user_email: str,
+    *,
+    decision: StudentOuDecision,
+    is_active: bool,
+    marked_for_removal: bool,
+    is_deleted: bool,
+) -> Optional[bool]:
+    """
+    Align Google suspension with student lifecycle policy.
+
+    Active students stay unsuspended. Alumni departures get a 1-year grace period.
+    Transferred & Removed departures suspend immediately.
+    """
+    from services.google_directory_service import (
+        set_user_suspended,
+        suspend_user,
+        sync_user_suspension_with_db_is_active,
+    )
+
+    if not _is_departing(is_active=is_active, marked_for_removal=marked_for_removal, is_deleted=is_deleted):
+        return sync_user_suspension_with_db_is_active(user_email, True)
+
+    if decision.should_suspend_now:
+        return suspend_user(user_email)
+    if decision.reason == "alumni_completed_level":
+        return set_user_suspended(user_email, False)
+    return suspend_user(user_email)
+
+
+def sync_staff_google_suspension(user_email: str, staff: "TeacherStaffModel") -> Optional[bool]:
+    """Staff marked for removal / inactive / deleted → suspend immediately in Google."""
+    from services.google_directory_service import suspend_user, sync_user_suspension_with_db_is_active
+
+    if staff_should_suspend_immediately(staff):
+        return suspend_user(user_email)
+    return sync_user_suspension_with_db_is_active(user_email, True)
 
 
 # --- Staff OU hierarchy under /Staff ---
@@ -268,7 +476,6 @@ STAFF_OU_FACULTY = "Faculty"
 STAFF_OU_SUBSTITUTES = "Substitutes"
 STAFF_OU_TEACHERS = "Teachers"
 
-# Higher number wins when a person matches multiple tiers (primary + secondary_roles + assigned_role).
 _STAFF_OU_RANK = {
     STAFF_OU_FACULTY: 10,
     STAFF_OU_TEACHERS: 40,
@@ -300,7 +507,6 @@ def _staff_role_labels_for_ou(staff: "TeacherStaffModel", user: Optional["UserMo
 def _canonical_label_to_staff_ou_sub(label: str) -> Optional[str]:
     """
     Map one canonical role label to a ``/Staff/<Subfolder>`` name, or None if it does not imply a tier.
-    Substitute-style titles are checked before generic *teacher* substring matches.
     """
     if not label or label == "Student":
         return None
@@ -337,26 +543,12 @@ def get_staff_ou_path(
     user: Optional["UserModel"] = None,
 ) -> str:
     """
-    Final 6-tier staff OU under ``/Staff``. When multiple roles apply (primary, ``secondary_roles``,
-    and comma-separated ``assigned_role``), the tier with the **highest** precedence rank wins.
-
-    Rank order (high → low): Director & Board > Administrator > Substitutes > Teachers > Faculty.
+    Final staff OU under ``/Staff``.
 
     1. **Terminated & Removed** — ``is_deleted``, ``not is_active``, or ``marked_for_removal`` (always wins).
-    2. **Administrator** — canonical Tech / IT Support / School Administrator, or ``position`` contains
-       ``administrator``.
-    3. **Director & Board** — canonical Director, or ``position`` / ``department`` hints for director/board.
-    4. **Substitutes** — canonical substitute titles, or ``position`` contains ``substitute``.
-    5. **Teachers** — canonical teacher titles, or ``position`` contains ``teacher``.
-    6. **Faculty** — default when no other tier matches.
-
-    Pass the linked ``User`` when present; use ``None`` if there is no website login.
+    2. Role-based tiers: Director & Board > Administrator > Substitutes > Teachers > Faculty.
     """
-    if (
-        bool(getattr(staff, "is_deleted", False))
-        or not bool(getattr(staff, "is_active", True))
-        or bool(getattr(staff, "marked_for_removal", False))
-    ):
+    if staff_should_suspend_immediately(staff):
         return _sanitize_ou_path(f"{STAFF_OU_BASE}/{STAFF_OU_TERMINATED_REMOVED}")
 
     position = _staff_field_lower(getattr(staff, "position", None))

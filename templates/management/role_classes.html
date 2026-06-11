@@ -82,6 +82,13 @@
                      or ('english' in _g3_subject)
                      or ('ela' in _g3_subject)
                      or ('literacy' in _g3_subject)) %}
+            {% set _g1_eligible = (1 in _g3_levels)
+                and (('math' in _g3_subject)
+                     or ('language' in _g3_subject)
+                     or ('reading' in _g3_subject)
+                     or ('english' in _g3_subject)
+                     or ('ela' in _g3_subject)
+                     or ('literacy' in _g3_subject)) %}
             <div class="class-card">
                 <div class="class-card-header d-flex justify-content-between align-items-center">
                     <h5 class="class-card-title">{{ class.name }}</h5>
@@ -177,6 +184,11 @@
                                     <i class="bi bi-journal-check action-btn-icon"></i><span class="action-btn-text">View Grades</span>
                                 </a>
                             </div>
+                            {% if _g1_eligible and 'teacher.grade1_standards.grade1_standards_editor' in current_app.view_functions %}
+                                <a href="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=class.id) }}" class="action-btn btn-grades mb-2">
+                                    <i class="bi bi-check2-square action-btn-icon"></i><span class="action-btn-text">1st Grade Standards</span>
+                                </a>
+                            {% endif %}
                             {% if _g3_eligible and 'teacher.grade3_standards.grade3_standards_editor' in current_app.view_functions %}
                                 <a href="{{ url_for('teacher.grade3_standards.grade3_standards_editor', class_id=class.id) }}" class="action-btn btn-grades mb-2">
                                     <i class="bi bi-check2-square action-btn-icon"></i><span class="action-btn-text">3rd Grade Standards</span>
@@ -223,6 +235,11 @@
                                     <i class="bi bi-plus-circle-fill action-btn-icon"></i><span class="action-btn-text">Assignment</span>
                                 </a>
                             </div>
+                            {% if _g1_eligible and 'teacher.grade1_standards.grade1_standards_editor' in current_app.view_functions %}
+                                <a href="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=class.id) }}" class="action-btn btn-view mb-2">
+                                    <i class="bi bi-check2-square action-btn-icon"></i><span class="action-btn-text">1st Grade Standards</span>
+                                </a>
+                            {% endif %}
                             {% if _g3_eligible and 'teacher.grade3_standards.grade3_standards_editor' in current_app.view_functions %}
                                 <a href="{{ url_for('teacher.grade3_standards.grade3_standards_editor', class_id=class.id) }}" class="action-btn btn-view mb-2">
                                     <i class="bi bi-check2-square action-btn-icon"></i><span class="action-btn-text">3rd Grade Standards</span>

@@ -10,19 +10,22 @@ from flask import current_app
 from extensions import db
 from models import Grade, Assignment, ReportCard, Student, AcademicPeriod, SubjectRequirement
 
-# Fallback subject lists (used when SubjectRequirement table is empty)
-_SUBJECTS_1_2 = [
-    "Reading Comprehension", "Language Arts", "Spelling", "Handwriting",
-    "Math", "Science", "Social Studies", "Art", "Physical Education"
-]
-_SUBJECTS_3 = [
-    "Reading", "English", "Spelling", "Math", "Science", "Social Studies",
-    "Art", "Physical Education", "Islamic Studies", "Quran", "Arabic"
-]
-_SUBJECTS_4_8 = [
-    "Reading", "English", "Spelling", "Vocabulary", "Math", "Science",
-    "Social Studies", "Art", "Physical Education", "Islamic Studies", "Quran", "Arabic"
-]
+# Fallback subject lists (used when SubjectRequirement table is empty).
+# Mirrors utils/core_class_catalog.py broad subjects.
+_ENRICHMENT = ["Art", "Music", "Physical Education"]
+_HISTORY_SOCIAL = "History/Social Studies"
+
+
+def _fallback_subjects_for_grade_level(grade_level):
+    if grade_level == 0:
+        return ["Language Arts", "Math", "Science"] + _ENRICHMENT
+    if grade_level == 1:
+        return ["Language Arts", "Math", "Science"] + _ENRICHMENT
+    if grade_level in (2, 3, 4, 5):
+        return ["Language Arts", "Math", "Science", _HISTORY_SOCIAL] + _ENRICHMENT
+    if grade_level in (6, 7, 8):
+        return ["Language Arts", "Math", "Science", _HISTORY_SOCIAL] + _ENRICHMENT
+    return []
 
 
 def _subjects_for_grade_level(grade_level):
@@ -36,13 +39,7 @@ def _subjects_for_grade_level(grade_level):
             return [r.subject_name for r in reqs]
     except Exception:
         pass
-    if grade_level in (1, 2):
-        return _SUBJECTS_1_2
-    if grade_level == 3:
-        return _SUBJECTS_3
-    if grade_level in (4, 5, 6, 7, 8):
-        return _SUBJECTS_4_8
-    return []
+    return _fallback_subjects_for_grade_level(grade_level)
 
 
 def _calculate_grades_for_subjects(grades, subjects):

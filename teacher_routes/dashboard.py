@@ -854,35 +854,25 @@ def assignments_and_grades():
                             unique_student_ids.add(enrollment.student_id)
             unique_student_count = len(unique_student_ids)
             
-            # Get pending extension request count for teacher's classes
-            from models import ExtensionRequest
+            from utils.school_year_filters import (
+                count_pending_extension_requests,
+                count_pending_redo_requests,
+                teacher_class_ids_active_school_year,
+            )
+
             if is_admin():
-                pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+                pending_extension_count = count_pending_extension_requests()
+                pending_redo_count = count_pending_redo_requests()
             else:
-                if teacher is None:
-                    pending_extension_count = 0
-                else:
-                    class_ids = [c.id for c in accessible_classes]
-                    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-                    assignment_ids = [a.id for a in assignments]
-                    pending_extension_count = ExtensionRequest.query.filter(
-                        ExtensionRequest.assignment_id.in_(assignment_ids),
-                        ExtensionRequest.status == 'Pending'
-                    ).count()
-            
-            # Get pending redo request count for teacher's classes
-            if is_admin():
-                pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
-            else:
-                if teacher is None:
-                    pending_redo_count = 0
-                else:
-                    class_ids = [c.id for c in accessible_classes]
-                    assignment_ids = [a.id for a in Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()]
-                    pending_redo_count = RedoRequest.query.filter(
-                        RedoRequest.assignment_id.in_(assignment_ids),
-                        RedoRequest.status == 'Pending'
-                    ).count() if assignment_ids else 0
+                teacher_year_class_ids = (
+                    teacher_class_ids_active_school_year(teacher.id) if teacher else []
+                )
+                pending_extension_count = count_pending_extension_requests(
+                    class_ids=teacher_year_class_ids
+                )
+                pending_redo_count = count_pending_redo_requests(
+                    class_ids=teacher_year_class_ids
+                )
             
             from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
             pending_assistant_by_class = {}
@@ -1437,35 +1427,25 @@ def assignments_and_grades():
                 else:
                     table_student_averages[student_id] = 'N/A'
         
-        # Get pending extension request count for teacher's classes
-        from models import ExtensionRequest
+        from utils.school_year_filters import (
+            count_pending_extension_requests,
+            count_pending_redo_requests,
+            teacher_class_ids_active_school_year,
+        )
+
         if is_admin():
-            pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+            pending_extension_count = count_pending_extension_requests()
+            pending_redo_count = count_pending_redo_requests()
         else:
-            if teacher is None:
-                pending_extension_count = 0
-            else:
-                class_ids = [c.id for c in accessible_classes]
-                assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-                assignment_ids = [a.id for a in assignments]
-                pending_extension_count = ExtensionRequest.query.filter(
-                    ExtensionRequest.assignment_id.in_(assignment_ids),
-                    ExtensionRequest.status == 'Pending'
-                ).count()
-        
-        # Get pending redo request count for teacher's classes
-        if is_admin():
-            pending_redo_count = RedoRequest.query.filter_by(status='Pending').count()
-        else:
-            if teacher is None:
-                pending_redo_count = 0
-            else:
-                class_ids = [c.id for c in accessible_classes]
-                assignment_ids = [a.id for a in Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()]
-                pending_redo_count = RedoRequest.query.filter(
-                    RedoRequest.assignment_id.in_(assignment_ids),
-                    RedoRequest.status == 'Pending'
-                ).count() if assignment_ids else 0
+            teacher_year_class_ids = (
+                teacher_class_ids_active_school_year(teacher.id) if teacher else []
+            )
+            pending_extension_count = count_pending_extension_requests(
+                class_ids=teacher_year_class_ids
+            )
+            pending_redo_count = count_pending_redo_requests(
+                class_ids=teacher_year_class_ids
+            )
 
         from management_routes.student_assistant_utils import count_pending_assistant_proposals_for_class
         pending_assistant_count = (
@@ -1843,6 +1823,10 @@ def view_student_details_data(student_id):
         
         from utils.at_risk_alerts import _percentage_from_grade_data
         from utils.academic_concern_submission import academic_concern_effective_submitted
+        from utils.school_year_filters import (
+            get_active_school_year,
+            teacher_class_ids_active_school_year,
+        )
         
         # Verify teacher has access to this student (student must be in one of their classes)
         if not current_user.teacher_staff_id:
@@ -1855,13 +1839,19 @@ def view_student_details_data(student_id):
             return jsonify({'success': False, 'error': 'Teacher profile not found'}), 403
         
         print(f"[Teacher Details] Teacher found: {teacher_staff.first_name} {teacher_staff.last_name}")
+
+        active_school_year = get_active_school_year()
+        if not active_school_year:
+            return jsonify({'success': False, 'error': 'No active school year.'}), 404
+
+        teacher_class_ids = teacher_class_ids_active_school_year(teacher_staff.id)
+        if not teacher_class_ids:
+            return jsonify({'success': False, 'error': 'You have no classes in the active school year.'}), 403
         
-        # Get teacher's classes
-        teacher_classes = Class.query.filter_by(teacher_id=teacher_staff.id).all()
-        teacher_class_ids = [c.id for c in teacher_classes]
-        
-        # Check if student is enrolled in any of teacher's classes
-        student_enrollments = Enrollment.query.filter_by(student_id=student_id, is_active=True).all()
+        # Check if student is enrolled in any of teacher's active-year classes
+        student_enrollments = Enrollment.query.filter_by(
+            student_id=student_id, is_active=True
+        ).filter(Enrollment.class_id.in_(teacher_class_ids)).all()
         student_class_ids = [e.class_id for e in student_enrollments]
         
         # Check if there's overlap

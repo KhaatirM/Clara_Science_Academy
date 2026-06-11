@@ -1,0 +1,40 @@
+{# Shared child selector + quick links #}
+{% if children %}
+<section class="pp-children">
+  <p class="pp-children__label">Your children</p>
+  <div class="pp-children__scroll">
+    {% for child in children %}
+    <form method="post" action="{{ url_for('parent.select_child', student_id=child.id) }}" class="pp-child-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="pp-child-chip {% if child.id == active_child_id %}pp-child-chip--active{% endif %}" aria-pressed="{{ 'true' if child.id == active_child_id else 'false' }}">
+        <span class="pp-child-chip__avatar" aria-hidden="true">{{ child.first_name[0] }}{{ child.last_name[0] }}</span>
+        <span>
+          <span class="pp-child-chip__name">{{ child.first_name }} {{ child.last_name }}</span>
+          <span class="pp-child-chip__grade">
+            {% if child.grade_level == 0 %}Kindergarten{% elif child.grade_level is not none %}Grade {{ child.grade_level }}{% else %}Student{% endif %}
+          </span>
+        </span>
+        <span class="pp-child-chip__active-dot" aria-hidden="true"></span>
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
+
+{% if active_child_id %}
+<nav class="pp-quick-nav" aria-label="Quick links for selected child">
+  <a href="{{ url_for('parent.child_grades', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_grades' %}active{% endif %}">
+    <i class="bi bi-card-checklist"></i> Grades
+  </a>
+  <a href="{{ url_for('parent.child_attendance', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_attendance' %}active{% endif %}">
+    <i class="bi bi-calendar-check"></i> Attendance
+  </a>
+  <a href="{{ url_for('parent.child_classes', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_classes' %}active{% endif %}">
+    <i class="bi bi-journal-bookmark"></i> Classes
+  </a>
+  <a href="{{ url_for('parent.child_report_cards', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_report_cards' %}active{% endif %}">
+    <i class="bi bi-file-earmark-text"></i> Report Cards
+  </a>
+</nav>
+{% endif %}
+{% endif %}

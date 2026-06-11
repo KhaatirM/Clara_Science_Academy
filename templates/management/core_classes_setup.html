@@ -1,0 +1,349 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Core Class Setup{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/core_class_setup.css') }}?v=2">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="ccs-page container-fluid px-2 px-md-4 py-3">
+  <header class="ccs-hero">
+    <div class="d-flex gap-3 flex-grow-1">
+      <div class="ccs-hero-icon" aria-hidden="true">
+        <i class="bi bi-diagram-3"></i>
+      </div>
+      <div class="ccs-hero-body">
+        <p class="ccs-hero-eyebrow">School year planning</p>
+        <h1>Core class setup</h1>
+        <p class="ccs-hero-lead">
+          Auto-create required K–8 core classes for a school year, or follow the manual guide below.
+          Class names are short (<strong>Math 2</strong>, <strong>Science K</strong>); subjects stay broad
+          (Math, Science, History/Social Studies, Language Arts, Art, Music, PE).
+          Middle-school science uses <strong>Introduction to Physics</strong>, <strong>Physics I</strong>,
+          and <strong>Physics II</strong> as class titles.
+        </p>
+      </div>
+    </div>
+    <div class="ccs-hero-actions">
+      <a href="{{ url_for('management.classes', school_year_id=selected_school_year_id) }}" class="ccs-btn-back">
+        <i class="bi bi-arrow-left me-1"></i> Classes
+      </a>
+    </div>
+  </header>
+
+  <div class="ccs-steps" aria-label="Setup steps">
+    <span class="ccs-step ccs-step--active"><span class="ccs-step-num">1</span> Configure</span>
+    <span class="ccs-step {% if preview %}ccs-step--active{% endif %}"><span class="ccs-step-num">2</span> Preview</span>
+    <span class="ccs-step"><span class="ccs-step-num">3</span> Create</span>
+  </div>
+
+  <section class="ccs-card">
+    <div class="ccs-card-header">
+      <div class="ccs-card-icon"><i class="bi bi-magic"></i></div>
+      <div>
+        <h2>Auto-create classes</h2>
+        <p class="ccs-card-desc">
+          One class per core subject for each selected grade. Existing matches are skipped.
+          Assign a primary teacher per subject, or set one teacher for an entire grade at once.
+        </p>
+      </div>
+    </div>
+
+    <div class="ccs-legend">
+      <span class="ccs-legend-chip ccs-legend-chip--academic">Academic core</span>
+      <span class="ccs-legend-chip ccs-legend-chip--enrich">Art · Music · PE</span>
+      <span class="ccs-legend-chip ccs-legend-chip--history">History / Social Studies (2nd+)</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('management.classes.core_class_setup') }}" id="ccsSetupForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-5">
+          <label class="ccs-form-label" for="school_year_id">School year</label>
+          <select class="form-select ccs-form-select" id="school_year_id" name="school_year_id" required>
+            {% for y in school_years %}
+            <option value="{{ y.id }}" {% if selected_school_year_id == y.id %}selected{% endif %}>
+              {{ y.name }}{% if y.is_active %} (Active){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="ccs-grade-toolbar">
+        <label class="ccs-form-label mb-0">Grade levels</label>
+        <div class="ccs-grade-toolbar-actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="ccsSelectAllGrades">Select all</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="ccsClearGrades">Clear</button>
+        </div>
+      </div>
+      <div class="ccs-grade-grid mb-2" id="ccsGradeGrid">
+        {% for g in setup_grade_levels %}
+        <label class="ccs-grade-chip">
+          <input type="checkbox" name="grade_levels" value="{{ g }}" class="ccs-grade-cb" {% if g|string in selected_grades %}checked{% endif %}>
+          {{ grade_label(g) }}
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="ccs-teacher-assign" id="ccsTeacherAssign">
+        <p class="ccs-teacher-assign-title"><i class="bi bi-person-badge me-1"></i> Primary teachers</p>
+        <p class="ccs-teacher-assign-desc">
+          For each selected grade, pick who leads each core class. Use <strong>Apply to all subjects</strong>
+          when one teacher covers the full grade.
+        </p>
+
+        {% for g in setup_grade_levels %}
+        {% set grade_selected = g|string in selected_grades %}
+        <div class="ccs-grade-teacher-panel {% if not grade_selected %}ccs-grade-teacher-panel--hidden{% endif %}" data-grade-panel="{{ g }}">
+          <div class="ccs-grade-teacher-head">
+            <h3>{{ grade_label(g) }}</h3>
+            <div class="ccs-grade-default-row">
+              <div>
+                <label class="ccs-form-label mb-1" for="grade_default_teacher_{{ g }}">Grade primary teacher</label>
+                <select class="form-select form-select-sm" id="grade_default_teacher_{{ g }}" name="grade_default_teacher_{{ g }}">
+                  <option value="">— Optional shortcut —</option>
+                  {% for t in teachers %}
+                  <option value="{{ t.id }}" {% if grade_default_teachers.get(g) == t.id %}selected{% endif %}>
+                    {{ t.first_name }} {{ t.last_name }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm ccs-btn-apply-grade" data-apply-grade="{{ g }}">
+                <i class="bi bi-arrow-down-circle me-1"></i>Apply to all subjects
+              </button>
+            </div>
+          </div>
+          <table class="ccs-subject-teacher-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Class name</th>
+                <th>Primary teacher <span class="text-danger">*</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in catalog_entries_for_grade(g) %}
+              {% set assign_key = teacher_assignment_key(g, setup_key_for_entry(entry)) %}
+              {% set selected_tid = teacher_assignments.get(assign_key) %}
+              <tr>
+                <td class="ccs-subject-name">{{ entry.subject }}</td>
+                <td class="ccs-class-name-preview">{{ class_name_for_grade(g, entry) }}</td>
+                <td>
+                  <select class="form-select form-select-sm ccs-subject-teacher"
+                          name="teacher_id_{{ g }}_{{ loop.index0 }}"
+                          data-grade="{{ g }}"
+                          data-subject="{{ entry.subject }}"
+                          {% if grade_selected %}required{% endif %}>
+                    <option value="">— Select teacher —</option>
+                    {% for t in teachers %}
+                    <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
+                      {{ t.first_name }} {{ t.last_name }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="ccs-actions">
+        <button type="submit" name="action" value="preview" class="btn btn-outline-primary ccs-btn-preview">
+          <i class="bi bi-eye me-1"></i> Preview changes
+        </button>
+        <button type="submit" name="action" value="create" class="btn btn-primary ccs-btn-create"
+                onclick="return confirm('Create all missing core classes for the selected grades?');">
+          <i class="bi bi-plus-circle me-1"></i> Create missing classes
+        </button>
+      </div>
+    </form>
+  </section>
+
+  {% if preview %}
+  <section class="ccs-card" id="ccsPreview">
+    <div class="ccs-card-header">
+      <div class="ccs-card-icon"><i class="bi bi-list-check"></i></div>
+      <div>
+        <h2>Preview results</h2>
+        <p class="ccs-card-desc">Review what will be added before you run create.</p>
+      </div>
+    </div>
+
+    {% if preview.errors %}
+      <div class="alert alert-warning mb-0">{{ preview.errors|join(' ') }}</div>
+    {% else %}
+      <div class="ccs-preview-stats">
+        <div class="ccs-preview-stat ccs-preview-stat--create">
+          <div class="ccs-preview-stat-num">{{ preview.to_create|length }}</div>
+          <div class="ccs-preview-stat-label">To create</div>
+        </div>
+        <div class="ccs-preview-stat ccs-preview-stat--skip">
+          <div class="ccs-preview-stat-num">{{ preview.skipped|length }}</div>
+          <div class="ccs-preview-stat-label">Already exist</div>
+        </div>
+      </div>
+
+      {% if preview.to_create %}
+      <div class="ccs-preview-group">
+        <div class="ccs-preview-group-title">Will create</div>
+        {% for grade_label, rows in preview.to_create|groupby('grade_label') %}
+        <p class="fw-bold small text-muted mb-1 mt-2">{{ grade_label }}</p>
+        <table class="ccs-preview-table mb-2">
+          <thead>
+            <tr><th>Class name</th><th>Subject</th><th>Primary teacher</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td>{{ row.name }}</td>
+              <td>{{ row.subject }}</td>
+              <td>{{ row.teacher_name or '—' }}</td>
+              <td><span class="ccs-badge-create"><i class="bi bi-plus-lg"></i> New</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if preview.skipped %}
+      <div class="ccs-preview-group">
+        <div class="ccs-preview-group-title">Already in this school year</div>
+        <table class="ccs-preview-table">
+          <thead>
+            <tr><th>Grade</th><th>Expected</th><th>Existing class</th></tr>
+          </thead>
+          <tbody>
+            {% for row in preview.skipped %}
+            <tr>
+              <td>{{ row.grade_label }}</td>
+              <td>{{ row.name }}</td>
+              <td>
+                <a href="{{ url_for('management.view_class', class_id=row.existing_class_id) }}">{{ row.existing_class_name }}</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="ccs-card" id="guide">
+    <div class="ccs-card-header">
+      <div class="ccs-card-icon"><i class="bi bi-journal-text"></i></div>
+      <div>
+        <h2>Manual setup guide</h2>
+        <p class="ccs-card-desc">
+          Prefer to add classes yourself? Expand each grade for the full checklist.
+          K and 1st have no History/Social Studies.
+        </p>
+      </div>
+    </div>
+
+    <div class="accordion ccs-guide-accordion" id="ccsGuideAccordion">
+      {% for row in guide_rows %}
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#ccsGuide{{ row.grade_level }}">
+            {{ row.grade_label }}
+            <span class="ccs-guide-count">{{ row.classes|length }} classes</span>
+          </button>
+        </h3>
+        <div id="ccsGuide{{ row.grade_level }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+             data-bs-parent="#ccsGuideAccordion">
+          <div class="accordion-body pt-2 pb-3">
+            <ul class="ccs-guide-list">
+              {% for c in row.classes %}
+              <li class="ccs-guide-item">
+                <span class="ccs-guide-class-name">{{ c.name }}</span>
+                <span class="ccs-guide-subject">{{ c.subject }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% if row.grade_level in [1, 3] %}
+            <p class="ccs-card-desc mb-0 mt-2">
+              <i class="bi bi-info-circle me-1"></i>
+              Language Arts and Math support standards checklists on report cards.
+            </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <p class="ccs-footnote mb-0">
+      <strong>Electives (not auto-created):</strong> Islamic Studies, Quran, Arabic, and other optional programs — add manually if your school offers them.
+    </p>
+  </section>
+</div>
+
+<script>
+(function () {
+  var boxes = document.querySelectorAll('.ccs-grade-cb');
+
+  function syncGradePanels() {
+    boxes.forEach(function (cb) {
+      var panel = document.querySelector('[data-grade-panel="' + cb.value + '"]');
+      if (!panel) return;
+      panel.classList.toggle('ccs-grade-teacher-panel--hidden', !cb.checked);
+      panel.querySelectorAll('.ccs-subject-teacher').forEach(function (sel) {
+        sel.required = cb.checked;
+      });
+    });
+  }
+
+  function applyGradeTeacher(grade) {
+    var def = document.getElementById('grade_default_teacher_' + grade);
+    if (!def || !def.value) return;
+    document.querySelectorAll('.ccs-subject-teacher[data-grade="' + grade + '"]').forEach(function (sel) {
+      sel.value = def.value;
+    });
+  }
+
+  boxes.forEach(function (cb) {
+    cb.addEventListener('change', syncGradePanels);
+  });
+
+  document.querySelectorAll('[data-apply-grade]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      applyGradeTeacher(btn.getAttribute('data-apply-grade'));
+    });
+  });
+
+  var selectAll = document.getElementById('ccsSelectAllGrades');
+  var clearBtn = document.getElementById('ccsClearGrades');
+  if (selectAll) {
+    selectAll.addEventListener('click', function () {
+      boxes.forEach(function (cb) { cb.checked = true; });
+      syncGradePanels();
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      boxes.forEach(function (cb) { cb.checked = false; });
+      syncGradePanels();
+    });
+  }
+
+  syncGradePanels();
+
+  {% if preview %}
+  var previewEl = document.getElementById('ccsPreview');
+  if (previewEl) previewEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  {% endif %}
+})();
+</script>
+{% endblock %}

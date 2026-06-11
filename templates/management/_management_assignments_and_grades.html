@@ -144,12 +144,6 @@
                             <label for="asgSubjectFilter" class="form-label fw-bold text-muted mb-2">Subject</label>
                             <select class="form-select border-0 bg-light d-none" id="asgSubjectFilter">
                                 <option value="">All subjects</option>
-                                <option value="Mathematics">Mathematics</option>
-                                <option value="Science">Science</option>
-                                <option value="English">English</option>
-                                <option value="History">History</option>
-                                <option value="Art">Art</option>
-                                <option value="Physical Education">Physical Education</option>
                             </select>
                             <div class="dropdown mgmt-asg-pretty-select" data-select-id="asgSubjectFilter">
                                 <button class="btn mgmt-asg-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
@@ -169,6 +163,70 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row g-3 align-items-end mt-1 mgmt-asg-filters-row-2">
+                        <div class="col-12 col-md-2">
+                            <label for="asgGradeFilter" class="form-label fw-bold text-muted mb-2">Grade</label>
+                            <select class="form-select border-0 bg-light d-none" id="asgGradeFilter">
+                                <option value="">All grades</option>
+                                <option value="0">Kindergarten</option>
+                                {% for g in range(1, 9) %}
+                                <option value="{{ g }}">{{ g }}{% if g == 1 %}st{% elif g == 2 %}nd{% elif g == 3 %}rd{% else %}th{% endif %} Grade</option>
+                                {% endfor %}
+                            </select>
+                            <div class="dropdown mgmt-asg-pretty-select" data-select-id="asgGradeFilter">
+                                <button class="btn mgmt-asg-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                <ul class="dropdown-menu mgmt-asg-pretty-select-menu"></ul>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label for="asgTeacherFilter" class="form-label fw-bold text-muted mb-2">Teacher</label>
+                            <select class="form-select border-0 bg-light d-none" id="asgTeacherFilter">
+                                <option value="">All teachers</option>
+                            </select>
+                            <div class="dropdown mgmt-asg-pretty-select" data-select-id="asgTeacherFilter">
+                                <button class="btn mgmt-asg-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                <ul class="dropdown-menu mgmt-asg-pretty-select-menu"></ul>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="asgEnrollmentFilter" class="form-label fw-bold text-muted mb-2">Students</label>
+                            <select class="form-select border-0 bg-light d-none" id="asgEnrollmentFilter">
+                                <option value="">Any</option>
+                                <option value="with">With students</option>
+                                <option value="empty">No students</option>
+                            </select>
+                            <div class="dropdown mgmt-asg-pretty-select" data-select-id="asgEnrollmentFilter">
+                                <button class="btn mgmt-asg-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                <ul class="dropdown-menu mgmt-asg-pretty-select-menu"></ul>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="asgAssignmentFilter" class="form-label fw-bold text-muted mb-2">Assignments</label>
+                            <select class="form-select border-0 bg-light d-none" id="asgAssignmentFilter">
+                                <option value="">Any</option>
+                                <option value="with">Has assignments</option>
+                                <option value="none">No assignments</option>
+                            </select>
+                            <div class="dropdown mgmt-asg-pretty-select" data-select-id="asgAssignmentFilter">
+                                <button class="btn mgmt-asg-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                <ul class="dropdown-menu mgmt-asg-pretty-select-menu"></ul>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label for="asgSortFilter" class="form-label fw-bold text-muted mb-2">Sort by</label>
+                            <select class="form-select border-0 bg-light d-none" id="asgSortFilter">
+                                <option value="name_asc">Class name (A–Z)</option>
+                                <option value="name_desc">Class name (Z–A)</option>
+                                <option value="teacher_asc">Teacher (A–Z)</option>
+                                <option value="students_desc">Most students</option>
+                                <option value="assignments_desc">Most assignments</option>
+                            </select>
+                            <div class="dropdown mgmt-asg-pretty-select" data-select-id="asgSortFilter">
+                                <button class="btn mgmt-asg-pretty-select-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                <ul class="dropdown-menu mgmt-asg-pretty-select-menu"></ul>
+                            </div>
+                        </div>
+                    </div>
                     <div class="class-finder-count mt-3" id="classSearchCount">(select a school year)</div>
                 </div>
             </div>
@@ -178,14 +236,17 @@
         <div class="row g-4" id="classSelectionGrid">
             {% for class_obj in accessible_classes %}
             <div class="col-12 col-md-6 col-lg-4 class-search-item"
+                 data-class-name="{{ class_obj.name|lower }}"
                  data-school-year-id="{{ class_obj.school_year_id or '' }}"
                  data-subject="{{ class_obj.subject or '' }}"
                  data-status="{{ 'active' if class_obj.is_active else 'inactive' }}"
+                 data-grade-levels="{{ class_obj.get_grade_levels()|join(',') }}"
                  data-assignment-count="{{ class_assignments.get(class_obj.id, 0) }}"
                  data-student-count="{{ class_obj.enrollments|selectattr('is_active')|list|length }}"
+                 data-teacher="{{ (class_obj.teacher.first_name ~ ' ' ~ class_obj.teacher.last_name) if class_obj.teacher else '' }}"
                  data-teacher-key="{{ ((class_obj.teacher.first_name ~ ' ' ~ class_obj.teacher.last_name) if class_obj.teacher else '')|lower }}">
                 <div class="assignment-class-card"
-                     data-search-text="{{ (class_obj.name ~ ' ' ~ (class_obj.subject or '') ~ ' ' ~ (class_obj.teacher.first_name if class_obj.teacher else '') ~ ' ' ~ (class_obj.teacher.last_name if class_obj.teacher else ''))|lower }}"
+                     data-search-text="{{ (class_obj.name ~ ' ' ~ (class_obj.subject or '') ~ ' ' ~ (class_obj.teacher.first_name if class_obj.teacher else '') ~ ' ' ~ (class_obj.teacher.last_name if class_obj.teacher else '') ~ ' ' ~ (class_obj.get_grade_levels_display() or ''))|lower }}"
                      onclick="viewClassAssignmentsAndGrades({{ class_obj.id }})">
                     <div class="assignment-class-header">
                         <div class="assignment-class-icon">
@@ -1179,11 +1240,139 @@ function createAssignment() {
     {% endif %}
 }
 
+function asgPrettySelectWrapper(selectEl) {
+    if (!selectEl) return null;
+    return document.querySelector(`.mgmt-asg-pretty-select[data-select-id="${selectEl.id}"]`);
+}
+
+function repopulateAsgSelectOptions(selectEl, placeholderLabel, items) {
+    if (!selectEl) return;
+    const prev = selectEl.value;
+    selectEl.innerHTML = '';
+    const base = document.createElement('option');
+    base.value = '';
+    base.textContent = placeholderLabel;
+    selectEl.appendChild(base);
+    items.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        opt.textContent = item.label;
+        selectEl.appendChild(opt);
+    });
+    if (prev && Array.from(selectEl.options).some((o) => o.value === prev)) {
+        selectEl.value = prev;
+    } else {
+        selectEl.value = '';
+    }
+    const wrap = asgPrettySelectWrapper(selectEl);
+    if (wrap) initAsgPrettySelectOne(wrap);
+}
+
+function initAsgPrettySelectOne(wrapperEl) {
+    const selectId = wrapperEl.getAttribute('data-select-id');
+    const selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+    const btn = wrapperEl.querySelector('.mgmt-asg-pretty-select-btn');
+    const menu = wrapperEl.querySelector('.mgmt-asg-pretty-select-menu');
+    if (!btn || !menu) return;
+    function setBtnLabelFromSelect() {
+        const opt = selectEl.options[selectEl.selectedIndex];
+        btn.textContent = (opt && opt.textContent) ? opt.textContent.trim() : 'Select';
+    }
+    menu.innerHTML = '';
+    Array.from(selectEl.options).forEach((opt) => {
+        const li = document.createElement('li');
+        const a = document.createElement('button');
+        a.type = 'button';
+        a.className = 'dropdown-item mgmt-asg-pretty-select-item';
+        a.setAttribute('data-value', opt.value);
+        a.textContent = (opt.textContent || '').trim();
+        li.appendChild(a);
+        menu.appendChild(li);
+    });
+    menu.onclick = function (e) {
+        const item = e.target.closest('.mgmt-asg-pretty-select-item');
+        if (!item) return;
+        selectEl.value = item.getAttribute('data-value') || '';
+        setBtnLabelFromSelect();
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    setBtnLabelFromSelect();
+}
+
+function rebuildAsgYearDependentOptions() {
+    const schoolYearFilter = document.getElementById('asgSchoolYearFilter');
+    const subjectFilter = document.getElementById('asgSubjectFilter');
+    const teacherFilter = document.getElementById('asgTeacherFilter');
+    const selectedYear = (schoolYearFilter && schoolYearFilter.value) ? String(schoolYearFilter.value) : '';
+    if (!selectedYear) return;
+
+    const subjects = new Set();
+    const teachers = new Map();
+    document.querySelectorAll('.class-search-item').forEach((cardCol) => {
+        if (String(cardCol.getAttribute('data-school-year-id') || '') !== selectedYear) return;
+        const subj = (cardCol.getAttribute('data-subject') || '').trim();
+        if (subj) subjects.add(subj);
+        const tk = (cardCol.getAttribute('data-teacher-key') || '').trim();
+        const tn = (cardCol.getAttribute('data-teacher') || '').trim();
+        if (tk) teachers.set(tk, tn || tk);
+    });
+
+    repopulateAsgSelectOptions(
+        subjectFilter,
+        'All subjects',
+        Array.from(subjects).sort((a, b) => a.localeCompare(b)).map((s) => ({ value: s, label: s }))
+    );
+    repopulateAsgSelectOptions(
+        teacherFilter,
+        'All teachers',
+        Array.from(teachers.entries())
+            .sort((a, b) => a[1].localeCompare(b[1]))
+            .map(([value, label]) => ({ value, label }))
+    );
+}
+
+function sortAsgVisibleClassCards() {
+    const grid = document.getElementById('classSelectionGrid');
+    const sortFilter = document.getElementById('asgSortFilter');
+    if (!grid || !sortFilter) return;
+    const sortBy = sortFilter.value || 'name_asc';
+    const cards = Array.from(grid.querySelectorAll('.class-search-item'));
+    const visible = cards.filter((c) => !c.classList.contains('d-none'));
+    const hidden = cards.filter((c) => c.classList.contains('d-none'));
+
+    visible.sort((a, b) => {
+        const nameA = (a.getAttribute('data-class-name') || '').toLowerCase();
+        const nameB = (b.getAttribute('data-class-name') || '').toLowerCase();
+        const teacherA = (a.getAttribute('data-teacher') || '').toLowerCase();
+        const teacherB = (b.getAttribute('data-teacher') || '').toLowerCase();
+        const studentsA = parseInt(a.getAttribute('data-student-count') || '0', 10) || 0;
+        const studentsB = parseInt(b.getAttribute('data-student-count') || '0', 10) || 0;
+        const assignmentsA = parseInt(a.getAttribute('data-assignment-count') || '0', 10) || 0;
+        const assignmentsB = parseInt(b.getAttribute('data-assignment-count') || '0', 10) || 0;
+
+        switch (sortBy) {
+            case 'name_desc': return nameB.localeCompare(nameA);
+            case 'teacher_asc': return teacherA.localeCompare(teacherB) || nameA.localeCompare(nameB);
+            case 'students_desc': return studentsB - studentsA || nameA.localeCompare(nameB);
+            case 'assignments_desc': return assignmentsB - assignmentsA || nameA.localeCompare(nameB);
+            default: return nameA.localeCompare(nameB);
+        }
+    });
+
+    visible.forEach((card) => grid.appendChild(card));
+    hidden.forEach((card) => grid.appendChild(card));
+}
+
 function filterClassCards() {
     const searchInput = document.getElementById('classSearchInput');
     const schoolYearFilter = document.getElementById('asgSchoolYearFilter');
     const subjectFilter = document.getElementById('asgSubjectFilter');
     const statusFilter = document.getElementById('asgStatusFilter');
+    const gradeFilter = document.getElementById('asgGradeFilter');
+    const teacherFilter = document.getElementById('asgTeacherFilter');
+    const enrollmentFilter = document.getElementById('asgEnrollmentFilter');
+    const assignmentFilter = document.getElementById('asgAssignmentFilter');
     const cards = document.querySelectorAll('.class-search-item');
     const countEl = document.getElementById('classSearchCount');
     const emptyState = document.getElementById('classSearchEmptyState');
@@ -1198,6 +1387,10 @@ function filterClassCards() {
     const yearChosen = !!selectedYear;
     const selectedSubject = subjectFilter ? subjectFilter.value : '';
     const selectedStatus = statusFilter ? statusFilter.value : '';
+    const selectedGrade = gradeFilter ? gradeFilter.value : '';
+    const selectedTeacher = teacherFilter ? teacherFilter.value : '';
+    const selectedEnrollment = enrollmentFilter ? enrollmentFilter.value : '';
+    const selectedAssignment = assignmentFilter ? assignmentFilter.value : '';
 
     let visibleCount = 0;
     let assignmentTotal = 0;
@@ -1210,6 +1403,10 @@ function filterClassCards() {
         const subject = cardCol.getAttribute('data-subject') || '';
         const status = cardCol.getAttribute('data-status') || '';
         const schoolYearId = String(cardCol.getAttribute('data-school-year-id') || '');
+        const gradeLevels = (cardCol.getAttribute('data-grade-levels') || '').split(',').map((g) => g.trim()).filter(Boolean);
+        const teacherKey = (cardCol.getAttribute('data-teacher-key') || '').trim();
+        const studentCount = parseInt(cardCol.getAttribute('data-student-count') || '0', 10) || 0;
+        const assignmentCount = parseInt(cardCol.getAttribute('data-assignment-count') || '0', 10) || 0;
 
         let show = yearChosen;
         if (!show) {
@@ -1220,16 +1417,23 @@ function filterClassCards() {
         if (selectedSubject && subject !== selectedSubject) show = false;
         if (selectedStatus && status !== selectedStatus) show = false;
         if (schoolYearId !== selectedYear) show = false;
+        if (selectedGrade && !gradeLevels.includes(selectedGrade)) show = false;
+        if (selectedTeacher && teacherKey !== selectedTeacher) show = false;
+        if (selectedEnrollment === 'with' && studentCount <= 0) show = false;
+        if (selectedEnrollment === 'empty' && studentCount > 0) show = false;
+        if (selectedAssignment === 'with' && assignmentCount <= 0) show = false;
+        if (selectedAssignment === 'none' && assignmentCount > 0) show = false;
 
         cardCol.classList.toggle('d-none', !show);
         if (show) {
             visibleCount += 1;
-            assignmentTotal += parseInt(cardCol.getAttribute('data-assignment-count') || '0', 10) || 0;
-            enrollmentTotal += parseInt(cardCol.getAttribute('data-student-count') || '0', 10) || 0;
-            const tk = cardCol.getAttribute('data-teacher-key') || '';
-            if (tk.trim()) teacherKeys.add(tk.trim());
+            assignmentTotal += assignmentCount;
+            enrollmentTotal += studentCount;
+            if (teacherKey) teacherKeys.add(teacherKey);
         }
     });
+
+    sortAsgVisibleClassCards();
 
     if (countEl) {
         countEl.textContent = yearChosen
@@ -1260,64 +1464,40 @@ function filterClassCards() {
     }
 }
 
+function setAsgPrettySelectEnabled(selectEl, enabled) {
+    if (!selectEl) return;
+    selectEl.disabled = !enabled;
+    const wrap = asgPrettySelectWrapper(selectEl);
+    const btn = wrap ? wrap.querySelector('.mgmt-asg-pretty-select-btn') : null;
+    if (btn) btn.disabled = !enabled;
+}
+
 function syncAsgDependentFilters() {
     const schoolYearFilter = document.getElementById('asgSchoolYearFilter');
     const subjectFilter = document.getElementById('asgSubjectFilter');
     const statusFilter = document.getElementById('asgStatusFilter');
+    const gradeFilter = document.getElementById('asgGradeFilter');
+    const teacherFilter = document.getElementById('asgTeacherFilter');
+    const enrollmentFilter = document.getElementById('asgEnrollmentFilter');
+    const assignmentFilter = document.getElementById('asgAssignmentFilter');
+    const sortFilter = document.getElementById('asgSortFilter');
+    const dependentFilters = [subjectFilter, statusFilter, gradeFilter, teacherFilter, enrollmentFilter, assignmentFilter, sortFilter];
     const hasYear = !!((schoolYearFilter && schoolYearFilter.value) ? String(schoolYearFilter.value).trim() : '');
 
-    function prettySelectWrapper(selectEl) {
-        if (!selectEl) return null;
-        return document.querySelector(`.mgmt-asg-pretty-select[data-select-id="${selectEl.id}"]`);
-    }
-    function setPrettySelectEnabled(selectEl, enabled) {
-        if (!selectEl) return;
-        selectEl.disabled = !enabled;
-        const wrap = prettySelectWrapper(selectEl);
-        const btn = wrap ? wrap.querySelector('.mgmt-asg-pretty-select-btn') : null;
-        if (btn) btn.disabled = !enabled;
-    }
-    function initAsgPrettySelect(wrapperEl) {
-        const selectId = wrapperEl.getAttribute('data-select-id');
-        const selectEl = document.getElementById(selectId);
-        if (!selectEl) return;
-        const btn = wrapperEl.querySelector('.mgmt-asg-pretty-select-btn');
-        const menu = wrapperEl.querySelector('.mgmt-asg-pretty-select-menu');
-        if (!btn || !menu) return;
-        function setBtnLabelFromSelect() {
-            const opt = selectEl.options[selectEl.selectedIndex];
-            btn.textContent = (opt && opt.textContent) ? opt.textContent.trim() : 'Select';
-        }
-        menu.innerHTML = '';
-        Array.from(selectEl.options).forEach((opt) => {
-            const li = document.createElement('li');
-            const a = document.createElement('button');
-            a.type = 'button';
-            a.className = 'dropdown-item mgmt-asg-pretty-select-item';
-            a.setAttribute('data-value', opt.value);
-            a.textContent = (opt.textContent || '').trim();
-            li.appendChild(a);
-            menu.appendChild(li);
-        });
-        menu.onclick = function (e) {
-            const item = e.target.closest('.mgmt-asg-pretty-select-item');
-            if (!item) return;
-            selectEl.value = item.getAttribute('data-value') || '';
-            setBtnLabelFromSelect();
-            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        };
-        setBtnLabelFromSelect();
-    }
+    dependentFilters.forEach((el) => setAsgPrettySelectEnabled(el, hasYear));
 
-    setPrettySelectEnabled(subjectFilter, hasYear);
-    setPrettySelectEnabled(statusFilter, hasYear);
-    if (!hasYear) {
-        if (subjectFilter) subjectFilter.value = '';
-        if (statusFilter) statusFilter.value = '';
-        const sw = prettySelectWrapper(subjectFilter);
-        const stw = prettySelectWrapper(statusFilter);
-        if (sw) initAsgPrettySelect(sw);
-        if (stw) initAsgPrettySelect(stw);
+    if (hasYear) {
+        rebuildAsgYearDependentOptions();
+    } else {
+        dependentFilters.forEach((el) => {
+            if (!el || el === sortFilter) return;
+            el.value = '';
+        });
+        if (sortFilter) sortFilter.value = 'name_asc';
+        dependentFilters.forEach((el) => {
+            const wrap = asgPrettySelectWrapper(el);
+            if (wrap) initAsgPrettySelectOne(wrap);
+        });
     }
 }
 
@@ -1340,37 +1520,7 @@ async function ensureAsgSchoolYearsLoaded() {
 }
 
 function initAsgPrettySelects() {
-    document.querySelectorAll('.mgmt-asg-pretty-select').forEach((wrapperEl) => {
-        const selectId = wrapperEl.getAttribute('data-select-id');
-        const selectEl = document.getElementById(selectId);
-        if (!selectEl) return;
-        const btn = wrapperEl.querySelector('.mgmt-asg-pretty-select-btn');
-        const menu = wrapperEl.querySelector('.mgmt-asg-pretty-select-menu');
-        if (!btn || !menu) return;
-        function setBtnLabelFromSelect() {
-            const opt = selectEl.options[selectEl.selectedIndex];
-            btn.textContent = (opt && opt.textContent) ? opt.textContent.trim() : 'Select';
-        }
-        menu.innerHTML = '';
-        Array.from(selectEl.options).forEach((opt) => {
-            const li = document.createElement('li');
-            const a = document.createElement('button');
-            a.type = 'button';
-            a.className = 'dropdown-item mgmt-asg-pretty-select-item';
-            a.setAttribute('data-value', opt.value);
-            a.textContent = (opt.textContent || '').trim();
-            li.appendChild(a);
-            menu.appendChild(li);
-        });
-        menu.addEventListener('click', function (e) {
-            const item = e.target.closest('.mgmt-asg-pretty-select-item');
-            if (!item) return;
-            selectEl.value = item.getAttribute('data-value') || '';
-            setBtnLabelFromSelect();
-            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-        setBtnLabelFromSelect();
-    });
+    document.querySelectorAll('.mgmt-asg-pretty-select').forEach(initAsgPrettySelectOne);
 }
 
 // Initialize view based on URL parameter (only set display, don't redirect)
@@ -1403,13 +1553,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const searchInput = document.getElementById('classSearchInput');
     const schoolYearFilter = document.getElementById('asgSchoolYearFilter');
-    const subjectFilter = document.getElementById('asgSubjectFilter');
-    const statusFilter = document.getElementById('asgStatusFilter');
+    const asgDependentFilterIds = [
+        'asgSubjectFilter', 'asgStatusFilter', 'asgGradeFilter', 'asgTeacherFilter',
+        'asgEnrollmentFilter', 'asgAssignmentFilter', 'asgSortFilter'
+    ];
     const resetBtn = document.getElementById('resetAsgClassFilters');
 
     if (searchInput) searchInput.addEventListener('input', filterClassCards);
-    if (subjectFilter) subjectFilter.addEventListener('change', filterClassCards);
-    if (statusFilter) statusFilter.addEventListener('change', filterClassCards);
+    asgDependentFilterIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', filterClassCards);
+    });
     if (schoolYearFilter) {
         schoolYearFilter.addEventListener('change', function () {
             syncAsgDependentFilters();
@@ -1419,9 +1573,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
             if (searchInput) searchInput.value = '';
-            if (subjectFilter) subjectFilter.value = '';
-            if (statusFilter) statusFilter.value = '';
             if (schoolYearFilter) schoolYearFilter.value = '';
+            asgDependentFilterIds.forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = (id === 'asgSortFilter') ? 'name_asc' : '';
+            });
             initAsgPrettySelects();
             syncAsgDependentFilters();
             filterClassCards();

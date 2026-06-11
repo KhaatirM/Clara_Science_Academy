@@ -1,0 +1,333 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_dashboard.css') }}?v=4">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="rh rh--parent container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    {% include 'parents/_parent_hub_header.html' %}
+
+    <div class="rh-content">
+      {% if section == 'home' %}
+        {% if not children %}
+        <div class="pp-alert-banner pp-alert-banner--info">
+          <i class="bi bi-info-circle fs-5"></i>
+          <span>No students are linked to your account yet. Please contact the school office if you believe this is an error.</span>
+        </div>
+        {% else %}
+        {% include 'parents/_parent_child_picker.html' %}
+
+        {% if active_summary %}
+        <div class="rh-insights" role="list">
+          <div class="rh-insight" role="listitem">
+            <span class="rh-insight-icon"><i class="bi bi-graph-up"></i></span>
+            <div>
+              <div class="rh-insight-value">{{ "%.2f"|format(active_summary.gpa|default(0)) }}</div>
+              <div class="rh-insight-label">GPA</div>
+            </div>
+          </div>
+          <div class="rh-insight" role="listitem">
+            <span class="rh-insight-icon"><i class="bi bi-journal-bookmark"></i></span>
+            <div>
+              <div class="rh-insight-value">{{ active_summary.classes|length }}</div>
+              <div class="rh-insight-label">Classes</div>
+            </div>
+          </div>
+          <div class="rh-insight" role="listitem">
+            <span class="rh-insight-icon"><i class="bi bi-check-circle"></i></span>
+            <div>
+              <div class="rh-insight-value">{{ active_summary.attendance_summary.Present|default(0) }}</div>
+              <div class="rh-insight-label">Days present</div>
+            </div>
+          </div>
+          <div class="rh-insight" role="listitem">
+            <span class="rh-insight-icon"><i class="bi bi-x-circle"></i></span>
+            <div>
+              <div class="rh-insight-value">{{ active_summary.attendance_summary.Absent|default(0) }}</div>
+              <div class="rh-insight-label">Absences</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pp-grid">
+          <div class="pp-card">
+            <div class="pp-card__head"><i class="bi bi-bar-chart-line"></i> Class averages</div>
+            <div class="pp-card__body">
+              {% if active_summary.class_grades %}
+                {% for name, avg in active_summary.class_grades.items() %}
+                <div class="pp-grade-row">
+                  <span class="pp-grade-row__name">{{ name }}</span>
+                  <span class="pp-grade-row__bar-wrap" aria-hidden="true">
+                    <span class="pp-grade-row__bar" style="width: {{ [avg, 100]|min }}%;"></span>
+                  </span>
+                  <span class="pp-grade-row__pct">{{ avg }}%</span>
+                </div>
+                {% endfor %}
+              {% else %}
+              <div class="pp-empty">
+                <i class="bi bi-clipboard-data"></i>
+                No graded work yet this school year.
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="pp-card">
+            <div class="pp-card__head"><i class="bi bi-clock-history"></i> Recent grades</div>
+            <div class="pp-card__body">
+              {% if active_summary.recent_grades %}
+                {% for g in active_summary.recent_grades %}
+                <div class="pp-recent-item">
+                  <div class="pp-recent-item__title">{{ g.assignment_title }}</div>
+                  <div class="pp-recent-item__meta">{{ g.class_name }}</div>
+                  <span class="pp-recent-item__score">{{ g.percentage }}%</span>
+                </div>
+                {% endfor %}
+              {% else %}
+              <div class="pp-empty">
+                <i class="bi bi-inbox"></i>
+                No recent grades to show.
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+      {% elif section == 'grades' and child %}
+        {% include 'parents/_parent_child_picker.html' %}
+        <div class="pp-card">
+          <div class="pp-card__head"><i class="bi bi-card-checklist"></i> Class averages — {{ child.first_name }}</div>
+          {% if class_grades %}
+          <table class="pp-grades-table">
+            <thead><tr><th>Class</th><th class="text-end">Average</th></tr></thead>
+            <tbody>
+              {% for name, avg in class_grades.items() %}
+              <tr>
+                <td>{{ name }}</td>
+                <td class="text-end"><strong>{{ avg }}%</strong></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div class="pp-grades-foot">Overall GPA: <strong>{{ "%.2f"|format(gpa|default(0)) }}</strong></div>
+          {% else %}
+          <div class="pp-empty">
+            <i class="bi bi-journal-x"></i>
+            No grades recorded for the active school year yet.
+          </div>
+          {% endif %}
+        </div>
+
+      {% elif section == 'attendance' and child %}
+        {% include 'parents/_parent_child_picker.html' %}
+        <div class="pp-card">
+          <div class="pp-card__head"><i class="bi bi-calendar-check"></i> Attendance — {{ child.first_name }}</div>
+          <div class="pp-attendance-grid">
+            <div class="pp-att-tile pp-att-tile--present">
+              <div class="pp-att-tile__value">{{ attendance_summary.Present|default(0) }}</div>
+              <div class="pp-att-tile__label">Present</div>
+            </div>
+            <div class="pp-att-tile pp-att-tile--tardy">
+              <div class="pp-att-tile__value">{{ attendance_summary.Tardy|default(0) }}</div>
+              <div class="pp-att-tile__label">Tardy</div>
+            </div>
+            <div class="pp-att-tile pp-att-tile--absent">
+              <div class="pp-att-tile__value">{{ attendance_summary.Absent|default(0) }}</div>
+              <div class="pp-att-tile__label">Absent</div>
+            </div>
+          </div>
+        </div>
+
+      {% elif section == 'report_cards' and child %}
+        {% include 'parents/_parent_child_picker.html' %}
+        <div class="pp-card">
+          <div class="pp-card__head"><i class="bi bi-file-earmark-text"></i> Official report cards — {{ child.first_name }}</div>
+          {% if report_cards %}
+          <div class="pp-report-card-list">
+            {% for rc in report_cards %}
+            <article class="pp-report-card-item">
+              <div class="pp-report-card-item__icon" aria-hidden="true"><i class="bi bi-file-earmark-pdf"></i></div>
+              <div class="pp-report-card-item__body">
+                <div class="pp-report-card-item__title">{{ rc.school_year.name }} · {{ rc.quarter }}</div>
+                <div class="pp-report-card-item__meta">
+                  Official report card
+                  {% if rc.generated_at %} · Generated {{ rc.generated_at.strftime('%B %d, %Y') }}{% endif %}
+                </div>
+              </div>
+              <a href="{{ url_for('parent.parent_report_card_pdf', report_card_id=rc.id) }}" class="pp-report-card-item__download" target="_blank" rel="noopener">
+                <i class="bi bi-download"></i> Download PDF
+              </a>
+            </article>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="pp-empty">
+            <i class="bi bi-hourglass-split"></i>
+            No report cards are available yet. Official report cards appear here after the Director approves them for release.
+          </div>
+          {% endif %}
+        </div>
+
+      {% elif section == 'classes' and child %}
+        {% include 'parents/_parent_child_picker.html' %}
+        <div class="pp-card">
+          <div class="pp-card__head"><i class="bi bi-grid-3x3-gap"></i> Enrolled classes — {{ child.first_name }}</div>
+          {% if classes %}
+          <div class="pp-class-grid">
+            {% for c in classes %}
+            <div class="pp-class-tile">
+              <div class="pp-class-tile__subject">{{ c.subject or 'Course' }}</div>
+              <div class="pp-class-tile__name">{{ c.name }}</div>
+              {% if c.teacher %}
+              <div class="pp-class-tile__teacher"><i class="bi bi-person me-1"></i>{{ c.teacher.first_name }} {{ c.teacher.last_name }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="pp-empty">
+            <i class="bi bi-door-closed"></i>
+            No active class enrollments for this school year.
+          </div>
+          {% endif %}
+        </div>
+
+      {% elif section == 'settings' %}
+        <div class="pp-settings-grid">
+          <div class="pp-card">
+            <div class="pp-card__head"><i class="bi bi-gear"></i> Account</div>
+            <div class="pp-settings-card">
+              <div class="pp-settings-card__row">
+                <span class="pp-settings-card__icon"><i class="bi bi-person-badge"></i></span>
+                <div>
+                  <div class="fw-semibold">Username</div>
+                  <div class="text-muted small">{{ current_user.username }}</div>
+                </div>
+              </div>
+              {% if current_user.email %}
+              <div class="pp-settings-card__row">
+                <span class="pp-settings-card__icon"><i class="bi bi-envelope"></i></span>
+                <div>
+                  <div class="fw-semibold">Email</div>
+                  <div class="text-muted small">{{ current_user.email }}</div>
+                </div>
+              </div>
+              {% endif %}
+              <div class="pp-settings-card__row">
+                <span class="pp-settings-card__icon"><i class="bi bi-key"></i></span>
+                <div>
+                  <div class="fw-semibold">Password</div>
+                  <div class="text-muted small">Use the change-password prompt when you sign in with a temporary password, or contact the school office for help.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pp-card">
+            <div class="pp-card__head"><i class="bi bi-palette"></i> Appearance</div>
+            <div class="pp-settings-card">
+              <div class="pp-theme-field">
+                <label for="pp_theme_preference" class="pp-theme-field__label">
+                  <i class="bi bi-brush me-1"></i> Theme
+                </label>
+                <select class="pp-theme-select" id="pp_theme_preference" name="theme" aria-describedby="pp_theme_hint">
+                  <option value="default" {% if current_user.theme_preference == 'default' or not current_user.theme_preference %}selected{% endif %}>Default</option>
+                  <option value="light" {% if current_user.theme_preference == 'light' %}selected{% endif %}>Light</option>
+                  <option value="dark" {% if current_user.theme_preference == 'dark' %}selected{% endif %}>Dark</option>
+                  <optgroup label="Seasonal">
+                    <option value="snowy" {% if current_user.theme_preference == 'snowy' %}selected{% endif %}>Snowy (Winter)</option>
+                    <option value="autumn" {% if current_user.theme_preference == 'autumn' %}selected{% endif %}>Autumn</option>
+                    <option value="spring" {% if current_user.theme_preference == 'spring' %}selected{% endif %}>Spring</option>
+                    <option value="summer" {% if current_user.theme_preference == 'summer' %}selected{% endif %}>Summer</option>
+                    <option value="holiday" {% if current_user.theme_preference == 'holiday' %}selected{% endif %}>Holiday</option>
+                  </optgroup>
+                  <optgroup label="Color">
+                    <option value="ocean" {% if current_user.theme_preference == 'ocean' %}selected{% endif %}>Ocean</option>
+                    <option value="forest" {% if current_user.theme_preference == 'forest' %}selected{% endif %}>Forest</option>
+                    <option value="sunset" {% if current_user.theme_preference == 'sunset' %}selected{% endif %}>Sunset</option>
+                    <option value="midnight" {% if current_user.theme_preference == 'midnight' %}selected{% endif %}>Midnight</option>
+                    <option value="desert" {% if current_user.theme_preference == 'desert' %}selected{% endif %}>Desert</option>
+                    <option value="lavender" {% if current_user.theme_preference == 'lavender' %}selected{% endif %}>Lavender</option>
+                    <option value="rose" {% if current_user.theme_preference == 'rose' %}selected{% endif %}>Rose</option>
+                    <option value="cherry" {% if current_user.theme_preference == 'cherry' %}selected{% endif %}>Cherry Blossom</option>
+                    <option value="aurora" {% if current_user.theme_preference == 'aurora' %}selected{% endif %}>Aurora</option>
+                    <option value="storm" {% if current_user.theme_preference == 'storm' %}selected{% endif %}>Storm</option>
+                    <option value="wine" {% if current_user.theme_preference == 'wine' %}selected{% endif %}>Wine</option>
+                    <option value="mint" {% if current_user.theme_preference == 'mint' %}selected{% endif %}>Mint</option>
+                  </optgroup>
+                </select>
+                <p class="pp-theme-field__hint" id="pp_theme_hint">Applies across the portal when you're logged in.</p>
+                <div class="pp-theme-status" id="pp_theme_status" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if section == 'settings' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const themeSelect = document.getElementById('pp_theme_preference');
+  const statusEl = document.getElementById('pp_theme_status');
+  if (!themeSelect) return;
+
+  function applyBodyTheme(theme) {
+    const body = document.body;
+    body.classList.forEach(function(cls) {
+      if (cls.indexOf('theme-') === 0) body.classList.remove(cls);
+    });
+    body.classList.add('theme-' + (theme || 'default'));
+  }
+
+  function setStatus(message, type) {
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.className = 'pp-theme-status' + (type ? ' pp-theme-status--' + type : '');
+  }
+
+  themeSelect.addEventListener('change', function() {
+    const theme = this.value;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+    const formData = new FormData();
+    formData.append('theme', theme);
+    if (csrfToken) formData.append('csrf_token', csrfToken);
+
+    themeSelect.disabled = true;
+    setStatus('Saving theme…', 'pending');
+
+    fetch("{{ url_for('auth.update_theme') }}", {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-CSRFToken': csrfToken || '', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+      .then(function(result) {
+        if (result.ok && result.data.success) {
+          applyBodyTheme(theme);
+          setStatus('Theme saved.', 'success');
+        } else {
+          setStatus(result.data.message || 'Could not save theme.', 'error');
+        }
+      })
+      .catch(function() {
+        setStatus('Could not save theme. Please try again.', 'error');
+      })
+      .finally(function() {
+        themeSelect.disabled = false;
+        setTimeout(function() { setStatus(''); }, 3000);
+      });
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

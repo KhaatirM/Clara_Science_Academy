@@ -381,6 +381,119 @@ def add_class():
     return redirect(url_for('management.classes'))
 
 
+# ============================================================
+# Core class setup — auto-create required classes per grade (K–8)
+# ============================================================
+
+@bp.route('/classes/core-class-setup', methods=['GET', 'POST'])
+@login_required
+@management_required
+def core_class_setup():
+    """
+    School Administrator / Director tool to auto-create core (non-elective) classes
+    for a school year, plus an instruction guide for manual setup.
+    """
+    from utils.core_class_catalog import (
+        SETUP_GRADE_LEVELS,
+        catalog_entries_for_grade,
+        class_name_for_grade,
+        guide_by_grade,
+        grade_label,
+        setup_key_for_entry,
+    )
+    from services.school_year_class_setup import (
+        parse_teacher_assignments_from_request,
+        preview_core_class_setup,
+        run_core_class_setup,
+        teacher_assignment_key,
+    )
+
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    teachers = [
+        t for t in TeacherStaff.query.filter(TeacherStaff.is_deleted == False).order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+        if _staff_can_be_assigned_to_classes(t)
+    ]
+
+    selected_school_year_id = request.values.get('school_year_id', type=int)
+    if not selected_school_year_id and active_school_year:
+        selected_school_year_id = active_school_year.id
+
+    selected_grades = request.values.getlist('grade_levels')
+    if not selected_grades and request.method == 'GET':
+        selected_grades = [str(g) for g in SETUP_GRADE_LEVELS]
+
+    grade_levels_int = [int(g) for g in selected_grades if str(g).isdigit()]
+    teacher_assignments = (
+        parse_teacher_assignments_from_request(request, grade_levels_int)
+        if grade_levels_int
+        else {}
+    )
+    grade_default_teachers = {
+        g: request.values.get(f'grade_default_teacher_{g}', type=int)
+        for g in grade_levels_int
+    }
+
+    preview = None
+    if request.method == 'POST':
+        action = (request.form.get('action') or 'preview').strip()
+        if not selected_school_year_id:
+            flash('Select a school year.', 'warning')
+        elif not grade_levels_int:
+            flash('Select at least one grade level.', 'warning')
+        elif action == 'create':
+            result = run_core_class_setup(
+                selected_school_year_id,
+                grade_levels_int,
+                teacher_assignments,
+            )
+            preview = result
+            if result.get('errors'):
+                for err in result['errors']:
+                    flash(err, 'danger')
+            elif result.get('created_count', 0):
+                flash(
+                    f"Created {result['created_count']} core class(es). "
+                    f"{len(result.get('skipped', []))} already existed and were skipped.",
+                    'success',
+                )
+                return redirect(url_for(
+                    'management.classes',
+                    school_year_id=selected_school_year_id,
+                ))
+            else:
+                flash('No new classes were needed — all core classes already exist for the selected grades.', 'info')
+        else:
+            preview = preview_core_class_setup(
+                selected_school_year_id,
+                grade_levels_int,
+                teacher_assignments,
+            )
+            if preview.get('errors'):
+                for err in preview['errors']:
+                    flash(err, 'warning')
+
+    return render_template(
+        'management/core_classes_setup.html',
+        school_years=school_years,
+        active_school_year=active_school_year,
+        selected_school_year_id=selected_school_year_id,
+        teachers=teachers,
+        setup_grade_levels=SETUP_GRADE_LEVELS,
+        grade_label=grade_label,
+        catalog_entries_for_grade=catalog_entries_for_grade,
+        class_name_for_grade=class_name_for_grade,
+        setup_key_for_entry=setup_key_for_entry,
+        teacher_assignment_key=teacher_assignment_key,
+        guide_rows=guide_by_grade(),
+        selected_grades=selected_grades,
+        teacher_assignments=teacher_assignments,
+        grade_default_teachers=grade_default_teachers,
+        preview=preview,
+        section='classes',
+        active_tab='classes',
+    )
+
 
 # ============================================================
 # Route: /class/<int:class_id>/manage

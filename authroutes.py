@@ -376,6 +376,9 @@ def dashboard():
     if canonical_role_label(current_user.role) == 'Student':
         return redirect(url_for('student.student_dashboard'))
 
+    if canonical_role_label(current_user.role) == 'Parent':
+        return redirect(url_for('parent.parent_dashboard'))
+
     if staff_must_choose_dashboard(current_user):
         target = session.get('staff_dashboard_target')
         if target == 'tech' and user_has_tech_route_access(current_user):

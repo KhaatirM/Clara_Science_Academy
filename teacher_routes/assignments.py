@@ -1223,27 +1223,28 @@ def bulk_void_assignments():
 @login_required
 @teacher_required
 def view_extension_requests():
-    """View all extension requests for teacher's assignments"""
-    from models import ExtensionRequest, Class
+    """View extension requests for the active school year (scoped by role)."""
+    from models import ExtensionRequest
     from datetime import datetime
+    from utils.school_year_filters import (
+        extension_requests_query,
+        teacher_class_ids_active_school_year,
+    )
     
     teacher = get_teacher_or_admin()
     
     if is_admin():
-        # Administrators see all extension requests
-        extension_requests = ExtensionRequest.query.order_by(ExtensionRequest.requested_at.desc()).all()
+        extension_requests = extension_requests_query().order_by(
+            ExtensionRequest.requested_at.desc()
+        ).all()
     else:
-        # Teachers see extension requests for their classes only
         if teacher is None:
             extension_requests = []
         else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-            class_ids = [c.id for c in classes]
-            assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-            assignment_ids = [a.id for a in assignments]
-            extension_requests = ExtensionRequest.query.filter(
-                ExtensionRequest.assignment_id.in_(assignment_ids)
-            ).order_by(ExtensionRequest.requested_at.desc()).all()
+            class_ids = teacher_class_ids_active_school_year(teacher.id)
+            extension_requests = extension_requests_query(class_ids=class_ids).order_by(
+                ExtensionRequest.requested_at.desc()
+            ).all()
     
     # Group requests by status
     pending_requests = [req for req in extension_requests if req.status == 'Pending']

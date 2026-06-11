@@ -219,7 +219,9 @@
 
           <div class="mgmt-rcc-student-actions">
             <a href="{{ url_for('management.generate_report_card_for_student', student_id=student.id, category=category) }}"
-               class="mgmt-rcc-btn mgmt-rcc-btn--band"
+               class="mgmt-rcc-btn mgmt-rcc-btn--band js-rc-unfinalized-check"
+               data-grade="{{ student.grade_level }}"
+               data-action="generate"
                target="_blank"
                rel="noopener">
               <i class="bi bi-file-earmark-text" aria-hidden="true"></i> Generate report card
@@ -248,8 +250,10 @@
                      title="View report card">
                     <i class="bi bi-eye" aria-hidden="true"></i>
                   </a>
-                  <a class="mgmt-rcc-icon-btn"
+                  <a class="mgmt-rcc-icon-btn js-rc-unfinalized-check"
                      href="{{ url_for('management.generate_report_card_pdf', report_card_id=report.id) }}"
+                     data-grade="{{ student.grade_level }}"
+                     data-action="pdf"
                      target="_blank"
                      rel="noopener"
                      title="Open PDF">
@@ -291,6 +295,20 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  const RCF_UNFINALIZED_GRADES = new Set({{ report_card_unfinalized_grades | tojson }});
+  const RCF_UNFINALIZED_CONFIRM = {{ report_card_unfinalized_confirm_messages | tojson }};
+
+  document.querySelectorAll('.js-rc-unfinalized-check').forEach(link => {
+    link.addEventListener('click', function (e) {
+      const grade = parseInt(this.getAttribute('data-grade') || '', 10);
+      if (Number.isNaN(grade) || !RCF_UNFINALIZED_GRADES.has(grade)) return;
+      const msg = RCF_UNFINALIZED_CONFIRM[String(grade)];
+      if (msg && !window.confirm(msg)) {
+        e.preventDefault();
+      }
+    });
+  });
+
   const grid = document.getElementById('rccGrid');
   if (!grid) return;
 

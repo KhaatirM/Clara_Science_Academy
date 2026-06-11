@@ -23,10 +23,13 @@ from services.google_directory_service import (
     move_user_to_ou,
     suspend_user,
     sync_user_groups,
-    sync_user_suspension_with_db_is_active,
 )
 from services.class_google_group import provision_and_sync_class_google_group
-from services.google_ou_policy import resolve_student_ou, school_level_group_for_grade
+from services.google_ou_policy import (
+    resolve_student_ou,
+    school_level_group_for_grade,
+    sync_student_google_suspension,
+)
 from utils.student_login_policy import (
     google_workspace_sync_should_skip_student,
     parse_grade_level_for_policy,
@@ -256,8 +259,8 @@ def sync_directory_data():
     """
     Sync Google Workspace Directory state from the database SSOT.
 
-    - Students: compute OU based on grade_level + grad_year (+ alumni/removal rules) and move if needed.
-      If marked for removal / inactive, suspend after ~6 months.
+    - Students: OU by grade + division completion (Alumni vs Transferred & Removed).
+      Alumni departures suspend after 1 year; transferred departures suspend immediately.
     - Classes: ensure each class has a Google Group (class-{id}-{YYYY}@domain), create if missing,
       and sync membership to enrolled students + primary/additional/substitute teachers.
     """
@@ -289,16 +292,27 @@ def sync_directory_data():
             )
             continue
 
-        sync_user_suspension_with_db_is_active(ws_email, bool(getattr(student, "is_active", True)))
+        db_active = bool(getattr(student, "is_active", True))
+        marked_for_removal = bool(getattr(student, "marked_for_removal", False))
+        is_deleted = bool(getattr(student, "is_deleted", False))
 
         decision = resolve_student_ou(
             grade_level=getattr(student, "grade_level", None),
             grad_year=getattr(student, "grad_year", None),
             expected_grad_date=getattr(student, "expected_grad_date", None),
-            is_active=bool(getattr(student, "is_active", True)),
-            marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+            is_active=db_active,
+            marked_for_removal=marked_for_removal,
+            is_deleted=is_deleted,
             status_updated_at=getattr(student, "status_updated_at", None),
             expected_graduation_year=getattr(student, "expected_graduation_year", None),
+        )
+
+        sync_student_google_suspension(
+            ws_email,
+            decision=decision,
+            is_active=db_active,
+            marked_for_removal=marked_for_removal,
+            is_deleted=is_deleted,
         )
 
         g_user = get_google_user(ws_email)
@@ -307,15 +321,12 @@ def sync_directory_data():
             ou_skipped += 1
             continue
 
-        if not bool(getattr(student, "is_active", True)):
-            # DB inactive: suspension already aligned above; skip OU / policy / group churn.
-            continue
-
         current_ou = g_user.get("orgUnitPath")
         is_suspended = bool(g_user.get("suspended", False))
 
-        # Start the 6-month clock the first time we detect removal/inactive without a timestamp
-        if decision.reason == "marked_for_removal_or_inactive" and not getattr(student, "status_updated_at", None):
+        if decision.reason in ("alumni_completed_level", "transferred_removed") and not getattr(
+            student, "status_updated_at", None
+        ):
             try:
                 student.status_updated_at = datetime.utcnow()
                 db.session.commit()
@@ -353,8 +364,8 @@ def sync_directory_data():
             desired_groups.append(level_email)
         desired_groups.append(STUDENT_ASSEMBLY_GROUP_EMAIL)
 
-        # Only enforce for active, non-removed students
-        if bool(getattr(student, "is_active", True)) and not bool(getattr(student, "marked_for_removal", False)):
+        # Only enforce for active, non-departing students
+        if db_active and not marked_for_removal and not is_deleted:
             sg_res = sync_user_groups(ws_email, desired_groups)
             if sg_res is True:
                 group_synced_students += 1

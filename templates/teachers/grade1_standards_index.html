@@ -1,0 +1,155 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/grade3_standards.css') }}">
+{% endblock %}
+
+{% macro percent_tier(p) -%}
+  {%- if p == 0 -%}zero
+  {%- elif p < 25 -%}low
+  {%- elif p < 60 -%}mid
+  {%- elif p < 100 -%}high
+  {%- else -%}full
+  {%- endif -%}
+{%- endmacro %}
+
+{# Defensive defaults so a context/code-version mismatch can't 500 the page. #}
+{% set total_classes = total_classes|default(0) %}
+{% set total_students = total_students|default(0) %}
+{% set overall_percent = overall_percent|default(0) %}
+{% set overall_filled = overall_filled|default(0) %}
+{% set overall_total = overall_total|default(0) %}
+{% set current_quarter = current_quarter|default('Q1') %}
+{% set quarter_columns = quarter_columns|default(['Q1', 'Q2', 'Q3', 'Q4']) %}
+{% set la_classes = la_classes|default([]) %}
+{% set math_classes = math_classes|default([]) %}
+{% set is_admin = is_admin|default(False) %}
+
+{% macro class_card(c) %}
+  {% set overall = c.g1_stats.overall %}
+  {% set tier = percent_tier(overall.percent) %}
+  <a href="{{ url_for('teacher.grade1_standards.grade1_standards_editor', class_id=c.id, quarter=current_quarter) }}"
+     class="g3-class-card">
+    <div class="g3-class-card-head">
+      <div>
+        <p class="g3-class-card-name">{{ c.name }}</p>
+        <div class="g3-class-card-sub">{{ c.subject }} · {{ c.g1_student_count }} student{{ '' if c.g1_student_count == 1 else 's' }}</div>
+      </div>
+      <span class="g3-class-card-percent" data-tier="{{ tier }}">{{ overall.percent }}%</span>
+    </div>
+    <div class="g3-quarter-strip">
+      {% for q in quarter_columns %}
+        {% set qstats = c.g1_stats.quarters[q] %}
+        {% set qtier = percent_tier(qstats.percent) %}
+        <div class="g3-quarter-pip" data-tier="{{ qtier }}" title="{{ q }} · {{ qstats.filled }}/{{ qstats.total }}">
+          {{ q }} · {{ qstats.percent }}%
+          <span class="g3-quarter-pip-bar" style="width: {{ qstats.percent }}%;"></span>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="g3-class-card-foot">
+      <span>{{ overall.filled }} / {{ overall.total }} cells filled</span>
+      <span class="g3-link">Open <i class="bi bi-arrow-right-short"></i></span>
+    </div>
+  </a>
+{% endmacro %}
+
+{% block dashboard_content %}
+<div class="g3-hub container-fluid px-0 px-md-1">
+  <div class="g3-shell">
+
+    <header class="g3-hero">
+      <div>
+        <p class="g3-eyebrow">Standards-based grading</p>
+        <h1 class="g3-title">1st Grade Standards Checklist</h1>
+        <p class="g3-subtitle">
+          <i class="bi bi-check2-square"></i>
+          {{ school_year.name }} · Mark each student M / W / NA / UA per standard, per quarter
+        </p>
+      </div>
+      <div class="g3-hero-actions">
+        {% if is_admin %}
+          <span class="g3-role-badge"><i class="bi bi-shield-fill"></i> Admin view</span>
+        {% endif %}
+        <a class="g3-btn g3-btn--ghost" href="{{ url_for('teacher.dashboard.my_classes') }}">
+          <i class="bi bi-arrow-left"></i> My classes
+        </a>
+        <a class="g3-btn g3-btn--ghost" href="{{ url_for('management.management_dashboard') if is_admin else url_for('teacher.dashboard.my_classes') }}">
+          <i class="bi bi-house-door"></i> Home
+        </a>
+      </div>
+    </header>
+
+    <div class="g3-insights" role="list">
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-stack"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ total_classes }}</div>
+          <div class="g3-insight-label">1st grade classes</div>
+        </div>
+      </div>
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-people-fill"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ total_students }}</div>
+          <div class="g3-insight-label">Students</div>
+        </div>
+      </div>
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-bar-chart-line-fill"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ overall_percent }}%</div>
+          <div class="g3-insight-label">Overall completeness</div>
+          <div class="g3-insight-mini">{{ overall_filled }} / {{ overall_total }} cells</div>
+        </div>
+      </div>
+      <div class="g3-insight" role="listitem">
+        <span class="g3-insight-icon"><i class="bi bi-calendar3"></i></span>
+        <div>
+          <div class="g3-insight-value">{{ current_quarter }}</div>
+          <div class="g3-insight-label">Current quarter</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="g3-subject-group">
+      <div class="g3-subject-header">
+        <h2 class="g3-subject-title">
+          <span class="g3-subject-icon g3-subject-icon--la"><i class="bi bi-book"></i></span>
+          Language Arts
+        </h2>
+        <span class="g3-subject-meta">
+          {{ la_classes|length }} class{{ '' if la_classes|length == 1 else 'es' }}
+        </span>
+      </div>
+      {% if la_classes %}
+        <div class="g3-class-grid">
+          {% for c in la_classes %}{{ class_card(c) }}{% endfor %}
+        </div>
+      {% else %}
+        <p class="g3-empty">No 1st grade Language Arts classes available to you for this school year.</p>
+      {% endif %}
+    </section>
+
+    <section class="g3-subject-group">
+      <div class="g3-subject-header">
+        <h2 class="g3-subject-title">
+          <span class="g3-subject-icon g3-subject-icon--math"><i class="bi bi-calculator"></i></span>
+          Math
+        </h2>
+        <span class="g3-subject-meta">
+          {{ math_classes|length }} class{{ '' if math_classes|length == 1 else 'es' }}
+        </span>
+      </div>
+      {% if math_classes %}
+        <div class="g3-class-grid">
+          {% for c in math_classes %}{{ class_card(c) }}{% endfor %}
+        </div>
+      {% else %}
+        <p class="g3-empty">No 1st grade Math classes available to you for this school year.</p>
+      {% endif %}
+    </section>
+
+  </div>
+</div>
+{% endblock %}

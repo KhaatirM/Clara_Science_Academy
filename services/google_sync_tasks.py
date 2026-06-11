@@ -11,6 +11,7 @@ Graduation cohorts are represented only in the Directory OU tree, not as ``YYYY@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from extensions import db
@@ -23,14 +24,16 @@ from services.google_directory_service import (
     get_google_group,
     get_google_user,
     move_user_to_ou,
+    suspend_user,
     sync_user_groups,
-    sync_user_suspension_with_db_is_active,
 )
 from services.google_ou_policy import (
     STAFF_OU_TERMINATED_REMOVED,
     get_staff_ou_path,
     resolve_student_ou,
     school_level_group_for_grade,
+    sync_staff_google_suspension,
+    sync_student_google_suspension,
 )
 from utils.student_login_policy import (
     google_workspace_sync_should_skip_student,
@@ -65,22 +68,37 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
         return
 
     db_active = bool(getattr(student, "is_active", True))
-    sync_user_suspension_with_db_is_active(email, db_active)
-    if not db_active:
-        return
+    marked_for_removal = bool(getattr(student, "marked_for_removal", False))
+    is_deleted = bool(getattr(student, "is_deleted", False))
 
     decision = resolve_student_ou(
         grade_level=getattr(student, "grade_level", None),
         grad_year=getattr(student, "grad_year", None),
         expected_grad_date=getattr(student, "expected_grad_date", None),
-        is_active=bool(getattr(student, "is_active", True)),
-        marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+        is_active=db_active,
+        marked_for_removal=marked_for_removal,
+        is_deleted=is_deleted,
         status_updated_at=getattr(student, "status_updated_at", None),
         expected_graduation_year=getattr(student, "expected_graduation_year", None),
     )
 
+    sync_student_google_suspension(
+        email,
+        decision=decision,
+        is_active=db_active,
+        marked_for_removal=marked_for_removal,
+        is_deleted=is_deleted,
+    )
+
     g_user = get_google_user(email)
     if not g_user:
+        if not ensure_ou_exists(decision.target_ou_path):
+            logger.warning(
+                "sync_single_user_to_google: ensure_ou_exists failed for %s (%s)",
+                decision.target_ou_path,
+                email,
+            )
+            return
         created = create_google_user(
             {
                 "primaryEmail": email,
@@ -95,9 +113,21 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
         else:
             g_user = get_google_user(email)
     else:
+        if decision.reason in ("alumni_completed_level", "transferred_removed") and not getattr(
+            student, "status_updated_at", None
+        ):
+            try:
+                student.status_updated_at = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         current_ou = g_user.get("orgUnitPath")
         if current_ou != decision.target_ou_path:
             move_user_to_ou(email, decision.target_ou_path)
+
+        if decision.should_suspend_now and not bool(g_user.get("suspended", False)):
+            suspend_user(email)
 
     level_key = school_level_group_for_grade(getattr(student, "grade_level", None))
     level_email = None
@@ -112,9 +142,7 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
     if level_email:
         desired_school_groups.insert(0, level_email)
 
-    if bool(getattr(student, "is_active", True)) and not bool(
-        getattr(student, "marked_for_removal", False)
-    ):
+    if db_active and not marked_for_removal and not is_deleted:
         if create_missing_groups:
             for g in desired_school_groups:
                 if not get_google_group(g):
@@ -141,8 +169,7 @@ def _sync_staff_workspace(
     linked_user = user or db.session.query(User).filter_by(teacher_staff_id=staff.id).first()
     target_ou = get_staff_ou_path(staff, linked_user)
 
-    db_active = bool(getattr(staff, "is_active", True))
-    sync_user_suspension_with_db_is_active(email, db_active)
+    sync_staff_google_suspension(email, staff)
 
     g_user = get_google_user(email)
     if not g_user:

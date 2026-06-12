@@ -32,6 +32,7 @@ from services.google_ou_policy import (
     get_staff_ou_path,
     resolve_student_ou,
     school_level_group_for_grade,
+    staff_google_account_eligible,
     sync_staff_google_suspension,
     sync_student_google_suspension,
 )
@@ -173,6 +174,12 @@ def _sync_staff_workspace(
 
     g_user = get_google_user(email)
     if not g_user:
+        if not staff_google_account_eligible(staff):
+            logger.info(
+                "sync_single_user_to_google: skip creating Workspace account for ineligible staff %s",
+                email,
+            )
+            return
         if not ensure_ou_exists(target_ou):
             logger.warning(
                 "sync_single_user_to_google: ensure_ou_exists failed for staff OU %s (%s); skip create",

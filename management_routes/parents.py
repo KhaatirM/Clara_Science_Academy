@@ -56,12 +56,31 @@ def parents_hub():
         ),
     ).count()
 
+    linked_student_ids = {
+        row[0]
+        for row in db.session.query(ParentStudentLink.student_id).distinct().all()
+    }
+    students_pending_link = Student.query.filter(
+        Student.is_deleted.is_(False),
+        Student.is_active.is_(True),
+        db.or_(
+            Student.parent1_email.isnot(None),
+            Student.parent2_email.isnot(None),
+        ),
+    ).all()
+    students_not_linked = sum(
+        1 for s in students_pending_link if s.id not in linked_student_ids
+    )
+    total_child_links = ParentStudentLink.query.count()
+
     parent_accounts = len(parent_users)
     return render_template(
         "management/parents_hub.html",
         rows=rows,
         parent_accounts=parent_accounts,
         students_with_parent_email=students_with_parent_email,
+        students_not_linked=students_not_linked,
+        total_child_links=total_child_links,
         section="parents",
     )
 

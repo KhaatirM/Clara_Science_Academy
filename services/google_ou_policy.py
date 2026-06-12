@@ -42,7 +42,12 @@ def _sanitize_ou_path(path: str) -> str:
     if not path:
         return "/"
     out = path.rstrip("/")
-    return out if out else "/"
+    if not out:
+        return "/"
+    # Legacy OU segment: keep singular ``Administrator`` (not ``Administrators``).
+    if "/Staff/Administrators" in out:
+        out = out.replace("/Staff/Administrators", "/Staff/Administrator")
+    return out
 
 
 def _parse_grade_level(grade_level) -> Optional[int]:
@@ -421,11 +426,20 @@ def resolve_student_ou(
 
 def staff_should_suspend_immediately(staff: "TeacherStaffModel") -> bool:
     """Staff deactivation is immediate (OU + Google suspended), never hard-deleted by sync."""
+    employment = (getattr(staff, "employment_status", None) or "").strip().lower()
     return (
         bool(getattr(staff, "is_deleted", False))
         or not bool(getattr(staff, "is_active", True))
         or bool(getattr(staff, "marked_for_removal", False))
+        or employment == "inactive"
     )
+
+
+def staff_google_account_eligible(staff: "TeacherStaffModel") -> bool:
+    """Only active employed staff with portal login should receive new Workspace accounts."""
+    if staff_should_suspend_immediately(staff):
+        return False
+    return bool(getattr(staff, "portal_login", True))
 
 
 def sync_student_google_suspension(

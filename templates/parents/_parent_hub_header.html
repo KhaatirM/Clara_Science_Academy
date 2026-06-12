@@ -16,6 +16,10 @@
     <p class="rh-eyebrow">Enrollments</p>
     <h1 class="rh-title">Classes</h1>
     <p class="rh-subtitle"><i class="bi bi-person-fill"></i> {{ child.first_name }} {{ child.last_name }}</p>
+    {% elif section == 'report_cards' and child %}
+    <p class="rh-eyebrow">Official records</p>
+    <h1 class="rh-title">Report Cards</h1>
+    <p class="rh-subtitle"><i class="bi bi-person-fill"></i> {{ child.first_name }} {{ child.last_name }}</p>
     {% elif section == 'settings' %}
     <p class="rh-eyebrow">Account</p>
     <h1 class="rh-title">Settings</h1>
@@ -24,6 +28,9 @@
   </div>
   <div class="rh-hero-actions">
     <span class="rh-role-badge rh-role-badge--parent"><i class="bi bi-people-fill"></i> Parent</span>
+    {% if school_year and section == 'home' %}
+    <span class="pp-year-badge"><i class="bi bi-calendar3"></i> {{ school_year.name }}</span>
+    {% endif %}
     {% if section != 'home' %}
     <a href="{{ url_for('parent.parent_dashboard') }}" class="rh-btn rh-btn--ghost"><i class="bi bi-house-door"></i> Home</a>
     {% endif %}

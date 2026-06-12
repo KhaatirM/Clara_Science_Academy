@@ -22,9 +22,9 @@
     <title>{{ dashboard_title or 'Dashboard' }} - Clara Science Academy</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=3">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}?v=3">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/hub_themes.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v=2">
     {% if not disable_academic_alert_popup and academic_concerns_audience|default(false) and at_risk_alerts %}
@@ -41,12 +41,27 @@
         <div class="sidebar" id="sidebar">
             <div class="sidebar-top">
             <h3 class="sidebar-heading text-center">
-                {{ dashboard_title or ('Staff' if sidebar_role_canonical == 'Other Staff' else (sidebar_role_canonical or current_user.role)) }}
+                {% if sidebar_role_canonical == 'Parent' %}
+                    <span class="sidebar-heading__name">{{ parent_display_name or 'Family Portal' }}</span>
+                    {% if parent_display_name %}
+                    <span class="sidebar-heading__portal">Family Portal</span>
+                    {% endif %}
+                {% else %}
+                    {{ dashboard_title or ('Staff' if sidebar_role_canonical == 'Other Staff' else (sidebar_role_canonical or current_user.role)) }}
+                {% endif %}
             </h3>
-            {% if current_user.is_authenticated and school_timezone_display %}
-            <p class="sidebar-school-tz text-center small text-muted mb-2 px-2" title="Assignment due dates, open/close windows, and school-time labels use this timezone for everyone.">
-                <i class="bi bi-globe"></i> {{ school_timezone_display }}
-            </p>
+            {% if current_user.is_authenticated and school_timezone_iana %}
+            <div class="sidebar-school-tz" id="sidebarSchoolTz" data-iana="{{ school_timezone_iana }}"
+                 title="School timezone for due dates and schedules">
+                <div class="sidebar-school-tz__clock-row">
+                    <i class="bi bi-clock" aria-hidden="true"></i>
+                    <time class="sidebar-school-tz__clock" id="sidebarSchoolClock">{{ school_timezone_clock or '--:-- --' }}</time>
+                    {% if school_timezone_zone %}
+                    <span class="sidebar-school-tz__zone" id="sidebarSchoolZone">{{ school_timezone_zone }}</span>
+                    {% endif %}
+                </div>
+                <span class="sidebar-school-tz__iana">{{ school_timezone_iana }}</span>
+            </div>
             {% endif %}
             <!-- Sidebar toggle - visible on all screen sizes -->
             <div class="sidebar-toggle" onclick="sidebarIsDrawerMode() ? toggleMobileSidebar() : toggleSidebar()">
@@ -168,9 +183,6 @@
                     
                 {# --- STUDENT TABS --- #}
                 {% elif sidebar_role_canonical == 'Parent' %}
-                    <li class="nav-item px-3 py-2 d-none d-md-block">
-                        <small class="text-muted text-uppercase" style="letter-spacing:0.08em;font-size:0.65rem;">Family Portal</small>
-                    </li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.parent_dashboard' %}active{% endif %}" href="{{ url_for('parent.parent_dashboard') }}"><i class="bi bi-house-heart-fill"></i><span> Home</span></a></li>
                     {% if active_child_id is defined and active_child_id %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'parent.child_grades' %}active{% endif %}" href="{{ url_for('parent.child_grades', student_id=active_child_id) }}"><i class="bi bi-card-checklist"></i><span> Grades</span></a></li>
@@ -378,6 +390,49 @@
             }
         });
         window.addEventListener('resize', function () { syncSidebarToViewport(); });
+
+        (function initSidebarSchoolClock() {
+            const root = document.getElementById('sidebarSchoolTz');
+            if (!root) return;
+            const iana = root.dataset.iana;
+            const clockEl = document.getElementById('sidebarSchoolClock');
+            const zoneEl = document.getElementById('sidebarSchoolZone');
+            if (!iana || !clockEl) return;
+
+            function tick() {
+                try {
+                    const fmt = new Intl.DateTimeFormat('en-US', {
+                        timeZone: iana,
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZoneName: 'short',
+                    });
+                    const parts = fmt.formatToParts(new Date());
+                    let hour = '';
+                    let minute = '';
+                    let dayPeriod = '';
+                    let tzName = '';
+                    parts.forEach(function (p) {
+                        if (p.type === 'hour') hour = p.value;
+                        if (p.type === 'minute') minute = p.value;
+                        if (p.type === 'dayPeriod') dayPeriod = p.value;
+                        if (p.type === 'timeZoneName') tzName = p.value;
+                    });
+                    if (hour && minute) {
+                        clockEl.textContent = hour + ':' + minute + ' ' + dayPeriod;
+                    }
+                    if (zoneEl && tzName) {
+                        zoneEl.textContent = tzName;
+                    }
+                } catch (err) {
+                    /* keep server-rendered time */
+                }
+            }
+
+            tick();
+            setInterval(tick, 30000);
+        })();
     </script>
     
     <!-- Password Change Popup Modal -->

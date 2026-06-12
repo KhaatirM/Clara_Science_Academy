@@ -206,6 +206,9 @@ def run_core_class_setup(
 
     if created:
         db.session.commit()
+        from services.class_google_group import try_provision_class_google_group
+        for row in created:
+            try_provision_class_google_group(row['id'])
     else:
         db.session.rollback()
 

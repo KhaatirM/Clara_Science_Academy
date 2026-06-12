@@ -444,8 +444,8 @@ body {
     flex-shrink: 0;
     margin-top: 0;
     padding: 20px;
-    background-color: #212529;
-    border-top: 1px solid #343a40;
+    background-color: var(--sidebar-logout-bg);
+    border-top: 1px solid var(--sidebar-logout-border);
     z-index: 1001;
 }
 
@@ -469,6 +469,19 @@ body {
     transition: width 0.3s ease;
     z-index: 1000;
     overflow: hidden;
+    --sidebar-tz-bg: rgba(255, 255, 255, 0.1);
+    --sidebar-tz-border: rgba(255, 255, 255, 0.16);
+    --sidebar-tz-text: #f8f9fa;
+    --sidebar-tz-muted: rgba(255, 255, 255, 0.72);
+    --sidebar-tz-accent: #6fa8ff;
+    --sidebar-toggle-bg: linear-gradient(135deg, #212529 0%, #343a40 100%);
+    --sidebar-toggle-bg-hover: linear-gradient(135deg, #343a40 0%, #495057 100%);
+    --sidebar-toggle-border: #0d6efd;
+    --sidebar-toggle-border-hover: #6fa8ff;
+    --sidebar-toggle-accent: #6fa8ff;
+    --sidebar-logout-bg: #212529;
+    --sidebar-logout-border: #343a40;
+    --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.55);
 }
 
 .sidebar-toggle {
@@ -478,8 +491,8 @@ body {
     width: 100%;
     height: 50px;
     cursor: pointer;
-    background: linear-gradient(135deg, #212529 0%, #343a40 100%);
-    border-bottom: 1px solid #0d6efd;
+    background: var(--sidebar-toggle-bg);
+    border-bottom: 1px solid var(--sidebar-toggle-border);
     margin-bottom: 10px;
     position: relative;
     z-index: 1100;
@@ -488,8 +501,8 @@ body {
 }
 
 .sidebar-toggle:hover {
-    background: linear-gradient(135deg, #343a40 0%, #495057 100%);
-    border-bottom-color: #6fa8ff;
+    background: var(--sidebar-toggle-bg-hover);
+    border-bottom-color: var(--sidebar-toggle-border-hover);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
@@ -515,8 +528,8 @@ body {
 }
 
 .hamburger:hover {
-    border-color: rgba(13, 110, 253, 0.3);
-    background: rgba(13, 110, 253, 0.1);
+    border-color: color-mix(in srgb, var(--sidebar-toggle-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--sidebar-toggle-accent) 12%, transparent);
     transform: translateY(-1px);
 }
 
@@ -531,7 +544,7 @@ body {
 }
 
 .hamburger:hover span {
-    background: #0d6efd;
+    background: var(--sidebar-toggle-accent);
     transform: scaleX(1.1);
 }
 
@@ -552,9 +565,9 @@ body {
 }
 
 .collapse-text:hover {
-    border-color: rgba(13, 110, 253, 0.3);
-    background: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
+    border-color: color-mix(in srgb, var(--sidebar-toggle-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--sidebar-toggle-accent) 12%, transparent);
+    color: var(--sidebar-toggle-accent);
     transform: translateY(-1px);
 }
 
@@ -604,6 +617,84 @@ body {
     border-bottom: 1px solid #6c757d;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     letter-spacing: 0.5px;
+}
+
+.sidebar-heading__name {
+    display: block;
+    font-size: 1em;
+    line-height: 1.2;
+}
+
+.sidebar-heading__portal {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.58em;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.82;
+}
+
+.sidebar-school-tz {
+    margin: 0 0.65rem 0.5rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+    text-align: center;
+    background: var(--sidebar-tz-bg);
+    border: 1px solid var(--sidebar-tz-border);
+    color: var(--sidebar-tz-text);
+    line-height: 1.25;
+}
+
+.sidebar-school-tz__clock-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.45rem;
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+}
+
+.sidebar-school-tz__clock-row .bi-clock {
+    color: var(--sidebar-tz-accent);
+    font-size: 0.95rem;
+}
+
+.sidebar-school-tz__clock {
+    font-variant-numeric: tabular-nums;
+}
+
+.sidebar-school-tz__zone {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--sidebar-tz-text);
+}
+
+.sidebar-school-tz__iana {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--sidebar-tz-muted);
+    letter-spacing: 0.02em;
+    word-break: break-word;
+}
+
+.sidebar-nav-eyebrow {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sidebar-nav-eyebrow);
 }
 
 .sidebar .nav {
@@ -669,6 +760,7 @@ body {
 }
 
 .sidebar.collapsed .sidebar-heading,
+.sidebar.collapsed .sidebar-school-tz,
 .sidebar.collapsed .nav-link span,
 .sidebar.collapsed .logout-btn-container span {
     display: none;

@@ -115,6 +115,7 @@ def main() -> int:
             get_staff_ou_path,
             resolve_student_ou,
             school_level_group_for_grade,
+            staff_google_account_eligible,
             sync_staff_google_suspension,
             sync_student_google_suspension,
         )
@@ -334,6 +335,9 @@ def main() -> int:
 
             if not g_user:
                 if apply_changes:
+                    if not staff_google_account_eligible(staff):
+                        print(f"[SKIP] would not create Workspace account for ineligible staff {email}")
+                        continue
                     if not ensure_ou_exists(target_staff_ou):
                         errors += 1
                         print(f"[ERROR] could not ensure OU exists for staff {email}: {target_staff_ou}")

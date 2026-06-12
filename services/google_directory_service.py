@@ -645,6 +645,31 @@ def get_google_group(group_email: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def delete_google_group(group_email: str) -> bool:
+    """
+    Delete a Google Group by email. Returns True if deleted or already absent.
+    """
+    service = get_directory_service()
+    if not service:
+        return False
+    group_email = (group_email or "").strip()
+    if not group_email:
+        return False
+    try:
+        service.groups().delete(groupKey=group_email).execute()
+        current_app.logger.info("Deleted Google group %s", group_email)
+        return True
+    except HttpError as e:
+        if getattr(e, "status_code", None) == 404:
+            current_app.logger.info("Google group %s already absent", group_email)
+            return True
+        current_app.logger.error("Directory API error deleting group %s: %s", group_email, e)
+        return False
+    except Exception as e:
+        current_app.logger.error("Failed to delete Google group %s: %s", group_email, e)
+        return False
+
+
 def create_google_group(group_email: str, name: str, description: str = "") -> Optional[Dict[str, Any]]:
     """
     Create a Google Group (best-effort).

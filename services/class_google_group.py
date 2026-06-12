@@ -17,11 +17,32 @@ from extensions import db
 from models import Class, Enrollment, Student, TeacherStaff, User
 from services.google_directory_service import (
     create_google_group,
+    delete_google_group,
     get_google_group,
     sync_group_members,
 )
 
 CLASS_GROUP_DOMAIN = "clarascienceacademy.org"
+
+# School-wide Workspace groups — never delete during year-end class group cleanup.
+PROTECTED_SCHOOL_GROUP_EMAILS = frozenset({
+    f"studentassembly@{CLASS_GROUP_DOMAIN}",
+    f"elementary@{CLASS_GROUP_DOMAIN}",
+    f"middle_school@{CLASS_GROUP_DOMAIN}",
+    f"highschool@{CLASS_GROUP_DOMAIN}",
+    f"teachers@{CLASS_GROUP_DOMAIN}",
+})
+
+
+def is_deletable_class_google_group_email(group_email: str) -> bool:
+    """True only for automated per-class lists (class-{id}-…@domain), not school-wide groups."""
+    email = (group_email or "").strip().lower()
+    if not email or email in PROTECTED_SCHOOL_GROUP_EMAILS:
+        return False
+    local, _, domain = email.partition("@")
+    if domain != CLASS_GROUP_DOMAIN:
+        return False
+    return local.startswith("class-")
 
 
 def default_google_group_email_for_class(class_obj: Class) -> str:
@@ -112,10 +133,11 @@ def provision_and_sync_class_google_group(class_id: int) -> bool:
         current_app.logger.warning("provision_and_sync: class %s not found", class_id)
         return False
 
-    group_email_stored = (c.google_group_email or "").strip()
-
-    if not c.is_active and not group_email_stored:
+    if not c.is_active:
+        # Archived classes: groups are removed during school-year closure; do not recreate.
         return True
+
+    group_email_stored = (c.google_group_email or "").strip()
 
     proposed = default_google_group_email_for_class(c)
 
@@ -175,3 +197,77 @@ def try_provision_class_google_group(class_id: int) -> None:
         current_app.logger.warning(
             "Class Google Group sync failed for class_id=%s: %s", class_id, exc
         )
+
+
+def delete_class_google_groups_for_school_year(school_year_id: int) -> dict:
+    """
+    Delete Workspace Google Groups for all classes in a school year being archived.
+
+    Skips protected school-wide groups (e.g. Student Assembly). Keeps ``google_group_email``
+    on the Class row for audit/history but the Workspace group is removed.
+    """
+    classes = Class.query.filter_by(school_year_id=school_year_id).all()
+    deleted = 0
+    failed = 0
+    skipped = 0
+    errors: list[str] = []
+
+    for class_obj in classes:
+        group_email = (class_obj.google_group_email or "").strip()
+        if not group_email:
+            skipped += 1
+            continue
+        if not is_deletable_class_google_group_email(group_email):
+            current_app.logger.info(
+                "Skipping protected/non-class group %s (class %s)", group_email, class_obj.id
+            )
+            skipped += 1
+            continue
+        if delete_google_group(group_email):
+            deleted += 1
+        else:
+            failed += 1
+            if len(errors) < 10:
+                errors.append(f"{class_obj.name} ({group_email})")
+
+    current_app.logger.info(
+        "Class Google Group deletion for school_year_id=%s: deleted=%s failed=%s skipped=%s",
+        school_year_id,
+        deleted,
+        failed,
+        skipped,
+    )
+    return {
+        "deleted": deleted,
+        "failed": failed,
+        "skipped": skipped,
+        "errors_sample": errors,
+    }
+
+
+def email_class_announcement_to_google_group(
+    class_obj: Class,
+    *,
+    title: str,
+    message: str,
+    sender_label: str,
+) -> bool:
+    """
+    Deliver a class announcement to the class Google Group (all rostered students + teachers).
+    """
+    group_email = (class_obj.google_group_email or "").strip()
+    if not group_email or not class_obj.is_active:
+        return False
+    if not get_google_group(group_email):
+        try_provision_class_google_group(class_obj.id)
+        if not get_google_group(group_email):
+            return False
+
+    from services.email_service import send_email
+
+    subject = (title or "Class announcement").strip()[:200]
+    body = (message or "").strip()
+    if sender_label:
+        body += f"\n\n— {sender_label}"
+    body += f"\n\n(Class: {class_obj.name})"
+    return bool(send_email(group_email, subject, body))

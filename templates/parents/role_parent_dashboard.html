@@ -1,8 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
+{% from 'parents/_parent_macros.html' import grade_letter, grade_tone, child_grade_label %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=2">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_dashboard.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_dashboard.css') }}?v=5">
 {% endblock %}
 
 {% block dashboard_content %}
@@ -13,27 +14,54 @@
     <div class="rh-content">
       {% if section == 'home' %}
         {% if not children %}
-        <div class="pp-alert-banner pp-alert-banner--info">
-          <i class="bi bi-info-circle fs-5"></i>
-          <span>No students are linked to your account yet. Please contact the school office if you believe this is an error.</span>
+        <div class="pp-empty-state">
+          <div class="pp-empty-state__icon"><i class="bi bi-people"></i></div>
+          <h2 class="pp-empty-state__title">No students linked yet</h2>
+          <p class="pp-empty-state__text">Your account is not connected to any students. Please contact the school office if you believe this is an error.</p>
         </div>
         {% else %}
         {% include 'parents/_parent_child_picker.html' %}
 
-        {% if active_summary %}
+        {% if active_summary and active_child %}
+        <article class="pp-spotlight">
+          <div class="pp-spotlight__main">
+            <div class="pp-spotlight__avatar" aria-hidden="true">{{ active_child.first_name[0] }}{{ active_child.last_name[0] }}</div>
+            <div>
+              <p class="pp-spotlight__eyebrow">Currently viewing</p>
+              <h2 class="pp-spotlight__name">{{ active_child.first_name }} {{ active_child.last_name }}</h2>
+              <p class="pp-spotlight__meta">
+                <span><i class="bi bi-mortarboard"></i> {{ child_grade_label(active_child) }}</span>
+                {% if active_summary.school_year %}
+                <span><i class="bi bi-calendar3"></i> {{ active_summary.school_year.name }}</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          {% if active_summary.attendance_rate is not none %}
+          <div class="pp-spotlight__attendance">
+            <div class="pp-att-ring" style="--pp-att-pct: {{ active_summary.attendance_rate }};">
+              <span class="pp-att-ring__value">{{ active_summary.attendance_rate }}%</span>
+            </div>
+            <span class="pp-att-ring__label">Attendance rate</span>
+          </div>
+          {% endif %}
+        </article>
+
+        {% include 'parents/_parent_action_tiles.html' %}
+
         <div class="rh-insights" role="list">
-          <div class="rh-insight" role="listitem">
+          <div class="rh-insight rh-insight--featured" role="listitem">
             <span class="rh-insight-icon"><i class="bi bi-graph-up"></i></span>
             <div>
               <div class="rh-insight-value">{{ "%.2f"|format(active_summary.gpa|default(0)) }}</div>
-              <div class="rh-insight-label">GPA</div>
+              <div class="rh-insight-label">Overall GPA</div>
             </div>
           </div>
           <div class="rh-insight" role="listitem">
             <span class="rh-insight-icon"><i class="bi bi-journal-bookmark"></i></span>
             <div>
               <div class="rh-insight-value">{{ active_summary.classes|length }}</div>
-              <div class="rh-insight-label">Classes</div>
+              <div class="rh-insight-label">Active classes</div>
             </div>
           </div>
           <div class="rh-insight" role="listitem">
@@ -44,24 +72,28 @@
             </div>
           </div>
           <div class="rh-insight" role="listitem">
-            <span class="rh-insight-icon"><i class="bi bi-x-circle"></i></span>
+            <span class="rh-insight-icon"><i class="bi bi-file-earmark-text"></i></span>
             <div>
-              <div class="rh-insight-value">{{ active_summary.attendance_summary.Absent|default(0) }}</div>
-              <div class="rh-insight-label">Absences</div>
+              <div class="rh-insight-value">{{ active_summary.report_card_count|default(0) }}</div>
+              <div class="rh-insight-label">Report cards ready</div>
             </div>
           </div>
         </div>
 
         <div class="pp-grid">
-          <div class="pp-card">
-            <div class="pp-card__head"><i class="bi bi-bar-chart-line"></i> Class averages</div>
+          <div class="pp-card pp-card--elevated">
+            <div class="pp-card__head">
+              <span><i class="bi bi-bar-chart-line"></i> Class averages</span>
+              <a href="{{ url_for('parent.child_grades', student_id=active_child_id) }}" class="pp-card__link">View all</a>
+            </div>
             <div class="pp-card__body">
               {% if active_summary.class_grades %}
                 {% for name, avg in active_summary.class_grades.items() %}
                 <div class="pp-grade-row">
+                  <span class="pp-grade-badge pp-grade-badge--{{ grade_tone(avg) }}">{{ grade_letter(avg) }}</span>
                   <span class="pp-grade-row__name">{{ name }}</span>
                   <span class="pp-grade-row__bar-wrap" aria-hidden="true">
-                    <span class="pp-grade-row__bar" style="width: {{ [avg, 100]|min }}%;"></span>
+                    <span class="pp-grade-row__bar pp-grade-row__bar--{{ grade_tone(avg) }}" style="width: {{ [avg, 100]|min }}%;"></span>
                   </span>
                   <span class="pp-grade-row__pct">{{ avg }}%</span>
                 </div>
@@ -75,14 +107,22 @@
             </div>
           </div>
 
-          <div class="pp-card">
-            <div class="pp-card__head"><i class="bi bi-clock-history"></i> Recent grades</div>
+          <div class="pp-card pp-card--elevated">
+            <div class="pp-card__head">
+              <span><i class="bi bi-clock-history"></i> Recent grades</span>
+              <a href="{{ url_for('parent.child_grades', student_id=active_child_id) }}" class="pp-card__link">Full history</a>
+            </div>
             <div class="pp-card__body">
               {% if active_summary.recent_grades %}
                 {% for g in active_summary.recent_grades %}
                 <div class="pp-recent-item">
-                  <div class="pp-recent-item__title">{{ g.assignment_title }}</div>
-                  <div class="pp-recent-item__meta">{{ g.class_name }}</div>
+                  <div class="pp-recent-item__top">
+                    <div>
+                      <div class="pp-recent-item__title">{{ g.assignment_title }}</div>
+                      <div class="pp-recent-item__meta">{{ g.class_name }}</div>
+                    </div>
+                    <span class="pp-grade-badge pp-grade-badge--{{ grade_tone(g.percentage) }} pp-grade-badge--sm">{{ grade_letter(g.percentage) }}</span>
+                  </div>
                   <span class="pp-recent-item__score">{{ g.percentage }}%</span>
                 </div>
                 {% endfor %}
@@ -95,26 +135,38 @@
             </div>
           </div>
         </div>
+
+        <div class="pp-help-strip">
+          <i class="bi bi-info-circle"></i>
+          <span>This portal is read-only. For questions about grades or attendance, contact your child's teacher or the school office.</span>
+        </div>
         {% endif %}
         {% endif %}
 
       {% elif section == 'grades' and child %}
         {% include 'parents/_parent_child_picker.html' %}
-        <div class="pp-card">
+        {% include 'parents/_parent_action_tiles.html' %}
+        <div class="pp-card pp-card--elevated">
           <div class="pp-card__head"><i class="bi bi-card-checklist"></i> Class averages — {{ child.first_name }}</div>
           {% if class_grades %}
-          <table class="pp-grades-table">
-            <thead><tr><th>Class</th><th class="text-end">Average</th></tr></thead>
-            <tbody>
-              {% for name, avg in class_grades.items() %}
-              <tr>
-                <td>{{ name }}</td>
-                <td class="text-end"><strong>{{ avg }}%</strong></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          <div class="pp-grades-foot">Overall GPA: <strong>{{ "%.2f"|format(gpa|default(0)) }}</strong></div>
+          <div class="pp-grades-visual">
+            {% for name, avg in class_grades.items() %}
+            <div class="pp-grades-visual__row">
+              <div class="pp-grades-visual__head">
+                <span class="pp-grade-badge pp-grade-badge--{{ grade_tone(avg) }}">{{ grade_letter(avg) }}</span>
+                <span class="pp-grades-visual__name">{{ name }}</span>
+                <strong class="pp-grades-visual__pct">{{ avg }}%</strong>
+              </div>
+              <div class="pp-grade-row__bar-wrap pp-grade-row__bar-wrap--wide">
+                <span class="pp-grade-row__bar pp-grade-row__bar--{{ grade_tone(avg) }}" style="width: {{ [avg, 100]|min }}%;"></span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="pp-grades-foot">
+            <span><i class="bi bi-graph-up"></i> Overall GPA</span>
+            <strong>{{ "%.2f"|format(gpa|default(0)) }}</strong>
+          </div>
           {% else %}
           <div class="pp-empty">
             <i class="bi bi-journal-x"></i>
@@ -125,18 +177,30 @@
 
       {% elif section == 'attendance' and child %}
         {% include 'parents/_parent_child_picker.html' %}
-        <div class="pp-card">
+        {% include 'parents/_parent_action_tiles.html' %}
+        <div class="pp-card pp-card--elevated">
           <div class="pp-card__head"><i class="bi bi-calendar-check"></i> Attendance — {{ child.first_name }}</div>
+          {% if attendance_rate is not none %}
+          <div class="pp-attendance-hero">
+            <div class="pp-att-ring pp-att-ring--lg" style="--pp-att-pct: {{ attendance_rate }};">
+              <span class="pp-att-ring__value">{{ attendance_rate }}%</span>
+            </div>
+            <p class="pp-attendance-hero__text">School-day attendance rate for the current year</p>
+          </div>
+          {% endif %}
           <div class="pp-attendance-grid">
             <div class="pp-att-tile pp-att-tile--present">
+              <div class="pp-att-tile__icon"><i class="bi bi-check-lg"></i></div>
               <div class="pp-att-tile__value">{{ attendance_summary.Present|default(0) }}</div>
               <div class="pp-att-tile__label">Present</div>
             </div>
             <div class="pp-att-tile pp-att-tile--tardy">
+              <div class="pp-att-tile__icon"><i class="bi bi-clock"></i></div>
               <div class="pp-att-tile__value">{{ attendance_summary.Tardy|default(0) }}</div>
               <div class="pp-att-tile__label">Tardy</div>
             </div>
             <div class="pp-att-tile pp-att-tile--absent">
+              <div class="pp-att-tile__icon"><i class="bi bi-x-lg"></i></div>
               <div class="pp-att-tile__value">{{ attendance_summary.Absent|default(0) }}</div>
               <div class="pp-att-tile__label">Absent</div>
             </div>
@@ -145,8 +209,10 @@
 
       {% elif section == 'report_cards' and child %}
         {% include 'parents/_parent_child_picker.html' %}
-        <div class="pp-card">
+        {% include 'parents/_parent_action_tiles.html' %}
+        <div class="pp-card pp-card--elevated">
           <div class="pp-card__head"><i class="bi bi-file-earmark-text"></i> Official report cards — {{ child.first_name }}</div>
+          <p class="pp-card__intro">Only report cards approved by the Director appear here. Unofficial copies are not shared with families.</p>
           {% if report_cards %}
           <div class="pp-report-card-list">
             {% for rc in report_cards %}
@@ -155,8 +221,8 @@
               <div class="pp-report-card-item__body">
                 <div class="pp-report-card-item__title">{{ rc.school_year.name }} · {{ rc.quarter }}</div>
                 <div class="pp-report-card-item__meta">
-                  Official report card
-                  {% if rc.generated_at %} · Generated {{ rc.generated_at.strftime('%B %d, %Y') }}{% endif %}
+                  <span class="pp-pill pp-pill--success">Official</span>
+                  {% if rc.generated_at %}Generated {{ rc.generated_at.strftime('%B %d, %Y') }}{% endif %}
                 </div>
               </div>
               <a href="{{ url_for('parent.parent_report_card_pdf', report_card_id=rc.id) }}" class="pp-report-card-item__download" target="_blank" rel="noopener">
@@ -166,21 +232,24 @@
             {% endfor %}
           </div>
           {% else %}
-          <div class="pp-empty">
+          <div class="pp-empty pp-empty--padded">
             <i class="bi bi-hourglass-split"></i>
-            No report cards are available yet. Official report cards appear here after the Director approves them for release.
+            <strong>Nothing released yet</strong>
+            Official report cards appear here after the Director approves them for families.
           </div>
           {% endif %}
         </div>
 
       {% elif section == 'classes' and child %}
         {% include 'parents/_parent_child_picker.html' %}
-        <div class="pp-card">
+        {% include 'parents/_parent_action_tiles.html' %}
+        <div class="pp-card pp-card--elevated">
           <div class="pp-card__head"><i class="bi bi-grid-3x3-gap"></i> Enrolled classes — {{ child.first_name }}</div>
           {% if classes %}
           <div class="pp-class-grid">
             {% for c in classes %}
             <div class="pp-class-tile">
+              <div class="pp-class-tile__icon"><i class="bi bi-book"></i></div>
               <div class="pp-class-tile__subject">{{ c.subject or 'Course' }}</div>
               <div class="pp-class-tile__name">{{ c.name }}</div>
               {% if c.teacher %}
@@ -199,7 +268,7 @@
 
       {% elif section == 'settings' %}
         <div class="pp-settings-grid">
-          <div class="pp-card">
+          <div class="pp-card pp-card--elevated">
             <div class="pp-card__head"><i class="bi bi-gear"></i> Account</div>
             <div class="pp-settings-card">
               <div class="pp-settings-card__row">
@@ -228,7 +297,7 @@
             </div>
           </div>
 
-          <div class="pp-card">
+          <div class="pp-card pp-card--elevated">
             <div class="pp-card__head"><i class="bi bi-palette"></i> Appearance</div>
             <div class="pp-settings-card">
               <div class="pp-theme-field">

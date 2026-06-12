@@ -84,6 +84,8 @@ def parent_dashboard():
 
     active_id = _resolve_active_child_id()
     active_summary = next((s for s in summaries if s["child"].id == active_id), summaries[0])
+    if active_id:
+        active_summary["report_card_count"] = len(get_parent_visible_report_cards(active_id))
 
     return render_template(
         "parents/role_parent_dashboard.html",

@@ -378,7 +378,7 @@ def sync_directory_data():
 
     # --- Google Group per class: create if missing, sync students + teachers ---
     group_synced = 0
-    for c in Class.query.order_by(Class.id).all():
+    for c in Class.query.filter_by(is_active=True).order_by(Class.id).all():
         if provision_and_sync_class_google_group(c.id):
             group_synced += 1
 

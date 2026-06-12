@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated June 10, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated June 12, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,51 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – June 10, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – June 12, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>June 10</strong> (<strong>{{ app_version_display }}</strong>) launches the <strong>Family Portal</strong> for parents and guardians, refreshes the <strong>sign-in page</strong> with CSA teal branding and family guidance, and adds <strong>Director-approved report cards</strong> so families only download official cards the Director has released.</p>
+                        <p class="updates-intro-text mb-0"><strong>June 12</strong> (<strong>{{ app_version_display }}</strong>) polishes the <strong>Family Portal</strong> and sidebar for all themes, fixes <strong>staff roster</strong> access for administrators with multiple roles, tightens <strong>Google Workspace</strong> staff provisioning, and ships a round of <strong>security hardening</strong> behind the scenes.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- June 12, 2026 - Family Portal polish, sidebar themes, staff/Google, security -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-stars me-2"></i>Family Portal, Sidebar &amp; Staff Tools – June 12, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Family Portal dashboard:</strong> Richer parent home with student spotlight, action tiles, grade badges, attendance ring, and an upgraded <strong>Management → Family Portal</strong> hub for staff.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Sidebar school clock:</strong> Live time in the school timezone appears in every dashboard sidebar, with zone badge and IANA name. Colors follow the active theme.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Sidebar theme polish:</strong> Collapse bar and logout footer now match all 20 themes (including Ocean). Parent sidebars show the guardian&rsquo;s name with a small <strong>Family Portal</strong> subtitle.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Staff roster tab:</strong> School Administrators with merged or secondary roles can open the <strong>Roster</strong> view under Teachers &amp; Staff again (current vs former employees).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Workspace staff sync:</strong> Inactive or removed staff no longer get new school emails. Departed accounts move to <strong>Terminated &amp; Removed</strong> and suspend instead. Staff admin OU uses singular <strong>Administrator</strong> (not <strong>Administrators</strong>).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Class Google Groups:</strong> Each class can have an auto-provisioned group for roster email; membership syncs with enrollments and year-end cleanup respects protected groups.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Security &amp; login:</strong> Hardened headers, safer redirects, upload checks, and improved login monitoring. Repeated failed sign-ins alert Tech; password changes block reuse of recent passwords.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Families and staff get a more polished portal experience. Google Directory stays aligned with who should actually have accounts. Leadership tools work reliably for merged admin logins.</p>
+                        </div>
+                    </div>
+
                     <!-- June 10, 2026 - Login refresh, Family Portal, report card approval -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-box-arrow-in-right me-2"></i>Sign-In Page, Family Portal &amp; Report Cards – June 10, 2026</h6>

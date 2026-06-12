@@ -1,0 +1,27 @@
+{# Shared Family Portal display helpers #}
+
+{% macro grade_letter(pct) -%}
+{%- if pct is none -%}—
+{%- elif pct >= 90 -%}A
+{%- elif pct >= 80 -%}B
+{%- elif pct >= 70 -%}C
+{%- elif pct >= 60 -%}D
+{%- else -%}F
+{%- endif -%}
+{%- endmacro %}
+
+{% macro grade_tone(pct) -%}
+{%- if pct is none -%}neutral
+{%- elif pct >= 90 -%}excellent
+{%- elif pct >= 80 -%}good
+{%- elif pct >= 70 -%}fair
+{%- else -%}low
+{%- endif -%}
+{%- endmacro %}
+
+{% macro child_grade_label(child) -%}
+{%- if child.grade_level == 0 -%}Kindergarten
+{%- elif child.grade_level is not none -%}Grade {{ child.grade_level }}
+{%- else -%}Student
+{%- endif -%}
+{%- endmacro %}

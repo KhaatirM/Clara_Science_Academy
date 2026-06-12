@@ -13,6 +13,8 @@ from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 # Authentication and decorators
 from decorators import is_teacher_role, has_any_permission
 from utils.user_roles import canonical_role_label
+from utils.password_policy import validate_new_password_against_old
+from services.login_security import handle_failed_login
 
 # Application imports - lazy import to avoid circular dependency
 def get_log_activity():
@@ -148,11 +150,20 @@ def login():
                     get_log_activity()(
                         user_id=None,
                         action='login_failed_maintenance',
-                        details={'username': username, 'role': user.role if user else 'unknown'},
+                        details={
+                            'username': username,
+                            'role': user.role if user else 'unknown',
+                            'reason': 'invalid_credentials',
+                        },
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent'),
                         success=False,
                         error_message='Login blocked during maintenance'
+                    )
+                    handle_failed_login(
+                        username,
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent'),
                     )
                     flash('System is currently under maintenance. Please try again later.', 'warning')
                     return redirect(url_for('auth.login'))
@@ -174,20 +185,12 @@ def login():
             username = request.form.get('username')
             password = request.form.get('password')
             
-            # Debug: Print form data
-            print(f"DEBUG: Received form data - username: '{username}', password: '{password}'")
-            print(f"DEBUG: Form data dict: {dict(request.form)}")
-            
             # Check if username and password are provided
             if not username or not password:
-                print(f"DEBUG: Missing credentials - username: {bool(username)}, password: {bool(password)}")
                 flash('Username and password are required.', 'danger')
                 return render_template('shared/login.html')
             
             user = User.query.filter_by(username=username).first()
-            print(f"DEBUG: User found: {user}")
-            if user:
-                print(f"DEBUG: User details - ID: {user.id}, Role: {user.role}, Password hash exists: {bool(user.password_hash)}")
             
             if user and check_password_hash(user.password_hash, password):
                 # Check if user has expired temporary access
@@ -267,15 +270,16 @@ def login():
                     except Exception as e:
                         current_app.logger.warning('Attendance on login failed: %s', e)
                 
+                session.pop('forced_pw_baseline', None)
                 # Check if user has temporary password or is first-time login
                 if user.is_temporary_password or user.login_count == 1:
+                    session['forced_pw_baseline'] = password
                     flash('You are using a temporary password or this is your first login. Please change your password for security.', 'warning')
                     return redirect(url_for('auth.dashboard'))
                 else:
                     _defer_or_flash_login_success(user, _login_success_message(user))
                     return redirect(url_for('auth.dashboard'))
             else:
-                print(f"DEBUG: Login failed - User: {user}, Password check: {user and check_password_hash(user.password_hash, password) if user else 'No user found'}")
                 # Log failed login attempt - invalid credentials
                 get_log_activity()(
                     user_id=None,
@@ -285,6 +289,11 @@ def login():
                     user_agent=request.headers.get('User-Agent'),
                     success=False,
                     error_message='Invalid credentials'
+                )
+                handle_failed_login(
+                    username,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
                 )
                 flash('Invalid username or password.', 'danger')
         except CSRFError:
@@ -419,10 +428,6 @@ def dashboard():
 def change_password_popup():
     """Handle password change from popup modal."""
     try:
-        print(f"DEBUG: Password change popup request received from user: {current_user.username}")
-        print(f"DEBUG: Request form data: {dict(request.form)}")
-        print(f"DEBUG: Before change - is_temporary_password: {current_user.is_temporary_password}, login_count: {current_user.login_count}")
-        
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
         
@@ -443,19 +448,26 @@ def change_password_popup():
         
         if not (has_upper and has_lower and has_digit):
             return jsonify({'success': False, 'message': 'Password must contain at least one uppercase letter, one lowercase letter, and one number.'})
+
+        ok, policy_message = validate_new_password_against_old(
+            new_password,
+            password_hash=current_user.password_hash,
+            old_plaintext=session.get('forced_pw_baseline'),
+        )
+        if not ok:
+            return jsonify({'success': False, 'message': policy_message})
         
         # Update user password
         current_user.password_hash = generate_password_hash(new_password)
         current_user.is_temporary_password = False
         current_user.password_changed_at = datetime.now(timezone.utc)
+        session.pop('forced_pw_baseline', None)
         
         # If this was a first-time login (login_count == 1), increment it to prevent popup from showing again
         if current_user.login_count == 1:
             current_user.login_count = 2
         
         db.session.commit()
-        
-        print(f"DEBUG: After change - is_temporary_password: {current_user.is_temporary_password}, login_count: {current_user.login_count}")
         
         # Log password change
         get_log_activity()(
@@ -481,12 +493,11 @@ def change_password_popup():
         return jsonify({
             'success': True,
             'username': current_user.username,
-            'password': new_password,  # Return the new password for display
-            'user_id': user_id
+            'user_id': user_id,
         })
         
     except Exception as e:
-        print(f"Error in change_password_popup: {str(e)}")
+        current_app.logger.error('Error in change_password_popup: %s', e)
         return jsonify({'success': False, 'message': 'An error occurred while changing password.'})
 
 @auth_blueprint.route('/submit-bug-report', methods=['POST'])
@@ -648,13 +659,20 @@ def change_password():
                 flash('New password must be at least 8 characters long.', 'danger')
                 return redirect(url_for('auth.change_password'))
             
-            # Check if new password is different from current
-            if check_password_hash(current_user.password_hash, new_password):
-                flash('New password must be different from current password.', 'danger')
+            ok, policy_message = validate_new_password_against_old(
+                new_password,
+                password_hash=current_user.password_hash,
+                old_plaintext=current_password,
+            )
+            if not ok:
+                flash(policy_message, 'danger')
                 return redirect(url_for('auth.change_password'))
             
             # Update password
             current_user.password_hash = generate_password_hash(new_password)
+            current_user.is_temporary_password = False
+            current_user.password_changed_at = datetime.now(timezone.utc)
+            session.pop('forced_pw_baseline', None)
             db.session.commit()
             
             # Log the password change
@@ -725,6 +743,14 @@ def change_password_ajax():
                 'success': False,
                 'message': 'Current password is incorrect.'
             }), 400
+
+        ok, policy_message = validate_new_password_against_old(
+            new_password,
+            password_hash=current_user.password_hash,
+            old_plaintext=current_password,
+        )
+        if not ok:
+            return jsonify({'success': False, 'message': policy_message}), 400
         
         # Check if user has temporary password (required for this route)
         if not current_user.is_temporary_password:
@@ -740,6 +766,7 @@ def change_password_ajax():
         current_user.password_hash = new_password_hash
         current_user.is_temporary_password = False
         current_user.password_changed_at = datetime.now(timezone.utc)
+        session.pop('forced_pw_baseline', None)
         
         db.session.commit()
         

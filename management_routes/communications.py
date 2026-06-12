@@ -438,6 +438,28 @@ def management_create_announcement():
         
         db.session.add(announcement)
         db.session.commit()
+
+        if target_group == 'class' and class_id:
+            class_obj = Class.query.get(class_id)
+            if class_obj:
+                from services.class_google_group import email_class_announcement_to_google_group
+                sender_label = (
+                    f'{current_user.first_name or ""} {current_user.last_name or ""}'.strip()
+                    or current_user.username
+                )
+                try:
+                    email_class_announcement_to_google_group(
+                        class_obj,
+                        title=title,
+                        message=message,
+                        sender_label=sender_label,
+                    )
+                except Exception as mail_exc:
+                    current_app.logger.warning(
+                        'Class announcement Google Group email failed for class %s: %s',
+                        class_id,
+                        mail_exc,
+                    )
         
         flash('Announcement created successfully!', 'success')
         return redirect(url_for('management.communications'))

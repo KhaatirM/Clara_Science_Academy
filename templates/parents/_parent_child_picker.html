@@ -20,21 +20,4 @@
     {% endfor %}
   </div>
 </section>
-
-{% if active_child_id %}
-<nav class="pp-quick-nav" aria-label="Quick links for selected child">
-  <a href="{{ url_for('parent.child_grades', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_grades' %}active{% endif %}">
-    <i class="bi bi-card-checklist"></i> Grades
-  </a>
-  <a href="{{ url_for('parent.child_attendance', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_attendance' %}active{% endif %}">
-    <i class="bi bi-calendar-check"></i> Attendance
-  </a>
-  <a href="{{ url_for('parent.child_classes', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_classes' %}active{% endif %}">
-    <i class="bi bi-journal-bookmark"></i> Classes
-  </a>
-  <a href="{{ url_for('parent.child_report_cards', student_id=active_child_id) }}" class="{% if request.endpoint == 'parent.child_report_cards' %}active{% endif %}">
-    <i class="bi bi-file-earmark-text"></i> Report Cards
-  </a>
-</nav>
-{% endif %}
 {% endif %}

@@ -1289,6 +1289,22 @@ def create_app(config_class=None):
             return {"credential_modal": None}
 
     @app.context_processor
+    def inject_parent_sidebar_name():
+        """Parent sidebar heading uses the guardian name, not the generic portal label."""
+        if not current_user.is_authenticated:
+            return {"parent_display_name": None}
+        try:
+            from utils.user_roles import canonical_role_label
+            from utils.parent_portal import parent_display_name as _parent_display_name
+
+            if canonical_role_label(getattr(current_user, "role", None)) != "Parent":
+                return {"parent_display_name": None}
+            return {"parent_display_name": _parent_display_name(current_user)}
+        except Exception as e:
+            current_app.logger.warning("inject_parent_sidebar_name failed: %s", e)
+            return {"parent_display_name": None}
+
+    @app.context_processor
     def inject_role_canonical():
         """Primary role (alerts, etc.); ``sidebar_role_canonical`` follows tech/management switch for dual staff."""
         if not current_user.is_authenticated:
@@ -1412,18 +1428,28 @@ def create_app(config_class=None):
 
     @app.context_processor
     def inject_school_timezone_display():
-        """IANA zone used for assignment times, schooltime filter, and school-day logic (same for all users)."""
+        """School clock + IANA zone for the dashboard sidebar (same for all authenticated users)."""
+        if not current_user.is_authenticated:
+            return {}
         try:
-            from flask_login import current_user
+            from utils.school_timezone import (
+                DEFAULT_SCHOOL_TIMEZONE,
+                get_school_timezone_sidebar_payload,
+            )
 
-            if not current_user.is_authenticated:
-                return {}
-            from utils.school_timezone import get_school_timezone_name
-
-            return {"school_timezone_display": get_school_timezone_name()}
+            return get_school_timezone_sidebar_payload()
         except Exception as e:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             current_app.logger.warning("inject_school_timezone_display: %s", e)
-            return {"school_timezone_display": None}
+            return {
+                "school_timezone_iana": DEFAULT_SCHOOL_TIMEZONE,
+                "school_timezone_clock": "",
+                "school_timezone_zone": "",
+                "school_timezone_display": DEFAULT_SCHOOL_TIMEZONE,
+            }
 
     @app.context_processor
     def inject_school_years_for_filters():

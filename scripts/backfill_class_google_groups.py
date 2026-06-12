@@ -37,7 +37,7 @@ def main() -> int:
     ok = 0
     fail = 0
     with app.app_context():
-        for c in Class.query.order_by(Class.id).all():
+        for c in Class.query.filter_by(is_active=True).order_by(Class.id).all():
             if provision_and_sync_class_google_group(c.id):
                 ok += 1
             else:

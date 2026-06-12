@@ -9,10 +9,10 @@ from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay, Assignmen
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import json
-from services.google_directory_service import create_google_user
 from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
 from services.email_service import send_staff_welcome_email
 from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
+from utils.user_roles import user_has_management_entry_access
 import os
 import uuid
 from management_routes.utils import allowed_file
@@ -111,40 +111,19 @@ def _allocate_workspace_email(first_name: str, last_name: str):
 
 def _post_commit_staff_google_pipeline(user, teacher_staff, assigned_role_display: str):
     """Directory sync + Admin SDK user create (same as Add Staff). Call after commit."""
+    from services.google_ou_policy import staff_google_account_eligible
+
+    if not staff_google_account_eligible(teacher_staff):
+        current_app.logger.info(
+            "Skipping Google Workspace provisioning for ineligible staff id=%s",
+            teacher_staff.id,
+        )
+        return
     try:
         sync_single_user_to_google(user.id)
     except Exception as e:
         current_app.logger.warning(
             "Google Directory sync after save failed for user %s: %s", user.id, e
-        )
-    try:
-        gwe = getattr(user, "google_workspace_email", None)
-        if gwe:
-            created = create_google_user(
-                {
-                    "primaryEmail": gwe,
-                    "name": {"givenName": teacher_staff.first_name, "familyName": teacher_staff.last_name},
-                    "password": "Welcome2CSA!",
-                    "orgUnitPath": "/Staff",
-                    "changePasswordAtNextLogin": True,
-                }
-            )
-            if not created:
-                flash(
-                    f"{assigned_role_display} saved locally, but Google account creation failed for {gwe}. "
-                    "Please verify the account does not already exist and that Directory permissions are configured.",
-                    "warning",
-                )
-        else:
-            flash(
-                f"{assigned_role_display} saved locally, but no school email was set, so no Google account was created.",
-                "warning",
-            )
-    except Exception as e:
-        current_app.logger.error(f"Failed to auto-create Google staff account: {e}")
-        flash(
-            f"{assigned_role_display} saved locally, but Google account creation encountered an error. Check logs for details.",
-            "warning",
         )
 
 
@@ -591,6 +570,10 @@ def edit_teacher_staff(staff_id):
             teacher_staff.marked_for_removal = marked_for_removal
             teacher_staff.removal_note = removal_note or None
             teacher_staff.status_updated_at = datetime.utcnow()
+            if employment_status == 'Inactive' or marked_for_removal:
+                teacher_staff.is_active = False
+            elif employment_status in ('Active', 'On Leave', ''):
+                teacher_staff.is_active = True
             teacher_staff.department = department
             teacher_staff.position = position
             teacher_staff.subject = subject
@@ -654,6 +637,18 @@ def edit_teacher_staff(staff_id):
                     teacher_staff.image = saved
             
             user = User.query.filter_by(teacher_staff_id=staff_id).first()
+
+            from services.google_ou_policy import staff_google_account_eligible
+
+            if portal_login and not staff_google_account_eligible(teacher_staff):
+                msg = (
+                    "Cannot enable website login or school email for inactive, removed, "
+                    "or directory-only staff. Set employment status to Active first."
+                )
+                if is_ajax:
+                    return jsonify({"success": False, "message": msg}), 400
+                flash(msg, "danger")
+                return render_template("management/add_teacher_staff.html", **_edit_staff_form_context(teacher_staff))
 
             if portal_login:
                 if user:
@@ -1059,7 +1054,7 @@ def teachers():
     teachers_view = request.args.get('teachers_view', 'manage')
     if teachers_view not in ('manage', 'directory'):
         teachers_view = 'manage'
-    if teachers_view == 'directory' and current_user.role not in ['School Administrator', 'Director']:
+    if teachers_view == 'directory' and not user_has_management_entry_access(current_user):
         teachers_view = 'manage'
 
     if teachers_view == 'directory':
@@ -1600,7 +1595,7 @@ def staff_activity_record(teacher_id):
     Print-friendly activity record for a staff member.
     Includes: assignments created, attendance taken, manual submission marks, group grades given.
     """
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_has_management_entry_access(current_user):
         abort(403)
 
     teacher = TeacherStaff.query.get_or_404(teacher_id)
@@ -1656,7 +1651,7 @@ def staff_activity_record(teacher_id):
 @management_required
 def export_staff_activity_record_csv(teacher_id):
     """CSV export for the staff activity record."""
-    if current_user.role not in ['Director', 'School Administrator']:
+    if not user_has_management_entry_access(current_user):
         abort(403)
 
     teacher = TeacherStaff.query.get_or_404(teacher_id)

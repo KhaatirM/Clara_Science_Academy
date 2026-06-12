@@ -434,6 +434,7 @@ def create_announcement():
                     )
                     db.session.add(notification)
         elif target_group == 'class' and class_id:
+            class_obj = Class.query.get(class_id)
             enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
             for enrollment in enrollments:
                 if enrollment.student and enrollment.student.user:
@@ -445,6 +446,23 @@ def create_announcement():
                         link='/communications'
                     )
                     db.session.add(notification)
+            if class_obj:
+                from services.class_google_group import email_class_announcement_to_google_group
+                from communications_helpers import get_user_full_name
+                sender_label = get_user_full_name(current_user) or current_user.username
+                try:
+                    email_class_announcement_to_google_group(
+                        class_obj,
+                        title=title,
+                        message=message_text,
+                        sender_label=sender_label,
+                    )
+                except Exception as mail_exc:
+                    current_app.logger.warning(
+                        'Class announcement Google Group email failed for class %s: %s',
+                        class_id,
+                        mail_exc,
+                    )
         
         db.session.commit()
 

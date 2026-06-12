@@ -65,3 +65,39 @@ def get_school_timezone_name():
         g._school_timezone_name = resolved
         return resolved
     return _resolve_school_timezone_string(current_app)
+
+
+def _school_now_in_tz(tz_name: str):
+    """Return (clock_hm, zone_abbrev) in the school zone, best-effort."""
+    from datetime import datetime
+
+    try:
+        from zoneinfo import ZoneInfo
+
+        now = datetime.now(ZoneInfo(tz_name))
+    except Exception:
+        try:
+            import pytz
+
+            now = datetime.now(pytz.timezone(tz_name))
+        except Exception:
+            return "", tz_name.split("/")[-1].replace("_", " ")
+
+    clock = now.strftime("%I:%M %p").lstrip("0")
+    zone = (now.strftime("%Z") or "").strip()
+    if not zone:
+        zone = tz_name.split("/")[-1].replace("_", " ")
+    return clock, zone
+
+
+def get_school_timezone_sidebar_payload() -> dict[str, str]:
+    """Template context for the dashboard sidebar school clock."""
+    tz_name = get_school_timezone_name()
+    clock, zone = _school_now_in_tz(tz_name)
+    display = f"{clock} {zone}".strip() if clock else tz_name
+    return {
+        "school_timezone_iana": tz_name,
+        "school_timezone_clock": clock,
+        "school_timezone_zone": zone,
+        "school_timezone_display": display,
+    }

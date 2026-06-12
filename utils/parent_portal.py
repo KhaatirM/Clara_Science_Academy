@@ -361,6 +361,7 @@ def build_child_academic_summary(student_id: int) -> dict[str, Any]:
             "class_grades": {},
             "gpa": 0.0,
             "attendance_summary": {},
+            "attendance_rate": None,
             "recent_grades": [],
         }
 
@@ -425,6 +426,10 @@ def build_child_academic_summary(student_id: int) -> dict[str, Any]:
         "Tardy": len([r for r in attendance_records if r.status == "Tardy"]),
         "Absent": len([r for r in attendance_records if r.status == "Absent"]),
     }
+    att_total = sum(attendance_summary.values())
+    attendance_rate = (
+        round(attendance_summary["Present"] / att_total * 100.0, 1) if att_total else None
+    )
 
     return {
         "student": student,
@@ -433,6 +438,7 @@ def build_child_academic_summary(student_id: int) -> dict[str, Any]:
         "class_grades": class_grades,
         "gpa": calculate_gpa_from_percentages(all_pcts),
         "attendance_summary": attendance_summary,
+        "attendance_rate": attendance_rate,
         "recent_grades": recent_grades,
     }
 

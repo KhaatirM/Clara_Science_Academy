@@ -1,70 +1,133 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_students.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/role_hub.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_dashboard.css') }}?v=5">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/family_portal_admin.css') }}?v=1">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid py-3">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-    <div>
-      <h2 class="h4 mb-1"><i class="bi bi-people-fill me-2"></i>Family portal accounts</h2>
-      <p class="text-muted mb-0">Create parent logins from student parent emails and manage linked children.</p>
-    </div>
-    <form method="post" action="{{ url_for('management.parents.provision_all_parent_logins') }}" onsubmit="return confirm('Create parent accounts for all students with parent emails on file?');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i> Provision all parent logins</button>
-    </form>
-  </div>
+<div class="rh rh--parent fp-admin container-fluid px-0 px-md-1 py-2">
+  <div class="rh-shell">
+    <header class="rh-hero">
+      <div>
+        <p class="rh-eyebrow">Management</p>
+        <h1 class="rh-title">Family Portal</h1>
+        <p class="rh-subtitle"><i class="bi bi-heart-fill"></i> Provision parent logins, link guardians to students, and release report cards to families.</p>
+      </div>
+      <div class="rh-hero-actions">
+        <form method="post" action="{{ url_for('management.parents.provision_all_parent_logins') }}" onsubmit="return confirm('Create parent accounts for all students with parent emails on file?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="rh-btn rh-btn--primary"><i class="bi bi-person-plus"></i> Provision all parent logins</button>
+        </form>
+      </div>
+    </header>
 
-  <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="text-muted small">Parent accounts</div>
-          <div class="fs-3 fw-bold">{{ parent_accounts }}</div>
+    <div class="rh-insights fp-admin__stats" role="list">
+      <div class="rh-insight rh-insight--featured" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-people-fill"></i></span>
+        <div>
+          <div class="rh-insight-value">{{ parent_accounts }}</div>
+          <div class="rh-insight-label">Parent accounts</div>
+        </div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-envelope-check"></i></span>
+        <div>
+          <div class="rh-insight-value">{{ students_with_parent_email }}</div>
+          <div class="rh-insight-label">Students with parent email</div>
+        </div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-link-45deg"></i></span>
+        <div>
+          <div class="rh-insight-value">{{ total_child_links }}</div>
+          <div class="rh-insight-label">Parent–child links</div>
+        </div>
+      </div>
+      <div class="rh-insight" role="listitem">
+        <span class="rh-insight-icon"><i class="bi bi-hourglass-split"></i></span>
+        <div>
+          <div class="rh-insight-value">{{ students_not_linked }}</div>
+          <div class="rh-insight-label">Awaiting first link</div>
         </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="text-muted small">Students with parent email</div>
-          <div class="fs-3 fw-bold">{{ students_with_parent_email }}</div>
+
+    <div class="fp-admin__workflow">
+      <div class="fp-admin__step">
+        <span class="fp-admin__step-num">1</span>
+        <div>
+          <strong>Add parent emails</strong>
+          <p>Enter Parent 1 / Parent 2 contact info on each student record.</p>
+        </div>
+      </div>
+      <div class="fp-admin__step">
+        <span class="fp-admin__step-num">2</span>
+        <div>
+          <strong>Provision logins</strong>
+          <p>Create accounts from a student profile or use bulk provision above.</p>
+        </div>
+      </div>
+      <div class="fp-admin__step">
+        <span class="fp-admin__step-num">3</span>
+        <div>
+          <strong>Release report cards</strong>
+          <p>Director approves official cards on the report card detail page for family download.</p>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="pp-card pp-card--elevated fp-admin__table-card">
+      <div class="pp-card__head">
+        <span><i class="bi bi-table"></i> Parent accounts</span>
+        <span class="fp-admin__count">{{ rows|length }} account{{ 's' if rows|length != 1 else '' }}</span>
+      </div>
       <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="table-light">
+        <table class="table fp-admin__table mb-0 align-middle">
+          <thead>
             <tr>
-              <th>Username</th>
+              <th>Account</th>
               <th>Email</th>
-              <th>Children</th>
-              <th>Links</th>
+              <th>Linked children</th>
+              <th class="text-end">Links</th>
             </tr>
           </thead>
           <tbody>
             {% for row in rows %}
             <tr>
-              <td><code>{{ row.user.username }}</code></td>
+              <td>
+                <div class="fp-admin__user-cell">
+                  <span class="fp-admin__avatar" aria-hidden="true">{{ (row.user.username or 'P')[0]|upper }}</span>
+                  <div>
+                    <code class="fp-admin__username">{{ row.user.username }}</code>
+                    <div class="fp-admin__role">Parent</div>
+                  </div>
+                </div>
+              </td>
               <td>{{ row.user.email or '—' }}</td>
               <td>
                 {% if row.children %}
-                  {{ row.children|join(', ') }}
+                  <div class="fp-admin__children">
+                    {% for name in row.children %}
+                    <span class="fp-admin__child-tag"><i class="bi bi-person"></i> {{ name }}</span>
+                    {% endfor %}
+                  </div>
                 {% else %}
                   <span class="text-muted">None linked</span>
                 {% endif %}
               </td>
-              <td>{{ row.link_count }}</td>
+              <td class="text-end"><span class="fp-admin__link-badge">{{ row.link_count }}</span></td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="4" class="text-center text-muted py-4">No parent portal accounts yet. Use <strong>Provision all parent logins</strong> or provision from a student record.</td>
+              <td colspan="4">
+                <div class="pp-empty pp-empty--padded">
+                  <i class="bi bi-people"></i>
+                  <strong>No parent portal accounts yet</strong>
+                  Use <em>Provision all parent logins</em> or provision from a student record under Family portal access.
+                </div>
+              </td>
             </tr>
             {% endfor %}
           </tbody>

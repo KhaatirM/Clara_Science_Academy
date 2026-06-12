@@ -1,0 +1,37 @@
+{# Quick navigation tiles for the active child #}
+{% if active_child_id %}
+<nav class="pp-actions" aria-label="Family portal sections">
+  <a href="{{ url_for('parent.child_grades', student_id=active_child_id) }}" class="pp-action-tile pp-action-tile--grades {% if request.endpoint == 'parent.child_grades' %}pp-action-tile--current{% endif %}">
+    <span class="pp-action-tile__icon"><i class="bi bi-bar-chart-line"></i></span>
+    <span class="pp-action-tile__body">
+      <span class="pp-action-tile__title">Grades</span>
+      <span class="pp-action-tile__hint">Class averages &amp; GPA</span>
+    </span>
+    <span class="pp-action-tile__arrow"><i class="bi bi-chevron-right"></i></span>
+  </a>
+  <a href="{{ url_for('parent.child_attendance', student_id=active_child_id) }}" class="pp-action-tile pp-action-tile--attendance {% if request.endpoint == 'parent.child_attendance' %}pp-action-tile--current{% endif %}">
+    <span class="pp-action-tile__icon"><i class="bi bi-calendar-check"></i></span>
+    <span class="pp-action-tile__body">
+      <span class="pp-action-tile__title">Attendance</span>
+      <span class="pp-action-tile__hint">Present, tardy &amp; absent</span>
+    </span>
+    <span class="pp-action-tile__arrow"><i class="bi bi-chevron-right"></i></span>
+  </a>
+  <a href="{{ url_for('parent.child_classes', student_id=active_child_id) }}" class="pp-action-tile pp-action-tile--classes {% if request.endpoint == 'parent.child_classes' %}pp-action-tile--current{% endif %}">
+    <span class="pp-action-tile__icon"><i class="bi bi-journal-bookmark"></i></span>
+    <span class="pp-action-tile__body">
+      <span class="pp-action-tile__title">Classes</span>
+      <span class="pp-action-tile__hint">Teachers &amp; enrollments</span>
+    </span>
+    <span class="pp-action-tile__arrow"><i class="bi bi-chevron-right"></i></span>
+  </a>
+  <a href="{{ url_for('parent.child_report_cards', student_id=active_child_id) }}" class="pp-action-tile pp-action-tile--reports {% if request.endpoint == 'parent.child_report_cards' %}pp-action-tile--current{% endif %}">
+    <span class="pp-action-tile__icon"><i class="bi bi-file-earmark-text"></i></span>
+    <span class="pp-action-tile__body">
+      <span class="pp-action-tile__title">Report Cards</span>
+      <span class="pp-action-tile__hint">Director-approved PDFs</span>
+    </span>
+    <span class="pp-action-tile__arrow"><i class="bi bi-chevron-right"></i></span>
+  </a>
+</nav>
+{% endif %}

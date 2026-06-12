@@ -3,93 +3,131 @@
 {% block title %}Sign In — Clara Science Academy{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_login.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_login.css') }}?v=3">
 {% endblock %}
+
+{% block main_classes %}login-main{% endblock %}
 
 {% block content %}
 <div class="login-page">
-  <div class="login-page__bg" aria-hidden="true"></div>
+  <div class="login-page__mesh" aria-hidden="true">
+    <span class="login-blob login-blob--1"></span>
+    <span class="login-blob login-blob--2"></span>
+    <span class="login-blob login-blob--3"></span>
+  </div>
 
-  <div class="login-shell">
-    <a href="{{ url_for('auth.home') }}" class="login-home-link">
-      <i class="bi bi-arrow-left"></i> Back to home
-    </a>
+  <div class="login-layout">
+    <aside class="login-brand" aria-label="Clara Science Academy">
+      <a href="{{ url_for('auth.home') }}" class="login-brand__home">
+        <i class="bi bi-arrow-left"></i> Back to home
+      </a>
 
-    <div class="login-card">
-      <div class="login-card__hero">
-        <img src="{{ url_for('static', filename='img/clara_logo.png') }}" alt="" class="login-card__logo" width="56" height="56">
-        <p class="login-card__eyebrow">Clara Science Academy</p>
-        <h1 class="login-card__title">Sign in to your portal</h1>
-        <p class="login-card__subtitle">Students, families, teachers, and staff</p>
+      <div class="login-brand__content">
+        <img src="{{ url_for('static', filename='img/clara_logo.png') }}" alt="" class="login-brand__logo" width="72" height="72">
+        <p class="login-brand__eyebrow"><i class="bi bi-stars"></i> Clara Science Academy</p>
+        <h1 class="login-brand__title">Your school portal,<br><em>one secure sign-in</em></h1>
+        <p class="login-brand__lead">Grades, attendance, classes, and official report cards — all in one place for students, families, teachers, and staff.</p>
+
+        <ul class="login-brand__features" role="list">
+          <li><i class="bi bi-shield-check"></i> Secure authentication</li>
+          <li><i class="bi bi-people-fill"></i> Family Portal for parents</li>
+          <li><i class="bi bi-google"></i> Sign in with Google</li>
+        </ul>
       </div>
 
-      <div class="login-card__body">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-          <div class="login-alerts">
-            {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-2 py-2" role="alert">{{ message }}</div>
-            {% endfor %}
-          </div>
-          {% endif %}
-        {% endwith %}
-
-        <div class="login-role-hints" aria-label="Who signs in here">
-          <span><i class="bi bi-mortarboard"></i> Students</span>
-          <span><i class="bi bi-people-fill"></i> Families</span>
-          <span><i class="bi bi-easel"></i> Teachers</span>
-          <span><i class="bi bi-building"></i> Staff</span>
+      <div class="login-brand__visual" aria-hidden="true">
+        <div class="login-brand__frame">
+          <div class="login-brand__slide active" style="background-image: url('{{ url_for('static', filename='img/backimg/image1.png') }}');"></div>
+          <div class="login-brand__slide" style="background-image: url('{{ url_for('static', filename='img/backimg/image2.png') }}');"></div>
+          <div class="login-brand__slide" style="background-image: url('{{ url_for('static', filename='img/backimg/image3.png') }}');"></div>
         </div>
+      </div>
 
-        <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" class="login-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <p class="login-brand__foot">{{ app_version_display }} · {{ app_version_release_label }}</p>
+    </aside>
 
-          <div class="form-group">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" name="username" id="username" class="form-control"
-                   placeholder="Your portal username" autocomplete="username" required>
+    <section class="login-panel">
+      <div class="login-card">
+        <header class="login-card__head">
+          <h2 class="login-card__title">Sign in</h2>
+          <p class="login-card__subtitle">Use your portal username and password</p>
+        </header>
+
+        <div class="login-card__body">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="login-alerts">
+              {% for category, message in messages %}
+              <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-0" role="alert">{{ message }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          {% endwith %}
+
+          <div class="login-role-hints" aria-label="Who signs in here">
+            <span><i class="bi bi-mortarboard"></i> Students</span>
+            <span><i class="bi bi-house-heart"></i> Families</span>
+            <span><i class="bi bi-easel"></i> Teachers</span>
+            <span><i class="bi bi-building"></i> Staff</span>
           </div>
 
-          <div class="form-group">
-            <label for="password" class="form-label">Password</label>
-            <div class="input-group">
-              <input type="password" name="password" id="password" class="form-control"
-                     placeholder="Your password" autocomplete="current-password" required>
-              <button class="password-toggle" type="button" id="togglePassword"
-                      aria-label="Show password">
-                <i class="bi bi-eye" id="passwordIcon"></i>
-              </button>
+          <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" class="login-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <div class="login-field">
+              <label for="username" class="login-field__label">Username</label>
+              <div class="login-field__wrap">
+                <i class="bi bi-person login-field__icon" aria-hidden="true"></i>
+                <input type="text" name="username" id="username" class="login-field__input"
+                       placeholder="Portal username" autocomplete="username" required>
+              </div>
+            </div>
+
+            <div class="login-field">
+              <label for="password" class="login-field__label">Password</label>
+              <div class="login-field__wrap">
+                <i class="bi bi-lock login-field__icon" aria-hidden="true"></i>
+                <input type="password" name="password" id="password" class="login-field__input login-field__input--password"
+                       placeholder="Password" autocomplete="current-password" required>
+                <button class="login-field__toggle" type="button" id="togglePassword" aria-label="Show password">
+                  <i class="bi bi-eye" id="passwordIcon"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+              <span class="btn-text">Sign in</span>
+              <i class="bi bi-arrow-right-short btn-login__arrow" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <div class="login-divider"><span>or</span></div>
+
+          <a href="{{ url_for('auth.google_login') }}" class="btn-google">
+            <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span>Sign in with Google</span>
+          </a>
+
+          <div class="login-family-note">
+            <span class="login-family-note__icon" aria-hidden="true"><i class="bi bi-house-heart"></i></span>
+            <div>
+              <strong>Family Portal</strong>
+              <p>Parents and guardians: use the username from the school office. Contact the main office if you need help signing in.</p>
             </div>
           </div>
+        </div>
 
-          <button type="submit" class="btn-login" id="loginBtn">
-            <span class="btn-text">Sign in</span>
-          </button>
-        </form>
-
-        <div class="login-divider"><span>or</span></div>
-
-        <a href="{{ url_for('auth.google_login') }}" class="btn-google">
-          <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          <span>Sign in with Google</span>
-        </a>
-
-        <p class="login-family-note">
-          <i class="bi bi-house-heart"></i>
-          <strong>Family Portal:</strong> Parents and guardians use the username provided by the school office. Need help? Contact the main office.
-        </p>
+        <footer class="login-card__foot login-card__foot--mobile">
+          <span>{{ app_version_display }}</span>
+          <span>{{ app_version_release_label }}</span>
+        </footer>
       </div>
-
-      <div class="login-card__foot">
-        <span class="login-version">{{ app_version_display }}</span>
-        <span class="login-version-meta">{{ app_version_release_label }}</span>
-      </div>
-    </div>
+    </section>
   </div>
 </div>
 
@@ -118,6 +156,16 @@ document.addEventListener('DOMContentLoaded', function() {
       loginBtn.classList.add('loading');
       btnText.textContent = 'Signing in…';
     });
+  }
+
+  const slides = document.querySelectorAll('.login-brand__slide');
+  if (slides.length > 1) {
+    let idx = 0;
+    setInterval(function() {
+      slides[idx].classList.remove('active');
+      idx = (idx + 1) % slides.length;
+      slides[idx].classList.add('active');
+    }, 5000);
   }
 });
 </script>

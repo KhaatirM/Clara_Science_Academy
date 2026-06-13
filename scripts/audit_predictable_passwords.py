@@ -6,7 +6,7 @@ Legacy patterns this script detects:
   - Students:  firstname + 4-digit birth year (e.g. john2012)
   - Staff:     firstname + year 2000–2010 (e.g. jane2007)
   - Parents:   Parent + last 4 digits of linked student guardian phone
-  - Shared:    Welcome2CSA! (old default Google onboarding password reused on portal)
+  - Shared:    legacy shared Google onboarding password (optional AUDIT_LEGACY_GOOGLE_PASSWORDS env)
 
 Usage:
   python scripts/audit_predictable_passwords.py              # report only
@@ -33,7 +33,7 @@ if ROOT not in sys.path:
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from services.google_sync_tasks import DEFAULT_TEMP_PASSWORD
+from utils.google_workspace_passwords import legacy_google_passwords_for_audit
 from utils.temporary_passwords import generate_temporary_password
 
 
@@ -107,7 +107,9 @@ def audit_users(*, apply: bool = False) -> list[FlaggedAccount]:
 
     with app.app_context():
         users = User.query.order_by(User.id).all()
-        shared_candidates = [DEFAULT_TEMP_PASSWORD, "Welcome2CSA!", "password123"]
+        shared_candidates = legacy_google_passwords_for_audit()
+        if os.environ.get("AUDIT_INCLUDE_COMMON_TEST_PASSWORDS", "").strip().lower() in ("1", "true", "yes"):
+            shared_candidates = [*shared_candidates, "password123"]
         reset_user_ids: set[int] = set()
 
         for user in users:

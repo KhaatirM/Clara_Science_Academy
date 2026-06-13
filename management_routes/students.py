@@ -83,7 +83,8 @@ def _remove_uploaded_student_photo(filename: str) -> None:
 from utils.credential_modal import student_grade3_plus_modal_payload, student_k2_modal_payload
 from utils.parent_portal import parent_portal_status_for_student, sync_student_parent_portal
 from services.google_directory_service import create_google_user
-from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
+from services.google_sync_tasks import sync_single_user_to_google
+from utils.google_workspace_passwords import new_google_workspace_initial_password
 
 bp = Blueprint('students', __name__)
 
@@ -145,13 +146,13 @@ def _provision_student_login_if_needed(student):
     user.is_temporary_password = True
     user.password_changed_at = None
     db.session.add(user)
-    from services.google_sync_tasks import DEFAULT_TEMP_PASSWORD
+    google_initial_password = new_google_workspace_initial_password()
 
     return {
         "username": username,
         "portal_password": password,
         "school_email": generated_workspace_email,
-        "google_initial_password": DEFAULT_TEMP_PASSWORD,
+        "google_initial_password": google_initial_password,
     }
 
 
@@ -473,9 +474,10 @@ def add_student():
 
                 google_warning = None
                 google_user_created = False
+                google_initial_password = new_google_workspace_initial_password()
 
                 try:
-                    sync_single_user_to_google(user.id)
+                    sync_single_user_to_google(user.id, initial_google_password=google_initial_password)
                 except Exception as e:
                     current_app.logger.warning(
                         "Google Directory sync after save failed for user %s: %s", user.id, e
@@ -497,7 +499,7 @@ def add_student():
                             {
                                 "primaryEmail": generated_workspace_email,
                                 "name": {"givenName": student.first_name, "familyName": student.last_name},
-                                "password": DEFAULT_TEMP_PASSWORD,
+                                "password": google_initial_password,
                                 "orgUnitPath": ou_path,
                                 "changePasswordAtNextLogin": True,
                             }
@@ -525,7 +527,7 @@ def add_student():
                     username=username,
                     portal_password=password,
                     school_email=generated_workspace_email,
-                    google_initial_password=DEFAULT_TEMP_PASSWORD,
+                    google_initial_password=google_initial_password,
                     google_user_created=google_user_created,
                     google_warning=google_warning,
                 )
@@ -2270,7 +2272,7 @@ def edit_student(student_id):
                     username=new_creds["username"],
                     portal_password=new_creds["portal_password"],
                     school_email=new_creds.get("school_email"),
-                    google_initial_password=new_creds.get("google_initial_password", DEFAULT_TEMP_PASSWORD),
+                    google_initial_password=new_creds.get("google_initial_password") or new_google_workspace_initial_password(),
                     context_note=(
                         "Grade was updated to 3rd+ and a new portal account was created."
                         if promoted
@@ -2287,7 +2289,7 @@ def edit_student(student_id):
                 username=new_creds["username"],
                 portal_password=new_creds["portal_password"],
                 school_email=new_creds.get("school_email"),
-                google_initial_password=new_creds.get("google_initial_password", DEFAULT_TEMP_PASSWORD),
+                google_initial_password=new_creds.get("google_initial_password") or new_google_workspace_initial_password(),
                 google_user_created=None,
                 google_warning=None,
             )

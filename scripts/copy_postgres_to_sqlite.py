@@ -86,7 +86,7 @@ def main():
     pg_host = os.environ.get('PG_HOST', 'localhost')
     pg_port = os.environ.get('PG_PORT', '5432')
     pg_user = os.environ.get('PG_USER', 'postgres')
-    pg_password = os.environ.get('PGPASSWORD') or os.environ.get('PG_PASSWORD', 'Lithium_3')
+    pg_password = os.environ.get('PGPASSWORD') or os.environ.get('PG_PASSWORD', '')
     pg_database = os.environ.get('PG_DATABASE', 'clara_science_local')
     
     if not pg_password:

@@ -12,8 +12,6 @@ from email.utils import make_msgid
 from flask import current_app, has_request_context, url_for
 from extensions import mail
 
-from services.google_sync_tasks import DEFAULT_TEMP_PASSWORD
-
 
 def _staff_login_url() -> str:
     """Absolute URL to the website login page (for emails outside request context)."""
@@ -142,6 +140,7 @@ def send_staff_welcome_email(
     username: str,
     temporary_password: str,
     school_email: str | None,
+    google_initial_password: str,
 ) -> bool:
     """
     Email website login + school (@clarascienceacademy.org) details to the staff
@@ -171,7 +170,7 @@ SCHOOL EMAIL (Google — Gmail, Classroom, Drive)
 Your official school email address:
   {se or "(if missing, contact IT — it may still be provisioning)"}
 First sign-in with Google using that address uses this initial password (you must change it when prompted):
-  {DEFAULT_TEMP_PASSWORD}
+  {google_initial_password}
 (This Google password is separate from your website portal password above.)
 
 Store this information securely.
@@ -200,7 +199,7 @@ Store this information securely.
 <h3 style="margin:1.25em 0 0.5em;">School email (Google)</h3>
 <p>Your official school email address (Gmail, Classroom, Drive):</p>
 <p style="font-size:1.1em;"><strong>{se_html}</strong></p>
-<p>First Google sign-in with that address uses this initial password (change when prompted): <strong>{esc(DEFAULT_TEMP_PASSWORD)}</strong></p>
+<p>First Google sign-in with that address uses this initial password (change when prompted): <strong>{esc(google_initial_password)}</strong></p>
 <p style="font-size:0.95em;color:#444;">That Google password is separate from your website portal password above.</p>
 <p>Store this information securely.</p>
 <p style="color:#666;font-size:0.9em;">— Clara Science Academy</p>

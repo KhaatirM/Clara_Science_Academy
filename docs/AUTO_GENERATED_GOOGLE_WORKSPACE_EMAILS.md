@@ -43,7 +43,7 @@ User.google_workspace_email: john.smith@clarascienceacademy.org
 ```
 Student added successfully! 
 Username: jsmith, 
-Password: john2024, 
+Password: [generated at save time], 
 Google Workspace Email: john.smith@clarascienceacademy.org
 Student will be required to change password on first login.
 ```
@@ -67,7 +67,7 @@ User.google_workspace_email: jane.doe@clarascienceacademy.org (auto-generated)
 ```
 Teacher added successfully! 
 Username: jdoe, 
-Password: jane2007, 
+Password: [generated at save time], 
 Staff ID: NC12345,
 Google Workspace Email: jane.doe@clarascienceacademy.org
 User will be required to change password on first login.

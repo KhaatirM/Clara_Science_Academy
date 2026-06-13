@@ -11,7 +11,9 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 BASE_URL = os.environ.get("E2E_BASE_URL", "http://127.0.0.1:5000")
-E2E_PASSWORD = os.environ.get("E2E_PASSWORD", "E2eTest2026!")
+E2E_PASSWORD = os.environ.get("E2E_PASSWORD")
+if not E2E_PASSWORD:
+    raise RuntimeError("Set E2E_PASSWORD in the environment before running Playwright e2e tests.")
 
 USERS = {
     "director": os.environ.get("E2E_DIRECTOR_USER", "vmuhammad"),

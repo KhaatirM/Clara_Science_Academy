@@ -41,6 +41,8 @@ from utils.student_login_policy import (
     parse_grade_level_for_policy,
 )
 
+from utils.google_workspace_passwords import new_google_workspace_initial_password
+
 logger = logging.getLogger(__name__)
 
 DOMAIN = "clarascienceacademy.org"
@@ -49,10 +51,15 @@ ELEMENTARY_GROUP_EMAIL = f"elementary@{DOMAIN}"
 MIDDLE_SCHOOL_GROUP_EMAIL = f"middle_school@{DOMAIN}"
 HIGH_SCHOOL_GROUP_EMAIL = f"highschool@{DOMAIN}"
 STUDENT_ASSEMBLY_GROUP_EMAIL = f"studentassembly@{DOMAIN}"
-DEFAULT_TEMP_PASSWORD = "Welcome2CSA!"
 
 
-def _sync_student_workspace(student: Student, workspace_email: str, *, create_missing_groups: bool) -> None:
+def _sync_student_workspace(
+    student: Student,
+    workspace_email: str,
+    *,
+    create_missing_groups: bool,
+    initial_google_password: str | None = None,
+) -> None:
     """Apply Directory OU + groups for a student (same rules as bulk sync script)."""
     email = (workspace_email or "").strip()
     if not email:
@@ -104,7 +111,7 @@ def _sync_student_workspace(student: Student, workspace_email: str, *, create_mi
             {
                 "primaryEmail": email,
                 "name": {"givenName": student.first_name, "familyName": student.last_name},
-                "password": DEFAULT_TEMP_PASSWORD,
+                "password": initial_google_password or new_google_workspace_initial_password(),
                 "orgUnitPath": decision.target_ou_path,
                 "changePasswordAtNextLogin": True,
             }
@@ -161,6 +168,7 @@ def _sync_staff_workspace(
     *,
     create_missing_groups: bool,
     user: Optional[User] = None,
+    initial_google_password: str | None = None,
 ) -> None:
     """Apply Directory OU + teachers group for staff (same rules as bulk sync script)."""
     email = (workspace_email or "").strip()
@@ -191,7 +199,7 @@ def _sync_staff_workspace(
             {
                 "primaryEmail": email,
                 "name": {"givenName": staff.first_name, "familyName": staff.last_name},
-                "password": DEFAULT_TEMP_PASSWORD,
+                "password": initial_google_password or new_google_workspace_initial_password(),
                 "orgUnitPath": target_ou,
                 "changePasswordAtNextLogin": True,
             }
@@ -213,7 +221,12 @@ def _sync_staff_workspace(
         ensure_user_in_group(email, TEACHERS_GROUP_EMAIL)
 
 
-def sync_single_user_to_google(user_id: int, *, create_missing_groups: bool = True) -> bool:
+def sync_single_user_to_google(
+    user_id: int,
+    *,
+    create_missing_groups: bool = True,
+    initial_google_password: str | None = None,
+) -> bool:
     """
     Look up User by id; if linked to a Student or TeacherStaff with a Workspace email,
     push OU + group membership to Google (same behavior as sync_all_to_google for that row).
@@ -236,7 +249,12 @@ def sync_single_user_to_google(user_id: int, *, create_missing_groups: bool = Tr
         if not student:
             logger.warning("sync_single_user_to_google: student id %s missing for user %s", user.student_id, user_id)
             return False
-        _sync_student_workspace(student, email, create_missing_groups=create_missing_groups)
+        _sync_student_workspace(
+            student,
+            email,
+            create_missing_groups=create_missing_groups,
+            initial_google_password=initial_google_password,
+        )
         return True
 
     if user.teacher_staff_id:
@@ -248,7 +266,13 @@ def sync_single_user_to_google(user_id: int, *, create_missing_groups: bool = Tr
                 user_id,
             )
             return False
-        _sync_staff_workspace(staff, email, create_missing_groups=create_missing_groups, user=user)
+        _sync_staff_workspace(
+            staff,
+            email,
+            create_missing_groups=create_missing_groups,
+            user=user,
+            initial_google_password=initial_google_password,
+        )
         return True
 
     logger.debug("sync_single_user_to_google: user %s is not a student or staff link; skip", user_id)

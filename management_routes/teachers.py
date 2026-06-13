@@ -9,7 +9,8 @@ from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay, Assignmen
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import json
-from services.google_sync_tasks import sync_single_user_to_google, DEFAULT_TEMP_PASSWORD
+from services.google_sync_tasks import sync_single_user_to_google
+from utils.google_workspace_passwords import new_google_workspace_initial_password
 from services.email_service import send_staff_welcome_email
 from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
 from utils.user_roles import user_has_management_entry_access
@@ -109,8 +110,14 @@ def _allocate_workspace_email(first_name: str, last_name: str):
         counter += 1
 
 
-def _post_commit_staff_google_pipeline(user, teacher_staff, assigned_role_display: str):
-    """Directory sync + Admin SDK user create (same as Add Staff). Call after commit."""
+def _post_commit_staff_google_pipeline(
+    user,
+    teacher_staff,
+    assigned_role_display: str,
+    *,
+    google_initial_password: str | None = None,
+):
+    """Directory sync after staff save. Call after commit."""
     from services.google_ou_policy import staff_google_account_eligible
 
     if not staff_google_account_eligible(teacher_staff):
@@ -120,7 +127,10 @@ def _post_commit_staff_google_pipeline(user, teacher_staff, assigned_role_displa
         )
         return
     try:
-        sync_single_user_to_google(user.id)
+        sync_single_user_to_google(
+            user.id,
+            initial_google_password=google_initial_password,
+        )
     except Exception as e:
         current_app.logger.warning(
             "Google Directory sync after save failed for user %s: %s", user.id, e
@@ -433,7 +443,13 @@ def add_teacher_staff():
 
             db.session.add(user)
             db.session.commit()
-            _post_commit_staff_google_pipeline(user, teacher_staff, assigned_role_display)
+            google_initial_password = new_google_workspace_initial_password()
+            _post_commit_staff_google_pipeline(
+                user,
+                teacher_staff,
+                assigned_role_display,
+                google_initial_password=google_initial_password,
+            )
 
             welcome_sent = send_staff_welcome_email(
                 email,
@@ -441,6 +457,7 @@ def add_teacher_staff():
                 username=username,
                 temporary_password=password,
                 school_email=generated_workspace_email,
+                google_initial_password=google_initial_password,
             )
 
             is_temporary = teacher_staff.is_temporary
@@ -455,7 +472,7 @@ def add_teacher_staff():
                 username=username,
                 portal_password=password,
                 school_email=generated_workspace_email,
-                google_initial_password=DEFAULT_TEMP_PASSWORD,
+                google_initial_password=google_initial_password,
                 personal_email=email,
                 welcome_email_sent=welcome_sent,
                 is_temporary=is_temporary,
@@ -688,7 +705,13 @@ def edit_teacher_staff(staff_id):
                     new_user.permissions = permissions_json
                     _apply_user_roles(new_user, primary_role, secondary_roles)
                     db.session.add(new_user)
-                    newly_provisioned = (username, password_plain, generated_workspace_email)
+                    google_initial_password = new_google_workspace_initial_password()
+                    newly_provisioned = (
+                        username,
+                        password_plain,
+                        generated_workspace_email,
+                        google_initial_password,
+                    )
             else:
                 if user:
                     fallback_uid = _actor_user_id_for_staff_removal([user.id])
@@ -706,13 +729,20 @@ def edit_teacher_staff(staff_id):
             welcome_sent_edit = False
             if portal_login and sync_user:
                 if newly_provisioned:
-                    _post_commit_staff_google_pipeline(sync_user, teacher_staff, assigned_role_display)
+                    u_n, p_w, gwe_n, google_initial_password = newly_provisioned
+                    _post_commit_staff_google_pipeline(
+                        sync_user,
+                        teacher_staff,
+                        assigned_role_display,
+                        google_initial_password=google_initial_password,
+                    )
                     welcome_sent_edit = send_staff_welcome_email(
                         email,
                         f"{first_name} {last_name}".strip(),
-                        username=newly_provisioned[0],
-                        temporary_password=newly_provisioned[1],
-                        school_email=newly_provisioned[2],
+                        username=u_n,
+                        temporary_password=p_w,
+                        school_email=gwe_n,
+                        google_initial_password=google_initial_password,
                     )
                 elif sync_user.google_workspace_email:
                     try:
@@ -730,7 +760,7 @@ def edit_teacher_staff(staff_id):
                     "message": f"{assigned_role_display} updated successfully!",
                 }
                 if newly_provisioned:
-                    u_n, p_w, gwe_n = newly_provisioned
+                    u_n, p_w, gwe_n, google_initial_password = newly_provisioned
                     payload["credentials"] = {
                         "username": u_n,
                         "password": p_w,
@@ -748,7 +778,7 @@ def edit_teacher_staff(staff_id):
                         username=u_n,
                         portal_password=p_w,
                         school_email=gwe_n,
-                        google_initial_password=DEFAULT_TEMP_PASSWORD,
+                        google_initial_password=google_initial_password,
                         personal_email=email,
                         welcome_email_sent=bool(welcome_sent_edit),
                         is_temporary=bool(teacher_staff.is_temporary),
@@ -768,7 +798,7 @@ def edit_teacher_staff(staff_id):
                     username=u_n,
                     portal_password=p_w,
                     school_email=gwe_n,
-                    google_initial_password=DEFAULT_TEMP_PASSWORD,
+                    google_initial_password=google_initial_password,
                     personal_email=email,
                     welcome_email_sent=bool(welcome_sent_edit),
                     is_temporary=bool(teacher_staff.is_temporary),

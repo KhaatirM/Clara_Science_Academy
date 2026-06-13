@@ -21,7 +21,7 @@ def recopy_user_table():
             print("=" * 70)
             
             # PostgreSQL connection
-            pg_password = os.environ.get('PGPASSWORD') or os.environ.get('PG_PASSWORD', 'Lithium_3')
+            pg_password = os.environ.get('PGPASSWORD') or os.environ.get('PG_PASSWORD', '')
             pg_uri = f'postgresql://postgres:{pg_password}@localhost:5432/clara_science_local'
             pg_engine = create_engine(pg_uri)
             

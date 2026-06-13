@@ -25,7 +25,7 @@ import sys
 import time
 from datetime import datetime
 
-DEFAULT_TEMP_PASSWORD = "Welcome2CSA!"
+from utils.google_workspace_passwords import google_workspace_initial_password_for_sync
 DOMAIN = "clarascienceacademy.org"
 TEACHERS_GROUP_EMAIL = f"teachers@{DOMAIN}"
 ELEMENTARY_GROUP_EMAIL = f"elementary@{DOMAIN}"
@@ -204,7 +204,7 @@ def main() -> int:
                             {
                                 "primaryEmail": email,
                                 "name": {"givenName": student.first_name, "familyName": student.last_name},
-                                "password": DEFAULT_TEMP_PASSWORD,
+                                "password": google_workspace_initial_password_for_sync(),
                                 "orgUnitPath": decision.target_ou_path,
                                 "changePasswordAtNextLogin": True,
                             }
@@ -346,7 +346,7 @@ def main() -> int:
                         {
                             "primaryEmail": email,
                             "name": {"givenName": staff.first_name, "familyName": staff.last_name},
-                            "password": DEFAULT_TEMP_PASSWORD,
+                            "password": google_workspace_initial_password_for_sync(),
                             "orgUnitPath": target_staff_ou,
                             "changePasswordAtNextLogin": True,
                         }

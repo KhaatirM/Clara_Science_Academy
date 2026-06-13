@@ -26,7 +26,7 @@ Optional environment variables:
 | Variable | Default |
 |----------|---------|
 | `E2E_BASE_URL` | `http://127.0.0.1:5000` |
-| `E2E_PASSWORD` | `E2eTest2026!` |
+| `E2E_PASSWORD` | *(required — set in your environment)* |
 | `E2E_DIRECTOR_USER` | `vmuhammad` |
 | `E2E_TEACHER_USER` | `jabdullah` |
 | `E2E_STUDENT_USER` | `jhope` |

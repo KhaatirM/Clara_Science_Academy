@@ -1,5 +1,5 @@
 """
-Failed login tracking and tech alerts after repeated wrong passwords.
+Activity-log based alerts when sign-in attempts fail repeatedly.
 """
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ import json
 from datetime import datetime, timedelta
 
 from flask import url_for
+from sqlalchemy import or_
 
 from extensions import db
 from models import ActivityLog, User
@@ -18,7 +19,9 @@ FAILED_LOGIN_THRESHOLD = 5
 FAILED_LOGIN_WINDOW_MINUTES = 30
 ALERT_COOLDOWN_MINUTES = 60
 
-_FAILED_LOGIN_ACTIONS = ('login_failed', 'login_failed_maintenance')
+# ActivityLog.action values written by authroutes on unsuccessful sign-in.
+_ACTION_SIGNIN_REJECTED = "login_failed"
+_ACTION_SIGNIN_REJECTED_MAINTENANCE = "login_failed_maintenance"
 
 
 def _normalize_username(username: str | None) -> str:
@@ -45,7 +48,10 @@ def count_recent_failed_logins(username: str, *, window_minutes: int = FAILED_LO
     since = datetime.utcnow() - timedelta(minutes=window_minutes)
     logs = (
         ActivityLog.query.filter(
-            ActivityLog.action.in_(_FAILED_LOGIN_ACTIONS),
+            or_(
+                ActivityLog.action == _ACTION_SIGNIN_REJECTED,
+                ActivityLog.action == _ACTION_SIGNIN_REJECTED_MAINTENANCE,
+            ),
             ActivityLog.success.is_(False),
             ActivityLog.timestamp >= since,
         )
@@ -103,9 +109,9 @@ def notify_tech_users_of_failed_logins(
         message += f'\nUser agent: {user_agent[:300]}'
 
     try:
-        link = url_for('tech.activity_log', action='login_failed')
+        link = url_for('tech.activity_log', action=_ACTION_SIGNIN_REJECTED)
     except Exception:
-        link = '/tech/activity-log?action=login_failed'
+        link = f'/tech/activity-log?action={_ACTION_SIGNIN_REJECTED}'
 
     create_notifications_for_users(
         tech_ids,

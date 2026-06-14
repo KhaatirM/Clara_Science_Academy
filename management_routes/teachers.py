@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import json
 from services.google_sync_tasks import sync_single_user_to_google
+from services.google_directory_service import suspend_user
 from utils.google_workspace_passwords import new_google_workspace_initial_password
 from services.email_service import send_staff_welcome_email
 from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
@@ -108,6 +109,22 @@ def _allocate_workspace_email(first_name: str, last_name: str):
         if not User.query.filter_by(google_workspace_email=candidate).first():
             return candidate
         counter += 1
+
+
+def _suspend_staff_google_workspace(user) -> None:
+    """Best-effort suspend when portal access is removed or staff is offboarded."""
+    email = (getattr(user, "google_workspace_email", None) or "").strip()
+    if not email:
+        return
+    try:
+        suspend_user(email)
+    except Exception as e:
+        current_app.logger.warning(
+            "Google Workspace suspend failed for staff user %s (%s): %s",
+            getattr(user, "id", None),
+            email,
+            e,
+        )
 
 
 def _post_commit_staff_google_pipeline(
@@ -714,6 +731,7 @@ def edit_teacher_staff(staff_id):
                     )
             else:
                 if user:
+                    _suspend_staff_google_workspace(user)
                     fallback_uid = _actor_user_id_for_staff_removal([user.id])
                     if not fallback_uid:
                         raise ValueError(
@@ -787,7 +805,7 @@ def edit_teacher_staff(staff_id):
                 return jsonify(payload)
 
             if newly_provisioned:
-                u_n, p_w, gwe_n = newly_provisioned
+                u_n, p_w, gwe_n, google_initial_password = newly_provisioned
                 exp_edit = None
                 if teacher_staff.is_temporary and teacher_staff.access_expires_at:
                     exp_edit = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p UTC')
@@ -968,6 +986,8 @@ def remove_teacher_staff(staff_id):
         # Delete associated User account(s) - this removes login access
         user_accounts = User.query.filter_by(teacher_staff_id=staff_id).all()
         if user_accounts:
+            for user in user_accounts:
+                _suspend_staff_google_workspace(user)
             uids = [u.id for u in user_accounts]
             fallback_uid = _actor_user_id_for_staff_removal(uids)
             if not fallback_uid:

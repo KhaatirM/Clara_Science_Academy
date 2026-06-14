@@ -854,7 +854,10 @@
         if (!studentId) return;
         showProfileModalLoading('profileViewModal', 'Student Details');
         fetch(`/management/view-student/${studentId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Could not load student details.');
+                return response.json();
+            })
             .then(data => {
                 let safeData = data || {};
                 let classes = (safeData.assigned_classes || []).map(c => `<li class="list-group-item d-flex justify-content-between align-items-center">
@@ -1527,14 +1530,17 @@
     }
 
     function renderParentPortalStatus(portal) {
-        function line(slot, elId) {
+        function line(slot, elId, btnId) {
             const el = document.getElementById(elId);
+            const btn = btnId ? document.getElementById(btnId) : null;
             if (!el) return;
             const p = portal && portal['parent' + slot];
             if (!p || !p.has_email) {
                 el.innerHTML = '<span class="text-warning">No email on file</span>';
+                if (btn) btn.disabled = true;
                 return;
             }
+            if (btn) btn.disabled = false;
             if (p.has_login && p.is_linked) {
                 el.innerHTML = '<span class="text-success">Login ready</span><br><code>' + (p.username || '') + '</code>';
             } else if (p.has_login) {
@@ -1543,8 +1549,13 @@
                 el.innerHTML = '<span class="text-muted">No login yet</span>';
             }
         }
-        line(1, 'parentPortalStatus1');
-        line(2, 'parentPortalStatus2');
+        line(1, 'parentPortalStatus1', 'parentPortalBtn1');
+        line(2, 'parentPortalStatus2', 'parentPortalBtn2');
+        const bothBtn = document.getElementById('parentPortalBtnBoth');
+        if (bothBtn) {
+            const hasAny = portal && (portal.parent1 && portal.parent1.has_email || portal.parent2 && portal.parent2.has_email);
+            bothBtn.disabled = !hasAny;
+        }
     }
 
     function provisionParentLogin(studentId, slot) {
@@ -1584,27 +1595,34 @@
 
     function editStudent(studentId) {
         if (!studentId) return;
+        function escAttr(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
+        }
         showProfileModalLoading('profileEditModal', 'Edit Student');
         fetch(`/management/view-student/${studentId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Could not load student details.');
+                return response.json();
+            })
             .then(data => {
                 // Populate the edit modal form fields
                 document.getElementById('profileEditModalLabel').innerText = 'Edit Student';
                 let form = document.getElementById('profileEditForm');
                 let body = document.getElementById('profileEditModalBody');
+                const d = (key) => escAttr(data[key]);
                 body.innerHTML = `
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
                       <label>First Name</label>
-                      <input type='text' class='form-control' name='first_name' value='${data.first_name || ''}'>
+                      <input type='text' class='form-control' name='first_name' value='${d('first_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Last Name</label>
-                      <input type='text' class='form-control' name='last_name' value='${data.last_name || ''}'>
+                      <input type='text' class='form-control' name='last_name' value='${d('last_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Date of Birth</label>
-                      <input type='date' class='form-control' name='dob' value='${data.dob || ''}'>
+                      <input type='date' class='form-control' name='dob' value='${d('dob')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Grade Level</label>
@@ -1628,11 +1646,11 @@
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Student ID</label>
-                      <input type='text' class='form-control' name='student_id' value='${data.student_id || ''}' disabled>
+                      <input type='text' class='form-control' name='student_id' value='${d('student_id')}' disabled>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Expected Graduation Date</label>
-                      <input type='text' class='form-control' name='expected_grad_date' value='${data.expected_grad_date || ''}' readonly>
+                      <input type='text' class='form-control' name='expected_grad_date' value='${d('expected_grad_date')}' readonly>
                     </div>
                     <div class='col-12 mb-3'>
                       <label class='form-label'>Student photo</label>
@@ -1646,7 +1664,7 @@
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
                       <label>Personal Email</label>
-                      <input type='email' class='form-control' name='email' value='${data.email || ''}' placeholder='student@example.com'>
+                      <input type='email' class='form-control' name='email' value='${d('email')}' placeholder='student@example.com'>
                       <small class='text-muted'>For parent contact and communications</small>
                     </div>
                     <div class='col-md-6 mb-3'>
@@ -1654,7 +1672,7 @@
                         Google Workspace Email
                         <i class='bi bi-google text-primary ms-1' title='For Google Sign-In'></i>
                       </label>
-                      <input type='email' class='form-control' name='google_workspace_email' value='${data.google_workspace_email || ''}' placeholder='Leave blank to auto-fill'>
+                      <input type='email' class='form-control' name='google_workspace_email' value='${d('google_workspace_email') || d('suggested_google_workspace_email')}' placeholder='Leave blank to auto-fill'>
                       <small class='text-muted'>Leave blank to auto-fill the school email. Override only if different from the generated address.</small>
                     </div>
                   </div>
@@ -1663,19 +1681,19 @@
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 1 First Name</label>
-                      <input type='text' class='form-control' name='parent1_first_name' value='${data.parent1_first_name || ''}'>
+                      <input type='text' class='form-control' name='parent1_first_name' value='${d('parent1_first_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 1 Last Name</label>
-                      <input type='text' class='form-control' name='parent1_last_name' value='${data.parent1_last_name || ''}'>
+                      <input type='text' class='form-control' name='parent1_last_name' value='${d('parent1_last_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 1 Email</label>
-                      <input type='email' class='form-control' name='parent1_email' value='${data.parent1_email || ''}'>
+                      <input type='email' class='form-control' name='parent1_email' value='${d('parent1_email')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 1 Phone</label>
-                      <input type='tel' class='form-control' name='parent1_phone' value='${data.parent1_phone || ''}'>
+                      <input type='tel' class='form-control' name='parent1_phone' value='${d('parent1_phone')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 1 Relationship</label>
@@ -1689,19 +1707,19 @@
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 2 First Name</label>
-                      <input type='text' class='form-control' name='parent2_first_name' value='${data.parent2_first_name || ''}'>
+                      <input type='text' class='form-control' name='parent2_first_name' value='${d('parent2_first_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 2 Last Name</label>
-                      <input type='text' class='form-control' name='parent2_last_name' value='${data.parent2_last_name || ''}'>
+                      <input type='text' class='form-control' name='parent2_last_name' value='${d('parent2_last_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 2 Email</label>
-                      <input type='email' class='form-control' name='parent2_email' value='${data.parent2_email || ''}'>
+                      <input type='email' class='form-control' name='parent2_email' value='${d('parent2_email')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 2 Phone</label>
-                      <input type='tel' class='form-control' name='parent2_phone' value='${data.parent2_phone || ''}'>
+                      <input type='tel' class='form-control' name='parent2_phone' value='${d('parent2_phone')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Parent 2 Relationship</label>
@@ -1719,36 +1737,36 @@
                       <div class='border rounded p-2 small'>
                         <strong>Parent 1</strong>
                         <div id='parentPortalStatus1' class='text-muted'>Loading…</div>
-                        <button type='button' class='btn btn-sm btn-outline-primary mt-2' onclick='provisionParentLogin(${data.id}, 1)'>Create / link Parent 1 login</button>
+                        <button type='button' id='parentPortalBtn1' class='btn btn-sm btn-outline-primary mt-2' onclick='provisionParentLogin(${data.id}, 1)'>Create / link Parent 1 login</button>
                       </div>
                     </div>
                     <div class='col-md-6'>
                       <div class='border rounded p-2 small'>
                         <strong>Parent 2</strong>
                         <div id='parentPortalStatus2' class='text-muted'>Loading…</div>
-                        <button type='button' class='btn btn-sm btn-outline-primary mt-2' onclick='provisionParentLogin(${data.id}, 2)'>Create / link Parent 2 login</button>
+                        <button type='button' id='parentPortalBtn2' class='btn btn-sm btn-outline-primary mt-2' onclick='provisionParentLogin(${data.id}, 2)'>Create / link Parent 2 login</button>
                       </div>
                     </div>
                   </div>
-                  <button type='button' class='btn btn-sm btn-primary mb-3' onclick='provisionParentLogin(${data.id}, "both")'>Provision both parents</button>
+                  <button type='button' id='parentPortalBtnBoth' class='btn btn-sm btn-primary mb-3' onclick='provisionParentLogin(${data.id}, "both")'>Provision both parents</button>
                   
                   <h6 class='mt-4 mb-3'>Emergency Contact</h6>
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
                       <label>Emergency Contact First Name</label>
-                      <input type='text' class='form-control' name='emergency_first_name' value='${data.emergency_first_name || ''}'>
+                      <input type='text' class='form-control' name='emergency_first_name' value='${d('emergency_first_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Emergency Contact Last Name</label>
-                      <input type='text' class='form-control' name='emergency_last_name' value='${data.emergency_last_name || ''}'>
+                      <input type='text' class='form-control' name='emergency_last_name' value='${d('emergency_last_name')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Emergency Contact Email</label>
-                      <input type='email' class='form-control' name='emergency_email' value='${data.emergency_email || ''}'>
+                      <input type='email' class='form-control' name='emergency_email' value='${d('emergency_email')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Emergency Contact Phone</label>
-                      <input type='tel' class='form-control' name='emergency_phone' value='${data.emergency_phone || ''}'>
+                      <input type='tel' class='form-control' name='emergency_phone' value='${d('emergency_phone')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Emergency Contact Relationship</label>
@@ -1767,23 +1785,23 @@
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
                       <label>Street Address</label>
-                      <input type='text' class='form-control' name='street' value='${data.street || ''}'>
+                      <input type='text' class='form-control' name='street' value='${d('street')}'>
                     </div>
                     <div class='col-md-6 mb-3'>
                       <label>Apt, Unit, Suite, etc.</label>
-                      <input type='text' class='form-control' name='apt_unit' value='${data.apt_unit || ''}'>
+                      <input type='text' class='form-control' name='apt_unit' value='${d('apt_unit')}'>
                     </div>
                     <div class='col-md-4 mb-3'>
                       <label>City</label>
-                      <input type='text' class='form-control' name='city' value='${data.city || ''}'>
+                      <input type='text' class='form-control' name='city' value='${d('city')}'>
                     </div>
                     <div class='col-md-4 mb-3'>
                       <label>State</label>
-                      <input type='text' class='form-control' name='state' value='${data.state || ''}'>
+                      <input type='text' class='form-control' name='state' value='${d('state')}'>
                     </div>
                     <div class='col-md-4 mb-3'>
                       <label>Zip Code</label>
-                      <input type='text' class='form-control' name='zip_code' value='${data.zip_code || ''}'>
+                      <input type='text' class='form-control' name='zip_code' value='${d('zip_code')}'>
                     </div>
                   </div>
                 `;
@@ -1802,6 +1820,14 @@
                 renderParentPortalStatus(data.parent_portal);
                 form.onsubmit = function(e) {
                   e.preventDefault();
+                  if (form.dataset.saving === '1') return;
+                  form.dataset.saving = '1';
+                  const saveBtn = form.querySelector('button[type="submit"]');
+                  if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.dataset.originalHtml = saveBtn.innerHTML;
+                    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+                  }
                   let formData = new FormData(form);
                   const csrfMeta = document.querySelector('meta[name="csrf-token"]');
                   if (csrfMeta && csrfMeta.content) {
@@ -1825,10 +1851,22 @@
                         location.reload();
                       }
                     } else {
+                      form.dataset.saving = '0';
+                      if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = saveBtn.dataset.originalHtml || 'Save Changes';
+                      }
                       showToast(result.message || 'Could not update student.', 'danger');
                     }
                   })
-                  .catch(() => showToast('Could not update student.', 'danger'));
+                  .catch(() => {
+                    form.dataset.saving = '0';
+                    if (saveBtn) {
+                      saveBtn.disabled = false;
+                      saveBtn.innerHTML = saveBtn.dataset.originalHtml || 'Save Changes';
+                    }
+                    showToast('Could not update student.', 'danger');
+                  });
                 };
             })
             .catch(function () {
@@ -2646,7 +2684,8 @@
     }
 
     function removeStudent(studentId, studentName) {
-        if (confirm(`Are you sure you want to remove ${studentName}? This action cannot be undone.`)) {
+        const label = (studentName || 'this student').trim() || 'this student';
+        if (confirm('Are you sure you want to remove ' + label + '? This action cannot be undone.')) {
             // Create a form and submit it to match the route's expectations
             const form = document.createElement('form');
             form.method = 'POST';
@@ -2869,26 +2908,8 @@
     // Store current student ID for edit operations
     let currentStudentId = null;
 
-    function switchStudentsView(view) {
-        const tableView = document.getElementById('tableView');
-        const cardsView = document.getElementById('cardsView');
-        const buttons = document.querySelectorAll('.btn-students-view');
-        
-        if (view === 'table') {
-            tableView.style.display = 'block';
-            cardsView.style.display = 'none';
-            buttons[0].classList.add('active');
-            buttons[1].classList.remove('active');
-        } else {
-            tableView.style.display = 'none';
-            cardsView.style.display = 'block';
-            buttons[0].classList.remove('active');
-            buttons[1].classList.add('active');
-        }
-    }
-
     // View, Edit, and Remove Student functions are defined earlier in the script
-    // Removed duplicate definitions
+    // switchStudentsView (table/cards/grouped) is defined above — do not redefine here
 
     // Switch Teachers View Function
     function switchTeachersView(view) {

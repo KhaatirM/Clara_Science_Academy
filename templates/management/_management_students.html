@@ -434,7 +434,7 @@
                                     <i class="bi bi-archive me-1"></i>Removed
                                 </span>
                             {% elif student.user %}
-                                {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                {% if student.grade_level is not none and student.grade_level < 3 %}
                                     <span class="badge bg-warning text-dark border border-warning" style="font-weight:500;">
                                         <i class="bi bi-check-circle me-1"></i>{{ student.user.username }}
                                     </span>
@@ -444,7 +444,7 @@
                                     </span>
                                 {% endif %}
                             {% else %}
-                                {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                {% if student.grade_level is not none and student.grade_level < 3 %}
                                     <span class="badge bg-warning text-dark border border-warning" style="font-weight: 500;">
                                         <i class="bi bi-hourglass-split me-1"></i>No account yet
                                     </span>
@@ -460,12 +460,14 @@
                                 <button type="button" class="btn btn-sm btn-students-action-view" onclick="viewStudent({{ student.id }})" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                                {% if can_student_admin_ui %}
                                 <button type="button" class="btn btn-sm btn-students-action-edit" onclick="editStudent({{ student.id }})" title="Edit Student">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-students-action-delete" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')" title="Remove Student">
+                                <button type="button" class="btn btn-sm btn-students-action-delete" data-student-name="{{ (student.first_name ~ ' ' ~ student.last_name) | e }}" onclick="removeStudent({{ student.id }}, this.dataset.studentName)" title="Remove Student">
                                     <i class="bi bi-trash"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -523,7 +525,7 @@
                             <i class="bi bi-person-circle me-2"></i>
                             <span>Account: 
                                 {% if student.user %}
-                                    {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                    {% if student.grade_level is not none and student.grade_level < 3 %}
                                     <span class="badge text-white" style="background-color:#fd7e14;">{{ student.user.username }}</span>
                                     {% else %}
                                     <span class="badge bg-success">{{ student.user.username }}</span>
@@ -538,12 +540,14 @@
                         <button type="button" class="btn btn-sm btn-students-card-action" onclick="viewStudent({{ student.id }})">
                             <i class="bi bi-eye me-1"></i>View
                         </button>
+                        {% if can_student_admin_ui %}
                         <button type="button" class="btn btn-sm btn-students-card-action" onclick="editStudent({{ student.id }})">
                             <i class="bi bi-pencil me-1"></i>Edit
                         </button>
-                        <button type="button" class="btn btn-sm btn-students-card-action-delete" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                        <button type="button" class="btn btn-sm btn-students-card-action-delete" data-student-name="{{ (student.first_name ~ ' ' ~ student.last_name) | e }}" onclick="removeStudent({{ student.id }}, this.dataset.studentName)">
                             <i class="bi bi-trash me-1"></i>Remove
                         </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -630,7 +634,7 @@
                                             <div>
                                                 <div class="grouped-stat-value">
                                                     {% if student.user %}
-                                                        {% if student.grade_level is not none and student.grade_level <= 3 %}
+                                                        {% if student.grade_level is not none and student.grade_level < 3 %}
                                                         <i class="bi bi-check-circle" style="color:#fd7e14;"></i>
                                                         {% else %}
                                                         <i class="bi bi-check-circle text-success"></i>

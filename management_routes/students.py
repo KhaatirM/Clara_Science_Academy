@@ -82,13 +82,35 @@ def _remove_uploaded_student_photo(filename: str) -> None:
             pass
 from utils.credential_modal import student_grade3_plus_modal_payload, student_k2_modal_payload
 from utils.parent_portal import parent_portal_status_for_student, sync_student_parent_portal
-from services.google_directory_service import create_google_user
+from services.google_directory_service import create_google_user, suspend_user
 from services.google_sync_tasks import sync_single_user_to_google
 from utils.google_workspace_passwords import new_google_workspace_initial_password
+from utils.student_login_policy import google_workspace_sync_should_skip_student
 
 bp = Blueprint('students', __name__)
 
 STUDENTS_PER_PAGE = 40
+
+
+def _student_workspace_email(student, *, user=None) -> str:
+    u = user or getattr(student, "user", None)
+    return (getattr(u, "google_workspace_email", None) or "").strip()
+
+
+def _suspend_student_google_workspace(student, *, workspace_email: str | None = None) -> None:
+    """Best-effort suspend when portal access is removed or student is offboarded."""
+    email = (workspace_email or _student_workspace_email(student)).strip()
+    if not email or google_workspace_sync_should_skip_student(getattr(student, "grade_level", None)):
+        return
+    try:
+        suspend_user(email)
+    except Exception as e:
+        current_app.logger.warning(
+            "Google Workspace suspend failed for student %s (%s): %s",
+            getattr(student, "id", None),
+            email,
+            e,
+        )
 
 
 def _strip_student_user_account(student):
@@ -2012,32 +2034,20 @@ def get_class_students(class_id):
 
 @bp.route('/view-student/<int:student_id>')
 @login_required
-@management_required
+@permissions_required('students:view', 'students:edit')
 def view_student(student_id):
-    """View detailed student information"""
+    """View detailed student information (read-only JSON for modals)."""
     student = Student.query.get_or_404(student_id)
 
-    if _ensure_student_google_workspace_email(student):
-        try:
-            db.session.commit()
-            uid = getattr(getattr(student, "user", None), "id", None)
-            if uid and (student.user.google_workspace_email or "").strip():
-                try:
-                    sync_single_user_to_google(uid)
-                except Exception as sync_e:
-                    current_app.logger.warning(
-                        "view_student: Directory sync after auto-fill failed for user %s: %s",
-                        uid,
-                        sync_e,
-                    )
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.warning(
-                "view_student: could not persist auto-filled Workspace email for student %s: %s",
-                student_id,
-                e,
-            )
-    
+    google_workspace_email = _student_workspace_email(student) or None
+    suggested_google_workspace_email = None
+    if (
+        not google_workspace_email
+        and getattr(student, "user", None)
+        and grade_may_have_login(student.grade_level)
+    ):
+        suggested_google_workspace_email = student.generate_email() or None
+
     # Calculate age from DOB
     age = None
     if student.dob:
@@ -2071,7 +2081,8 @@ def view_student(student_id):
         'entrance_date': getattr(student, 'entrance_date', None),
         'expected_grad_date': getattr(student, 'expected_grad_date', None),
         'email': student.email,
-        'google_workspace_email': student.user.google_workspace_email if student.user else None,
+        'google_workspace_email': google_workspace_email,
+        'suggested_google_workspace_email': suggested_google_workspace_email,
         'gpa': gpa,
         'assigned_classes': assigned_classes,
         'photo_filename': student.photo_filename,
@@ -2238,8 +2249,11 @@ def edit_student(student_id):
 
         new_creds = None
         if not grade_may_have_login(student.grade_level):
+            ws_before_strip = _student_workspace_email(student)
             _strip_student_user_account(student)
+            pending_ws_suspend = ws_before_strip
         else:
+            pending_ws_suspend = None
             new_creds = _provision_student_login_if_needed(student)
             if getattr(student, "user", None):
                 _ensure_student_google_workspace_email(student)
@@ -2247,6 +2261,8 @@ def edit_student(student_id):
         parent_creds = sync_student_parent_portal(student)
 
         db.session.commit()
+        if pending_ws_suspend:
+            _suspend_student_google_workspace(student, workspace_email=pending_ws_suspend)
         # Google Directory sync immediately after commit (Save → Workspace updated in one step)
         if getattr(student, "user", None) and student.user.google_workspace_email:
             try:
@@ -2345,7 +2361,7 @@ def check_student_id(student_id):
 
 @bp.route('/remove-student/<int:student_id>', methods=['POST'])
 @login_required
-@management_required
+@permissions_required('students:edit')
 def remove_student(student_id):
     """Soft-remove a student (preserve record like staff)."""
     try:
@@ -2353,6 +2369,8 @@ def remove_student(student_id):
 
         from datetime import datetime, timezone
         from models import Enrollment
+
+        ws_email = _student_workspace_email(student)
 
         # Mark as deleted / off roster (record preserved for logs & former report cards)
         student.is_deleted = True
@@ -2371,6 +2389,9 @@ def remove_student(student_id):
         _strip_student_user_account(student)
 
         db.session.commit()
+
+        if ws_email:
+            _suspend_student_google_workspace(student, workspace_email=ws_email)
 
         flash('Student removed (record preserved).', 'success')
         return redirect(url_for('management.students'))

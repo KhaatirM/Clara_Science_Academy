@@ -68,6 +68,24 @@ def _log_skip_protected_admin(user_email: str) -> None:
     current_app.logger.info("[INFO] Skipping protected/admin user: %s", user_email)
 
 
+def _is_http_not_found(exc: HttpError) -> bool:
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status == 404:
+        return True
+    return getattr(exc, "status_code", None) == 404
+
+
+_WORKSPACE_DOMAIN = "clarascienceacademy.org"
+
+# School-wide student groups only — per-class lists (class-*@…) are managed separately.
+STUDENT_SCHOOL_WIDE_GROUP_EMAILS = frozenset({
+    f"elementary@{_WORKSPACE_DOMAIN}",
+    f"middle_school@{_WORKSPACE_DOMAIN}",
+    f"highschool@{_WORKSPACE_DOMAIN}",
+    f"studentassembly@{_WORKSPACE_DOMAIN}",
+})
+
+
 DIRECTORY_SCOPES_FULL = [
     "https://www.googleapis.com/auth/admin.directory.user",
     "https://www.googleapis.com/auth/admin.directory.group",
@@ -498,9 +516,15 @@ def sync_group_members(
                 current_app.logger.info("Removed %s from group %s", email_l, group_email)
                 current_roles.pop(email_l, None)
             except HttpError as e:
-                current_app.logger.error(
-                    "Directory API error removing %s from %s: %s", email_l, group_email, e
-                )
+                if _is_http_not_found(e):
+                    current_app.logger.debug(
+                        "Member %s already absent from %s; skip remove", email_l, group_email
+                    )
+                    current_roles.pop(email_l, None)
+                else:
+                    current_app.logger.error(
+                        "Directory API error removing %s from %s: %s", email_l, group_email, e
+                    )
 
         return True
     except HttpError as e:
@@ -511,13 +535,20 @@ def sync_group_members(
         return False
 
 
-def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> Optional[bool]:
+def sync_user_groups(
+    user_email: str,
+    group_emails_list: Iterable[str],
+    *,
+    managed_groups: Optional[Iterable[str]] = None,
+) -> Optional[bool]:
     """
-    Ensure user is a member of exactly the provided groups (best-effort).
+    Sync school-wide group membership for a user (best-effort).
 
     Notes:
     - Adds the user to any missing groups in `group_emails_list`
-    - Removes the user from any current groups not in `group_emails_list`
+    - Removes the user only from *managed* school-wide groups they should no longer
+      be in (e.g. elementary@ after a grade promotion). Per-class Google Groups
+      (class-*@…) are never touched here.
 
     Returns:
         True on success, False on failure, None if skipped (403 Not Authorized for admin/privileged users).
@@ -527,6 +558,11 @@ def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> Optio
         return False
 
     desired = {g.strip().lower() for g in (group_emails_list or []) if g and str(g).strip()}
+    managed = {
+        g.strip().lower()
+        for g in (managed_groups if managed_groups is not None else STUDENT_SCHOOL_WIDE_GROUP_EMAILS)
+        if g and str(g).strip()
+    }
     try:
         # List groups the user currently belongs to
         current_groups: List[str] = []
@@ -564,8 +600,8 @@ def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> Optio
                     return None
                 current_app.logger.error(f"Directory API error adding {user_email} to {group_email}: {e}")
 
-        # Remove extra memberships
-        for group_email in sorted(current - desired):
+        # Remove only from managed school-wide groups the user should no longer be in
+        for group_email in sorted((current & managed) - desired):
             try:
                 service.members().delete(groupKey=group_email, memberKey=user_email).execute()
                 current_app.logger.info(f"Removed {user_email} from group {group_email}")
@@ -573,9 +609,14 @@ def sync_user_groups(user_email: str, group_emails_list: Iterable[str]) -> Optio
                 if _is_protected_workspace_admin_403(e):
                     _log_skip_protected_admin(user_email)
                     return None
-                current_app.logger.error(
-                    f"Directory API error removing {user_email} from {group_email}: {e}"
-                )
+                if _is_http_not_found(e):
+                    current_app.logger.debug(
+                        "Member %s already absent from %s; skip remove", user_email, group_email
+                    )
+                else:
+                    current_app.logger.error(
+                        f"Directory API error removing {user_email} from {group_email}: {e}"
+                    )
 
         return True
     except HttpError as e:

@@ -247,9 +247,18 @@ def management_required(f):
                 'students.add_student': ['students:edit'],
                 'students.edit_student': ['students:edit'],
                 'students.view_student': ['students:view', 'students:edit'],
+                'students.remove_student': ['students:edit'],
+                'management.remove_student': ['students:edit'],
+                'students.download_students_csv': ['students:edit'],
+                'students.download_students_template': ['students:edit'],
+                'students.upload_students_csv': ['students:edit'],
+                'management.download_students_csv': ['students:edit'],
+                'management.download_students_template': ['students:edit'],
+                'management.upload_students_csv': ['students:edit'],
 
                 # Teachers & staff (view/manage)
                 'management.teachers': ['teachers_staff:manage'],
+                'management.add_teacher_staff': ['teachers_staff:manage'],
                 'management.edit_teacher_staff': ['teachers_staff:manage'],
                 'management.remove_teacher_staff': ['teachers_staff:manage'],
                 'management.view_teacher': ['teachers_staff:manage'],

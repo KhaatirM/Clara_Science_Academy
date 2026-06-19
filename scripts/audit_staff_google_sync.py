@@ -44,9 +44,10 @@ def main() -> int:
     needle = (args.search or "").strip().lower()
 
     with app.app_context():
-        db_uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
-        db_target = db_uri.split("@")[-1].split("?")[0] if "@" in db_uri else db_uri or "(unknown)"
-        print(f"Database: {db_target}")
+        from scripts.render_db_guard import print_database_target, require_postgres_database
+
+        require_postgres_database(app, script_name="audit_staff_google_sync.py")
+        print_database_target(app)
         print("=" * 80)
 
         staff_rows = TeacherStaff.query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()

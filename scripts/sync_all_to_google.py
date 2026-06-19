@@ -139,13 +139,10 @@ def main() -> int:
     errors = 0
 
     with app.app_context():
-        db_uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
-        if db_uri:
-            # Log host/db only — never print credentials.
-            db_target = db_uri.split("@")[-1].split("?")[0] if "@" in db_uri else "(local sqlite)"
-            print(f"Database source: {db_target} (live app DB — not hardcoded file data)")
-        else:
-            print("Database source: (SQLALCHEMY_DATABASE_URI not set)")
+        from scripts.render_db_guard import print_database_target, require_postgres_database
+
+        require_postgres_database(app, script_name="sync_all_to_google.py")
+        print_database_target(app)
 
         # ------------------------
         # Students: must have User row with non-empty google_workspace_email (no guessed emails)

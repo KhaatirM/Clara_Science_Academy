@@ -25,6 +25,11 @@ import sys
 import time
 from datetime import datetime
 
+# Repo root must be on sys.path before local imports (Render cron cwd may not be project root).
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
 from utils.google_workspace_passwords import google_workspace_initial_password_for_sync
 DOMAIN = "clarascienceacademy.org"
 TEACHERS_GROUP_EMAIL = f"teachers@{DOMAIN}"
@@ -58,10 +63,6 @@ def main() -> int:
     Run bulk Workspace sync. Return value is ignored when run as __main__; the process always
     ends with sys.exit(0) so Render Cron stays green. Check logs / summary['errors'] for issues.
     """
-    # Ensure repo root is on sys.path when running from scripts/
-    if "." not in sys.path:
-        sys.path.append(".")
-
     apply_changes = _env_bool("APPLY_CHANGES", default=False)
     create_missing_groups = _env_bool("CREATE_MISSING_GROUPS", default=False)
     sleep_ms = _env_int("SLEEP_MS", 50)

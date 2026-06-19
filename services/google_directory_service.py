@@ -112,6 +112,30 @@ DIRECTORY_SCOPES_READONLY = [
     "https://www.googleapis.com/auth/admin.directory.user.readonly",
 ]
 
+# Reuse one Directory client per process/scope set so OAuth token + RAB lookups are not
+# repeated on every API call (reduces transient google.oauth2._client 500 noise on cron).
+_directory_service_cache: dict[tuple[str, ...], Any] = {}
+
+
+def _build_directory_service(
+    *,
+    key_json: str | None,
+    key_file: str | None,
+    delegated_admin: str,
+    effective_scopes: list[str],
+):
+    if key_json:
+        info = json.loads(key_json)
+        creds = service_account.Credentials.from_service_account_info(
+            info, scopes=effective_scopes
+        )
+    else:
+        creds = service_account.Credentials.from_service_account_file(
+            key_file, scopes=effective_scopes
+        )
+    delegated_creds = creds.with_subject(delegated_admin)
+    return build("admin", "directory_v1", credentials=delegated_creds, cache_discovery=False)
+
 
 def get_directory_service(scopes: Optional[Sequence[str]] = None):
     """
@@ -143,17 +167,17 @@ def get_directory_service(scopes: Optional[Sequence[str]] = None):
 
     try:
         effective_scopes = list(scopes) if scopes else DIRECTORY_SCOPES_FULL
-        if key_json:
-            info = json.loads(key_json)
-            creds = service_account.Credentials.from_service_account_info(
-                info, scopes=effective_scopes
-            )
-        else:
-            creds = service_account.Credentials.from_service_account_file(
-                key_file, scopes=effective_scopes
-            )
-        delegated_creds = creds.with_subject(delegated_admin)
-        service = build("admin", "directory_v1", credentials=delegated_creds, cache_discovery=False)
+        cache_key = tuple(sorted(effective_scopes))
+        if cache_key in _directory_service_cache:
+            return _directory_service_cache[cache_key]
+
+        service = _build_directory_service(
+            key_json=key_json,
+            key_file=key_file,
+            delegated_admin=delegated_admin,
+            effective_scopes=effective_scopes,
+        )
+        _directory_service_cache[cache_key] = service
         return service
     except Exception as e:
         current_app.logger.error(f"Failed to build Directory service: {e}")

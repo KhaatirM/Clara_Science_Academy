@@ -63,6 +63,13 @@ def main() -> int:
     Run bulk Workspace sync. Return value is ignored when run as __main__; the process always
     ends with sys.exit(0) so Render Cron stays green. Check logs / summary['errors'] for issues.
     """
+    import logging
+
+    # Google's Regional Access Boundary lookup can log transient 500 INTERNAL warnings while
+    # retrying token refresh; the client retries automatically and sync usually succeeds.
+    for _logger_name in ("google.oauth2._client", "google.auth", "google.auth.transport.requests"):
+        logging.getLogger(_logger_name).setLevel(logging.ERROR)
+
     apply_changes = _env_bool("APPLY_CHANGES", default=False)
     create_missing_groups = _env_bool("CREATE_MISSING_GROUPS", default=False)
     sleep_ms = _env_int("SLEEP_MS", 50)

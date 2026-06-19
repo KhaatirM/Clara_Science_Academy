@@ -139,6 +139,14 @@ def main() -> int:
     errors = 0
 
     with app.app_context():
+        db_uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+        if db_uri:
+            # Log host/db only — never print credentials.
+            db_target = db_uri.split("@")[-1].split("?")[0] if "@" in db_uri else "(local sqlite)"
+            print(f"Database source: {db_target} (live app DB — not hardcoded file data)")
+        else:
+            print("Database source: (SQLALCHEMY_DATABASE_URI not set)")
+
         # ------------------------
         # Students: must have User row with non-empty google_workspace_email (no guessed emails)
         # ------------------------
@@ -332,7 +340,24 @@ def main() -> int:
             # Staff OU tiers require TeacherStaff + linked User (u may be None if no login row).
             target_staff_ou = get_staff_ou_path(staff, u)
 
-            print(f"[DEBUG] Syncing database record for: {email} (staff OU -> {target_staff_ou})")
+            print(
+                f"[DEBUG] Syncing staff id={staff.id} "
+                f"{(staff.first_name or '').strip()} {(staff.last_name or '').strip()} "
+                f"(deleted={bool(getattr(staff, 'is_deleted', False))}, "
+                f"employment={getattr(staff, 'employment_status', None)}, "
+                f"portal_login={getattr(staff, 'portal_login', None)}): "
+                f"{email} (staff OU -> {target_staff_ou})"
+            )
+
+            if not staff_google_account_eligible(staff):
+                if apply_changes:
+                    sync_staff_google_suspension(email, staff)
+                    _sleep_ms(sleep_ms)
+                print(
+                    f"[SKIP] {email} — not eligible for active Directory sync "
+                    "(removed, inactive, or portal login off). Suspended if account exists."
+                )
+                continue
 
             if apply_changes:
                 sync_staff_google_suspension(email, staff)

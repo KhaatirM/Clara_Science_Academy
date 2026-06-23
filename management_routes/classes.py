@@ -4,6 +4,7 @@ Classes routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from decorators import management_required, is_teacher_role, has_permission, user_can_manage_student_assistants
 from models import (
     db,
@@ -48,9 +49,137 @@ from utils.attendance_status import (
 )
 from .utils import allowed_file
 from services.class_google_group import try_provision_class_google_group
+from utils.user_roles import user_has_management_entry_access
 
 
 bp = Blueprint('classes', __name__)
+
+
+def _classes_wants_json() -> bool:
+    return "application/json" in (request.headers.get("Accept") or "").lower()
+
+
+def _parse_classes_list_args(args):
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    school_year_id = args.get("school_year_id", type=int)
+    if school_year_id is None and active_school_year:
+        school_year_id = active_school_year.id
+    return {
+        "school_year_id": school_year_id,
+    }
+
+
+def serialize_class_list_item(cls, *, enrollment_count: int, assignment_count: int) -> dict:
+    teacher = cls.teacher
+    teacher_name = ""
+    teacher_id = None
+    if teacher:
+        teacher_name = f"{teacher.first_name or ''} {teacher.last_name or ''}".strip()
+        teacher_id = teacher.id
+
+    grade_levels = cls.get_grade_levels()
+    grade_display = cls.get_grade_levels_display() or "N/A"
+    subject = (cls.subject or "").strip() or "General"
+    school_year = cls.school_year
+
+    search_parts = [
+        cls.name or "",
+        subject,
+        teacher_name,
+        grade_display,
+    ]
+
+    return {
+        "id": cls.id,
+        "name": cls.name or "",
+        "subject": subject,
+        "grade_levels": grade_levels,
+        "grade_levels_display": grade_display,
+        "teacher": {
+            "id": teacher_id,
+            "display_name": teacher_name or "N/A",
+        },
+        "school_year_id": cls.school_year_id,
+        "school_year_name": school_year.name if school_year else None,
+        "is_active": bool(cls.is_active),
+        "enrollment_count": enrollment_count,
+        "assignment_count": assignment_count,
+        "room_number": cls.room_number or None,
+        "schedule": cls.schedule or None,
+        "google_classroom_id": cls.google_classroom_id or None,
+        "google_classroom_linked": bool(cls.google_classroom_id),
+        "search_text": " ".join(search_parts).lower(),
+    }
+
+
+def query_classes_list(args) -> dict:
+    """Shared class list payload for legacy hub and SPA API."""
+    params = _parse_classes_list_args(args)
+
+    enrollment_counts = dict(
+        db.session.query(Enrollment.class_id, func.count(Enrollment.id))
+        .filter(Enrollment.is_active.is_(True))
+        .group_by(Enrollment.class_id)
+        .all()
+    )
+    assignment_counts = dict(
+        db.session.query(Assignment.class_id, func.count(Assignment.id))
+        .group_by(Assignment.class_id)
+        .all()
+    )
+
+    classes = Class.query.order_by(Class.name).all()
+    items = [
+        serialize_class_list_item(
+            cls,
+            enrollment_count=enrollment_counts.get(cls.id, 0),
+            assignment_count=assignment_counts.get(cls.id, 0),
+        )
+        for cls in classes
+    ]
+
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+
+    visible = items
+    if params["school_year_id"]:
+        visible = [i for i in items if i["school_year_id"] == params["school_year_id"]]
+
+    teacher_keys = {
+        (i["teacher"]["display_name"] or "").strip().lower()
+        for i in visible
+        if i["teacher"]["display_name"] and i["teacher"]["display_name"] != "N/A"
+    }
+
+    return {
+        "items": items,
+        "stats": {
+            "total_classes": len(visible),
+            "total_enrollments": sum(i["enrollment_count"] for i in visible),
+            "unique_teachers": len(teacher_keys),
+            "total_assignments": sum(i["assignment_count"] for i in visible),
+        },
+        "filters": params,
+        "school_years": [
+            {
+                "id": y.id,
+                "name": y.name,
+                "is_active": bool(y.is_active),
+            }
+            for y in school_years
+        ],
+        "meta": {
+            "default_school_year_id": params["school_year_id"],
+            "active_school_year_id": active_school_year.id if active_school_year else None,
+            "has_active_school_year": active_school_year is not None,
+        },
+    }
+
+
+def _can_class_admin_ui(user) -> bool:
+    if user_has_management_entry_access(user):
+        return True
+    return has_permission(user, "classes:manage")
 
 
 def _staff_can_be_assigned_to_classes(staff):
@@ -203,19 +332,18 @@ def management_api_school_years():
 @management_required
 def classes():
     """Enhanced classes management page for Directors and School Administrators."""
-    # Filters (GET):
-    # - If a school year is active and the user didn't explicitly pick a year,
-    #   default the UI to the active year.
-    # - Keep the page fast to navigate by loading all classes and filtering in
-    #   the UI (so switching years doesn't require a full reload).
+    if (
+        current_app.config.get("REACT_SPA_ENABLED")
+        and user_has_management_entry_access(current_user)
+        and request.args.get("legacy") != "1"
+    ):
+        return redirect("/app/management/classes")
+
+    payload = query_classes_list(request.args)
     active_school_year = SchoolYear.query.filter_by(is_active=True).first()
-    selected_school_year_id = request.args.get('school_year_id', type=int)
-    if selected_school_year_id is None and active_school_year:
-        selected_school_year_id = active_school_year.id
+    selected_school_year_id = payload["filters"]["school_year_id"]
 
     classes = Class.query.all()
-
-    # Provide school-year list for the filter dropdown
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     try:
         current_app.logger.info(
@@ -226,18 +354,18 @@ def classes():
         )
     except Exception:
         pass
-    
-    # Get unique student count (total students in system, not sum across classes)
-    from models import Student
+
     unique_student_count = Student.query.count()
-    
-    return render_template('management/enhanced_classes.html', 
-                         classes=classes,
-                         school_years=school_years,
-                         selected_school_year_id=selected_school_year_id,
-                         unique_student_count=unique_student_count,
-                         section='classes',
-                         active_tab='classes')
+
+    return render_template(
+        'management/enhanced_classes.html',
+        classes=classes,
+        school_years=school_years,
+        selected_school_year_id=selected_school_year_id,
+        unique_student_count=unique_student_count,
+        section='classes',
+        active_tab='classes',
+    )
 
 
 
@@ -393,6 +521,13 @@ def core_class_setup():
     School Administrator / Director tool to auto-create core (non-elective) classes
     for a school year, plus an instruction guide for manual setup.
     """
+    if (
+        current_app.config.get("REACT_SPA_ENABLED")
+        and user_has_management_entry_access(current_user)
+        and request.args.get("legacy") != "1"
+    ):
+        return redirect("/app/management/classes/core-setup")
+
     from utils.core_class_catalog import (
         SETUP_GRADE_LEVELS,
         catalog_entries_for_grade,
@@ -1926,12 +2061,18 @@ def remove_class(class_id):
 
         db.session.delete(class_obj)
         db.session.commit()
+        if _classes_wants_json():
+            return jsonify({"success": True, "message": f'Class "{class_name}" and all associated data removed successfully!'})
         flash(f'Class "{class_name}" and all associated data removed successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('remove_class failed for class_id=%s', class_id)
+        if _classes_wants_json():
+            return jsonify({"success": False, "message": f'Error removing class: {str(e)}'}), 500
         flash(f'Error removing class: {str(e)}', 'danger')
 
+    if _classes_wants_json():
+        return jsonify({"success": False, "message": "Could not remove class."}), 500
     return redirect(url_for('management.classes'))
 
 

@@ -4,7 +4,7 @@ Students routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify, session
 from flask_login import login_required, current_user
-from decorators import management_required, teacher_required, permissions_required
+from decorators import management_required, teacher_required, permissions_required, has_permission
 from models import (
     db, Student, User, Enrollment, Class, Grade, Assignment, ReportCard, SchoolYear,
     Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, StudentGroup, Submission,
@@ -24,6 +24,7 @@ import uuid
 import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
+from utils.user_roles import user_has_management_entry_access
 
 
 def enrolled_students_payload_for_class(class_id, *, include_archived_fallback=True):
@@ -90,6 +91,299 @@ from utils.student_login_policy import google_workspace_sync_should_skip_student
 bp = Blueprint('students', __name__)
 
 STUDENTS_PER_PAGE = 40
+
+
+def _display_grade_label(grade_level) -> str:
+    if grade_level == 0:
+        return "K"
+    if grade_level is not None:
+        return str(grade_level)
+    return "N/A"
+
+
+def _student_gpa_alert_level(gpa) -> str:
+    if gpa is None:
+        return "none"
+    if gpa < 2.0:
+        return "critical"
+    if gpa < 3.0:
+        return "warning"
+    if gpa >= 3.5:
+        return "excellent"
+    return "none"
+
+
+def _student_academic_status(gpa):
+    if gpa is None:
+        return "No Data", "muted"
+    if gpa >= 3.5:
+        return "Honors", "success"
+    if gpa >= 3.0:
+        return "Good Standing", "primary"
+    if gpa >= 2.0:
+        return "Needs Improvement", "warning"
+    return "At Risk", "danger"
+
+
+def _grade_is_young(grade_level) -> bool:
+    if grade_level is None:
+        return False
+    try:
+        return int(grade_level) < 3
+    except (TypeError, ValueError):
+        return False
+
+
+def _student_account_badge(student) -> tuple[str, str]:
+    """Return (label, kind) for account column badges matching legacy colors."""
+    young = _grade_is_young(student.grade_level)
+    if getattr(student, "is_deleted", False):
+        return "Removed", "removed"
+    user = getattr(student, "user", None)
+    if user:
+        return user.username, "has_young" if young else "has_active"
+    if young:
+        return "No account yet", "no_young"
+    return "No Account", "no_active"
+
+
+def _spa_students_list_url():
+    if (
+        current_app.config.get("REACT_SPA_ENABLED")
+        and user_has_management_entry_access(current_user)
+    ):
+        return "/app/management/students"
+    return url_for("management.students")
+
+
+def _student_form_error(message: str, status: int = 400):
+    if _students_wants_json():
+        return jsonify({"success": False, "message": message}), status
+    flash(message, "danger")
+    return redirect(request.url)
+
+
+def _students_wants_json() -> bool:
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return True
+    return "application/json" in (request.headers.get("Accept") or "").lower()
+
+
+def _parse_students_list_args(args) -> dict:
+    page = args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    return {
+        "search": (args.get("search") or "").strip(),
+        "search_type": (args.get("search_type") or "all").strip(),
+        "grade_level": (args.get("grade_level") or "").strip(),
+        "status": (args.get("status") or "").strip(),
+        "alert_filter": (args.get("alert_filter") or "").strip(),
+        "sort": (args.get("sort") or "name").strip(),
+        "order": (args.get("order") or "asc").strip(),
+        "page": page,
+    }
+
+
+def _students_search_filter(search_query: str, search_type: str):
+    if not search_query:
+        return None
+    q = f"%{search_query}%"
+    if search_type in ("all", ""):
+        return db.or_(
+            Student.first_name.ilike(q),
+            Student.last_name.ilike(q),
+            Student.email.ilike(q),
+            Student.student_id.ilike(q),
+            Student.parent1_first_name.ilike(q),
+            Student.parent1_last_name.ilike(q),
+            Student.parent1_email.ilike(q),
+            Student.parent1_phone.ilike(q),
+            Student.parent2_first_name.ilike(q),
+            Student.parent2_last_name.ilike(q),
+            Student.parent2_email.ilike(q),
+            Student.parent2_phone.ilike(q),
+            Student.emergency_first_name.ilike(q),
+            Student.emergency_last_name.ilike(q),
+            Student.emergency_phone.ilike(q),
+            Student.city.ilike(q),
+            Student.state.ilike(q),
+            Student.previous_school.ilike(q),
+        )
+    if search_type == "name":
+        return db.or_(Student.first_name.ilike(q), Student.last_name.ilike(q))
+    if search_type == "contact":
+        return db.or_(
+            Student.email.ilike(q),
+            Student.parent1_email.ilike(q),
+            Student.parent2_email.ilike(q),
+            Student.emergency_email.ilike(q),
+        )
+    if search_type == "phone":
+        return db.or_(
+            Student.parent1_phone.ilike(q),
+            Student.parent2_phone.ilike(q),
+            Student.emergency_phone.ilike(q),
+        )
+    if search_type == "address":
+        return db.or_(
+            Student.street.ilike(q),
+            Student.city.ilike(q),
+            Student.state.ilike(q),
+            Student.zip_code.ilike(q),
+        )
+    if search_type == "parents":
+        return db.or_(
+            Student.parent1_first_name.ilike(q),
+            Student.parent1_last_name.ilike(q),
+            Student.parent2_first_name.ilike(q),
+            Student.parent2_last_name.ilike(q),
+        )
+    return db.or_(
+        Student.first_name.ilike(q),
+        Student.last_name.ilike(q),
+        Student.email.ilike(q),
+        Student.student_id.ilike(q),
+    )
+
+
+def _students_list_query(params: dict):
+    from utils.student_roster import active_roster_student_filters
+
+    status_filter = params.get("status") or ""
+    if status_filter == "former":
+        query = Student.query.filter(Student.is_deleted == True)
+    elif status_filter == "all":
+        query = Student.query
+    else:
+        query = Student.query.filter(active_roster_student_filters())
+
+    sf = _students_search_filter(params.get("search") or "", params.get("search_type") or "all")
+    if sf is not None:
+        query = query.filter(sf)
+
+    grade_filter = params.get("grade_level") or ""
+    if grade_filter != "":
+        query = query.filter(Student.grade_level == int(grade_filter))
+
+    alert_filter = params.get("alert_filter") or ""
+    if alert_filter == "critical":
+        query = query.filter(Student.gpa.isnot(None), Student.gpa < 2.0)
+    elif alert_filter == "warning":
+        query = query.filter(Student.gpa.isnot(None), Student.gpa >= 2.0, Student.gpa < 3.0)
+    elif alert_filter == "good":
+        query = query.filter(Student.gpa.isnot(None), Student.gpa >= 3.0)
+
+    _has_login = exists().where(User.student_id == Student.id)
+    if status_filter in ("has_account", "no_account"):
+        if status_filter == "has_account":
+            query = query.filter(_has_login)
+        else:
+            query = query.filter(~_has_login)
+
+    sort_by = params.get("sort") or "name"
+    sort_order = params.get("order") or "asc"
+    if sort_by == "name":
+        if sort_order == "desc":
+            query = query.order_by(Student.last_name.desc(), Student.first_name.desc())
+        else:
+            query = query.order_by(Student.last_name, Student.first_name)
+    elif sort_by == "grade":
+        if sort_order == "desc":
+            query = query.order_by(Student.grade_level.desc(), Student.last_name, Student.first_name)
+        else:
+            query = query.order_by(Student.grade_level, Student.last_name, Student.first_name)
+    elif sort_by == "id":
+        if sort_order == "desc":
+            query = query.order_by(Student.student_id.desc())
+        else:
+            query = query.order_by(Student.student_id)
+    elif sort_by in ("gpa", "gpa_desc"):
+        if sort_by == "gpa_desc" or sort_order == "desc":
+            query = query.order_by(Student.gpa.desc(), Student.last_name, Student.first_name)
+        else:
+            query = query.order_by(Student.gpa, Student.last_name, Student.first_name)
+    else:
+        query = query.order_by(Student.last_name, Student.first_name)
+
+    return query
+
+
+def serialize_student_list_item(student: Student) -> dict:
+    gpa = student.gpa
+    alert_level = _student_gpa_alert_level(gpa)
+    academic_status, academic_tone = _student_academic_status(gpa)
+    account_status, account_badge_kind = _student_account_badge(student)
+    initials = (
+        f"{(student.first_name or '?')[:1]}{(student.last_name or '?')[:1]}".upper()
+    )
+    return {
+        "id": student.id,
+        "first_name": student.first_name,
+        "last_name": student.last_name,
+        "display_name": f"{student.first_name} {student.last_name}".strip(),
+        "initials": initials,
+        "grade_level": student.grade_level,
+        "grade_display": _display_grade_label(student.grade_level),
+        "student_id": student.student_id,
+        "gpa": gpa,
+        "alert_level": alert_level,
+        "academic_status": academic_status,
+        "academic_tone": academic_tone,
+        "is_deleted": bool(getattr(student, "is_deleted", False)),
+        "has_account": getattr(student, "user", None) is not None,
+        "username": student.user.username if getattr(student, "user", None) else None,
+        "account_status": account_status,
+        "account_badge_kind": account_badge_kind,
+        "dob": getattr(student, "dob", None),
+    }
+
+
+def query_students_list(args) -> dict:
+    params = _parse_students_list_args(args)
+    query = _students_list_query(params)
+
+    stats_query = query
+    total_students = stats_query.count()
+    students_with_accounts = stats_query.filter(
+        exists().where(User.student_id == Student.id)
+    ).count()
+    students_without_accounts = total_students - students_with_accounts
+    high_gpa_count = stats_query.filter(Student.gpa.isnot(None), Student.gpa >= 3.5).count()
+
+    pagination = query.paginate(
+        page=params["page"],
+        per_page=STUDENTS_PER_PAGE,
+        error_out=False,
+    )
+
+    return {
+        "students": pagination.items,
+        "items": [serialize_student_list_item(s) for s in pagination.items],
+        "stats": {
+            "total": total_students,
+            "with_accounts": students_with_accounts,
+            "without_accounts": students_without_accounts,
+            "on_page": len(pagination.items),
+            "high_gpa": high_gpa_count,
+        },
+        "pagination": {
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev,
+        },
+        "pagination_obj": pagination,
+        "filters": params,
+    }
+
+
+def _can_student_admin_ui(user) -> bool:
+    if user_has_management_entry_access(user):
+        return True
+    return has_permission(user, "students:edit")
 
 
 def _student_workspace_email(student, *, user=None) -> str:
@@ -273,309 +567,341 @@ def _student_ou_path(grade_level: int, grad_year: int | None) -> str:
 @permissions_required('students:edit')
 def add_student():
     """Add a new student"""
-    if request.method == 'POST':
-        # Get form data
-        first_name = request.form.get('student_first_name', '').strip()
-        last_name = request.form.get('student_last_name', '').strip()
-        dob = request.form.get('dob', '').strip()
-        grade_level_str = request.form.get('grade_level', '').strip()
-        gender = request.form.get('gender', '').strip()
-        entrance_school_year = request.form.get('entrance_date', '').strip()
+    if request.method != 'POST':
+        if (
+            current_app.config.get("REACT_SPA_ENABLED")
+            and user_has_management_entry_access(current_user)
+        ):
+            return redirect("/app/management/students/new")
+        return render_template(
+            'students/add_student.html',
+            entrance_school_year_options=_build_entrance_school_year_options(),
+        )
+
+    # Get form data
+    first_name = request.form.get('student_first_name', '').strip()
+    last_name = request.form.get('student_last_name', '').strip()
+    dob = request.form.get('dob', '').strip()
+    grade_level_str = request.form.get('grade_level', '').strip()
+    gender = request.form.get('gender', '').strip()
+    entrance_school_year = request.form.get('entrance_date', '').strip()
+    
+    # Address fields
+    street = request.form.get('street_address', '').strip()
+    apt_unit = request.form.get('apt_unit_suite', '').strip()
+    city = request.form.get('city', '').strip()
+    state = request.form.get('state', '').strip()
+    zip_code = request.form.get('zip_code', '').strip()
+    
+    # Parent 1 information
+    parent1_first_name = request.form.get('parent1_first_name', '').strip()
+    parent1_last_name = request.form.get('parent1_last_name', '').strip()
+    parent1_email = request.form.get('parent1_email', '').strip()
+    parent1_phone = request.form.get('parent1_phone', '').strip()
+    parent1_relationship = request.form.get('parent1_relationship', '').strip()
+    
+    # Parent 2 information
+    parent2_first_name = request.form.get('parent2_first_name', '').strip()
+    parent2_last_name = request.form.get('parent2_last_name', '').strip()
+    parent2_email = request.form.get('parent2_email', '').strip()
+    parent2_phone = request.form.get('parent2_phone', '').strip()
+    parent2_relationship = request.form.get('parent2_relationship', '').strip()
+    
+    # Emergency contact
+    emergency_first_name = request.form.get('emergency_first_name', '').strip()
+    emergency_last_name = request.form.get('emergency_last_name', '').strip()
+    emergency_email = request.form.get('emergency_email', '').strip()
+    emergency_phone = request.form.get('emergency_phone', '').strip()
+    emergency_relationship = request.form.get('emergency_relationship', '').strip()
+    
+    # Validate that emergency_phone is not an email and is not too long
+    if emergency_phone:
+        if '@' in emergency_phone or len(emergency_phone) > 20:
+            return _student_form_error(
+                'Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).'
+            )
+
+    if parent1_phone and len(parent1_phone) > 20:
+        return _student_form_error(
+            'Parent 1 phone number is too long. Please enter a valid phone number (max 20 characters).'
+        )
+
+    if parent2_phone and len(parent2_phone) > 20:
+        return _student_form_error(
+            'Parent 2 phone number is too long. Please enter a valid phone number (max 20 characters).'
+        )
+    
+    # Additional fields
+    previous_school = request.form.get('previous_school', '').strip()
+    email = request.form.get('email', '').strip()
+    medical_concerns = request.form.get('medical_concerns', '').strip()
+    notes = request.form.get('notes', '').strip()
+    
+    # Handle image upload
+    photo_filename = None
+    if 'student_image' in request.files:
+        file = request.files['student_image']
+        if file and file.filename != '':
+            if allowed_file(file.filename):
+                # Generate unique filename
+                import uuid
+                file_extension = file.filename.rsplit('.', 1)[1].lower()
+                photo_filename = f"student_{uuid.uuid4().hex}.{file_extension}"
+                
+                # Save file
+                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, photo_filename)
+                file.save(file_path)
+            else:
+                return _student_form_error(
+                    'Invalid file type. Please upload an image file (jpg, jpeg, png, gif).'
+                )
+    
+    # Handle transcript upload
+    transcript_filename = None
+    if 'transcript' in request.files:
+        file = request.files['transcript']
+        if file and file.filename != '':
+            if allowed_file(file.filename):
+                # Generate unique filename
+                import uuid
+                file_extension = file.filename.rsplit('.', 1)[1].lower()
+                transcript_filename = f"transcript_{uuid.uuid4().hex}.{file_extension}"
+                
+                # Save file
+                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, transcript_filename)
+                file.save(file_path)
+            else:
+                return _student_form_error(
+                    'Invalid file type for transcript. Please upload a valid document.'
+                )
+    
+    # Convert grade level string to integer
+    grade_level = None
+    if grade_level_str:
+        grade_map = {
+            "Kindergarten": 0, "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5,
+            "6th": 6, "7th": 7, "8th": 8, "9th": 9, "10th": 10, "11th": 11, "12th": 12
+        }
+        grade_level = grade_map.get(grade_level_str)
+    
+    # Validate required fields (use 'is not None' for grade_level since 0 is valid for Kindergarten)
+    if not first_name or not last_name or not dob or grade_level is None:
+        return _student_form_error(
+            'First name, last name, date of birth, and grade level are required.'
+        )
+
+    if not gender:
+        return _student_form_error(
+            'Gender is required for student records and report card confirmation.'
+        )
+
+    if gender not in ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other']:
+        return _student_form_error('Please select a valid gender option.')
+
+    if not _is_valid_school_year_label(entrance_school_year):
+        return _student_form_error(
+            'Entrance school year is required and must use format YYYY-YYYY.'
+        )
+    
+    # Generate username (first initial + last name + random number)
+    import random
+    base_username = f"{first_name[0].lower()}{last_name.lower()}"
+    username = base_username
+    counter = 1
+    
+    # Ensure unique username
+    while User.query.filter_by(username=username).first():
+        username = f"{base_username}{counter}"
+        counter += 1
+    
+    # Generate password (first name + last 4 digits of year)
+    year = dob.split('-')[0] if '-' in dob else str(random.randint(2000, 2010))
+    password = f"{first_name.lower()}{year[-4:]}"
+    
+    try:
+        # Create student record
+        student = Student()
+        student.first_name = first_name
+        student.last_name = last_name
+        student.dob = dob
+        student.grade_level = grade_level
+        student.gender = gender
+        student.entrance_date = entrance_school_year
+        student.expected_grad_date = _calculate_expected_grad_date(grade_level, entrance_school_year)
+        student.photo_filename = photo_filename
+        student.transcript_filename = transcript_filename
         
         # Address fields
-        street = request.form.get('street_address', '').strip()
-        apt_unit = request.form.get('apt_unit_suite', '').strip()
-        city = request.form.get('city', '').strip()
-        state = request.form.get('state', '').strip()
-        zip_code = request.form.get('zip_code', '').strip()
-        
-        # Parent 1 information
-        parent1_first_name = request.form.get('parent1_first_name', '').strip()
-        parent1_last_name = request.form.get('parent1_last_name', '').strip()
-        parent1_email = request.form.get('parent1_email', '').strip()
-        parent1_phone = request.form.get('parent1_phone', '').strip()
-        parent1_relationship = request.form.get('parent1_relationship', '').strip()
-        
-        # Parent 2 information
-        parent2_first_name = request.form.get('parent2_first_name', '').strip()
-        parent2_last_name = request.form.get('parent2_last_name', '').strip()
-        parent2_email = request.form.get('parent2_email', '').strip()
-        parent2_phone = request.form.get('parent2_phone', '').strip()
-        parent2_relationship = request.form.get('parent2_relationship', '').strip()
-        
-        # Emergency contact
-        emergency_first_name = request.form.get('emergency_first_name', '').strip()
-        emergency_last_name = request.form.get('emergency_last_name', '').strip()
-        emergency_email = request.form.get('emergency_email', '').strip()
-        emergency_phone = request.form.get('emergency_phone', '').strip()
-        emergency_relationship = request.form.get('emergency_relationship', '').strip()
-        
-        # Validate that emergency_phone is not an email and is not too long
-        if emergency_phone:
-            if '@' in emergency_phone or len(emergency_phone) > 20:
-                flash('Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).', 'danger')
-                return redirect(request.url)
-        
-        # Validate parent phone numbers as well
-        if parent1_phone and len(parent1_phone) > 20:
-            flash('Parent 1 phone number is too long. Please enter a valid phone number (max 20 characters).', 'danger')
-            return redirect(request.url)
-        
-        if parent2_phone and len(parent2_phone) > 20:
-            flash('Parent 2 phone number is too long. Please enter a valid phone number (max 20 characters).', 'danger')
-            return redirect(request.url)
+        student.street = street
+        student.apt_unit = apt_unit
+        student.city = city
+        student.state = state
+        student.zip_code = zip_code
         
         # Additional fields
-        previous_school = request.form.get('previous_school', '').strip()
-        email = request.form.get('email', '').strip()
-        medical_concerns = request.form.get('medical_concerns', '').strip()
-        notes = request.form.get('notes', '').strip()
+        student.previous_school = previous_school
+        student.email = email
+        student.medical_concerns = medical_concerns
+        student.notes = notes
         
-        # Handle image upload
-        photo_filename = None
-        if 'student_image' in request.files:
-            file = request.files['student_image']
-            if file and file.filename != '':
-                if allowed_file(file.filename):
-                    # Generate unique filename
-                    import uuid
-                    file_extension = file.filename.rsplit('.', 1)[1].lower()
-                    photo_filename = f"student_{uuid.uuid4().hex}.{file_extension}"
-                    
-                    # Save file
-                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                    os.makedirs(upload_folder, exist_ok=True)
-                    file_path = os.path.join(upload_folder, photo_filename)
-                    file.save(file_path)
-                else:
-                    flash('Invalid file type. Please upload an image file (jpg, jpeg, png, gif).', 'danger')
-                    return redirect(request.url)
+        # Parent 1 information
+        student.parent1_first_name = parent1_first_name
+        student.parent1_last_name = parent1_last_name
+        student.parent1_email = parent1_email
+        student.parent1_phone = parent1_phone
+        student.parent1_relationship = parent1_relationship
         
-        # Handle transcript upload
-        transcript_filename = None
-        if 'transcript' in request.files:
-            file = request.files['transcript']
-            if file and file.filename != '':
-                if allowed_file(file.filename):
-                    # Generate unique filename
-                    import uuid
-                    file_extension = file.filename.rsplit('.', 1)[1].lower()
-                    transcript_filename = f"transcript_{uuid.uuid4().hex}.{file_extension}"
-                    
-                    # Save file
-                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                    os.makedirs(upload_folder, exist_ok=True)
-                    file_path = os.path.join(upload_folder, transcript_filename)
-                    file.save(file_path)
-                else:
-                    flash('Invalid file type for transcript. Please upload a valid document.', 'danger')
-                    return redirect(request.url)
+        # Parent 2 information
+        student.parent2_first_name = parent2_first_name
+        student.parent2_last_name = parent2_last_name
+        student.parent2_email = parent2_email
+        student.parent2_phone = parent2_phone
+        student.parent2_relationship = parent2_relationship
         
-        # Convert grade level string to integer
-        grade_level = None
-        if grade_level_str:
-            grade_map = {
-                "Kindergarten": 0, "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5,
-                "6th": 6, "7th": 7, "8th": 8, "9th": 9, "10th": 10, "11th": 11, "12th": 12
-            }
-            grade_level = grade_map.get(grade_level_str)
+        # Emergency contact
+        student.emergency_first_name = emergency_first_name
+        student.emergency_last_name = emergency_last_name
+        student.emergency_email = emergency_email
+        student.emergency_phone = emergency_phone
+        student.emergency_relationship = emergency_relationship
+
+        # Auto-generate Student ID based on state and DOB (call after all fields are set)
+        student.student_id = student.generate_student_id()
         
-        # Validate required fields (use 'is not None' for grade_level since 0 is valid for Kindergarten)
-        if not first_name or not last_name or not dob or grade_level is None:
-            flash('First name, last name, date of birth, and grade level are required.', 'danger')
-            return redirect(request.url)
-
-        if not gender:
-            flash('Gender is required for student records and report card confirmation.', 'danger')
-            return redirect(request.url)
-
-        if gender not in ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other']:
-            flash('Please select a valid gender option.', 'danger')
-            return redirect(request.url)
-
-        if not _is_valid_school_year_label(entrance_school_year):
-            flash('Entrance school year is required and must use format YYYY-YYYY.', 'danger')
-            return redirect(request.url)
+        # Check if student ID already exists
+        existing_student = Student.query.filter_by(student_id=student.student_id).first()
+        if existing_student:
+            return _student_form_error(
+                f'A student with ID {student.student_id} already exists: '
+                f'{existing_student.first_name} {existing_student.last_name}. '
+                'This student may have already been added. Please check the student list or contact support if you believe this is an error.'
+            )
         
-        # Generate username (first initial + last name + random number)
-        import random
-        base_username = f"{first_name[0].lower()}{last_name.lower()}"
-        username = base_username
-        counter = 1
+        db.session.add(student)
+        db.session.flush()  # Get the student ID
         
-        # Ensure unique username
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-        
-        # Generate password (first name + last 4 digits of year)
-        year = dob.split('-')[0] if '-' in dob else str(random.randint(2000, 2010))
-        password = f"{first_name.lower()}{year[-4:]}"
-        
-        try:
-            # Create student record
-            student = Student()
-            student.first_name = first_name
-            student.last_name = last_name
-            student.dob = dob
-            student.grade_level = grade_level
-            student.gender = gender
-            student.entrance_date = entrance_school_year
-            student.expected_grad_date = _calculate_expected_grad_date(grade_level, entrance_school_year)
-            student.photo_filename = photo_filename
-            student.transcript_filename = transcript_filename
-            
-            # Address fields
-            student.street = street
-            student.apt_unit = apt_unit
-            student.city = city
-            student.state = state
-            student.zip_code = zip_code
-            
-            # Additional fields
-            student.previous_school = previous_school
-            student.email = email
-            student.medical_concerns = medical_concerns
-            student.notes = notes
-            
-            # Parent 1 information
-            student.parent1_first_name = parent1_first_name
-            student.parent1_last_name = parent1_last_name
-            student.parent1_email = parent1_email
-            student.parent1_phone = parent1_phone
-            student.parent1_relationship = parent1_relationship
-            
-            # Parent 2 information
-            student.parent2_first_name = parent2_first_name
-            student.parent2_last_name = parent2_last_name
-            student.parent2_email = parent2_email
-            student.parent2_phone = parent2_phone
-            student.parent2_relationship = parent2_relationship
-            
-            # Emergency contact
-            student.emergency_first_name = emergency_first_name
-            student.emergency_last_name = emergency_last_name
-            student.emergency_email = emergency_email
-            student.emergency_phone = emergency_phone
-            student.emergency_relationship = emergency_relationship
+        # Workspace email (3rd grade+ only): Student.generate_email() → FirstnameLastinitialmmyy@...
+        generated_workspace_email = None
+        if grade_may_have_login(grade_level):
+            generated_workspace_email = student.generate_email()
 
-            # Auto-generate Student ID based on state and DOB (call after all fields are set)
-            student.student_id = student.generate_student_id()
-            
-            # Check if student ID already exists
-            existing_student = Student.query.filter_by(student_id=student.student_id).first()
-            if existing_student:
-                flash(f'A student with ID {student.student_id} already exists: {existing_student.first_name} {existing_student.last_name}. This student may have already been added. Please check the student list or contact support if you believe this is an error.', 'danger')
-                return redirect(request.url)
-            
-            db.session.add(student)
-            db.session.flush()  # Get the student ID
-            
-            # Workspace email (3rd grade+ only): Student.generate_email() → FirstnameLastinitialmmyy@...
-            generated_workspace_email = None
-            if grade_may_have_login(grade_level):
-                generated_workspace_email = student.generate_email()
+        # If no personal email was provided in the form, use the generated workspace address (grade 3+)
+        if not email and generated_workspace_email:
+            student.email = generated_workspace_email
 
-            # If no personal email was provided in the form, use the generated workspace address (grade 3+)
-            if not email and generated_workspace_email:
-                student.email = generated_workspace_email
+        if grade_may_have_login(grade_level):
+            user = User()
+            user.username = username
+            user.password_hash = generate_password_hash(password)
+            user.role = 'Student'
+            user.student_id = student.id
+            user.email = student.email
+            user.google_workspace_email = generated_workspace_email
+            user.is_temporary_password = True
+            user.password_changed_at = None
+            db.session.add(user)
+            sync_student_parent_portal(student)
+            db.session.commit()
 
-            if grade_may_have_login(grade_level):
-                user = User()
-                user.username = username
-                user.password_hash = generate_password_hash(password)
-                user.role = 'Student'
-                user.student_id = student.id
-                user.email = student.email
-                user.google_workspace_email = generated_workspace_email
-                user.is_temporary_password = True
-                user.password_changed_at = None
-                db.session.add(user)
-                sync_student_parent_portal(student)
-                db.session.commit()
+            google_warning = None
+            google_user_created = False
+            google_initial_password = new_google_workspace_initial_password()
 
-                google_warning = None
-                google_user_created = False
-                google_initial_password = new_google_workspace_initial_password()
+            try:
+                sync_single_user_to_google(user.id, initial_google_password=google_initial_password)
+            except Exception as e:
+                current_app.logger.warning(
+                    "Google Directory sync after save failed for user %s: %s", user.id, e
+                )
+                google_warning = (
+                    "Google Directory sync failed after save; the account may update on the next sync run."
+                )
 
-                try:
-                    sync_single_user_to_google(user.id, initial_google_password=google_initial_password)
-                except Exception as e:
-                    current_app.logger.warning(
-                        "Google Directory sync after save failed for user %s: %s", user.id, e
+            try:
+                grad_year = None
+                if hasattr(student, "grad_year") and getattr(student, "grad_year"):
+                    grad_year = int(getattr(student, "grad_year"))
+                elif student.expected_grad_date and "/" in str(student.expected_grad_date):
+                    grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+
+                ou_path = _student_ou_path(student.grade_level, grad_year)
+                if generated_workspace_email:
+                    created = create_google_user(
+                        {
+                            "primaryEmail": generated_workspace_email,
+                            "name": {"givenName": student.first_name, "familyName": student.last_name},
+                            "password": google_initial_password,
+                            "orgUnitPath": ou_path,
+                            "changePasswordAtNextLogin": True,
+                        }
                     )
-                    google_warning = (
-                        "Google Directory sync failed after save; the account may update on the next sync run."
-                    )
-
-                try:
-                    grad_year = None
-                    if hasattr(student, "grad_year") and getattr(student, "grad_year"):
-                        grad_year = int(getattr(student, "grad_year"))
-                    elif student.expected_grad_date and "/" in str(student.expected_grad_date):
-                        grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
-
-                    ou_path = _student_ou_path(student.grade_level, grad_year)
-                    if generated_workspace_email:
-                        created = create_google_user(
-                            {
-                                "primaryEmail": generated_workspace_email,
-                                "name": {"givenName": student.first_name, "familyName": student.last_name},
-                                "password": google_initial_password,
-                                "orgUnitPath": ou_path,
-                                "changePasswordAtNextLogin": True,
-                            }
-                        )
-                        google_user_created = bool(created)
-                        if not created:
-                            google_warning = (
-                                f"Google account creation failed for {generated_workspace_email}. "
-                                "Verify the account does not already exist and that Directory permissions are configured."
-                            )
-                    else:
+                    google_user_created = bool(created)
+                    if not created:
                         google_warning = (
-                            "No Google Workspace email was generated, so no Google user was created."
+                            f"Google account creation failed for {generated_workspace_email}. "
+                            "Verify the account does not already exist and that Directory permissions are configured."
                         )
-                except Exception as e:
-                    current_app.logger.error(f"Failed to auto-create Google student account: {e}")
+                else:
                     google_warning = (
-                        "Google account creation encountered an error. Check server logs for details."
+                        "No Google Workspace email was generated, so no Google user was created."
                     )
+            except Exception as e:
+                current_app.logger.error(f"Failed to auto-create Google student account: {e}")
+                google_warning = (
+                    "Google account creation encountered an error. Check server logs for details."
+                )
 
-                session["credential_modal"] = student_grade3_plus_modal_payload(
-                    first_name=first_name,
-                    last_name=last_name,
-                    student_id=student.student_id or "",
-                    username=username,
-                    portal_password=password,
-                    school_email=generated_workspace_email,
-                    google_initial_password=google_initial_password,
-                    google_user_created=google_user_created,
-                    google_warning=google_warning,
-                )
-                flash("Student saved. Use the credential summary popup to copy login details.", "success")
-            else:
-                sync_student_parent_portal(student)
-                db.session.commit()
-                session["credential_modal"] = student_k2_modal_payload(
-                    first_name=first_name,
-                    last_name=last_name,
-                    student_id=student.student_id or "",
-                    grade_level=grade_level,
-                    entrance_school_year=entrance_school_year,
-                )
-                flash("Student saved. Review the K–2 policy summary in the popup.", "success")
-            return redirect(url_for('management.students'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error adding student: {str(e)}', 'danger')
-            return redirect(request.url)
+            modal = student_grade3_plus_modal_payload(
+                first_name=first_name,
+                last_name=last_name,
+                student_id=student.student_id or "",
+                username=username,
+                portal_password=password,
+                school_email=generated_workspace_email,
+                google_initial_password=google_initial_password,
+                google_user_created=google_user_created,
+                google_warning=google_warning,
+            )
+            msg = "Student saved. Use the credential summary popup to copy login details."
+            if _students_wants_json():
+                return jsonify({
+                    "success": True,
+                    "message": msg,
+                    "redirect": _spa_students_list_url(),
+                    "credential_modal": modal,
+                })
+            session["credential_modal"] = modal
+            flash(msg, "success")
+        else:
+            sync_student_parent_portal(student)
+            db.session.commit()
+            modal = student_k2_modal_payload(
+                first_name=first_name,
+                last_name=last_name,
+                student_id=student.student_id or "",
+                grade_level=grade_level,
+                entrance_school_year=entrance_school_year,
+            )
+            msg = "Student saved. Review the K–2 policy summary in the popup."
+            if _students_wants_json():
+                return jsonify({
+                    "success": True,
+                    "message": msg,
+                    "redirect": _spa_students_list_url(),
+                    "credential_modal": modal,
+                })
+            session["credential_modal"] = modal
+            flash(msg, "success")
+        return redirect(url_for('management.students'))
+
+    except Exception as e:
+        db.session.rollback()
+        return _student_form_error(f'Error adding student: {str(e)}')
     
-    return render_template(
-        'students/add_student.html',
-        entrance_school_year_options=_build_entrance_school_year_options()
-    )
 
 
 
@@ -766,167 +1092,34 @@ def get_student_details(student_id):
 @login_required
 @permissions_required('students:view', 'students:edit')
 def students():
-    # Get search parameters
-    search_query = request.args.get('search', '').strip()
-    search_type = request.args.get('search_type', 'all')
-    grade_filter = request.args.get('grade_level', '')
-    status_filter = request.args.get('status', '')
-    alert_filter = request.args.get('alert_filter', '').strip()
-    sort_by = request.args.get('sort', 'name')
-    sort_order = request.args.get('order', 'asc')
-    page = request.args.get('page', 1, type=int)
-    if page < 1:
-        page = 1
-    
-    from utils.student_roster import active_roster_student_filters
-    # Build the query (exclude archived students by default, unless requested)
-    if status_filter == 'former':
-        query = Student.query.filter(Student.is_deleted == True)
-    elif status_filter == 'all':
-        query = Student.query
-    else:
-        query = Student.query.filter(active_roster_student_filters())
-    
-    # Apply search filter if query exists
-    if search_query:
-        if search_type == 'all' or search_type == '':
-            # Search across all fields
-            search_filter = db.or_(
-                Student.first_name.ilike(f'%{search_query}%'),
-                Student.last_name.ilike(f'%{search_query}%'),
-                Student.email.ilike(f'%{search_query}%'),
-                Student.student_id.ilike(f'%{search_query}%'),
-                Student.parent1_first_name.ilike(f'%{search_query}%'),
-                Student.parent1_last_name.ilike(f'%{search_query}%'),
-                Student.parent1_email.ilike(f'%{search_query}%'),
-                Student.parent1_phone.ilike(f'%{search_query}%'),
-                Student.parent2_first_name.ilike(f'%{search_query}%'),
-                Student.parent2_last_name.ilike(f'%{search_query}%'),
-                Student.parent2_email.ilike(f'%{search_query}%'),
-                Student.parent2_phone.ilike(f'%{search_query}%'),
-                Student.emergency_first_name.ilike(f'%{search_query}%'),
-                Student.emergency_last_name.ilike(f'%{search_query}%'),
-                Student.emergency_phone.ilike(f'%{search_query}%'),
-                Student.city.ilike(f'%{search_query}%'),
-                Student.state.ilike(f'%{search_query}%'),
-                Student.previous_school.ilike(f'%{search_query}%')
-            )
-        elif search_type == 'name':
-            search_filter = db.or_(
-                Student.first_name.ilike(f'%{search_query}%'),
-                Student.last_name.ilike(f'%{search_query}%')
-            )
-        elif search_type == 'contact':
-            search_filter = db.or_(
-                Student.email.ilike(f'%{search_query}%'),
-                Student.parent1_email.ilike(f'%{search_query}%'),
-                Student.parent2_email.ilike(f'%{search_query}%'),
-                Student.emergency_email.ilike(f'%{search_query}%')
-            )
-        elif search_type == 'phone':
-            search_filter = db.or_(
-                Student.parent1_phone.ilike(f'%{search_query}%'),
-                Student.parent2_phone.ilike(f'%{search_query}%'),
-                Student.emergency_phone.ilike(f'%{search_query}%')
-            )
-        elif search_type == 'address':
-            search_filter = db.or_(
-                Student.street.ilike(f'%{search_query}%'),
-                Student.city.ilike(f'%{search_query}%'),
-                Student.state.ilike(f'%{search_query}%'),
-                Student.zip_code.ilike(f'%{search_query}%')
-            )
-        elif search_type == 'parents':
-            search_filter = db.or_(
-                Student.parent1_first_name.ilike(f'%{search_query}%'),
-                Student.parent1_last_name.ilike(f'%{search_query}%'),
-                Student.parent2_first_name.ilike(f'%{search_query}%'),
-                Student.parent2_last_name.ilike(f'%{search_query}%')
-            )
-        else:
-            # Default to all fields
-            search_filter = db.or_(
-                Student.first_name.ilike(f'%{search_query}%'),
-                Student.last_name.ilike(f'%{search_query}%'),
-                Student.email.ilike(f'%{search_query}%'),
-                Student.student_id.ilike(f'%{search_query}%')
-            )
-        query = query.filter(search_filter)
-    
-    # Apply grade level filter
-    if grade_filter:
-        query = query.filter(Student.grade_level == int(grade_filter))
+    if (
+        current_app.config.get("REACT_SPA_ENABLED")
+        and user_has_management_entry_access(current_user)
+        and request.args.get("legacy") != "1"
+    ):
+        return redirect("/app/management/students")
 
-    if alert_filter == 'critical':
-        query = query.filter(Student.gpa.isnot(None), Student.gpa < 2.0)
-    elif alert_filter == 'warning':
-        query = query.filter(Student.gpa.isnot(None), Student.gpa >= 2.0, Student.gpa < 3.0)
-    elif alert_filter == 'good':
-        query = query.filter(Student.gpa.isnot(None), Student.gpa >= 3.0)
-    
-    # Apply status filter (account status) — only has_account / no_account
-    # Use EXISTS on user.student_id; Student.user.isnot(None) breaks on SQLAlchemy 2.x.
-    _has_login = exists().where(User.student_id == Student.id)
-    if status_filter in ('has_account', 'no_account'):
-        if status_filter == 'has_account':
-            query = query.filter(_has_login)
-        else:
-            query = query.filter(~_has_login)
-    
-    # Apply sorting
-    if sort_by == 'name':
-        if sort_order == 'desc':
-            query = query.order_by(Student.last_name.desc(), Student.first_name.desc())
-        else:
-            query = query.order_by(Student.last_name, Student.first_name)
-    elif sort_by == 'grade':
-        if sort_order == 'desc':
-            query = query.order_by(Student.grade_level.desc(), Student.last_name, Student.first_name)
-        else:
-            query = query.order_by(Student.grade_level, Student.last_name, Student.first_name)
-    elif sort_by == 'id':
-        if sort_order == 'desc':
-            query = query.order_by(Student.student_id.desc())
-        else:
-            query = query.order_by(Student.student_id)
-    elif sort_by == 'gpa':
-        if sort_order == 'desc':
-            query = query.order_by(Student.gpa.desc(), Student.last_name, Student.first_name)
-        else:
-            query = query.order_by(Student.gpa, Student.last_name, Student.first_name)
-    elif sort_by == 'gpa_desc':
-        query = query.order_by(Student.gpa.desc(), Student.last_name, Student.first_name)
-    else:
-        # Default sorting
-        query = query.order_by(Student.last_name, Student.first_name)
-    
-    stats_query = query
-    total_students = stats_query.count()
-    students_with_accounts = stats_query.filter(
-        exists().where(User.student_id == Student.id)
-    ).count()
-    students_without_accounts = total_students - students_with_accounts
-    high_gpa_count = stats_query.filter(Student.gpa.isnot(None), Student.gpa >= 3.5).count()
+    params = _parse_students_list_args(request.args)
+    payload = query_students_list(request.args)
 
-    pagination = query.paginate(page=page, per_page=STUDENTS_PER_PAGE, error_out=False)
-    students = pagination.items
-    
-    return render_template('management/role_dashboard.html', 
-                         students=students,
-                         pagination=pagination,
-                         search_query=search_query,
-                         search_type=search_type,
-                         grade_filter=grade_filter,
-                         status_filter=status_filter,
-                         alert_filter=alert_filter,
-                         sort_by=sort_by,
-                         sort_order=sort_order,
-                         total_students=total_students,
-                         students_with_accounts=students_with_accounts,
-                         students_without_accounts=students_without_accounts,
-                         high_gpa_count=high_gpa_count,
-                         section='students',
-                         active_tab='students')
+    return render_template(
+        "management/role_dashboard.html",
+        students=payload["students"],
+        pagination=payload["pagination_obj"],
+        search_query=params["search"],
+        search_type=params["search_type"],
+        grade_filter=params["grade_level"],
+        status_filter=params["status"],
+        alert_filter=params["alert_filter"],
+        sort_by=params["sort"],
+        sort_order=params["order"],
+        total_students=payload["stats"]["total"],
+        students_with_accounts=payload["stats"]["with_accounts"],
+        students_without_accounts=payload["stats"]["without_accounts"],
+        high_gpa_count=payload["stats"]["high_gpa"],
+        section="students",
+        active_tab="students",
+    )
 
 
 @bp.route('/students/mark-repeating', methods=['POST'])
@@ -967,13 +1160,18 @@ def mark_students_repeating():
             updated += 1
 
         db.session.commit()
-        flash(f'Marked {updated} student(s) as repeating and updated graduation year.', 'success')
+        msg = f"Marked {updated} student(s) as repeating and updated graduation year."
+        if _students_wants_json():
+            return jsonify({"success": True, "message": msg, "updated": updated})
+        flash(msg, "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Failed to mark students repeating: {e}")
-        flash('Failed to update selected students. Please try again.', 'danger')
+        if _students_wants_json():
+            return jsonify({"success": False, "message": "Failed to update selected students."}), 500
+        flash("Failed to update selected students. Please try again.", "danger")
 
-    return redirect(url_for('management.students'))
+    return redirect(url_for("management.students"))
 
 
 
@@ -2274,7 +2472,7 @@ def edit_student(student_id):
                     e,
                 )
 
-        response = {"success": True, "message": "Student updated successfully."}
+        response = {"success": True, "message": "Student updated successfully.", "redirect": _spa_students_list_url()}
         if new_creds:
             promoted = (prev_grade is not None and not grade_may_have_login(prev_grade)) and grade_may_have_login(
                 student.grade_level
@@ -2393,13 +2591,18 @@ def remove_student(student_id):
         if ws_email:
             _suspend_student_google_workspace(student, workspace_email=ws_email)
 
-        flash('Student removed (record preserved).', 'success')
-        return redirect(url_for('management.students'))
+        msg = "Student removed (record preserved)."
+        if _students_wants_json():
+            return jsonify({"success": True, "message": msg})
+        flash(msg, "success")
+        return redirect(url_for("management.students"))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('remove_student failed student_id=%s', student_id)
         print(f"Error removing student: {e}")
+        if _students_wants_json():
+            return jsonify({"success": False, "message": "Error removing student."}), 500
         flash('Error removing student. Please try again.', 'error')
         return redirect(url_for('management.students'))
 

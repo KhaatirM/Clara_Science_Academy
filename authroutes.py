@@ -393,13 +393,15 @@ def dashboard():
         if target == 'tech' and user_has_tech_route_access(current_user):
             return redirect(url_for('tech.tech_dashboard'))
         if target == 'management' and user_has_management_entry_access(current_user):
-            return redirect(url_for('management.management_dashboard'))
+            from utils.spa_management_urls import management_home_redirect_target
+            return redirect(management_home_redirect_target())
         return redirect(url_for('auth.choose_staff_dashboard'))
 
     if is_teacher_role(current_user.role):
         return redirect(url_for('teacher.dashboard.teacher_dashboard'))
     elif user_has_management_entry_access(current_user):
-        return redirect(url_for('management.management_dashboard'))
+        from utils.spa_management_urls import management_home_redirect_target
+        return redirect(management_home_redirect_target())
     elif user_has_tech_route_access(current_user):
         return redirect(url_for('tech.tech_dashboard'))
     else:

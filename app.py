@@ -127,13 +127,19 @@ def create_app(config_class=None):
     """
     if config_class is None:
         # Auto-detect environment and select appropriate config
-        env = os.environ.get('FLASK_ENV', 'production').lower()
+        env = os.environ.get('FLASK_ENV', '').lower()
         if env == 'development':
             config_class = DevelopmentConfig
         elif env == 'testing':
             config_class = TestingConfig
+        elif env == 'production':
+            config_class = ProductionConfig
+        elif os.environ.get('RENDER') or os.environ.get('DYNO'):
+            # Hosted PaaS without explicit FLASK_ENV → production
+            config_class = ProductionConfig
         else:
-            config_class = ProductionConfig  # Default to production for security
+            # Local `python app.py` — development (HTTP cookies, React SPA, debug)
+            config_class = DevelopmentConfig
     
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -981,6 +987,12 @@ def create_app(config_class=None):
     app.register_blueprint(communications_api_bp)  # Communications API - no prefix, uses absolute paths
     app.register_blueprint(shared_communications_bp)  # Shared communications routes
 
+    from api_spa import spa_api_blueprint
+    from spa_routes import spa_blueprint
+
+    app.register_blueprint(spa_api_blueprint)
+    app.register_blueprint(spa_blueprint)
+
     # Expose ``current_app`` to Jinja so templates can defensively check
     # registered endpoints (e.g. {% if 'foo.bar' in current_app.view_functions %}).
     from flask import current_app as _flask_current_app
@@ -1450,6 +1462,20 @@ def create_app(config_class=None):
                 "school_timezone_zone": "",
                 "school_timezone_display": DEFAULT_SCHOOL_TIMEZONE,
             }
+
+    @app.context_processor
+    def inject_spa_management_nav():
+        from utils.spa_management_urls import (
+            management_home_redirect_target,
+            react_spa_enabled,
+            spa_management_url,
+        )
+
+        return {
+            "react_spa_enabled": react_spa_enabled(),
+            "spa_mgmt_url": spa_management_url,
+            "mgmt_home_url": management_home_redirect_target,
+        }
 
     @app.context_processor
     def inject_school_years_for_filters():
@@ -2147,7 +2173,8 @@ def create_app(config_class=None):
 # Create the application instance
 print("Initializing Clara Science App (first load may take 1–2 minutes)...", flush=True)
 app = create_app()
-print("Application ready.", flush=True)
+_cfg = app.config.get('ENV', 'production')
+print(f"Application ready (config: {_cfg}, react_spa={app.config.get('REACT_SPA_ENABLED')}).", flush=True)
 
 if __name__ == '__main__':
     # use_reloader=False avoids a common Windows hang with debug mode

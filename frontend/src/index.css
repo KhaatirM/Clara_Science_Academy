@@ -1,0 +1,27 @@
+@import 'tailwindcss';
+
+/* Design tokens aligned with static/css/role_hub.css (management theme) */
+@theme {
+  --color-hub-text: #0f172a;
+  --color-hub-muted: #64748b;
+  --color-hub-accent: #4f46e5;
+  --color-hub-accent-deep: #4338ca;
+  --color-hub-accent-soft: rgba(79, 70, 229, 0.12);
+  --color-hub-surface: rgba(255, 255, 255, 0.94);
+  --color-hub-border: rgba(255, 255, 255, 0.92);
+  --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--color-hub-text);
+  background: linear-gradient(165deg, #eef2ff 0%, #e8e4f8 45%, #e0e7ff 100%);
+}

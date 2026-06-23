@@ -77,6 +77,22 @@ STAFF_FORM_ROLE_OPTIONS = [
 ]
 
 
+def _staff_form_wants_json():
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return True
+    accept = (request.headers.get("Accept") or "").lower()
+    return "application/json" in accept
+
+
+def _spa_staff_list_url():
+    if (
+        current_app.config.get("REACT_SPA_ENABLED")
+        and user_has_management_entry_access(current_user)
+    ):
+        return "/app/management/teachers"
+    return url_for("management.teachers")
+
+
 def _unique_username_for_staff(first_name: str, last_name: str) -> str:
     base_username = f"{(first_name or 's')[0].lower()}{(last_name or 'taff').lower()}"
     username = base_username
@@ -279,7 +295,22 @@ bp = Blueprint('teachers', __name__)
 # @management_required
 def add_teacher_staff():
     """Add a new teacher or staff member"""
+    if request.method == "GET":
+        if (
+            current_app.config.get("REACT_SPA_ENABLED")
+            and user_has_management_entry_access(current_user)
+        ):
+            return redirect("/app/management/teachers/new")
+
     if request.method == 'POST':
+        is_ajax = _staff_form_wants_json()
+
+        def _fail(message, status=400):
+            if is_ajax:
+                return jsonify({"success": False, "message": message}), status
+            flash(message, "danger")
+            return redirect(request.url)
+
         # Get form data
         first_name = request.form.get('first_name', '').strip()
         middle_initial = request.form.get('middle_initial', '').strip()
@@ -332,28 +363,23 @@ def add_teacher_staff():
         # Validate that emergency_phone is not an email and is not too long
         if emergency_phone:
             if '@' in emergency_phone or len(emergency_phone) > 20:
-                flash('Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).', 'danger')
-                return redirect(request.url)
+                return _fail('Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).')
         
         # Validate staff phone number
         if phone and len(phone) > 20:
-            flash('Phone number is too long. Please enter a valid phone number (max 20 characters).', 'danger')
-            return redirect(request.url)
+            return _fail('Phone number is too long. Please enter a valid phone number (max 20 characters).')
         
         # Validate required fields
         if not all([first_name, last_name, email]):
-            flash('First name, last name, and email are required.', 'danger')
-            return redirect(request.url)
+            return _fail('First name, last name, and email are required.')
         
         # Validate email format
         if '@' not in email or '.' not in email:
-            flash('Please enter a valid email address.', 'danger')
-            return redirect(request.url)
+            return _fail('Please enter a valid email address.')
         
         # Check if email already exists
         if TeacherStaff.query.filter_by(email=email).first():
-            flash('A teacher/staff member with this email already exists.', 'danger')
-            return redirect(request.url)
+            return _fail('A teacher/staff member with this email already exists.')
 
         try:
             # Create teacher/staff record
@@ -394,11 +420,9 @@ def add_teacher_staff():
                             access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
                             teacher_staff.access_expires_at = access_expires_at
                         except ValueError:
-                            flash('Invalid expiration date format. Please use the date picker.', 'warning')
-                            return redirect(request.url)
+                            return _fail('Invalid expiration date format. Please use the date picker.', status=400)
                     else:
-                        flash('Expiration date is required for temporary staff.', 'danger')
-                        return redirect(request.url)
+                        return _fail('Expiration date is required for temporary staff.')
                 else:
                     teacher_staff.access_expires_at = None
             
@@ -421,8 +445,7 @@ def add_teacher_staff():
                 up = request.files["staff_image"]
                 saved = _save_staff_upload_photo(up)
                 if saved == "__invalid__":
-                    flash("Invalid staff photo. Please upload a JPG, PNG, or GIF.", "danger")
-                    return redirect(request.url)
+                    return _fail("Invalid staff photo. Please upload a JPG, PNG, or GIF.")
                 if saved:
                     teacher_staff.image = saved
             
@@ -434,14 +457,24 @@ def add_teacher_staff():
 
             if not portal_login:
                 db.session.commit()
-                session["credential_modal"] = staff_directory_only_modal_payload(
+                modal = staff_directory_only_modal_payload(
                     display_name=f"{first_name} {last_name}".strip(),
                     staff_id=teacher_staff.staff_id or "",
                     role_label=assigned_role_display,
                     personal_email=email,
                 )
+                if is_ajax:
+                    return jsonify(
+                        {
+                            "success": True,
+                            "message": "Staff saved. Review the directory-only summary.",
+                            "redirect": _spa_staff_list_url(),
+                            "credential_modal": modal,
+                        }
+                    )
+                session["credential_modal"] = modal
                 flash("Staff saved. Review the directory-only summary in the popup.", "success")
-                return redirect(url_for('management.teachers'))
+                return redirect(_spa_staff_list_url())
 
             username = _unique_username_for_staff(first_name, last_name)
             password = _initial_password_staff(first_name)
@@ -482,7 +515,7 @@ def add_teacher_staff():
             if is_temporary and teacher_staff.access_expires_at:
                 expires_str = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p UTC')
 
-            session["credential_modal"] = staff_full_modal_payload(
+            modal = staff_full_modal_payload(
                 display_name=f"{first_name} {last_name}".strip(),
                 staff_id=teacher_staff.staff_id or "",
                 role_label=assigned_role_display,
@@ -495,11 +528,23 @@ def add_teacher_staff():
                 is_temporary=is_temporary,
                 access_expires_at=expires_str,
             )
+            if is_ajax:
+                return jsonify(
+                    {
+                        "success": True,
+                        "message": "Staff saved. Use the credential summary to copy login details.",
+                        "redirect": _spa_staff_list_url(),
+                        "credential_modal": modal,
+                    }
+                )
+            session["credential_modal"] = modal
             flash("Staff saved. Use the credential summary popup to copy login details.", "success")
-            return redirect(url_for('management.teachers'))
+            return redirect(_spa_staff_list_url())
             
         except Exception as e:
             db.session.rollback()
+            if is_ajax:
+                return jsonify({"success": False, "message": f"Error adding staff account: {str(e)}"}), 500
             flash(f'Error adding staff account: {str(e)}', 'danger')
             return redirect(request.url)
     
@@ -525,6 +570,13 @@ def add_teacher_staff():
 def edit_teacher_staff(staff_id):
     """Edit a teacher or staff member"""
     teacher_staff = TeacherStaff.query.get_or_404(staff_id)
+
+    if request.method == "GET":
+        if (
+            current_app.config.get("REACT_SPA_ENABLED")
+            and user_has_management_entry_access(current_user)
+        ):
+            return redirect(f"/app/management/teachers/{staff_id}/edit")
     
     if request.method == 'POST':
         # Check if this is an AJAX request (from the modal)
@@ -776,6 +828,7 @@ def edit_teacher_staff(staff_id):
                 payload = {
                     "success": True,
                     "message": f"{assigned_role_display} updated successfully!",
+                    "redirect": _spa_staff_list_url(),
                 }
                 if newly_provisioned:
                     u_n, p_w, gwe_n, google_initial_password = newly_provisioned
@@ -825,7 +878,7 @@ def edit_teacher_staff(staff_id):
                 flash("Staff updated. Use the credential summary popup to copy new login details.", "success")
             else:
                 flash(f'{assigned_role_display} updated successfully!', 'success')
-            return redirect(url_for('management.teachers'))
+            return redirect(_spa_staff_list_url())
             
         except Exception as e:
             db.session.rollback()
@@ -1101,11 +1154,45 @@ def _staff_directory_context():
 @login_required
 @management_required
 def teachers():
+    from flask import current_app, redirect
+    from urllib.parse import urlencode
+
     teachers_view = request.args.get('teachers_view', 'manage')
     if teachers_view not in ('manage', 'directory'):
         teachers_view = 'manage'
     if teachers_view == 'directory' and not user_has_management_entry_access(current_user):
         teachers_view = 'manage'
+
+    if (
+        current_app.config.get('REACT_SPA_ENABLED')
+        and user_has_management_entry_access(current_user)
+    ):
+        if teachers_view == 'directory':
+            tab = (request.args.get('staff_dir_tab') or request.args.get('tab') or 'current').strip()
+            if tab not in ('current', 'former'):
+                tab = 'current'
+            q = (request.args.get('staff_dir_q') or request.args.get('q') or '').strip()
+            return redirect(f"/app/management/teachers/roster?{urlencode({'tab': tab, 'q': q})}")
+
+        spa_params = {}
+        for legacy_key, spa_key in (
+            ('search', 'search'),
+            ('search_type', 'search_type'),
+            ('department', 'department'),
+            ('role', 'role'),
+            ('employment', 'employment'),
+        ):
+            value = (request.args.get(legacy_key) or '').strip()
+            if value:
+                spa_params[spa_key] = value
+        sort_by = (request.args.get('sort_by') or '').strip()
+        if sort_by:
+            spa_params['sort'] = sort_by
+        sort_order = (request.args.get('sort_order') or '').strip()
+        if sort_order:
+            spa_params['order'] = sort_order
+        qs = f"?{urlencode(spa_params)}" if spa_params else ''
+        return redirect(f"/app/management/teachers{qs}")
 
     if teachers_view == 'directory':
         ctx = _staff_directory_context()

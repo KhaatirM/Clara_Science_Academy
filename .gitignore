@@ -174,3 +174,9 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
+
+# Node / React frontend
+node_modules/
+frontend/node_modules/
+static/spa/

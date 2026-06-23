@@ -110,6 +110,11 @@ class Config:
     # Optional: monitored address for replies. Improves deliverability vs a bare no-reply From with no Reply-To.
     MAIL_REPLY_TO = (os.environ.get('MAIL_REPLY_TO') or '').strip() or None
 
+    # React management SPA (hybrid migration). When True, Flask serves /app/* from static/spa.
+    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'false').lower() in (
+        'true', '1', 'yes', 'on',
+    )
+
     # Ensure the upload folder and subdirs exist
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
@@ -136,6 +141,10 @@ class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
     TESTING = False
+    SESSION_COOKIE_SECURE = False  # local dev uses http://127.0.0.1
+    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'true').lower() in (
+        'true', '1', 'yes', 'on',
+    )
 
 
 class TestingConfig(Config):

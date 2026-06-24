@@ -86,3 +86,9 @@ from api_spa import dashboard as _spa_dashboard  # noqa: F401, E402
 from api_spa import students as _spa_students  # noqa: F401, E402
 from api_spa import parents as _spa_parents  # noqa: F401, E402
 from api_spa import classes as _spa_classes  # noqa: F401, E402
+from api_spa import assignments as _spa_assignments  # noqa: F401, E402
+from api_spa import extensions as _spa_extensions  # noqa: F401, E402
+from api_spa import redo as _spa_redo  # noqa: F401, E402
+from api_spa import calendar as _spa_calendar  # noqa: F401, E402
+from api_spa import school_year_closure as _spa_school_year_closure  # noqa: F401, E402
+from api_spa import school_years as _spa_school_years  # noqa: F401, E402

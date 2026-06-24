@@ -22,6 +22,7 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo
 import json
 from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
+from .assignment_create_json import create_form_err, create_form_ok, create_form_wants_json
 from teacher_routes.assignment_utils import (
     is_assignment_open_for_student,
     quiz_authoring_save_action,
@@ -101,6 +102,11 @@ def _apply_assignment_adjustments(assignment, entered_points, submission_record=
 @management_required
 def assignment_type_selector():
     """Assignment type selection page for management"""
+    from utils.spa_management_urls import spa_assignment_type_selector_redirect
+
+    spa_redirect = spa_assignment_type_selector_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
     preselected_class_id = request.args.get('class_id', type=int)
     return render_template('shared/assignment_type_selector.html', preselected_class_id=preselected_class_id)
 
@@ -116,6 +122,12 @@ def assignment_type_selector():
 @management_required
 def group_assignment_type_selector():
     """General group assignment type selector for management"""
+    from utils.spa_management_urls import spa_group_class_picker_redirect
+
+    spa_redirect = spa_group_class_picker_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     classes = Class.query.all()
     return render_template('management/group_assignment_class_selector.html', classes=classes)
 
@@ -154,6 +166,13 @@ def _build_quiz_data_for_edit(assignment):
 @management_required
 def create_quiz_assignment():
     """Create or edit a quiz assignment - management version"""
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_create_quiz_redirect
+
+        spa_redirect = spa_create_quiz_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
+
     if request.method == 'POST':
         save_action = quiz_authoring_save_action(request.form)
         is_draft = save_action == 'draft'
@@ -167,6 +186,8 @@ def create_quiz_assignment():
         link_google_form_early = request.form.get('link_google_form') == 'on'
 
         def _redirect_quiz_back():
+            if create_form_wants_json():
+                return create_form_err("Please fix the errors and try again.")
             rt = url_for('management.create_quiz_assignment')
             if is_edit:
                 rt += f'?edit={assignment_id}'
@@ -223,8 +244,10 @@ def create_quiz_assignment():
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
-                flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('management.create_quiz_assignment') + '?compose=new')
+                return create_form_err(
+                    "Cannot create assignment: No active school year.",
+                    redirect_target=url_for('management.create_quiz_assignment') + '?compose=new',
+                )
             
             # Get save and continue settings
             allow_save_and_continue = request.form.get('allow_save_and_continue') == 'on'
@@ -463,19 +486,29 @@ def create_quiz_assignment():
             new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
             if is_draft:
-                flash(
+                draft_msg = (
                     'Draft saved. Open it again from Assignments & Grades when you are ready to continue.'
                     if is_edit
-                    else 'Draft saved. You can finish and publish later from Assignments & Grades.',
-                    'success',
+                    else 'Draft saved. You can finish and publish later from Assignments & Grades.'
                 )
+                draft_url = url_for('management.create_quiz_assignment') + f'?edit={new_assignment.id}&legacy=1'
+                if create_form_wants_json():
+                    return create_form_ok(draft_msg, redirect_url=draft_url)
+                flash(draft_msg, 'success')
                 return redirect(url_for('management.create_quiz_assignment') + f'?edit={new_assignment.id}')
-            flash('Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!', 'success')
-            return redirect(url_for('management.assignments_and_grades'))
+            success_msg = 'Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!'
+            if class_id:
+                success_url = f'/app/management/assignments/{class_id}'
+            else:
+                success_url = '/app/management/assignments'
+            from utils.spa_management_urls import user_should_use_spa_management_shell
+            if not user_should_use_spa_management_shell():
+                success_url = url_for('management.assignments_and_grades')
+            return create_form_ok(success_msg, redirect_url=success_url)
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error creating quiz assignment: {str(e)}', 'danger')
+            return create_form_err(f'Error creating quiz assignment: {str(e)}')
     
     # GET request - show form (create or edit)
     classes = Class.query.all()
@@ -491,6 +524,7 @@ def create_quiz_assignment():
         quiz_data = _build_quiz_data_for_edit(assignment)
     question_banks_url = url_for('management.assignments.question_banks_json')
     save_to_bank_url = url_for('management.assignments.save_to_bank')
+    preselected_class_id = request.args.get('class_id', type=int)
     return render_template(
         'shared/create_quiz_assignment.html',
         classes=classes,
@@ -500,6 +534,7 @@ def create_quiz_assignment():
         question_banks_url=question_banks_url,
         save_to_bank_url=save_to_bank_url,
         quiz_drafts_enabled=True,
+        preselected_class_id=preselected_class_id,
     )
 
 
@@ -581,6 +616,13 @@ def create_discussion_assignment():
     """Create or edit a discussion assignment - management version"""
     from teacher_routes.assignment_utils import calculate_assignment_status
 
+    if request.method == 'GET' and not request.args.get('edit', type=int):
+        from utils.spa_management_urls import spa_create_discussion_redirect
+
+        spa_redirect = spa_create_discussion_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
+
     edit_id = request.args.get('edit', type=int)
     assignment = None
     if edit_id:
@@ -610,8 +652,10 @@ def create_discussion_assignment():
         close_date_str = request.form.get('close_date', '').strip()
 
         if not all([title, class_id, discussion_prompt, due_date_str, quarter]):
-            flash("Please fill in all required fields.", "danger")
-            return render_template('shared/create_discussion_assignment.html', classes=classes, assignment=assignment, current_quarter=get_current_quarter())
+            return create_form_err(
+                "Please fill in all required fields.",
+                redirect_target=url_for('management.create_discussion_assignment'),
+            )
 
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
@@ -654,16 +698,20 @@ def create_discussion_assignment():
                     existing.total_points = total_points
                     existing.allow_student_edit_posts = allow_student_edit_posts
                     db.session.commit()
-                    flash('Discussion assignment updated successfully!', 'success')
-                    return redirect(url_for('management.view_assignment', assignment_id=existing.id))
+                    return create_form_ok(
+                        'Discussion assignment updated successfully!',
+                        redirect_url=f'/app/management/assignments/{existing.class_id}/individual/{existing.id}/view?legacy=1',
+                    )
                 else:
                     flash("Discussion assignment not found.", "danger")
                     return redirect(url_for('management.assignments_and_grades'))
 
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
-                flash("Cannot create assignment: No active school year.", "danger")
-                return render_template('shared/create_discussion_assignment.html', classes=classes, assignment=assignment, current_quarter=get_current_quarter())
+                return create_form_err(
+                    "Cannot create assignment: No active school year.",
+                    redirect_target=url_for('management.create_discussion_assignment'),
+                )
 
             new_assignment = Assignment(
                 title=title,
@@ -683,12 +731,14 @@ def create_discussion_assignment():
             )
             db.session.add(new_assignment)
             db.session.commit()
-            flash('Discussion assignment created successfully!', 'success')
-            return redirect(url_for('management.assignments_and_grades'))
+            return create_form_ok(
+                'Discussion assignment created successfully!',
+                redirect_url=f'/app/management/assignments/{class_id}',
+            )
 
         except Exception as e:
             db.session.rollback()
-            flash(f'Error saving discussion assignment: {str(e)}', 'danger')
+            return create_form_err(f'Error saving discussion assignment: {str(e)}')
 
     current_quarter = get_current_quarter()
     if assignment:
@@ -697,7 +747,8 @@ def create_discussion_assignment():
         class_obj = assignment.class_info
     else:
         prompt, instructions, rubric, min_initial_posts, min_replies = '', '', '', 1, 2
-        class_obj = None
+        preselected_class_id = request.args.get('class_id', type=int)
+        class_obj = Class.query.get(preselected_class_id) if preselected_class_id else None
     return render_template('shared/create_discussion_assignment.html',
                          classes=classes,
                          current_quarter=current_quarter,
@@ -721,6 +772,12 @@ def create_discussion_assignment():
 @management_required
 def view_extension_requests():
     """View all extension requests for assignments in the active school year"""
+    from utils.spa_management_urls import spa_extension_requests_redirect
+
+    spa_redirect = spa_extension_requests_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     from datetime import datetime
     from utils.school_year_filters import extension_requests_query
 
@@ -872,6 +929,12 @@ def bulk_review_extension_requests():
 @management_required
 def assignments_and_grades():
     """Combined assignments and grades view for School Administrators and Directors"""
+    from utils.spa_management_urls import spa_assignments_hub_redirect
+
+    spa_redirect = spa_assignments_hub_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     import json
     # Import at function start to avoid UnboundLocalError from inner-scope shadowing
     from models import Enrollment
@@ -1790,6 +1853,13 @@ def debug_grades(class_id):
 @management_required
 def add_assignment():
     """Add a new assignment"""
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_add_assignment_redirect
+
+        spa_redirect = spa_add_assignment_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
+
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
@@ -1824,8 +1894,7 @@ def add_assignment():
         category_weight = request.form.get('category_weight', type=float) or 0.0
         
         if not all([title, due_date_str, quarter]) or not class_ids:
-            flash("Title, Class(es), Due Date, and Quarter are required.", "danger")
-            return redirect(request.url)
+            return create_form_err("Title, Class(es), Due Date, and Quarter are required.")
 
         # Type assertion for due_date_str
         assert due_date_str is not None
@@ -1833,8 +1902,7 @@ def add_assignment():
         tz_name = get_school_timezone_name()
         due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
         if not due_date:
-            flash("Invalid due date.", "danger")
-            return redirect(request.url)
+            return create_form_err("Invalid due date.")
         open_date_str = request.form.get('open_date', '').strip()
         close_date_str = request.form.get('close_date', '').strip()
         open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
@@ -1856,8 +1924,7 @@ def add_assignment():
         
         current_school_year = SchoolYear.query.filter_by(is_active=True).first()
         if not current_school_year:
-            flash("Cannot create assignment: No active school year.", "danger")
-            return redirect(request.url)
+            return create_form_err("Cannot create assignment: No active school year.")
 
         # Type assertion for quarter
         assert quarter is not None
@@ -1876,8 +1943,9 @@ def add_assignment():
             if not file or not file.filename:
                 continue
             if not allowed_file(file.filename):
-                flash(f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
-                return redirect(request.url)
+                return create_form_err(
+                    f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'
+                )
             assert file.filename is not None
             filename = secure_filename(file.filename)
             unique_filename = f"assignment_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{idx}_{filename}"
@@ -1893,8 +1961,7 @@ def add_assignment():
                     'sort_order': idx,
                 })
             except Exception as e:
-                flash(f'Error saving file: {str(e)}', 'danger')
-                return redirect(request.url)
+                return create_form_err(f'Error saving file: {str(e)}')
 
         try:
             created_count = 0
@@ -1948,19 +2015,28 @@ def add_assignment():
                 created_count += 1
 
             db.session.commit()
-            flash(f'Assignment created successfully for {created_count} class{"es" if created_count > 1 else ""}.', 'success')
-            return redirect(url_for('management.assignments_and_grades'))
+            success_msg = f'Assignment created successfully for {created_count} class{"es" if created_count > 1 else ""}.'
+            from utils.spa_management_urls import user_should_use_spa_management_shell
+            if user_should_use_spa_management_shell() and created_count == 1 and len(class_ids) == 1:
+                return create_form_ok(success_msg, redirect_url=f"/app/management/assignments/{class_ids[0]}")
+            if len(class_ids) == 1:
+                return create_form_ok(
+                    success_msg,
+                    redirect_url=url_for('management.assignments_and_grades', class_id=class_ids[0]),
+                )
+            return create_form_ok(success_msg, redirect_url=url_for('management.assignments_and_grades'))
         except Exception as e:
             print(f"ERROR: Failed to create assignment: {e}")
             db.session.rollback()
-            flash(f'Error creating assignment: {str(e)}', 'danger')
-            return redirect(request.url)
+            return create_form_err(f'Error creating assignment: {str(e)}')
 
     # For GET request, get all classes for the dropdown and current quarter
     classes = Class.query.all()
     current_quarter = get_current_quarter()
     # Get assignment context from query parameter (in-class or homework)
     context = request.args.get('context', 'homework')
+    preselected_class_id = request.args.get('class_id', type=int)
+    class_obj = Class.query.get(preselected_class_id) if preselected_class_id else None
     # For in-class: default due date = today at 4:00 PM EST
     default_due_date = None
     in_class_due_date_str = None  # Always compute for JS (when user switches context)
@@ -1977,7 +2053,15 @@ def add_assignment():
         in_class_due_date_str = in_class_dt.strftime('%Y-%m-%dT%H:%M')
         if context == 'in-class':
             default_due_date = in_class_dt
-    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter, context=context, default_due_date=default_due_date, in_class_due_date_str=in_class_due_date_str)
+    return render_template(
+        'shared/add_assignment.html',
+        classes=classes,
+        current_quarter=current_quarter,
+        context=context,
+        default_due_date=default_due_date,
+        in_class_due_date_str=in_class_due_date_str,
+        class_obj=class_obj,
+    )
 
 
 
@@ -2149,6 +2233,13 @@ def send_reminder(assignment_id):
 @management_required
 def grade_assignment(assignment_id):
     """Grade an assignment - Directors and School Administrators can grade assignments for classes they teach"""
+    from utils.spa_management_urls import spa_assignment_grade_redirect
+
+    if request.method == "GET":
+        spa_redirect = spa_assignment_grade_redirect(assignment_id)
+        if spa_redirect is not None:
+            return spa_redirect
+
     try:
         assignment = Assignment.query.get_or_404(assignment_id)
         
@@ -2860,6 +2951,13 @@ def sync_google_forms_submissions(assignment_id):
 @management_required
 def view_assignment(assignment_id):
     """View assignment details"""
+    from utils.spa_management_urls import spa_assignment_view_redirect
+
+    if request.method == "GET":
+        spa_redirect = spa_assignment_view_redirect(assignment_id)
+        if spa_redirect is not None:
+            return spa_redirect
+
     try:
         assignment = Assignment.query.get_or_404(assignment_id)
         
@@ -4915,6 +5013,13 @@ def grant_group_extensions(assignment_id):
 @management_required
 def admin_view_group_assignment(assignment_id):
     """View details of a specific group assignment - Management view."""
+    from utils.spa_management_urls import spa_assignment_view_redirect
+
+    if request.method == "GET":
+        spa_redirect = spa_assignment_view_redirect(assignment_id, is_group=True)
+        if spa_redirect is not None:
+            return spa_redirect
+
     from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension, Assignment, GroupAssignmentMemberSnapshot
     from types import SimpleNamespace
     import json
@@ -5127,6 +5232,13 @@ def admin_view_group_assignment(assignment_id):
 @login_required
 def admin_grade_group_assignment(assignment_id):
     """Grade a group assignment - Allows teachers and administrators."""
+    from utils.spa_management_urls import spa_assignment_grade_redirect
+
+    if request.method == "GET":
+        spa_redirect = spa_assignment_grade_redirect(assignment_id, is_group=True)
+        if spa_redirect is not None:
+            return spa_redirect
+
     from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff, Student, GroupSubmission, GroupAssignmentMemberSnapshot
     from teacher_routes.utils import is_authorized_for_class
     from types import SimpleNamespace
@@ -5475,8 +5587,18 @@ def admin_delete_group_assignment(assignment_id):
     group_assignment = None
     try:
         from models import GroupAssignment, GroupGrade, GroupSubmission, DeadlineReminder
-        
-        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+
+        group_assignment = GroupAssignment.query.get(assignment_id)
+        if not group_assignment:
+            wants_json = (
+                request.accept_mimetypes.accept_json
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                or "application/json" in request.headers.get("Accept", "")
+            )
+            if wants_json:
+                return jsonify({"success": True, "message": "Assignment already removed."})
+            flash("Group assignment already removed.", "info")
+            return redirect(url_for("management.assignments_and_grades"))
         
         # Delete related grades first
         GroupGrade.query.filter_by(group_assignment_id=assignment_id).delete()
@@ -5497,13 +5619,28 @@ def admin_delete_group_assignment(assignment_id):
         # Delete the assignment itself
         db.session.delete(group_assignment)
         db.session.commit()
-        
-        flash('Group assignment deleted successfully!', 'success')
+
+        wants_json = (
+            request.accept_mimetypes.accept_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if wants_json:
+            return jsonify({"success": True, "message": "Group assignment deleted successfully."})
+
+        flash("Group assignment deleted successfully!", "success")
     except NotFound:
         raise
     except Exception as e:
         db.session.rollback()
-        flash(f'Error deleting assignment: {str(e)}', 'danger')
+        wants_json = (
+            request.accept_mimetypes.accept_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if wants_json:
+            return jsonify({"success": False, "message": f"Error deleting assignment: {str(e)}"}), 500
+        flash(f"Error deleting assignment: {str(e)}", "danger")
     
     # Redirect back to the appropriate page
     class_id = getattr(group_assignment, 'class_id', None) if group_assignment else None

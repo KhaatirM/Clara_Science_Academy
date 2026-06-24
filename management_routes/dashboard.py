@@ -406,6 +406,12 @@ def management_dashboard():
 @login_required
 def redo_dashboard():
     """Dashboard showing all active redo opportunities, reopenings, and pending redo requests from students"""
+    from utils.spa_management_urls import spa_redo_dashboard_redirect
+
+    spa_redirect = spa_redo_dashboard_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     from datetime import datetime, timezone
     from teacher_routes.assignment_utils import _as_utc_aware
     from models import Assignment, AssignmentRedo, AssignmentReopening, TeacherStaff, RedoRequest

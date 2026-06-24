@@ -75,7 +75,7 @@
                                 <select class="form-select form-select-lg" id="class_id" name="class_id" required>
                                     <option value="">Choose a class...</option>
                                     {% for class in classes %}
-                                        <option value="{{ class.id }}" {% if assignment and assignment.class_id == class.id %}selected{% endif %}>{{ class.name }} - {{ class.subject }}</option>
+                                        <option value="{{ class.id }}" {% if (assignment and assignment.class_id == class.id) or (preselected_class_id and preselected_class_id == class.id) %}selected{% endif %}>{{ class.name }} - {{ class.subject }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

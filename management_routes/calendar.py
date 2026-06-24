@@ -158,6 +158,12 @@ def get_academic_dates_for_calendar(year, month):
 @management_required
 def calendar():
     """School calendar view"""
+    from utils.spa_management_urls import spa_calendar_redirect
+
+    spa_redirect = spa_calendar_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     from datetime import datetime, timedelta
     import calendar as cal
     

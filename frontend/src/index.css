@@ -25,3 +25,15 @@ body {
   color: var(--color-hub-text);
   background: linear-gradient(165deg, #eef2ff 0%, #e8e4f8 45%, #e0e7ff 100%);
 }
+
+/* Legacy management pages (school years, closure) — match Jinja dashboard_content */
+html.spa-legacy-mgmt-shell,
+body.spa-legacy-mgmt-shell {
+  min-height: auto;
+}
+
+.spa-legacy-mgmt-shell .mgmt-sy,
+.spa-legacy-mgmt-shell .mgmt-syc {
+  min-height: 100%;
+  padding-block: 0;
+}

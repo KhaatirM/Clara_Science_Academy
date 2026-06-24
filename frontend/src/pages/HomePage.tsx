@@ -217,14 +217,14 @@ export function HomePage() {
               icon="bi-clock-history"
               value={pendingExt}
               label="Pending extensions"
-              href={pendingExt > 0 ? '/management/extension-requests' : undefined}
+              href={pendingExt > 0 ? '/app/management/extensions' : undefined}
               alert={pendingExt > 0}
             />
             <InsightCard
               icon={atRisk > 0 ? 'bi-exclamation-triangle' : 'bi-shield-check'}
               value={atRisk}
               label="Academic concerns"
-              href={atRisk > 0 ? '/management/assignments-and-grades' : undefined}
+              href={atRisk > 0 ? '/app/management/assignments' : undefined}
               alert={atRisk > 0}
             />
           </div>
@@ -294,8 +294,8 @@ export function HomePage() {
             <ActionGroup label="Academics">
               <ActionTile icon="bi-plus-circle" label="Add class" href="/management/classes?open=create" react />
               <ActionTile icon="bi-mortarboard" label="Classes" href="/management/classes" react />
-              <ActionTile icon="bi-journal-plus" label="Add assignment" href="/management/assignment/type-selector" />
-              <ActionTile icon="bi-clipboard-data" label="Grades & assignments" href="/management/assignments-and-grades" />
+              <ActionTile icon="bi-journal-plus" label="Add assignment" href="/management/assignments/create" react />
+              <ActionTile icon="bi-clipboard-data" label="Grades & assignments" href="/management/assignments" react />
               <ActionTile icon="bi-file-earmark-text" label="Report cards" href="/management/generate-report-card-form" />
               <ActionTile icon="bi-collection" label="View report cards" href="/management/report-cards" />
             </ActionGroup>
@@ -304,7 +304,8 @@ export function HomePage() {
               <ActionTile
                 icon="bi-clock-history"
                 label="Extensions"
-                href="/management/extension-requests"
+                href="/management/extensions"
+                react
                 highlight={pendingExt > 0}
                 badge={pendingExt > 0 ? pendingExt : undefined}
               />

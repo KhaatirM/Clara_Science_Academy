@@ -283,6 +283,12 @@ def google_disconnect_account():
 @management_required
 def school_years():
     """Manage school years."""
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_school_years_redirect
+        spa_resp = spa_school_years_redirect()
+        if spa_resp:
+            return spa_resp
+
     if request.method == 'POST':
         name = request.form.get('name')
         start_date_str = request.form.get('start_date')

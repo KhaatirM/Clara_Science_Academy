@@ -16,6 +16,19 @@ export interface StudentBrief {
   photo_url: string | null
 }
 
+export interface StudentRosterEntry extends StudentBrief {
+  email?: string | null
+  has_account?: boolean
+  username?: string | null
+  view_url?: string
+}
+
+export interface ClassTeacherAssignee {
+  id: number
+  display_name: string
+  role: string
+}
+
 export interface ClassManagementLinks {
   add_assignment: string
   attendance: string
@@ -81,9 +94,24 @@ export interface ClassEditResponse extends ClassDetailResponse {
 }
 
 export interface ClassRosterResponse {
-  class: ClassListItem
-  enrolled_students: StudentBrief[]
-  available_students: StudentBrief[]
+  class: ClassListItem & {
+    max_students?: number
+    room_number?: string | null
+    schedule?: string | null
+  }
+  enrolled_students: StudentRosterEntry[]
+  available_students: StudentRosterEntry[]
+  stats?: {
+    enrolled: number
+    with_accounts: number
+    capacity_percent: number
+    max_students: number
+  }
+  teachers?: {
+    primary: ClassTeacherAssignee | null
+    substitute: ClassTeacherAssignee[]
+    additional: ClassTeacherAssignee[]
+  }
   meta: ClassMeta
 }
 
@@ -98,15 +126,25 @@ export interface ClassGradesColumn {
 
 export interface ClassGradesRow {
   student: StudentBrief
-  grades: Record<string, { grade: string | number; type: string }>
+  grades: Record<string, { grade: string | number; type: string; group_name?: string | null }>
   average: string | number
 }
 
 export interface ClassGradesResponse {
-  class: ClassListItem
+  class: ClassListItem & {
+    schedule?: string | null
+    schedule_display?: string
+  }
   view_mode: string
   columns: ClassGradesColumn[]
   rows: ClassGradesRow[]
+  stats?: {
+    students: number
+    assignments: number
+    individual_count: number
+    group_count: number
+    schedule_display: string
+  }
   meta: ClassMeta
 }
 

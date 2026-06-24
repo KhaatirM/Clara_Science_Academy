@@ -687,6 +687,12 @@ def manage_class(class_id):
 @management_required
 def edit_class(class_id):
     """Edit a specific class."""
+    from utils.spa_management_urls import spa_class_workflow_redirect
+
+    spa_redirect = spa_class_workflow_redirect(class_id, "edit")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     if request.method == 'POST':
@@ -918,6 +924,12 @@ def edit_class(class_id):
 def class_roster(class_id):
     """View and manage class roster."""
     from datetime import date, datetime
+    from utils.spa_management_urls import spa_class_workflow_redirect
+
+    if request.method == 'GET':
+        spa_redirect = spa_class_workflow_redirect(class_id, "roster")
+        if spa_redirect is not None:
+            return spa_redirect
     
     class_obj = Class.query.get_or_404(class_id)
     
@@ -1497,6 +1509,12 @@ def admin_class_conflicts(class_id):
 @management_required
 def class_grades(class_id):
     """View class grades."""
+    from utils.spa_management_urls import spa_class_workflow_redirect
+
+    spa_redirect = spa_class_workflow_redirect(class_id, "grades")
+    if spa_redirect is not None:
+        return spa_redirect
+
     from datetime import date
     import json
     
@@ -2320,6 +2338,12 @@ def class_grades_view(class_id):
 @management_required
 def view_class(class_id):
     """View detailed class information"""
+    from utils.spa_management_urls import spa_class_workflow_redirect
+
+    spa_redirect = spa_class_workflow_redirect(class_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_info = Class.query.get_or_404(class_id)
     
     # Get teacher information
@@ -2391,6 +2415,12 @@ def view_class(class_id):
 @management_required
 def manage_class_roster(class_id):
     """Manage class roster - add/remove students"""
+    from utils.spa_management_urls import spa_class_workflow_redirect
+
+    spa_redirect = spa_class_workflow_redirect(class_id, "roster")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_info = Class.query.get_or_404(class_id)
     
     if request.method == 'POST':
@@ -2722,6 +2752,12 @@ def admin_class_group_rotations(class_id):
 @management_required
 def admin_group_assignment_type_selector(class_id):
     """Group assignment type selector for management."""
+    from utils.spa_management_urls import spa_group_type_selector_redirect
+
+    spa_redirect = spa_group_type_selector_redirect(class_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     return render_template('shared/group_assignment_type_selector.html',
@@ -2744,7 +2780,15 @@ def admin_create_group_pdf_assignment(class_id):
     import time
     import os
     import json
-    
+    from .assignment_create_json import create_form_err, create_form_ok
+
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_group_pdf_create_redirect
+
+        spa_redirect = spa_group_pdf_create_redirect(class_id)
+        if spa_redirect is not None:
+            return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     accessible_classes = Class.query.order_by(Class.name).all()
     
@@ -2793,24 +2837,20 @@ def admin_create_group_pdf_assignment(class_id):
         class_obj = Class.query.get_or_404(effective_class_id)
         
         if not title or not due_date_str or not quarter:
-            flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('shared/create_group_pdf_assignment.html', 
-                                 class_obj=class_obj, 
-                                 academic_periods=academic_periods,
-                                 accessible_classes=accessible_classes,
-                                 admin_view=True)
+            return create_form_err(
+                'Title, due date, and quarter are required.',
+                redirect_target=url_for('management.classes.admin_create_group_pdf_assignment', class_id=class_id),
+            )
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
             open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
             close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M') if close_date_str else None
         except ValueError:
-            flash('Invalid date format.', 'danger')
-            return render_template('shared/create_group_pdf_assignment.html', 
-                                 class_obj=class_obj, 
-                                 academic_periods=academic_periods,
-                                 accessible_classes=accessible_classes,
-                                 admin_view=True)
+            return create_form_err(
+                'Invalid date format.',
+                redirect_target=url_for('management.classes.admin_create_group_pdf_assignment', class_id=class_id),
+            )
         
         # Handle file upload
         attachment_filename = None
@@ -2916,9 +2956,12 @@ def admin_create_group_pdf_assignment(class_id):
             pass
 
         db.session.commit()
-        
-        flash(f'Group PDF assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('management.assignments_and_grades', class_id=effective_class_id))
+
+        success_msg = f'Group PDF assignment "{title}" created successfully!'
+        return create_form_ok(
+            success_msg,
+            redirect_url=f'/app/management/assignments/{effective_class_id}',
+        )
     
     return render_template('shared/create_group_pdf_assignment.html',
                          class_obj=class_obj,
@@ -2939,7 +2982,15 @@ def admin_create_group_pdf_assignment(class_id):
 def admin_create_group_quiz_assignment(class_id):
     """Create a new quiz group assignment - Management view."""
     import json
-    
+    from management_routes.assignment_create_json import create_form_err, create_form_ok
+
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_group_quiz_create_redirect
+
+        spa_redirect = spa_group_quiz_create_redirect(class_id)
+        if spa_redirect is not None:
+            return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     # Get current school year and academic periods
@@ -2958,8 +3009,8 @@ def admin_create_group_quiz_assignment(class_id):
         group_size_min = request.form.get('group_size_min', 2)
         group_size_max_raw = request.form.get('group_size_max', '').strip()
         group_size_max = int(group_size_max_raw) if group_size_max_raw else None  # Blank = unlimited
-        allow_individual = 'allow_individual' in request.form
-        collaboration_type = request.form.get('collaboration_type', 'group')
+        allow_individual = False
+        collaboration_type = 'group'
         
         # Quiz-specific settings
         time_limit = int(request.form.get('time_limit', 30))
@@ -2977,20 +3028,18 @@ def admin_create_group_quiz_assignment(class_id):
             selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
         
         if not title or not due_date_str or not quarter:
-            flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('shared/create_group_quiz_assignment.html', 
-                                 class_obj=class_obj, 
-                                 academic_periods=academic_periods,
-                                 admin_view=True)
+            return create_form_err(
+                'Title, due date, and quarter are required.',
+                redirect_target=url_for('management.classes.admin_create_group_quiz_assignment', class_id=class_id),
+            )
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         except ValueError:
-            flash('Invalid due date format.', 'danger')
-            return render_template('shared/create_group_quiz_assignment.html', 
-                                 class_obj=class_obj, 
-                                 academic_periods=academic_periods,
-                                 admin_view=True)
+            return create_form_err(
+                'Invalid due date format.',
+                redirect_target=url_for('management.classes.admin_create_group_quiz_assignment', class_id=class_id),
+            )
         
         # Get assignment context from form or query parameter
         assignment_context = request.form.get('assignment_context', 'homework')
@@ -3044,36 +3093,15 @@ def admin_create_group_quiz_assignment(class_id):
                     ))
         except Exception:
             pass
-
-        # Freeze membership snapshot so future group reshuffles don't affect this assignment's roster.
-        try:
-            from models import GroupAssignmentMemberSnapshot, StudentGroupMember, StudentGroup
-            selected_ids = []
-            try:
-                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else (group_assignment.selected_group_ids or [])
-            except Exception:
-                selected_ids = []
-            if not selected_ids:
-                selected_ids = [g.id for g in StudentGroup.query.filter_by(class_id=class_obj.id, is_active=True).all()]
-            if selected_ids:
-                member_rows = StudentGroupMember.query.filter(StudentGroupMember.group_id.in_(selected_ids)).all()
-                for m in member_rows:
-                    if not m.student_id:
-                        continue
-                    db.session.add(GroupAssignmentMemberSnapshot(
-                        group_assignment_id=group_assignment.id,
-                        group_id=m.group_id,
-                        student_id=m.student_id,
-                    ))
-        except Exception:
-            pass
         
         # Save quiz questions
         question_count = 0
         for key, value in request.form.items():
             if key.startswith('question_text_'):
                 question_id = key.split('_')[2]
-                question_text = value
+                question_text = (value or '').strip()
+                if not question_text:
+                    continue
                 question_type = request.form.get(f'question_type_{question_id}')
                 points = float(request.form.get(f'question_points_{question_id}', 1.0))
                 
@@ -3110,10 +3138,19 @@ def admin_create_group_quiz_assignment(class_id):
                             option_count += 1
                 
                 question_count += 1
-        
+
+        if question_count < 1:
+            return create_form_err(
+                'Add at least one question before creating the group quiz.',
+                redirect_target=url_for('management.classes.admin_create_group_quiz_assignment', class_id=class_id),
+            )
+
         db.session.commit()
-        flash(f'Group quiz assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('management.assignments_and_grades', class_id=class_id))
+        success_msg = f'Group quiz assignment "{title}" created successfully!'
+        return create_form_ok(
+            success_msg,
+            redirect_url=f'/app/management/assignments/{class_id}',
+        )
     
     return render_template('shared/create_group_quiz_assignment.html',
                          class_obj=class_obj,

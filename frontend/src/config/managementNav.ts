@@ -60,6 +60,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
     id: 'assignments',
     label: 'Assignments & Grades',
     icon: 'bi-journal-check',
+    reactTo: '/management/assignments',
     legacyHref: '/management/assignments-and-grades',
     perm: 'assignments_grades:manage',
   },
@@ -89,6 +90,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
     label: 'School Calendar',
     adminStaffLabel: 'Calendar',
     icon: 'bi-calendar-event-fill',
+    reactTo: '/management/calendar',
     legacyHref: '/management/calendar',
   },
   {

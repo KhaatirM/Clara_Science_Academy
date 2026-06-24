@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from flask import Blueprint, abort, current_app, send_from_directory
+from flask import Blueprint, abort, current_app, make_response, send_from_directory
 
 spa_blueprint = Blueprint("spa", __name__)
 
@@ -26,7 +26,9 @@ def spa_assets(filename: str):
     assets_dir = os.path.join(_spa_dir(), "assets")
     if not os.path.isdir(assets_dir):
         abort(503)
-    return send_from_directory(assets_dir, filename)
+    response = make_response(send_from_directory(assets_dir, filename))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 @spa_blueprint.route("/app")
@@ -41,4 +43,8 @@ def spa_index(path: str = ""):
             503,
             "React app not built. Run: cd frontend && npm install && npm run build",
         )
-    return send_from_directory(_spa_dir(), "index.html")
+    response = make_response(send_from_directory(_spa_dir(), "index.html"))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response

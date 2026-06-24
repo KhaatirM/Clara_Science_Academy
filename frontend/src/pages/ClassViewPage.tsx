@@ -3,6 +3,7 @@ import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom
 import { fetchClassDetail } from '../api/classes'
 import { ClassManagementPanel } from '../components/classes/ClassManagementPanel'
 import { ClassSubpageShell } from '../components/classes/ClassSubpageShell'
+import { ClassWorkflowNav } from '../components/classes/ClassWorkflowNav'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ClassDetailResponse, ClassManagementLinks, StudentBrief } from '../types/classDetail'
 
@@ -108,49 +109,12 @@ export function ClassViewPage() {
       subtitle={cls ? `${cls.subject} · ${cls.grade_levels_display || 'All grades'}` : undefined}
       actions={
         cls && data ? (
-          <>
-            {isDirector ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-900">
-                <i className="bi bi-award-fill" aria-hidden />
-                Director
-              </span>
-            ) : data.meta.can_admin_ui ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-1 text-xs font-bold text-teal-900">
-                <i className="bi bi-shield-fill" aria-hidden />
-                Administrator
-              </span>
-            ) : null}
-            <Link
-              to={`/management/classes/${id}/roster`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3.5 py-2 text-[0.82rem] font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
-            >
-              <i className="bi bi-people" aria-hidden />
-              Roster
-            </Link>
-            <Link
-              to={`/management/classes/${id}/grades`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3.5 py-2 text-[0.82rem] font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
-            >
-              <i className="bi bi-graph-up" aria-hidden />
-              Grades
-            </Link>
-            {data.meta.can_admin_ui ? (
-              <Link
-                to={`/management/classes/${id}/edit`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3.5 py-2 text-[0.82rem] font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
-              >
-                <i className="bi bi-pencil" aria-hidden />
-                Edit
-              </Link>
-            ) : null}
-            <Link
-              to="/management/classes"
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-teal-700 to-teal-900 px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105"
-            >
-              <i className="bi bi-grid" aria-hidden />
-              All classes
-            </Link>
-          </>
+          <ClassWorkflowNav
+            classId={id}
+            active="view"
+            isDirector={isDirector}
+            canAdminUi={data.meta.can_admin_ui}
+          />
         ) : null
       }
     >

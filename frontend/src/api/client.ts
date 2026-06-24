@@ -35,6 +35,7 @@ export async function apiFetch<T>(
   }
 
   const response = await fetch(path, {
+    cache: 'no-store',
     ...init,
     headers,
     credentials: 'same-origin',

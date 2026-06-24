@@ -102,6 +102,28 @@ def serialize_student_brief(student: Student) -> dict[str, Any]:
     }
 
 
+def _teacher_roster_assignee(staff: TeacherStaff | None) -> dict[str, Any] | None:
+    if not staff:
+        return None
+    user = getattr(staff, "user", None)
+    return {
+        "id": staff.id,
+        "display_name": f"{staff.first_name or ''} {staff.last_name or ''}".strip() or "N/A",
+        "role": (user.role if user else None) or "No Role",
+    }
+
+
+def serialize_student_roster(student: Student) -> dict[str, Any]:
+    user = getattr(student, "user", None)
+    return {
+        **serialize_student_brief(student),
+        "email": student.email or None,
+        "has_account": user is not None,
+        "username": user.username if user else None,
+        "view_url": f"/management/view-student/{student.id}",
+    }
+
+
 def _subject_has_standards(subject: str | None) -> bool:
     subj = (subject or "").lower()
     return any(k in subj for k in ("math", "language", "reading", "english", "ela", "literacy"))
@@ -136,7 +158,7 @@ def _class_management_links(class_id: int) -> dict[str, str]:
         "feedback_360": url_for("management.admin_class_360_feedback", class_id=class_id),
         "reflection_journals": url_for("management.admin_class_reflection_journals", class_id=class_id),
         "conflicts": url_for("management.admin_class_conflicts", class_id=class_id),
-        "assignments_and_grades": url_for("management.assignments_and_grades", class_id=class_id),
+        "assignments_and_grades": f"/app/management/assignments/{class_id}",
         "manage_groups": url_for("management.admin_class_groups", class_id=class_id),
         "deadline_reminders": url_for("management.admin_class_deadline_reminders", class_id=class_id),
         "class_assignments": f"/management/assignments/class/{class_id}",
@@ -237,14 +259,39 @@ def query_class_roster(class_id: int) -> dict[str, Any]:
     )
     enrolled = [s for s in all_students if s.id in enrolled_ids]
     available = [s for s in all_students if s.id not in enrolled_ids]
+    max_students = class_info.max_students or 0
+    enrolled_count = len(enrolled)
+    with_accounts = sum(1 for s in enrolled if getattr(s, "user", None))
+    capacity_percent = round((enrolled_count / max_students) * 100, 1) if max_students else 0
+    item = serialize_class_list_item(
+        class_info,
+        enrollment_count=enrolled_count,
+        assignment_count=_assignment_count(class_id),
+    )
     return {
-        "class": serialize_class_list_item(
-            class_info,
-            enrollment_count=len(enrolled),
-            assignment_count=_assignment_count(class_id),
-        ),
-        "enrolled_students": [serialize_student_brief(s) for s in enrolled],
-        "available_students": [serialize_student_brief(s) for s in available],
+        "class": {
+            **item,
+            "max_students": max_students,
+            "room_number": class_info.room_number,
+            "schedule": class_info.schedule,
+        },
+        "enrolled_students": [serialize_student_roster(s) for s in enrolled],
+        "available_students": [serialize_student_roster(s) for s in available],
+        "stats": {
+            "enrolled": enrolled_count,
+            "with_accounts": with_accounts,
+            "capacity_percent": capacity_percent,
+            "max_students": max_students,
+        },
+        "teachers": {
+            "primary": _teacher_roster_assignee(class_info.teacher),
+            "substitute": [
+                t for t in (_teacher_roster_assignee(s) for s in class_info.substitute_teachers) if t
+            ],
+            "additional": [
+                t for t in (_teacher_roster_assignee(s) for s in class_info.additional_teachers) if t
+            ],
+        },
     }
 
 
@@ -452,6 +499,231 @@ def update_class_from_body(class_id: int, body: dict[str, Any]) -> dict[str, Any
         return {"success": False, "message": f"Error updating class: {exc}"}
 
 
+def _grade_display_from_points(points: Any, total_points: float) -> str | float:
+    if points is None:
+        return "N/A"
+    try:
+        points_float = float(points)
+        percentage = (points_float / total_points * 100) if total_points > 0 else 0
+        return round(percentage, 1)
+    except (ValueError, TypeError):
+        return "N/A"
+
+
+def _grade_counts_toward_average(grade_info: dict[str, Any]) -> bool:
+    if grade_info.get("is_voided"):
+        return False
+    if grade_info.get("assignment_voided"):
+        return False
+    if "Not assigned to this group" in grade_info.get("comments", ""):
+        return False
+    grade_val = grade_info.get("grade")
+    if grade_val in ("N/A", "Not Assigned", "Not Graded", "No Group", "Voided"):
+        return False
+    try:
+        float(grade_val)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def _build_student_grades_for_class(
+    class_id: int,
+    enrolled_students: list[Student],
+    assignments: list[Assignment],
+    group_assignments: list[GroupAssignment],
+) -> dict[int, dict[str, dict[str, Any]]]:
+    """Mirror legacy class_grades grade matrix (individual + group, voids, group scope)."""
+    student_grades: dict[int, dict[str, dict[str, Any]]] = {}
+    for student in enrolled_students:
+        student_grades[student.id] = {}
+        for assignment in assignments:
+            key = str(assignment.id)
+            if assignment.status == "Voided":
+                student_grades[student.id][key] = {
+                    "grade": "Voided",
+                    "comments": "",
+                    "type": "individual",
+                    "is_voided": False,
+                    "assignment_voided": True,
+                }
+                continue
+            grade = (
+                Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id)
+                .order_by(Grade.graded_at.desc())
+                .first()
+            )
+            is_voided = bool(getattr(grade, "is_voided", False)) if grade else False
+            if grade and is_voided:
+                student_grades[student.id][key] = {
+                    "grade": "Voided",
+                    "comments": "",
+                    "type": "individual",
+                    "is_voided": True,
+                    "assignment_voided": False,
+                }
+                continue
+            if grade:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    total_points = assignment.total_points if assignment.total_points else 100.0
+                    display = _grade_display_from_points(get_points_earned(grade_data), total_points)
+                    student_grades[student.id][key] = {
+                        "grade": display,
+                        "comments": grade_data.get("comments", ""),
+                        "type": "individual",
+                        "is_voided": False,
+                        "assignment_voided": False,
+                    }
+                except (json.JSONDecodeError, TypeError):
+                    student_grades[student.id][key] = {
+                        "grade": "N/A",
+                        "comments": "Error parsing grade data",
+                        "type": "individual",
+                        "is_voided": is_voided,
+                        "assignment_voided": False,
+                    }
+            else:
+                student_grades[student.id][key] = {
+                    "grade": "Not Graded",
+                    "comments": "",
+                    "type": "individual",
+                    "is_voided": False,
+                    "assignment_voided": False,
+                }
+
+        for group_assignment in group_assignments:
+            key = f"group_{group_assignment.id}"
+            if group_assignment.status == "Voided":
+                student_grades[student.id][key] = {
+                    "grade": "Voided",
+                    "comments": "",
+                    "type": "group",
+                    "group_name": "N/A",
+                    "is_voided": False,
+                    "assignment_voided": True,
+                }
+                continue
+
+            assignment_group_ids: list[int] = []
+            if group_assignment.selected_group_ids:
+                try:
+                    raw_group_ids = json.loads(group_assignment.selected_group_ids)
+                    assignment_group_ids = [int(gid) for gid in raw_group_ids]
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    assignment_group_ids = []
+
+            should_show_assignment = False
+            student_group_id = None
+            student_group_name = "N/A"
+            if not assignment_group_ids:
+                student_group_member = (
+                    StudentGroupMember.query.join(StudentGroup)
+                    .filter(
+                        StudentGroup.class_id == class_id,
+                        StudentGroupMember.student_id == student.id,
+                    )
+                    .order_by(StudentGroupMember.id.desc())
+                    .first()
+                )
+                if student_group_member and student_group_member.group:
+                    student_group_id = student_group_member.group.id
+                    student_group_name = student_group_member.group.name
+                    should_show_assignment = True
+            else:
+                student_group_member = (
+                    StudentGroupMember.query.join(StudentGroup)
+                    .filter(
+                        StudentGroup.class_id == class_id,
+                        StudentGroupMember.student_id == student.id,
+                        StudentGroup.id.in_(assignment_group_ids),
+                    )
+                    .order_by(StudentGroupMember.id.desc())
+                    .first()
+                )
+                if student_group_member and student_group_member.group:
+                    student_group_id = student_group_member.group.id
+                    student_group_name = student_group_member.group.name
+                    should_show_assignment = True
+
+            if should_show_assignment and student_group_id:
+                group_grade = GroupGrade.query.filter_by(
+                    student_id=student.id,
+                    group_assignment_id=group_assignment.id,
+                ).first()
+                is_voided = bool(getattr(group_grade, "is_voided", False)) if group_grade else False
+                if group_grade and is_voided:
+                    student_grades[student.id][key] = {
+                        "grade": "Voided",
+                        "comments": "",
+                        "type": "group",
+                        "group_name": student_group_name,
+                        "is_voided": True,
+                        "assignment_voided": False,
+                    }
+                    continue
+                if group_grade:
+                    try:
+                        grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
+                        total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                        display = _grade_display_from_points(get_points_earned(grade_data), total_points)
+                        student_grades[student.id][key] = {
+                            "grade": display,
+                            "comments": grade_data.get("comments", ""),
+                            "type": "group",
+                            "group_name": student_group_name,
+                            "is_voided": False,
+                            "assignment_voided": False,
+                        }
+                    except (json.JSONDecodeError, TypeError, AttributeError):
+                        student_grades[student.id][key] = {
+                            "grade": "N/A",
+                            "comments": "Error parsing grade data",
+                            "type": "group",
+                            "group_name": student_group_name,
+                            "is_voided": is_voided,
+                            "assignment_voided": False,
+                        }
+                else:
+                    student_grades[student.id][key] = {
+                        "grade": "Not Graded",
+                        "comments": "",
+                        "type": "group",
+                        "group_name": student_group_name,
+                        "is_voided": False,
+                        "assignment_voided": False,
+                    }
+            elif should_show_assignment:
+                student_grades[student.id][key] = {
+                    "grade": "No Group",
+                    "comments": "Student not assigned to a group",
+                    "type": "group",
+                    "group_name": "N/A",
+                    "is_voided": False,
+                    "assignment_voided": False,
+                }
+            elif not assignment_group_ids:
+                student_grades[student.id][key] = {
+                    "grade": "No Group",
+                    "comments": "Student not assigned to a group",
+                    "type": "group",
+                    "group_name": "N/A",
+                    "is_voided": False,
+                    "assignment_voided": False,
+                }
+            else:
+                student_grades[student.id][key] = {
+                    "grade": "Not Assigned",
+                    "comments": "Not assigned to this group",
+                    "type": "group",
+                    "group_name": "N/A",
+                    "is_voided": False,
+                    "assignment_voided": False,
+                }
+
+    return student_grades
+
+
 def query_class_grades(class_id: int, view_mode: str = "table") -> dict[str, Any]:
     class_obj = Class.query.get_or_404(class_id)
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -463,6 +735,7 @@ def query_class_grades(class_id: int, view_mode: str = "table") -> dict[str, Any
         group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
     except Exception:
         group_assignments = []
+
     columns = []
     for a in assignments:
         columns.append(
@@ -486,68 +759,52 @@ def query_class_grades(class_id: int, view_mode: str = "table") -> dict[str, Any
                 "status": ga.status,
             }
         )
+
+    student_grades = _build_student_grades_for_class(class_id, enrolled_students, assignments, group_assignments)
     rows = []
-    student_averages: dict[int, Any] = {}
     for student in enrolled_students:
-        grades: dict[str, Any] = {}
+        grades_for_row: dict[str, Any] = {}
         valid_numeric: list[float] = []
-        for assignment in assignments:
-            if assignment.status == "Voided":
-                continue
-            grade = (
-                Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id)
-                .order_by(Grade.graded_at.desc())
-                .first()
-            )
-            key = str(assignment.id)
-            if grade:
-                try:
-                    grade_data = json.loads(grade.grade_data)
-                    points = get_points_earned(grade_data)
-                    total = assignment.total_points or 100.0
-                    display = round((float(points) / total * 100), 1) if points is not None and total > 0 else "N/A"
-                except Exception:
-                    display = "N/A"
-                grades[key] = {"grade": display, "type": "individual"}
-                if isinstance(display, (int, float)):
-                    valid_numeric.append(float(display))
-            else:
-                grades[key] = {"grade": "Not Graded", "type": "individual"}
-        for ga in group_assignments:
-            if ga.status == "Voided":
-                continue
-            key = f"group_{ga.id}"
-            gg = GroupGrade.query.filter_by(student_id=student.id, group_assignment_id=ga.id).first()
-            if gg:
-                try:
-                    grade_data = json.loads(gg.grade_data) if gg.grade_data else {}
-                    points = get_points_earned(grade_data)
-                    total = ga.total_points or 100.0
-                    display = round((float(points) / total * 100), 1) if points is not None and total > 0 else "N/A"
-                except Exception:
-                    display = "N/A"
-                grades[key] = {"grade": display, "type": "group"}
-                if isinstance(display, (int, float)):
-                    valid_numeric.append(float(display))
-            else:
-                grades[key] = {"grade": "Not Graded", "type": "group"}
-        student_averages[student.id] = round(sum(valid_numeric) / len(valid_numeric), 2) if valid_numeric else "N/A"
+        for key, info in student_grades.get(student.id, {}).items():
+            grades_for_row[key] = {
+                "grade": info["grade"],
+                "type": info["type"],
+                "group_name": info.get("group_name"),
+            }
+            if _grade_counts_toward_average(info):
+                valid_numeric.append(float(info["grade"]))
+
+        average: str | float = round(sum(valid_numeric) / len(valid_numeric), 2) if valid_numeric else "N/A"
         rows.append(
             {
                 "student": serialize_student_brief(student),
-                "grades": grades,
-                "average": student_averages[student.id],
+                "grades": grades_for_row,
+                "average": average,
             }
         )
+
+    individual_count = len(assignments)
+    group_count = len(group_assignments)
     return {
-        "class": serialize_class_list_item(
-            class_obj,
-            enrollment_count=len(enrolled_students),
-            assignment_count=len(columns),
-        ),
+        "class": {
+            **serialize_class_list_item(
+                class_obj,
+                enrollment_count=len(enrolled_students),
+                assignment_count=len(columns),
+            ),
+            "schedule": class_obj.schedule,
+            "schedule_display": class_obj.schedule or "TBD",
+        },
         "view_mode": view_mode,
         "columns": columns,
         "rows": rows,
+        "stats": {
+            "students": len(enrolled_students),
+            "assignments": len(columns),
+            "individual_count": individual_count,
+            "group_count": group_count,
+            "schedule_display": class_obj.schedule or "TBD",
+        },
     }
 
 

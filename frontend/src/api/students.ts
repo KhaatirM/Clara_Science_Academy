@@ -42,7 +42,7 @@ export async function fetchStudentList(filters: StudentFilters): Promise<Student
 }
 
 export async function fetchStudentDetail(id: number): Promise<StudentDetail> {
-  return apiFetch<StudentDetail>(`/management/view-student/${id}`)
+  return apiFetch<StudentDetail>(`/api/spa/students/${id}`)
 }
 
 export async function submitStudentAddForm(formData: FormData): Promise<StudentSaveResponse> {
@@ -78,6 +78,30 @@ export async function markStudentsRepeating(ids: number[]): Promise<{ message: s
     throw new Error(data.message || data.error || 'Could not mark students as repeating')
   }
   return { message: data.message || 'Students marked as repeating.' }
+}
+
+export async function uploadStudentsCsv(file: File): Promise<{ message: string }> {
+  const form = new FormData()
+  form.append('csv_file', file)
+  const csrf = getCsrfToken()
+  if (csrf) form.append('csrf_token', csrf)
+
+  const response = await fetch('/management/students/upload-csv', {
+    method: 'POST',
+    body: form,
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(csrf ? { 'X-CSRFToken': csrf } : {}),
+    },
+  })
+
+  const data = (await response.json().catch(() => ({}))) as { success?: boolean; message?: string }
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || 'Could not upload CSV')
+  }
+  return { message: data.message || 'CSV uploaded.' }
 }
 
 export async function removeStudent(id: number): Promise<{ message: string }> {

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { fetchClosureScheduleForm, scheduleClosure } from '../api/schoolYearClosure'
-import { CLOSURE_LEGACY_CSS } from '../config/legacyPages'
-import { useLegacyStyles } from '../hooks/useLegacyStyles'
+import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ClosureScheduleResponse } from '../types/schoolYearClosure'
 import { previewOffsetDate } from '../utils/formatDate'
@@ -11,7 +10,6 @@ import { spaRoute } from '../utils/spaRoute'
 const PREVIEW_OFFSETS = [0, 7, 21, 28] as const
 
 export function ClosureSchedulePage() {
-  useLegacyStyles([CLOSURE_LEGACY_CSS])
   const { user } = useOutletContext<ManagementOutletContext>()
   const navigate = useNavigate()
   const isDirector = user.role_canonical === 'Director'
@@ -89,26 +87,31 @@ export function ClosureSchedulePage() {
 
   if (loading) {
     return (
-      <div className="mgmt-syc container-fluid px-0 px-md-1">
-        <div className="mgmt-syc-shell p-5 text-center">Loading…</div>
-      </div>
+      <LegacyMgmtScope>
+        <div className="mgmt-syc container-fluid px-0 px-md-1">
+          <div className="mgmt-syc-shell p-5 text-center">Loading…</div>
+        </div>
+      </LegacyMgmtScope>
     )
   }
 
   if (error && !data) {
     return (
-      <div className="mgmt-syc container-fluid px-0 px-md-1">
-        <div className="mgmt-syc-shell p-5">
-          <p>{error}</p>
-          <Link to="/management/calendar" className="mgmt-syc-btn mgmt-syc-btn--ghost">
-            School calendar
-          </Link>
+      <LegacyMgmtScope>
+        <div className="mgmt-syc container-fluid px-0 px-md-1">
+          <div className="mgmt-syc-shell p-5">
+            <p>{error}</p>
+            <Link to="/management/calendar" className="mgmt-syc-btn mgmt-syc-btn--ghost">
+              School calendar
+            </Link>
+          </div>
         </div>
-      </div>
+      </LegacyMgmtScope>
     )
   }
 
   return (
+    <LegacyMgmtScope>
     <div className="mgmt-syc container-fluid px-0 px-md-1">
         <div className={`mgmt-syc-shell${isDirector ? ' mgmt-syc-shell--director' : ''}`}>
           <header className="mgmt-syc-hero">
@@ -390,5 +393,6 @@ export function ClosureSchedulePage() {
           </section>
         </div>
       </div>
+    </LegacyMgmtScope>
   )
 }

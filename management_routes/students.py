@@ -25,6 +25,7 @@ import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
 from utils.user_roles import user_has_management_entry_access
+from utils.school_year_filters import get_school_year_for_display, student_classes_for_school_year
 
 
 def enrolled_students_payload_for_class(class_id, *, include_archived_fallback=True):
@@ -167,6 +168,16 @@ def _students_wants_json() -> bool:
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return True
     return "application/json" in (request.headers.get("Accept") or "").lower()
+
+
+def _students_csv_upload_finish(message: str, category: str = "success"):
+    """Flash + redirect for legacy form posts; JSON for SPA fetch uploads."""
+    if _students_wants_json():
+        success = category != "error"
+        status = 200 if success else 400
+        return jsonify({"success": success, "message": message}), status
+    flash(message, category)
+    return redirect(_spa_students_list_url())
 
 
 def _parse_students_list_args(args) -> dict:
@@ -580,6 +591,7 @@ def add_student():
 
     # Get form data
     first_name = request.form.get('student_first_name', '').strip()
+    middle_name = request.form.get('student_middle_name', '').strip() or None
     last_name = request.form.get('student_last_name', '').strip()
     dob = request.form.get('dob', '').strip()
     grade_level_str = request.form.get('grade_level', '').strip()
@@ -726,6 +738,7 @@ def add_student():
         # Create student record
         student = Student()
         student.first_name = first_name
+        student.middle_name = middle_name
         student.last_name = last_name
         student.dob = dob
         student.grade_level = grade_level
@@ -972,14 +985,15 @@ def get_student_classes(student_id):
             from management_routes.reports import _selected_quarters_date_window
             window_start, window_end = _selected_quarters_date_window(school_year_id, valid_quarters)
 
-        from utils.student_roster import student_is_archived
+        from utils.report_card_school_year import enrollment_must_be_active_for_report_card
+
+        school_year = SchoolYear.query.get(school_year_id) if school_year_id else None
+        require_active = enrollment_must_be_active_for_report_card(student, school_year)
 
         enrollments_q = Enrollment.query.filter_by(student_id=student_id).join(Class)
         if school_year_id:
             enrollments_q = enrollments_q.filter(Class.school_year_id == school_year_id)
-        # Active students -> only active enrollments. Archived (withdrawn) students may
-        # legitimately have only inactive enrollments left, so include all of theirs.
-        if not student_is_archived(student):
+        if require_active:
             enrollments_q = enrollments_q.filter(Enrollment.is_active.is_(True))
         enrollments = enrollments_q.all()
 
@@ -1340,20 +1354,26 @@ def upload_students_csv():
     try:
         # Check if file was uploaded
         if 'csv_file' not in request.files:
-            flash('No file selected. Please choose a CSV file to upload.', 'error')
-            return redirect(url_for('management.students'))
+            return _students_csv_upload_finish(
+                'No file selected. Please choose a CSV file to upload.',
+                'error',
+            )
         
         file = request.files['csv_file']
         
         # Check if file has a name
         if file.filename == '':
-            flash('No file selected. Please choose a CSV file to upload.', 'error')
-            return redirect(url_for('management.students'))
+            return _students_csv_upload_finish(
+                'No file selected. Please choose a CSV file to upload.',
+                'error',
+            )
         
         # Check file extension
         if not file.filename.lower().endswith('.csv'):
-            flash('Invalid file type. Please upload a CSV file.', 'error')
-            return redirect(url_for('management.students'))
+            return _students_csv_upload_finish(
+                'Invalid file type. Please upload a CSV file.',
+                'error',
+            )
         
         # Read and process CSV
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
@@ -1532,30 +1552,40 @@ def upload_students_csv():
                 message_parts.append(f"{added_count} student(s) added")
             if updated_count > 0:
                 message_parts.append(f"{updated_count} student(s) updated")
-            
+
+            messages: list[str] = []
             if message_parts:
-                flash(f"CSV upload successful: {', '.join(message_parts)}", 'success')
-            
+                messages.append(f"CSV upload successful: {', '.join(message_parts)}")
+
             if error_count > 0:
                 error_msg = f"{error_count} error(s) occurred during upload."
                 if len(errors) <= 10:
                     error_msg += " Errors: " + "; ".join(errors)
                 else:
-                    error_msg += f" First 10 errors: " + "; ".join(errors[:10])
-                flash(error_msg, 'warning')
+                    error_msg += " First 10 errors: " + "; ".join(errors[:10])
+                messages.append(error_msg)
+
+            if not messages:
+                return _students_csv_upload_finish(
+                    'No student rows were processed. Check that your CSV has data below the header row.',
+                    'warning',
+                )
+
+            combined = " ".join(messages)
+            category = 'success' if message_parts and error_count == 0 else 'warning'
+            if not message_parts and error_count > 0:
+                category = 'error'
+            return _students_csv_upload_finish(combined, category)
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error committing CSV upload: {e}")
-            flash(f'Error saving data: {str(e)}', 'error')
-        
-        return redirect(url_for('management.students'))
+            return _students_csv_upload_finish(f'Error saving data: {str(e)}', 'error')
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error processing CSV upload: {e}")
-        flash(f'Error processing CSV file: {str(e)}', 'error')
-        return redirect(url_for('management.students'))
+        return _students_csv_upload_finish(f'Error processing CSV file: {str(e)}', 'error')
 
 
 
@@ -1568,29 +1598,9 @@ def upload_students_csv():
 @login_required
 @management_required
 def student_report_card_history(student_id):
-    """View all report cards for a specific student (historical view)."""
-    student = Student.query.get_or_404(student_id)
-    
-    # Get all report cards for this student, ordered by school year and quarter
-    report_cards_list = ReportCard.query.filter_by(
-        student_id=student_id
-    ).join(SchoolYear).order_by(
-        SchoolYear.start_date.desc(),
-        ReportCard.quarter.desc()
-    ).all()
-    
-    # Group by school year for better display
-    report_cards_by_year = {}
-    for rc in report_cards_list:
-        year_name = rc.school_year.name if rc.school_year else 'Unknown'
-        if year_name not in report_cards_by_year:
-            report_cards_by_year[year_name] = []
-        report_cards_by_year[year_name].append(rc)
-    
-    return render_template('management/student_report_card_history.html',
-                         student=student,
-                         report_cards_by_year=report_cards_by_year,
-                         total_count=len(report_cards_list))
+    """View all report cards for a specific student — React SPA."""
+    Student.query.get_or_404(student_id)
+    return redirect(f'/app/management/report-cards/student/{student_id}')
 
 
 
@@ -1603,36 +1613,13 @@ def student_report_card_history(student_id):
 @login_required
 @management_required
 def generate_report_card_for_student(student_id):
-    """Enhanced report card generation form for a specific student."""
-    student = Student.query.get_or_404(student_id)
-    category = request.args.get('category', '')
-    
-    # Get all data needed for the form
-    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
-    
-    # Get student's enrolled classes (active only; former students include past enrollments)
-    from models import Enrollment
-    from utils.student_roster import student_is_archived
-    enrollments_q = Enrollment.query.filter_by(student_id=student_id)
-    if not student_is_archived(student):
-        enrollments_q = enrollments_q.filter_by(is_active=True)
-    enrollments = enrollments_q.all()
-    
-    classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
-    
-    from utils.report_card_warnings import report_card_warnings_template_context
-
-    return render_template(
-        'management/report_card_generate_form.html',
-        student=student,
-        students=[student],
-        school_years=school_years,
-        classes=classes,
-        category=category,
-        pre_selected_student=student_id,
-        entrance_school_year_options=_build_entrance_school_year_options(),
-        **report_card_warnings_template_context(),
-    )
+    """Report card generation wizard — React SPA."""
+    Student.query.get_or_404(student_id)
+    path = f'/app/management/report-cards/generate/{student_id}'
+    query = request.query_string.decode('utf-8') if request.query_string else ''
+    if query:
+        path = f'{path}?{query}'
+    return redirect(path)
 
 
 
@@ -2230,12 +2217,11 @@ def get_class_students(class_id):
 # Function: view_student
 # ============================================================
 
-@bp.route('/view-student/<int:student_id>')
-@login_required
-@permissions_required('students:view', 'students:edit')
-def view_student(student_id):
-    """View detailed student information (read-only JSON for modals)."""
-    student = Student.query.get_or_404(student_id)
+def serialize_student_detail(student_id: int) -> dict:
+    """JSON payload for student detail modals (SPA + legacy)."""
+    student = Student.query.get(student_id)
+    if not student:
+        raise ValueError("Student not found.")
 
     google_workspace_email = _student_workspace_email(student) or None
     suggested_google_workspace_email = None
@@ -2246,30 +2232,36 @@ def view_student(student_id):
     ):
         suggested_google_workspace_email = student.generate_email() or None
 
-    # Calculate age from DOB
     age = None
     if student.dob:
         try:
             dob_date = datetime.strptime(student.dob, '%Y-%m-%d')
             age = (datetime.now() - dob_date).days // 365
-        except:
+        except Exception:
             pass
-    
-    # Get assigned classes
+
     assigned_classes = []
-    if hasattr(student, 'enrollments'):
-        for enrollment in student.enrollments:
+    assigned_classes_school_year = None
+
+    display_year = get_school_year_for_display()
+    if display_year:
+        assigned_classes_school_year = {
+            'id': display_year.id,
+            'name': display_year.name,
+            'is_active': bool(display_year.is_active),
+        }
+        for class_info in student_classes_for_school_year(student.id, display_year):
             assigned_classes.append({
-                'name': enrollment.class_info.name,
-                'subject': enrollment.class_info.subject
+                'name': class_info.name,
+                'subject': class_info.subject,
             })
-    
-    # Get GPA from student record (updated by scheduler)
+
     gpa = student.gpa if student.gpa is not None else 0.0
-    
-    return jsonify({
+
+    return {
         'id': student.id,
         'first_name': student.first_name,
+        'middle_name': student.middle_name,
         'last_name': student.last_name,
         'dob': student.dob,
         'age': age,
@@ -2283,37 +2275,41 @@ def view_student(student_id):
         'suggested_google_workspace_email': suggested_google_workspace_email,
         'gpa': gpa,
         'assigned_classes': assigned_classes,
+        'assigned_classes_school_year': assigned_classes_school_year,
         'photo_filename': student.photo_filename,
-        
-        # Parent 1 information
+        'previous_school': student.previous_school,
+        'medical_concerns': student.medical_concerns,
+        'notes': student.notes,
         'parent1_first_name': student.parent1_first_name,
         'parent1_last_name': student.parent1_last_name,
         'parent1_email': student.parent1_email,
         'parent1_phone': student.parent1_phone,
         'parent1_relationship': student.parent1_relationship,
-        
-        # Parent 2 information
         'parent2_first_name': student.parent2_first_name,
         'parent2_last_name': student.parent2_last_name,
         'parent2_email': student.parent2_email,
         'parent2_phone': student.parent2_phone,
         'parent2_relationship': student.parent2_relationship,
-        
-        # Emergency contact
         'emergency_first_name': student.emergency_first_name,
         'emergency_last_name': student.emergency_last_name,
         'emergency_email': student.emergency_email,
         'emergency_phone': student.emergency_phone,
         'emergency_relationship': student.emergency_relationship,
-        
-        # Address
         'street': student.street,
         'apt_unit': student.apt_unit,
         'city': student.city,
         'state': student.state,
         'zip_code': student.zip_code,
         'parent_portal': parent_portal_status_for_student(student),
-    })
+    }
+
+
+@bp.route('/view-student/<int:student_id>')
+@login_required
+@permissions_required('students:view', 'students:edit')
+def view_student(student_id):
+    """View detailed student information (read-only JSON for modals)."""
+    return jsonify(serialize_student_detail(student_id))
 
 
 
@@ -2348,6 +2344,8 @@ def edit_student(student_id):
         
         # Basic info
         student.first_name = request.form.get('first_name', student.first_name).strip()
+        middle_name = (request.form.get('middle_name') or '').strip() or None
+        student.middle_name = middle_name
         student.last_name = request.form.get('last_name', student.last_name).strip()
         student.dob = request.form.get('dob', student.dob)
         raw_grade = request.form.get('grade_level', student.grade_level)
@@ -2394,6 +2392,9 @@ def edit_student(student_id):
         student.city = request.form.get('city', student.city)
         student.state = request.form.get('state', student.state)
         student.zip_code = request.form.get('zip_code', student.zip_code)
+        student.previous_school = (request.form.get('previous_school') or student.previous_school or '').strip() or None
+        student.medical_concerns = (request.form.get('medical_concerns') or student.medical_concerns or '').strip() or None
+        student.notes = (request.form.get('notes') or student.notes or '').strip() or None
 
         # Optional profile photo (multipart)
         if "student_image" in request.files:
@@ -2732,6 +2733,12 @@ def get_team_detailed_description(team):
 @login_required
 def student_jobs():
     """Student Jobs management page for cleaning crews, computer teams, and other teams"""
+    from utils.spa_management_urls import spa_student_jobs_redirect
+
+    spa_resp = spa_student_jobs_redirect()
+    if spa_resp is not None:
+        return spa_resp
+
     try:
         # Get all teams (cleaning, computer, and other)
         # Check if team_type column exists first, then order accordingly

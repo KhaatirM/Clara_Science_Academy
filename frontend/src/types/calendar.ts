@@ -2,7 +2,10 @@ export interface CalendarEventItem {
   title: string
   category: string
   type: string
-  description: string
+  description?: string
+  source?: 'calendar_event' | 'academic_period' | 'school_year' | 'teacher_work_day' | 'school_break'
+  entity_id?: number
+  deletable?: boolean
 }
 
 export interface CalendarDayCell {

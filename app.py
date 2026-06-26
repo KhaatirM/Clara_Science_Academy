@@ -388,6 +388,7 @@ def create_app(config_class=None):
         # Add student profile confirmation columns if missing (report cards + enrollment policy)
         _student_cols = [
             ('gender', 'VARCHAR(30)', 'TEXT'),
+            ('middle_name', 'VARCHAR(100)', 'TEXT'),
             ('entrance_date', 'VARCHAR(9)', 'TEXT'),
             ('expected_grad_date', 'VARCHAR(7)', 'TEXT'),
             ('grad_year', 'INTEGER', 'INTEGER'),

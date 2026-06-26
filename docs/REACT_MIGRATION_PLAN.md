@@ -104,4 +104,11 @@ This migration supports a later Capacitor wrap (parent/student mobile). Build JS
 - [x] `/api/spa/me` session endpoint
 - [x] Layout shell + placeholder routes
 - [x] Teachers & Staff list (search, view, remove; add/edit via legacy forms)
-- [ ] Remaining management pages
+- [x] Calendar slice (calendar, school years, closure dashboard)
+- [x] Students (management): list, detail/edit modals, add form, CSV, redirects
+- [x] Management dashboard home (legacy mgmt-home shell, quick actions, feeds API)
+- [x] Family Portal admin (Tailwind SPA — hub, stats, bulk provision)
+- [x] Classes (Tailwind SPA — hub, filters, cards, create modal, view/edit/roster/grades/core-setup)
+- [x] Attendance (Tailwind SPA — school day save, class period hub, reports, analytics)
+- [x] Report Cards (Tailwind SPA — hub, category rosters, recent list; generate/view/PDF remain legacy)
+- [ ] Remaining management pages (Settings)

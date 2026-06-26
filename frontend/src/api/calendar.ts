@@ -46,6 +46,12 @@ export async function addTeacherWorkDays(body: {
   })
 }
 
+export async function deleteCalendarEvent(id: number) {
+  return apiFetch<{ success: boolean; message: string }>(`/api/spa/calendar/events/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function deleteSchoolBreak(id: number) {
   return apiFetch<{ success: boolean; message: string }>(`/api/spa/calendar/breaks/${id}`, {
     method: 'DELETE',

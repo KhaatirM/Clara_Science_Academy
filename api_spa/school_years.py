@@ -17,6 +17,7 @@ from management_routes.school_years_spa_helpers import (
     generate_academic_periods,
     query_school_years_page,
     set_active_school_year,
+    upload_calendar_pdf_from_request,
 )
 
 from . import spa_api_blueprint
@@ -133,6 +134,19 @@ def school_years_create_next():
     body = request.get_json(silent=True) or {}
     try:
         return jsonify(create_next_school_year(body))
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@spa_api_blueprint.route("/school-years/upload-calendar-pdf", methods=["POST"])
+@login_required
+@management_required
+def school_years_upload_calendar_pdf():
+    try:
+        return jsonify(upload_calendar_pdf_from_request())
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
     except Exception as exc:

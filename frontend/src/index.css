@@ -33,7 +33,90 @@ body.spa-legacy-mgmt-shell {
 }
 
 .spa-legacy-mgmt-shell .mgmt-sy,
-.spa-legacy-mgmt-shell .mgmt-syc {
+.spa-legacy-mgmt-shell .mgmt-syc,
+.spa-legacy-mgmt-shell .mgmt-cal {
   min-height: 100%;
   padding-block: 0;
+}
+
+.legacy-mgmt-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  pointer-events: none;
+}
+
+.legacy-mgmt-portal > * {
+  pointer-events: auto;
+}
+
+/* Full-viewport modal stack — backdrop + outside click to close */
+.legacy-mgmt-portal .legacy-modal-stack {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .mgmt-cal-modal-dialog,
+.legacy-mgmt-portal .legacy-modal-stack .modal.show.d-block {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2;
+  width: 100% !important;
+  height: 100% !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Scrollable modals: body scrolls inside dialog; outer shell does not steal wheel events */
+.legacy-mgmt-portal .legacy-modal-stack .modal.show.d-block:has(.modal-dialog-scrollable) {
+  overflow: hidden;
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable {
+  max-height: calc(100vh - 2rem);
+  margin: 0 auto;
+  height: auto;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-content {
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-content > .modal-header {
+  flex-shrink: 0;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-footer {
+  flex-shrink: 0;
 }

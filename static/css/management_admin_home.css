@@ -435,6 +435,11 @@
   }
 }
 
+.legacy-mgmt-bootstrap .mgmt-home .bi {
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+}
+
 .mgmt-home-action {
   display: flex;
   flex-direction: column;

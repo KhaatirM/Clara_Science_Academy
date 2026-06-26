@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useOutletContext } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   addSchoolYearPeriod,
   createSchoolYear,
@@ -9,13 +9,13 @@ import {
   fetchSchoolYearsPage,
   generateSchoolYearPeriods,
   setActiveSchoolYear,
+  uploadCalendarPdf,
 } from '../api/schoolYears'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
-import { SCHOOL_YEARS_LEGACY_CSS } from '../config/legacyPages'
-import { useLegacyStyles } from '../hooks/useLegacyStyles'
-import type { ManagementOutletContext } from '../types/layout'
+import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
 import type { AcademicPeriod, CalendarEventRow, SchoolYearRow, SchoolYearsPageResponse } from '../types/schoolYears'
 import { formatDateLong, formatDateShort } from '../utils/formatDate'
+import { invalidateCalendarPageCache } from '../utils/calendarPageCache'
 
 type ModalKey =
   | 'add'
@@ -28,9 +28,6 @@ type ModalKey =
   | null
 
 export function SchoolYearsPage() {
-  useLegacyStyles([SCHOOL_YEARS_LEGACY_CSS])
-  const { user } = useOutletContext<ManagementOutletContext>()
-
   const [data, setData] = useState<SchoolYearsPageResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +63,7 @@ export function SchoolYearsPage() {
       const res = await fn()
       showMessage(res.message)
       setModal(null)
+      invalidateCalendarPageCache()
       void load()
     } catch (e) {
       showMessage(e instanceof Error ? e.message : 'Action failed')
@@ -94,22 +92,26 @@ export function SchoolYearsPage() {
 
   if (loading) {
     return (
-      <div className="mgmt-sy">
-        <div className="mgmt-sy-shell p-5 text-center">Loading…</div>
-      </div>
+      <LegacyMgmtScope>
+        <div className="mgmt-sy">
+          <div className="mgmt-sy-shell p-5 text-center">Loading…</div>
+        </div>
+      </LegacyMgmtScope>
     )
   }
 
   if (error || !data || !stats) {
     return (
-      <div className="mgmt-sy">
-        <div className="mgmt-sy-shell p-5">
-          <p>{error || 'Could not load school years'}</p>
-          <Link to="/management/calendar" className="mgmt-sy-btn mgmt-sy-btn--ghost">
-            Back to Calendar
-          </Link>
+      <LegacyMgmtScope>
+        <div className="mgmt-sy">
+          <div className="mgmt-sy-shell p-5">
+            <p>{error || 'Could not load school years'}</p>
+            <Link to="/management/calendar" className="mgmt-sy-btn mgmt-sy-btn--ghost">
+              Back to Calendar
+            </Link>
+          </div>
         </div>
-      </div>
+      </LegacyMgmtScope>
     )
   }
 
@@ -117,7 +119,8 @@ export function SchoolYearsPage() {
   const semesters = active?.academic_periods.filter((p) => p.period_type === 'semester') ?? []
 
   return (
-    <>
+    <LegacyMgmtScope>
+      <>
       <div className="mgmt-sy">
         <div className="mgmt-sy-shell">
           {flash ? (
@@ -422,9 +425,10 @@ export function SchoolYearsPage() {
       />
       <UploadPdfModal
         show={modal === 'upload'}
+        busy={busy}
         onClose={() => setModal(null)}
-        csrf={user.csrf_token}
         years={years}
+        onSubmit={(formData) => run(() => uploadCalendarPdf(formData))}
       />
       {active ? (
         <EditYearDatesModal
@@ -460,6 +464,7 @@ export function SchoolYearsPage() {
         />
       ) : null}
     </>
+    </LegacyMgmtScope>
   )
 }
 
@@ -746,15 +751,39 @@ function AddYearModal({
 
 function UploadPdfModal({
   show,
+  busy,
   onClose,
-  csrf,
   years,
+  onSubmit,
 }: {
   show: boolean
+  busy: boolean
   onClose: () => void
-  csrf: string
   years: SchoolYearRow[]
+  onSubmit: (form: FormData) => Promise<void>
 }) {
+  const [schoolYear, setSchoolYear] = useState('')
+  const [calendarName, setCalendarName] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+
+  useEffect(() => {
+    if (!show) {
+      setSchoolYear('')
+      setCalendarName('')
+      setFile(null)
+    }
+  }, [show])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file || !schoolYear) return
+    const form = new FormData()
+    form.append('calendar_pdf', file)
+    form.append('school_year', schoolYear)
+    if (calendarName.trim()) form.append('calendar_name', calendarName.trim())
+    await onSubmit(form)
+  }
+
   return (
     <LegacyBootstrapModal
       show={show}
@@ -767,25 +796,39 @@ function UploadPdfModal({
       className="mgmt-sy-modal"
       size="lg"
     >
-      <form method="POST" action="/management/upload-calendar-pdf" encType="multipart/form-data">
-        <input type="hidden" name="csrf_token" value={csrf} />
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="modal-body">
           <div className="alert alert-info">
             <i className="bi bi-info-circle me-2" aria-hidden="true" />
-            We&apos;ll extract year start/end dates, quarters, holidays, breaks, PD days, and
-            conferences automatically.
+            When enabled, we&apos;ll extract year start/end dates, quarters, holidays, breaks, PD days,
+            and conferences automatically.
           </div>
           <div className="mb-3">
             <label htmlFor="calendar_pdf" className="form-label">
               Calendar PDF <span className="text-danger">*</span>
             </label>
-            <input type="file" className="form-control" id="calendar_pdf" name="calendar_pdf" accept=".pdf" required />
+            <input
+              type="file"
+              className="form-control"
+              id="calendar_pdf"
+              name="calendar_pdf"
+              accept=".pdf"
+              required
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
           </div>
           <div className="mb-3">
             <label htmlFor="upload-school-year" className="form-label">
               Apply to school year <span className="text-danger">*</span>
             </label>
-            <select className="form-select" id="upload-school-year" name="school_year" required>
+            <select
+              className="form-select"
+              id="upload-school-year"
+              name="school_year"
+              required
+              value={schoolYear}
+              onChange={(e) => setSchoolYear(e.target.value)}
+            >
               <option value="">Select a school year…</option>
               {years.map((y) => (
                 <option key={y.id} value={y.id}>
@@ -804,15 +847,17 @@ function UploadPdfModal({
               id="calendar_name"
               name="calendar_name"
               placeholder="e.g., 2026-2027 Official School Calendar"
+              value={calendarName}
+              onChange={(e) => setCalendarName(e.target.value)}
             />
           </div>
         </div>
         <div className="modal-footer">
-          <button type="button" className="mgmt-sy-btn mgmt-sy-btn--ghost" onClick={onClose}>
+          <button type="button" className="mgmt-sy-btn mgmt-sy-btn--ghost" onClick={onClose} disabled={busy}>
             Cancel
           </button>
-          <button type="submit" className="mgmt-sy-btn mgmt-sy-btn--primary">
-            <i className="bi bi-upload" aria-hidden="true" /> Upload &amp; process
+          <button type="submit" className="mgmt-sy-btn mgmt-sy-btn--primary" disabled={busy || !file || !schoolYear}>
+            <i className="bi bi-upload" aria-hidden="true" /> {busy ? 'Uploading…' : 'Upload & process'}
           </button>
         </div>
       </form>

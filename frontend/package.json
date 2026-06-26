@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/build-scoped-bootstrap.mjs && tsc -b && vite build",
+    "build:scoped-bootstrap": "node scripts/build-scoped-bootstrap.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -21,6 +22,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "bootstrap": "^5.3.3",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",

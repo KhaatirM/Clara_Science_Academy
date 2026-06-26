@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { submitStudentAddForm } from '../api/students'
+import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
 import { StaffCredentialModal } from '../components/staff/StaffCredentialModal'
 import {
   buildEntranceSchoolYearOptions,
@@ -10,12 +11,13 @@ import {
   STUDENT_GRADES_FOR_ADD,
   US_STATES,
 } from '../config/studentForm'
+import type { ManagementOutletContext } from '../types/layout'
 import type { CredentialModalPayload } from '../types/staff'
+import { canStudentAdminUi } from '../utils/studentAccess'
 
-const inputClass =
-  'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20'
-const labelClass = 'mb-1 block text-sm font-medium text-hub-muted'
-const sectionClass = 'overflow-hidden rounded-2xl border border-white/90 bg-white/95 shadow-lg'
+const inputClass = 'form-control'
+const labelClass = 'form-label'
+const sectionClass = 'students-search-card mb-4'
 
 function Field({
   label,
@@ -41,12 +43,24 @@ function Field({
 }
 
 export function StudentFormPage() {
+  const { user } = useOutletContext<ManagementOutletContext>()
   const navigate = useNavigate()
   const formRef = useRef<HTMLFormElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [credentialModal, setCredentialModal] = useState<CredentialModalPayload | null>(null)
   const entranceYears = useMemo(() => buildEntranceSchoolYearOptions(), [])
+  const canAdd = canStudentAdminUi(user)
+
+  useEffect(() => {
+    if (!canAdd) {
+      navigate('/management/students', { replace: true })
+    }
+  }, [canAdd, navigate])
+
+  if (!canAdd) {
+    return null
+  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,33 +88,29 @@ export function StudentFormPage() {
   }
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-rose-50 via-orange-50/80 to-amber-100 p-5 md:p-8">
-      {credentialModal ? (
-        <StaffCredentialModal payload={credentialModal} onClose={closeCredentialModal} />
-      ) : null}
+    <LegacyMgmtScope>
+      <div className="mgmt-stu container-fluid px-0 px-md-1">
+        <div className="mgmt-stu-shell">
+          {credentialModal ? (
+            <StaffCredentialModal payload={credentialModal} onClose={closeCredentialModal} />
+          ) : null}
 
-      <header className="mb-6">
-        <Link
-          to="/management/students"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-hub-accent hover:underline"
-        >
-          <i className="bi bi-arrow-left" aria-hidden />
-          Back to students
-        </Link>
-        <p className="mt-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-muted">
-          Students
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-hub-text">Add student</h1>
-        <p className="mt-2 text-sm text-hub-muted">
-          Complete each section below. Required fields are marked with an asterisk.
-        </p>
-      </header>
+          <header className="mgmt-stu-hero">
+            <div>
+              <Link to="/management/students" className="mgmt-stu-btn mgmt-stu-btn--ghost mb-2 d-inline-flex">
+                <i className="bi bi-arrow-left me-2" aria-hidden="true" />
+                Back to students
+              </Link>
+              <p className="mgmt-stu-eyebrow">Students</p>
+              <h1 className="mgmt-stu-title">Add student</h1>
+              <p className="mgmt-stu-subtitle">
+                Complete each section below. Required fields are marked with an asterisk.
+              </p>
+            </div>
+          </header>
 
-      {error ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
-        </div>
-      ) : null}
+          <div className="mgmt-stu-content">
+            {error ? <div className="alert alert-danger">{error}</div> : null}
 
       <form ref={formRef} onSubmit={onSubmit} className="space-y-5" encType="multipart/form-data">
         <section className={sectionClass}>
@@ -110,6 +120,9 @@ export function StudentFormPage() {
           <div className="grid gap-4 p-5 md:grid-cols-2">
             <Field label="First name" required>
               <input name="student_first_name" required className={inputClass} />
+            </Field>
+            <Field label="Middle name / initial">
+              <input name="student_middle_name" className={inputClass} />
             </Field>
             <Field label="Last name" required>
               <input name="student_last_name" required className={inputClass} />
@@ -300,30 +313,26 @@ export function StudentFormPage() {
           </div>
         </section>
 
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-900">
+        <div className="students-info-box mb-4">
           <strong>Student portal:</strong> Login accounts are created automatically for{' '}
           <strong>3rd grade and above</strong>. Kindergarten through 2nd grade are saved without a portal account until
           they reach 3rd grade.
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-105 disabled:opacity-60"
-          >
-            <i className="bi bi-check-lg" aria-hidden />
+        <div className="d-flex flex-wrap gap-2 mb-4">
+          <button type="submit" disabled={saving} className="mgmt-stu-btn mgmt-stu-btn--primary">
+            <i className="bi bi-check-lg me-2" aria-hidden="true" />
             {saving ? 'Saving…' : 'Add student'}
           </button>
-          <Link
-            to="/management/students"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:border-teal-600 hover:text-teal-800"
-          >
-            <i className="bi bi-x-lg" aria-hidden />
+          <Link to="/management/students" className="mgmt-stu-btn mgmt-stu-btn--ghost">
+            <i className="bi bi-x-lg me-2" aria-hidden="true" />
             Discard
           </Link>
         </div>
       </form>
-    </div>
+          </div>
+        </div>
+      </div>
+    </LegacyMgmtScope>
   )
 }

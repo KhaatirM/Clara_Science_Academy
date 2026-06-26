@@ -10,6 +10,41 @@ def get_active_school_year():
     return SchoolYear.query.filter_by(is_active=True).first()
 
 
+def get_school_year_for_display():
+    """
+    School year for read-only enrollment displays (student detail, etc.).
+    Uses the active year when set; otherwise the most recent year by start date.
+    """
+    active = get_active_school_year()
+    if active:
+        return active
+    return (
+        SchoolYear.query.order_by(SchoolYear.start_date.desc(), SchoolYear.id.desc()).first()
+    )
+
+
+def student_classes_for_school_year(student_id: int, school_year: SchoolYear) -> list:
+    """Classes a student is/was enrolled in for the given school year."""
+    q = (
+        Enrollment.query.join(Class, Enrollment.class_id == Class.id)
+        .filter(
+            Enrollment.student_id == student_id,
+            Class.school_year_id == school_year.id,
+        )
+    )
+    if school_year.is_active:
+        q = q.filter(Enrollment.is_active.is_(True))
+    rows = q.order_by(Class.name).all()
+    seen: set[int] = set()
+    classes = []
+    for enrollment in rows:
+        class_info = enrollment.class_info
+        if class_info and class_info.id not in seen:
+            seen.add(class_info.id)
+            classes.append(class_info)
+    return classes
+
+
 def active_school_year_class_ids(*, include_inactive_classes: bool = False) -> list[int]:
     """Class IDs belonging to the active school year."""
     active = get_active_school_year()

@@ -13,6 +13,19 @@ import { CreateDiscussionAssignmentPage } from './pages/CreateDiscussionAssignme
 import { CreatePdfAssignmentPage } from './pages/CreatePdfAssignmentPage'
 import { CreateQuizAssignmentPage } from './pages/CreateQuizAssignmentPage'
 import { AssignmentsGradesHubPage } from './pages/AssignmentsGradesHubPage'
+import AttendancePage from './pages/AttendancePage'
+import AttendanceAnalyticsPage from './pages/AttendanceAnalyticsPage'
+import AttendanceReportsPage from './pages/AttendanceReportsPage'
+import ReportCardsPage from './pages/ReportCardsPage'
+import ReportCardsCategoryPage from './pages/ReportCardsCategoryPage'
+import ReportCardGeneratePage from './pages/ReportCardGeneratePage'
+import ReportCardDetailPage from './pages/ReportCardDetailPage'
+import ReportCardHistoryPage from './pages/ReportCardHistoryPage'
+import GradeStandardsHubPage from './pages/GradeStandardsHubPage'
+import GradeStandardsEditorPage from './pages/GradeStandardsEditorPage'
+import BillingPage from './pages/BillingPage'
+import StudentJobsPage from './pages/StudentJobsPage'
+import SettingsPage from './pages/SettingsPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { ClosureDashboardPage } from './pages/ClosureDashboardPage'
 import { ClosureSchedulePage } from './pages/ClosureSchedulePage'
@@ -26,7 +39,6 @@ import { CoreClassSetupPage } from './pages/CoreClassSetupPage'
 import { ExtensionRequestsPage } from './pages/ExtensionRequestsPage'
 import { HomePage } from './pages/HomePage'
 import { RedoDashboardPage } from './pages/RedoDashboardPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
 import { StaffFormPage } from './pages/StaffFormPage'
 import { StaffRosterPage } from './pages/StaffRosterPage'
 import { ParentsPage } from './pages/ParentsPage'
@@ -118,26 +130,25 @@ export default function App() {
           <Route path="/management/students" element={<StudentsPage />} />
           <Route path="/management/students/new" element={<StudentFormPage />} />
           <Route path="/management/parents" element={<ParentsPage />} />
-          <Route
-            path="/management/report-cards"
-            element={
-              <PlaceholderPage
-                title="Report Cards"
-                description="List, generate, and release report cards to families."
-                legacyPath="/management/report-cards"
-              />
-            }
-          />
-          <Route
-            path="/management/settings"
-            element={
-              <PlaceholderPage
-                title="Settings"
-                description="School-wide configuration and preferences."
-                legacyPath="/management/settings"
-              />
-            }
-          />
+          <Route path="/management/attendance" element={<AttendancePage />} />
+          <Route path="/management/attendance/reports" element={<AttendanceReportsPage />} />
+          <Route path="/management/attendance/analytics" element={<AttendanceAnalyticsPage />} />
+          <Route path="/management/billing" element={<BillingPage />} />
+          <Route path="/management/student-jobs" element={<StudentJobsPage />} />
+          <Route path="/management/settings">
+            <Route index element={<SettingsPage />} />
+            <Route path="bug-reports" element={<SettingsPage />} />
+          </Route>
+          <Route path="/management/report-cards">
+            <Route index element={<ReportCardsPage />} />
+            <Route path="generate" element={<ReportCardGeneratePage />} />
+            <Route path="generate/:studentId" element={<ReportCardGeneratePage />} />
+            <Route path="student/:studentId" element={<ReportCardHistoryPage />} />
+            <Route path="category/:category" element={<ReportCardsCategoryPage />} />
+            <Route path="standards/:grade" element={<GradeStandardsHubPage />} />
+            <Route path="standards/:grade/:classId" element={<GradeStandardsEditorPage />} />
+            <Route path=":reportCardId" element={<ReportCardDetailPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/management" replace />} />
         </Route>
       </Routes>

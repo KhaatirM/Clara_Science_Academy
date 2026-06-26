@@ -112,6 +112,32 @@
   color: #fff;
   filter: brightness(1.05);
 }
+
+/* Scoped Bootstrap Reboot zeros button { border-radius: 0 } */
+.legacy-mgmt-bootstrap .mgmt-cls button.mgmt-cls-btn {
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+}
+
+.legacy-mgmt-bootstrap .mgmt-cls a.mgmt-cls-btn {
+  text-decoration: none !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-cls a.mgmt-cls-btn--ghost {
+  color: #334155 !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-cls a.mgmt-cls-btn--ghost:hover {
+  color: var(--mgmt-cls-accent-deep) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-cls .bi {
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+}
+
 .mgmt-cls-insights {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1635,6 +1661,9 @@ CLASSES TAB STYLES ==================== */
   background: linear-gradient(135deg, rgba(13, 148, 136, 0.14) 0%, rgba(20, 184, 166, 0.08) 100%);
   padding: 1.15rem 1.25rem;
   border-bottom: 1px solid rgba(13, 148, 136, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
 }
 
 .mgmt-cls .class-card-header-modern::before,
@@ -1644,12 +1673,23 @@ CLASSES TAB STYLES ==================== */
 }
 
 .mgmt-cls-content .class-card-icon-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 44px;
   height: 44px;
   border-radius: 12px;
   background: var(--mgmt-cls-accent-soft);
   color: var(--mgmt-cls-accent-deep);
   box-shadow: none;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.mgmt-cls-content .class-card-icon-modern .bi {
+  display: block;
+  line-height: 1;
   font-size: 1.15rem;
 }
 
@@ -1789,10 +1829,24 @@ CLASSES TAB STYLES ==================== */
   box-shadow: 0 4px 10px rgba(124, 58, 237, 0.12);
 }
 
-/* Grid & card spacing */
+/* Grid & card spacing — CSS grid (Bootstrap row gutters were zeroed on .class-card cols) */
 .mgmt-cls-content .mgmt-cls-grid {
-  --bs-gutter-x: 1.75rem;
-  --bs-gutter-y: 1.75rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.75rem;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .mgmt-cls-content .mgmt-cls-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .mgmt-cls-content .mgmt-cls-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .mgmt-cls-content .mgmt-cls-grid > .class-card {
@@ -1839,6 +1893,9 @@ CLASSES TAB STYLES ==================== */
 }
 
 .mgmt-cls .mgmt-cls-content .class-card-icon-modern {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   background: var(--mgmt-cls-accent-soft) !important;
   color: var(--mgmt-cls-accent-deep) !important;
   border: none !important;

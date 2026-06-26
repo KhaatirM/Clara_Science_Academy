@@ -145,12 +145,22 @@ def _standards_flags(class_info: Class) -> dict[str, bool]:
 def _class_management_links(class_id: int) -> dict[str, str]:
     from flask import url_for
 
+    from management_routes.grade_standards_spa_helpers import grade_standards_editor_path
+    from utils.spa_management_urls import user_should_use_spa_management_shell
+
+    if user_should_use_spa_management_shell():
+        grade1_standards = f"/app{grade_standards_editor_path(1, class_id)}"
+        grade3_standards = f"/app{grade_standards_editor_path(3, class_id)}"
+    else:
+        grade1_standards = url_for("teacher.grade1_standards.grade1_standards_editor", class_id=class_id)
+        grade3_standards = url_for("teacher.grade3_standards.grade3_standards_editor", class_id=class_id)
+
     return {
         "add_assignment": url_for("management.assignment_type_selector", class_id=class_id),
         "attendance": url_for("management.unified_attendance"),
         "manage_roster": f"/app/management/classes/{class_id}/roster",
-        "grade1_standards": url_for("teacher.grade1_standards.grade1_standards_editor", class_id=class_id),
-        "grade3_standards": url_for("teacher.grade3_standards.grade3_standards_editor", class_id=class_id),
+        "grade1_standards": grade1_standards,
+        "grade3_standards": grade3_standards,
         "assistant_approvals": url_for("teacher.assignments.pending_assistant_assignments", class_id=class_id),
         "view_grades": f"/app/management/classes/{class_id}/grades",
         "edit_class": f"/app/management/classes/{class_id}/edit",

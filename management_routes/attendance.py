@@ -269,6 +269,20 @@ def _wants_analytics_partial(request):
 @management_required
 def attendance_analytics():
     """Attendance analytics and pattern tracking"""
+    if (
+        request.method == "GET"
+        and current_app.config.get("REACT_SPA_ENABLED")
+        and request.args.get("legacy") != "1"
+    ):
+        from utils.user_roles import user_has_management_entry_access
+
+        if user_has_management_entry_access(current_user):
+            path = "/app/management/attendance/analytics"
+            query = request.query_string.decode("utf-8") if request.query_string else ""
+            if query:
+                path = f"{path}?{query}"
+            return redirect(path)
+
     ctx = _attendance_analytics_context(request)
     if _wants_analytics_partial(request):
         return render_template('management/_attendance_analytics_panel.html', **ctx)
@@ -290,6 +304,16 @@ def mark_all_present(class_id):
     from datetime import datetime
 
     class_obj = Class.query.get_or_404(class_id)
+
+    from utils.school_year_filters import get_active_school_year
+
+    active_school_year = get_active_school_year()
+    if not active_school_year:
+        flash("No active school year is set.", "danger")
+        return redirect(url_for('management.unified_attendance'))
+    if class_obj.school_year_id != active_school_year.id or not class_obj.is_active:
+        flash("Class is not part of the active school year.", "danger")
+        return redirect(url_for('management.unified_attendance'))
 
     date_str = request.form.get('date')
     if not date_str:
@@ -360,7 +384,7 @@ def unified_attendance():
         attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
         
         from utils.student_roster import active_roster_students_query
-        students = active_roster_students_query(require_active_enrollment=True).all()
+        students = active_roster_students_query(require_active_enrollment=False).all()
         
         # Process attendance records
         updated_count = 0
@@ -414,6 +438,20 @@ def unified_attendance():
         return redirect(url_for('management.unified_attendance', date=attendance_date_str))
     
     # GET request - show unified attendance form
+    if (
+        request.method == "GET"
+        and current_app.config.get("REACT_SPA_ENABLED")
+        and request.args.get("legacy") != "1"
+    ):
+        from utils.user_roles import user_has_management_entry_access
+
+        if user_has_management_entry_access(current_user):
+            path = "/app/management/attendance"
+            query = request.query_string.decode("utf-8") if request.query_string else ""
+            if query:
+                path = f"{path}?{query}"
+            return redirect(path)
+
     if _wants_reports_partial(request):
         reports_ctx = _attendance_reports_context(
             request,
@@ -439,7 +477,7 @@ def unified_attendance():
     
     from utils.student_roster import active_roster_students_query
     students = (
-        active_roster_students_query(require_active_enrollment=True)
+        active_roster_students_query(require_active_enrollment=False)
         .order_by(Student.last_name, Student.first_name)
         .all()
     )
@@ -489,7 +527,10 @@ def unified_attendance():
         class_date = datetime.now().date()
         class_date_str = class_date.strftime('%Y-%m-%d')
     
-    classes = Class.query.all()
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
+    class_ids = [class_obj.id for class_obj in classes]
     today_date = class_date_str  # Use selected date for display
     
     # Calculate attendance stats for each class for the selected date
@@ -530,8 +571,19 @@ def unified_attendance():
     pending_classes_count = len(classes) - today_attendance_count
     
     # Calculate overall attendance rate for the selected date
-    total_attendance_records = Attendance.query.filter_by(date=class_date).count()
-    present_records = Attendance.query.filter_by(date=class_date, status='Present').count()
+    if class_ids:
+        total_attendance_records = Attendance.query.filter(
+            Attendance.date == class_date,
+            Attendance.class_id.in_(class_ids),
+        ).count()
+        present_records = Attendance.query.filter(
+            Attendance.date == class_date,
+            Attendance.class_id.in_(class_ids),
+            Attendance.status == 'Present',
+        ).count()
+    else:
+        total_attendance_records = 0
+        present_records = 0
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
     reports_ctx = _attendance_reports_context(
@@ -578,7 +630,7 @@ def school_day_attendance():
         attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
         
         from utils.student_roster import active_roster_students_query
-        students = active_roster_students_query(require_active_enrollment=True).all()
+        students = active_roster_students_query(require_active_enrollment=False).all()
         
         # Process attendance records
         updated_count = 0
@@ -641,7 +693,7 @@ def school_day_attendance():
     
     from utils.student_roster import active_roster_students_query
     students = (
-        active_roster_students_query(require_active_enrollment=True)
+        active_roster_students_query(require_active_enrollment=False)
         .order_by(Student.last_name, Student.first_name)
         .all()
     )
@@ -686,8 +738,9 @@ def school_day_attendance():
 @management_required
 def attendance():
     """Management attendance hub with improved interface."""
-    # Get all classes
-    classes = Class.query.all()
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
     
     # Get today's date
     from datetime import datetime
@@ -971,6 +1024,21 @@ def _attendance_reports_context(request, form_action=None, embed_tab=False):
 @login_required
 @management_required
 def attendance_reports():
+    if (
+        request.method == "GET"
+        and current_app.config.get("REACT_SPA_ENABLED")
+        and request.args.get("legacy") != "1"
+        and not _wants_reports_partial(request)
+    ):
+        from utils.user_roles import user_has_management_entry_access
+
+        if user_has_management_entry_access(current_user):
+            path = "/app/management/attendance/reports"
+            query = request.query_string.decode("utf-8") if request.query_string else ""
+            if query:
+                path = f"{path}?{query}"
+            return redirect(path)
+
     ctx = _attendance_reports_context(
         request,
         form_action=url_for('management.attendance_reports'),

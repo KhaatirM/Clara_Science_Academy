@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { fetchDashboardHome } from '../api/dashboard'
+import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import {
+  homeActionsForGroup,
+  type HomeActionGroup,
+  type HomeQuickAction,
+} from '../config/homeQuickActions'
 import type { ManagementOutletContext } from '../types/layout'
 import type { DashboardHomeResponse } from '../types/dashboard'
 
@@ -16,99 +22,59 @@ function formatFeedTime(value: string | null | undefined) {
   })
 }
 
-function ActionTile({
-  icon,
-  label,
-  href,
-  react,
-  highlight,
-  badge,
-}: {
-  icon: string
-  label: string
-  href: string
-  react?: boolean
-  highlight?: boolean
-  badge?: number
-}) {
-  const className = [
-    'relative flex flex-col items-center justify-center gap-1.5 rounded-[14px] border px-2 py-3.5 text-center text-[0.78rem] font-semibold leading-tight text-slate-700 transition hover:-translate-y-px',
-    highlight
-      ? 'border-amber-300/60 bg-gradient-to-br from-amber-50 to-amber-100/80 hover:border-amber-400/60'
-      : 'border-slate-200 bg-slate-50 hover:border-teal-600/35 hover:bg-teal-50/80 hover:text-teal-800',
-  ].join(' ')
-
-  const inner = (
-    <>
-      <i
-        className={`bi ${icon} text-xl ${highlight ? 'text-amber-700' : 'text-teal-700'}`}
-        aria-hidden
-      />
-      <span>{label}</span>
-      {badge ? (
-        <span className="absolute right-1.5 top-1.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[0.65rem] font-bold text-white">
-          {badge}
-        </span>
-      ) : null}
-    </>
-  )
-
-  if (react) {
-    return (
-      <Link to={href} className={className}>
-        {inner}
-      </Link>
-    )
+function notificationIconClass(type: string) {
+  switch (type) {
+    case 'grade':
+      return 'mgmt-home-feed-icon--grade'
+    case 'assignment':
+      return 'mgmt-home-feed-icon--assignment'
+    case 'attendance':
+      return 'mgmt-home-feed-icon--attendance'
+    case 'submission':
+      return 'mgmt-home-feed-icon--submission'
+    case 'extension_request':
+      return 'mgmt-home-feed-icon--extension'
+    case 'alert':
+    case 'warning':
+      return 'mgmt-home-feed-icon--alert'
+    default:
+      return ''
   }
-  return (
-    <a href={href} className={className}>
-      {inner}
-    </a>
-  )
 }
 
-function InsightCard({
-  icon,
-  value,
-  label,
-  href,
-  alert,
-}: {
-  icon: string
-  value: string | number
-  label: string
-  href?: string
-  alert?: boolean
-}) {
-  const body = (
-    <div
-      className={[
-        'flex items-start gap-3 rounded-2xl border p-4 shadow-sm',
-        alert ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-white' : 'border-white/90 bg-white/95',
-      ].join(' ')}
-    >
-      <span
-        className={[
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base',
-          alert ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-800',
-        ].join(' ')}
-      >
-        <i className={`bi ${icon}`} aria-hidden />
-      </span>
-      <div>
-        <div className="text-lg font-extrabold text-hub-text">{value}</div>
-        <div className="text-[0.72rem] font-semibold uppercase tracking-wide text-hub-muted">{label}</div>
-      </div>
-    </div>
-  )
-  if (href) {
-    return (
-      <a href={href} className="block no-underline">
-        {body}
-      </a>
-    )
+function notificationIcon(type: string) {
+  switch (type) {
+    case 'grade':
+      return 'bi-clipboard-check-fill'
+    case 'assignment':
+      return 'bi-journal-plus-fill'
+    case 'attendance':
+      return 'bi-calendar-check-fill'
+    case 'submission':
+      return 'bi-file-earmark-check-fill'
+    case 'extension_request':
+      return 'bi-clock-history'
+    case 'alert':
+    case 'warning':
+      return 'bi-exclamation-triangle-fill'
+    default:
+      return 'bi-bell-fill'
   }
-  return body
+}
+
+function activityIcon(type: string) {
+  switch (type) {
+    case 'grade':
+      return 'bi-clipboard-check text-success'
+    case 'assignment':
+      return 'bi-journal-plus text-primary'
+    case 'submission':
+      return 'bi-file-earmark-check text-warning'
+    case 'extension_request':
+      return 'bi-clock-history text-info'
+    default:
+      return 'bi-circle-fill text-secondary'
+  }
 }
 
 export function HomePage() {
@@ -125,26 +91,32 @@ export function HomePage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) {
-    return (
-      <div className="rounded-3xl bg-white/90 p-8 text-center text-hub-muted shadow-lg">
-        Loading dashboard…
+  return (
+    <LegacyMgmtScope>
+      <div className="mgmt-home container-fluid px-0 px-md-1">
+        <div className="mgmt-home-shell">
+          {loading ? (
+            <div className="p-5 text-center text-muted">Loading dashboard…</div>
+          ) : error || !data ? (
+            <div className="alert alert-danger m-3">{error || 'Could not load dashboard'}</div>
+          ) : (
+            <HomeDashboardBody data={data} user={user} isDirector={isDirector} />
+          )}
+        </div>
       </div>
-    )
-  }
+    </LegacyMgmtScope>
+  )
+}
 
-  if (error || !data) {
-    return (
-      <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center text-red-800 shadow-lg">
-        {error || 'Could not load dashboard'}
-      </div>
-    )
-  }
-
-  const shellClass = isDirector
-    ? 'bg-gradient-to-br from-violet-50 via-violet-50/80 to-indigo-100'
-    : 'bg-gradient-to-br from-emerald-50 via-teal-50/80 to-cyan-50'
-
+function HomeDashboardBody({
+  data,
+  user,
+  isDirector,
+}: {
+  data: DashboardHomeResponse
+  user: ManagementOutletContext['user']
+  isDirector: boolean
+}) {
   const ms = data.monthly_stats
   const ws = data.weekly_stats
   const st = data.stats
@@ -152,55 +124,47 @@ export function HomePage() {
   const atRisk = data.at_risk_count
 
   return (
-    <div className={`rounded-3xl p-5 md:p-8 ${shellClass}`}>
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <>
+      <header className="mgmt-home-hero">
         <div>
-          <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-muted">
-            School management
-          </p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-hub-text">
-            Welcome back, {data.profile.display_name}
-          </h1>
-          <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-hub-muted">
-            <i className="bi bi-calendar3" aria-hidden />
+          <p className="mgmt-home-eyebrow">School management</p>
+          <h1 className="mgmt-home-title">Welcome back, {data.profile.display_name}</h1>
+          <p className="mgmt-home-date">
+            <i className="bi bi-calendar3" aria-hidden="true" />
             {data.home_display_date}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mgmt-home-hero-actions">
           {isDirector ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-gradient-to-br from-violet-100 to-violet-200 px-3.5 py-2 text-[0.82rem] font-bold text-violet-800">
-              <i className="bi bi-award-fill" aria-hidden />
-              Director
+            <span className="mgmt-home-role-badge mgmt-home-role-badge--director">
+              <i className="bi bi-award-fill" aria-hidden="true" /> Director
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-gradient-to-br from-teal-100 to-emerald-200 px-3.5 py-2 text-[0.82rem] font-bold text-teal-900">
-              <i className="bi bi-shield-fill" aria-hidden />
-              Administrator
+            <span className="mgmt-home-role-badge mgmt-home-role-badge--admin">
+              <i className="bi bi-shield-fill" aria-hidden="true" /> Administrator
             </span>
           )}
           {data.dual_dashboard_staff ? (
-            <a
-              href="/switch-staff-dashboard"
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3.5 py-2 text-[0.82rem] font-semibold text-slate-700 hover:border-teal-600 hover:text-teal-800"
-            >
-              <i className="bi bi-arrow-left-right" aria-hidden />
-              Switch dashboard
+            <a href="/switch-staff-dashboard" className="mgmt-home-switch-link">
+              <i className="bi bi-arrow-left-right" aria-hidden="true" /> Switch dashboard
             </a>
           ) : null}
         </div>
       </header>
 
       {!data.has_active_school_year ? (
-        <div className="mb-6 flex gap-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
-          <i className="bi bi-calendar-x text-2xl text-slate-500" aria-hidden />
+        <div className="school-year-closed-banner" role="status">
+          <span className="school-year-closed-banner__icon" aria-hidden="true">
+            <i className="bi bi-calendar-x" />
+          </span>
           <div>
-            <p className="font-bold text-hub-text">School year closed</p>
-            <p className="text-sm text-hub-muted">
+            <p className="school-year-closed-banner__title">School year closed</p>
+            <p className="school-year-closed-banner__text mb-0">
               There is no active school year. Live statistics and coursework summaries are hidden
               until a new year is started.
             </p>
             {data.latest_school_year_label ? (
-              <p className="mt-1 text-sm text-hub-muted">
+              <p className="school-year-closed-banner__meta mb-0">
                 Most recent year: {data.latest_school_year_label}
               </p>
             ) : null}
@@ -208,253 +172,303 @@ export function HomePage() {
         </div>
       ) : (
         <>
-          <div className="mb-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-            <InsightCard icon="bi-calendar-week" value={ws.due_assignments} label="Due this week" />
-            <InsightCard icon="bi-check2-circle" value={`${ms.attendance_rate}%`} label="Attendance rate" />
-            <InsightCard icon="bi-graph-up" value={`${ms.average_grade}%`} label="Avg. grade score" />
-            <InsightCard icon="bi-person-plus" value={ms.new_students} label="New enrollments" />
-            <InsightCard
-              icon="bi-clock-history"
-              value={pendingExt}
-              label="Pending extensions"
-              href={pendingExt > 0 ? '/app/management/extensions' : undefined}
-              alert={pendingExt > 0}
-            />
-            <InsightCard
-              icon={atRisk > 0 ? 'bi-exclamation-triangle' : 'bi-shield-check'}
-              value={atRisk}
-              label="Academic concerns"
-              href={atRisk > 0 ? '/app/management/assignments' : undefined}
-              alert={atRisk > 0}
-            />
+          <div className="mgmt-home-insights" role="list">
+            <InsightChip icon="bi-calendar-week" value={ws.due_assignments} label="Due this week" />
+            <InsightChip icon="bi-check2-circle" value={`${ms.attendance_rate}%`} label="Attendance rate" />
+            <InsightChip icon="bi-graph-up" value={`${ms.average_grade}%`} label="Avg. grade score" />
+            <InsightChip icon="bi-person-plus" value={ms.new_students} label="New enrollments" />
+            {pendingExt > 0 ? (
+              <Link
+                to="/management/extensions"
+                className="mgmt-home-insight mgmt-home-insight--alert text-decoration-none"
+                role="listitem"
+              >
+                <span className="mgmt-home-insight-icon">
+                  <i className="bi bi-clock-history" aria-hidden="true" />
+                </span>
+                <div>
+                  <div className="mgmt-home-insight-value">{pendingExt}</div>
+                  <div className="mgmt-home-insight-label">Pending extensions</div>
+                </div>
+              </Link>
+            ) : (
+              <InsightChip icon="bi-clock-history" value={0} label="Pending extensions" />
+            )}
+            {atRisk > 0 ? (
+              <Link
+                to="/management/assignments"
+                className="mgmt-home-insight mgmt-home-insight--alert text-decoration-none"
+                role="listitem"
+              >
+                <span className="mgmt-home-insight-icon">
+                  <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+                </span>
+                <div>
+                  <div className="mgmt-home-insight-value">{atRisk}</div>
+                  <div className="mgmt-home-insight-label">Academic concerns</div>
+                </div>
+              </Link>
+            ) : (
+              <InsightChip icon="bi-shield-check" value={0} label="Academic concerns" />
+            )}
           </div>
 
-          <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard tone="students" icon="bi-people-fill" value={st.students} label="Students" meta="Enrolled in the system" />
-            <StatCard tone="staff" icon="bi-person-badge-fill" value={st.teachers} label="Teachers & staff" meta="Active staff records" />
-            <StatCard tone="classes" icon="bi-mortarboard-fill" value={st.classes} label="Classes" meta="Across all grade levels" />
-            <StatCard
-              tone="assignments"
-              icon="bi-journal-check"
-              value={st.active_assignments}
-              label="Active assignments"
-              meta={`${st.assignments} total in system`}
-            />
+          <div className="mgmt-home-stats">
+            <article className="mgmt-home-stat mgmt-home-stat--students">
+              <div className="mgmt-home-stat-icon">
+                <i className="bi bi-people-fill" aria-hidden="true" />
+              </div>
+              <p className="mgmt-home-stat-number">{st.students}</p>
+              <p className="mgmt-home-stat-label">Students</p>
+              <p className="mgmt-home-stat-meta">Enrolled in the system</p>
+            </article>
+            <article className="mgmt-home-stat mgmt-home-stat--staff">
+              <div className="mgmt-home-stat-icon">
+                <i className="bi bi-person-badge-fill" aria-hidden="true" />
+              </div>
+              <p className="mgmt-home-stat-number">{st.teachers}</p>
+              <p className="mgmt-home-stat-label">Teachers &amp; staff</p>
+              <p className="mgmt-home-stat-meta">Active staff records</p>
+            </article>
+            <article className="mgmt-home-stat mgmt-home-stat--classes">
+              <div className="mgmt-home-stat-icon">
+                <i className="bi bi-mortarboard-fill" aria-hidden="true" />
+              </div>
+              <p className="mgmt-home-stat-number">{st.classes}</p>
+              <p className="mgmt-home-stat-label">Classes</p>
+              <p className="mgmt-home-stat-meta">Across all grade levels</p>
+            </article>
+            <article className="mgmt-home-stat mgmt-home-stat--assignments">
+              <div className="mgmt-home-stat-icon">
+                <i className="bi bi-journal-check" aria-hidden="true" />
+              </div>
+              <p className="mgmt-home-stat-number">{st.active_assignments}</p>
+              <p className="mgmt-home-stat-label">Active assignments</p>
+              <p className="mgmt-home-stat-meta">{st.assignments} total in system</p>
+            </article>
           </div>
         </>
       )}
 
-      <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(260px,320px)_1fr] lg:items-start">
-        <aside className="rounded-[20px] border border-white/90 bg-white/95 p-5 shadow-[0_4px_6px_rgba(15,23,42,0.04),0_18px_40px_rgba(15,23,42,0.08)]">
-          <div className="mb-4 flex items-center gap-4 border-b border-slate-200 pb-4">
+      <div className="mgmt-home-main-grid">
+        <aside className="mgmt-home-profile">
+          <div className="mgmt-home-profile-top">
             <div
-              className={[
-                'flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-[14px] text-[1.35rem]',
-                isDirector
-                  ? 'bg-gradient-to-br from-violet-100 to-violet-300 text-violet-800'
-                  : 'bg-gradient-to-br from-teal-100 to-teal-300 text-teal-800',
-              ].join(' ')}
+              className={`mgmt-home-avatar ${isDirector ? 'mgmt-home-avatar--director' : 'mgmt-home-avatar--admin'}`}
+              aria-hidden="true"
             >
-              <i className={`bi ${isDirector ? 'bi-award-fill' : 'bi-person-badge-fill'}`} aria-hidden />
+              <i className={`bi ${isDirector ? 'bi-award-fill' : 'bi-person-badge-fill'}`} />
             </div>
             <div>
-              <h2 className="text-[1.05rem] font-bold text-hub-text">{data.profile.display_name}</h2>
-              <p className="text-[0.82rem] text-hub-muted">{data.profile.role}</p>
+              <h2 className="mgmt-home-profile-name">{data.profile.display_name}</h2>
+              <p className="mgmt-home-profile-role">{data.profile.role}</p>
             </div>
           </div>
-          <div className="space-y-2.5 text-[0.88rem] leading-snug text-slate-600">
-            <p className="flex items-start gap-2">
-              <i className="bi bi-person-vcard mt-0.5 text-teal-700" aria-hidden />
-              <span>ID: {data.profile.staff_id}</span>
-            </p>
-            <p className="flex items-start gap-2">
-              <i className="bi bi-envelope mt-0.5 text-teal-700" aria-hidden />
-              <span>{data.profile.email || 'None'}</span>
-            </p>
-            <p className="flex items-start gap-2">
-              <i className="bi bi-building mt-0.5 text-teal-700" aria-hidden />
-              <span>Clara Science Academy — School operations</span>
-            </p>
+          <div className="mgmt-home-profile-detail">
+            <i className="bi bi-person-vcard" aria-hidden="true" />
+            <span>ID: {data.profile.staff_id}</span>
+          </div>
+          <div className="mgmt-home-profile-detail">
+            <i className="bi bi-envelope" aria-hidden="true" />
+            <span>{data.profile.email || 'None'}</span>
+          </div>
+          <div className="mgmt-home-profile-detail">
+            <i className="bi bi-building" aria-hidden="true" />
+            <span>Clara Science Academy — School operations</span>
           </div>
         </aside>
 
-        <section className="rounded-[20px] border border-white/90 bg-white/95 px-5 pb-4 pt-5 shadow-[0_4px_6px_rgba(15,23,42,0.04),0_18px_40px_rgba(15,23,42,0.08)]">
-          <h2 className="mb-4 flex items-center gap-1.5 text-[0.95rem] font-bold text-hub-text">
-            <i className="bi bi-lightning-fill text-teal-700" aria-hidden />
-            Quick actions
+        <section className="mgmt-home-actions-panel" aria-labelledby="mgmtHomeQuickActions">
+          <h2 id="mgmtHomeQuickActions" className="mgmt-home-section-title">
+            <i className="bi bi-lightning-fill" aria-hidden="true" /> Quick actions
           </h2>
-          <div className="space-y-4">
-            <ActionGroup label="People">
-              <ActionTile icon="bi-person-plus-fill" label="Add student" href="/management/add-student" />
-              <ActionTile icon="bi-person-badge" label="Add staff" href="/management/teachers/new" react />
-              <ActionTile icon="bi-people" label="Students" href="/management/students" react />
-              <ActionTile icon="bi-heart-fill" label="Family Portal" href="/management/parents" react />
-              <ActionTile icon="bi-person-workspace" label="Teachers & staff" href="/management/teachers" react />
-            </ActionGroup>
-            <ActionGroup label="Academics">
-              <ActionTile icon="bi-plus-circle" label="Add class" href="/management/classes?open=create" react />
-              <ActionTile icon="bi-mortarboard" label="Classes" href="/management/classes" react />
-              <ActionTile icon="bi-journal-plus" label="Add assignment" href="/management/assignments/create" react />
-              <ActionTile icon="bi-clipboard-data" label="Grades & assignments" href="/management/assignments" react />
-              <ActionTile icon="bi-file-earmark-text" label="Report cards" href="/management/generate-report-card-form" />
-              <ActionTile icon="bi-collection" label="View report cards" href="/management/report-cards" />
-            </ActionGroup>
-            <ActionGroup label="Operations">
-              <ActionTile icon="bi-calendar-check" label="Attendance" href="/management/unified-attendance" />
-              <ActionTile
-                icon="bi-clock-history"
-                label="Extensions"
-                href="/management/extensions"
-                react
-                highlight={pendingExt > 0}
-                badge={pendingExt > 0 ? pendingExt : undefined}
-              />
-            </ActionGroup>
+          <div className="mgmt-home-action-groups">
+            <ActionGroup user={user} group="people" label="People" pendingExt={pendingExt} />
+            <ActionGroup user={user} group="academics" label="Academics" pendingExt={pendingExt} />
+            <ActionGroup user={user} group="operations" label="Operations" pendingExt={pendingExt} />
           </div>
         </section>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <FeedPanel
-          title="Notifications"
-          icon="bi-bell-fill"
-          emptyIcon="bi-bell-slash"
-          emptyText="No new notifications"
-          items={data.notifications.map((n) => ({
-            type: n.type,
-            title: n.title,
-            text: n.message || '',
-            timestamp: n.timestamp,
-            link: n.link,
-          }))}
-        />
-        <FeedPanel
-          title="Recent activity"
-          icon="bi-activity"
-          emptyIcon="bi-inbox"
-          emptyText="No recent activity"
-          items={data.recent_activity.map((a) => ({
-            type: a.type,
-            title: a.title,
-            text: a.description || '',
-            timestamp: a.timestamp,
-            link: a.link,
-          }))}
-          timeline
-        />
+      <div className="mgmt-home-feeds">
+        <section className="mgmt-home-feed" aria-labelledby="mgmtHomeNotifications">
+          <div className="mgmt-home-feed-header">
+            <h2 id="mgmtHomeNotifications" className="mgmt-home-feed-title">
+              <i className="bi bi-bell-fill" aria-hidden="true" />
+              Notifications
+              {data.notifications.length ? (
+                <span className="mgmt-home-feed-count">{data.notifications.length}</span>
+              ) : null}
+            </h2>
+            <span className="mgmt-home-feed-meta">Last 7 days</span>
+          </div>
+          <div className="mgmt-home-feed-list">
+            {data.notifications.length === 0 ? (
+              <div className="mgmt-home-empty">
+                <i className="bi bi-bell-slash" aria-hidden="true" />
+                <p>No new notifications</p>
+              </div>
+            ) : (
+              data.notifications.map((n) => (
+                <article key={`${n.type}-${n.title}-${n.timestamp}`} className="mgmt-home-feed-item">
+                  <div className={`mgmt-home-feed-icon ${notificationIconClass(n.type)}`}>
+                    <i className={`bi ${notificationIcon(n.type)}`} aria-hidden="true" />
+                  </div>
+                  <div className="mgmt-home-feed-body">
+                    <h3 className="mgmt-home-feed-item-title">{n.title}</h3>
+                    <p className="mgmt-home-feed-item-text">{n.message}</p>
+                    <time className="mgmt-home-feed-time">{formatFeedTime(n.timestamp)}</time>
+                    {n.link ? (
+                      <a href={n.link} className="mgmt-home-feed-link">
+                        View details <i className="bi bi-arrow-right-short" aria-hidden="true" />
+                      </a>
+                    ) : null}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="mgmt-home-feed" aria-labelledby="mgmtHomeActivity">
+          <div className="mgmt-home-feed-header">
+            <h2 id="mgmtHomeActivity" className="mgmt-home-feed-title">
+              <i className="bi bi-activity" aria-hidden="true" />
+              Recent activity
+            </h2>
+            <span className="mgmt-home-feed-meta">Last 7 days</span>
+          </div>
+          <div className="mgmt-home-feed-list">
+            {data.recent_activity.length === 0 ? (
+              <div className="mgmt-home-empty">
+                <i className="bi bi-inbox" aria-hidden="true" />
+                <p>No recent activity</p>
+              </div>
+            ) : (
+              <div className="mgmt-home-timeline">
+                {data.recent_activity.map((a) => (
+                  <article key={`${a.type}-${a.title}-${a.timestamp}`} className="mgmt-home-timeline-item">
+                    <span className="mgmt-home-timeline-dot" aria-hidden="true" />
+                    <h3 className="mgmt-home-timeline-item-title">
+                      <i className={`bi ${activityIcon(a.type)} me-1`} aria-hidden="true" />
+                      {a.title}
+                    </h3>
+                    <p className="mgmt-home-timeline-item-text">{a.description}</p>
+                    <time className="mgmt-home-feed-time">{formatFeedTime(a.timestamp)}</time>
+                    {a.link ? (
+                      <a href={a.link} className="mgmt-home-feed-link">
+                        View <i className="bi bi-arrow-right-short" aria-hidden="true" />
+                      </a>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </>
   )
 }
 
-function ActionGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-2 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-slate-400">{label}</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">{children}</div>
-    </div>
-  )
-}
-
-function StatCard({
-  tone,
+function InsightChip({
   icon,
   value,
   label,
-  meta,
 }: {
-  tone: 'students' | 'staff' | 'classes' | 'assignments'
   icon: string
-  value: number
+  value: string | number
   label: string
-  meta: string
 }) {
-  const accent =
-    tone === 'students'
-      ? 'from-blue-500/20'
-      : tone === 'staff'
-        ? 'from-violet-500/20'
-        : tone === 'classes'
-          ? 'from-teal-500/20'
-          : 'from-amber-500/20'
-
   return (
-    <article className={`relative overflow-hidden rounded-2xl border border-white/90 bg-white/95 p-5 shadow-lg`}>
-      <div className={`pointer-events-none absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-gradient-to-br ${accent} to-transparent opacity-60`} />
-      <i className={`bi ${icon} text-2xl text-teal-700`} aria-hidden />
-      <p className="mt-3 text-3xl font-extrabold text-hub-text">{value}</p>
-      <p className="font-semibold text-hub-text">{label}</p>
-      <p className="text-sm text-hub-muted">{meta}</p>
-    </article>
+    <div className="mgmt-home-insight" role="listitem">
+      <span className="mgmt-home-insight-icon">
+        <i className={`bi ${icon}`} aria-hidden="true" />
+      </span>
+      <div>
+        <div className="mgmt-home-insight-value">{value}</div>
+        <div className="mgmt-home-insight-label">{label}</div>
+      </div>
+    </div>
   )
 }
 
-function FeedPanel({
-  title,
-  icon,
-  emptyIcon,
-  emptyText,
-  items,
-  timeline,
+function ActionGroup({
+  user,
+  group,
+  label,
+  pendingExt,
 }: {
-  title: string
-  icon: string
-  emptyIcon: string
-  emptyText: string
-  items: { type: string; title: string; text: string; timestamp: string | null; link: string | null }[]
-  timeline?: boolean
+  user: ManagementOutletContext['user']
+  group: HomeActionGroup
+  label: string
+  pendingExt: number
 }) {
+  const actions = homeActionsForGroup(user, group)
+  if (!actions.length) return null
+
   return (
-    <section className="rounded-2xl border border-white/90 bg-white/95 p-5 shadow-lg">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-hub-text">
-          <i className={`bi ${icon}`} aria-hidden />
-          {title}
-          {items.length ? (
-            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-bold text-teal-800">
-              {items.length}
-            </span>
-          ) : null}
-        </h2>
-        <span className="text-xs font-semibold uppercase tracking-wide text-hub-muted">Last 7 days</span>
+    <div>
+      <p className="mgmt-home-action-group-label">{label}</p>
+      <div className="mgmt-home-action-grid">
+        {actions.map((action) => (
+          <HomeActionTile
+            key={action.id}
+            action={action}
+            highlight={action.id === 'extensions' && pendingExt > 0}
+            badge={action.id === 'extensions' && pendingExt > 0 ? pendingExt : undefined}
+          />
+        ))}
       </div>
-      {items.length === 0 ? (
-        <div className="py-10 text-center text-hub-muted">
-          <i className={`bi ${emptyIcon} mb-2 block text-3xl`} aria-hidden />
-          <p>{emptyText}</p>
-        </div>
-      ) : timeline ? (
-        <div className="space-y-4 border-l-2 border-teal-100 pl-4">
-          {items.map((item) => (
-            <article key={`${item.type}-${item.title}-${item.timestamp}`} className="relative">
-              <span className="absolute -left-[1.35rem] top-1.5 h-2.5 w-2.5 rounded-full bg-teal-500" aria-hidden />
-              <h3 className="font-semibold text-hub-text">{item.title}</h3>
-              <p className="text-sm text-hub-muted">{item.text}</p>
-              <time className="text-xs text-hub-muted">{formatFeedTime(item.timestamp)}</time>
-              {item.link ? (
-                <a href={item.link} className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-teal-700 hover:underline">
-                  View <i className="bi bi-arrow-right-short" aria-hidden />
-                </a>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <article key={`${item.type}-${item.title}-${item.timestamp}`} className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <h3 className="font-semibold text-hub-text">{item.title}</h3>
-              <p className="text-sm text-hub-muted">{item.text}</p>
-              <time className="text-xs text-hub-muted">{formatFeedTime(item.timestamp)}</time>
-              {item.link ? (
-                <a href={item.link} className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-teal-700 hover:underline">
-                  View details <i className="bi bi-arrow-right-short" aria-hidden />
-                </a>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
+    </div>
+  )
+}
+
+function HomeActionTile({
+  action,
+  highlight,
+  badge,
+}: {
+  action: HomeQuickAction
+  highlight?: boolean
+  badge?: number
+}) {
+  const className = `mgmt-home-action${highlight ? ' mgmt-home-action--highlight' : ''}`
+  const inner = (
+    <>
+      <i className={`bi ${action.icon}`} aria-hidden="true" />
+      <span>{action.label}</span>
+    </>
+  )
+
+  if (badge) {
+    return (
+      <span className="mgmt-home-action-wrap">
+        {action.reactTo ? (
+          <Link to={action.reactTo} className={className}>
+            {inner}
+          </Link>
+        ) : (
+          <a href={action.legacyHref} className={className}>
+            {inner}
+          </a>
+        )}
+        <span className="mgmt-home-action-badge">{badge}</span>
+      </span>
+    )
+  }
+
+  if (action.reactTo) {
+    return (
+      <Link to={action.reactTo} className={className}>
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <a href={action.legacyHref} className={className}>
+      {inner}
+    </a>
   )
 }

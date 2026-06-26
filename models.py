@@ -121,6 +121,7 @@ class Student(db.Model):
     """
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
+    middle_name = db.Column(db.String(100), nullable=True)
     last_name = db.Column(db.String(100), nullable=False)
     dob = db.Column(db.String(20)) # Storing as string as per our previous finding
     grade_level = db.Column(db.Integer)  # Changed to Integer to match app.py expectations
@@ -1295,6 +1296,36 @@ class ReportCard(db.Model):
 
     def __repr__(self):
         return f"ReportCard(Student ID: {self.student_id}, Quarter: {self.quarter})"
+
+
+class StudentSchoolYear(db.Model):
+    """
+    Grade level and enrollment status for a student in a specific school year.
+
+    Populated at report-card generation and school-year close so historical cards
+    use the correct grade even after promotion.
+    """
+    __tablename__ = 'student_school_year'
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False, index=True)
+    grade_level = db.Column(db.Integer, nullable=False)
+    enrolled = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    student = db.relationship('Student', backref='school_year_records', lazy=True)
+    school_year = db.relationship('SchoolYear', backref='student_year_records', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'school_year_id', name='uq_student_school_year'),
+    )
+
+    def __repr__(self):
+        return f"StudentSchoolYear(student={self.student_id}, year={self.school_year_id}, grade={self.grade_level})"
 
 
 class ReportCardComment(db.Model):

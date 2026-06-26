@@ -1,17 +1,28 @@
-/** Tailwind classes for calendar event badges (mirrors legacy shared_calendar.css). */
+const KNOWN_EVENT_TYPES = new Set([
+  'quarter_start',
+  'quarter_end',
+  'semester_start',
+  'semester_end',
+  'school_year_start',
+  'school_year_end',
+  'teacher_work_day',
+  'school_break_start',
+  'school_break_end',
+  'holiday',
+  'professional_development',
+  'other_event',
+])
+
+/** Normalize event type to legacy shared_calendar.css class suffix (event-*). */
+export function normalizeCalendarEventType(type: string): string {
+  if (type === 'other' || type === 'other_event') return 'other_event'
+  if (type === 'break' || type === 'school_break') return 'school_break_start'
+  if (type === 'professional_development' || type === 'pd') return 'professional_development'
+  if (KNOWN_EVENT_TYPES.has(type)) return type
+  return 'other_event'
+}
+
+/** Legacy calendar-event badge class (pairs with shared_calendar.css). */
 export function calendarEventClass(type: string): string {
-  const normalized = type === 'other' ? 'other_event' : type
-  const map: Record<string, string> = {
-    quarter_start: 'bg-emerald-600 hover:bg-emerald-700',
-    quarter_end: 'bg-teal-700 hover:bg-teal-800',
-    semester_start: 'bg-indigo-600 hover:bg-indigo-700',
-    semester_end: 'bg-violet-700 hover:bg-violet-800',
-    teacher_work_day: 'bg-amber-600 hover:bg-amber-700',
-    school_break_start: 'bg-sky-600 hover:bg-sky-700',
-    school_break_end: 'bg-blue-700 hover:bg-blue-800',
-    holiday: 'bg-rose-600 hover:bg-rose-700',
-    professional_development: 'bg-orange-600 hover:bg-orange-700',
-    other_event: 'bg-slate-600 hover:bg-slate-700',
-  }
-  return map[normalized] || map.other_event
+  return `event-${normalizeCalendarEventType(type)}`
 }

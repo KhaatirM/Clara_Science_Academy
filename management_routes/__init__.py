@@ -737,6 +737,11 @@ def take_class_attendance_route(class_id):
 @management_required
 def school_breaks_route():
     """Redirect to calendar with School Breaks modal open"""
+    from utils.spa_management_urls import spa_calendar_school_breaks_redirect
+
+    spa_redirect = spa_calendar_school_breaks_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
     return redirect(url_for('management.calendar', open='school-breaks'))
 
 # Add alias for add school break route (form on School Breaks page posts here)

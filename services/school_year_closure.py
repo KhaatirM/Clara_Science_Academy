@@ -966,6 +966,9 @@ def finalize_closure(closure: SchoolYearClosure, *, triggered_by: str = 'manual'
     promo_stats = None
     promo_failed = False
     if enrolled_student_ids:
+        from utils.report_card_school_year import record_student_year_grades_before_close
+
+        record_student_year_grades_before_close(sy.id, enrolled_student_ids)
         try:
             promo_stats = _apply_grade_promotion_after_year_close(enrolled_student_ids)
         except Exception:

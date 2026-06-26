@@ -73,6 +73,9 @@ def build_calendar_month(year: int, month: int) -> dict[str, Any]:
                         "category": academic_date.get("category", ""),
                         "type": academic_date.get("type", "other_event"),
                         "description": academic_date.get("description", ""),
+                        "source": academic_date.get("source"),
+                        "entity_id": academic_date.get("entity_id"),
+                        "deletable": bool(academic_date.get("deletable")),
                     }
                     for academic_date in academic_dates
                     if academic_date["day"] == day
@@ -153,11 +156,18 @@ def query_calendar_page(year: int | None = None, month: int | None = None) -> di
         "breaks": [_serialize_break(b) for b in breaks],
         "active_closures": active_closures,
         "event_categories": [
+            {"value": "quarter_start", "label": "Quarter Start"},
+            {"value": "quarter_end", "label": "Quarter End"},
+            {"value": "semester_start", "label": "Semester Start"},
+            {"value": "semester_end", "label": "Semester End"},
+            {"value": "teacher_work_day", "label": "Teacher Work Day"},
+            {"value": "school_break_start", "label": "School Break Start"},
+            {"value": "school_break_end", "label": "School Break End"},
             {"value": "holiday", "label": "Holiday"},
-            {"value": "professional_development", "label": "Professional development"},
-            {"value": "other_event", "label": "Other event"},
+            {"value": "professional_development", "label": "Professional Development"},
+            {"value": "other", "label": "Other"},
         ],
-        "break_types": ["Vacation", "Holiday", "Other"],
+        "break_types": ["Vacation", "Holiday", "Professional Development", "No School"],
     }
 
 

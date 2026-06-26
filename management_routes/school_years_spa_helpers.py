@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any
 
 from models import AcademicPeriod, CalendarEvent, SchoolYear, db
-from management_routes.utils import add_academic_periods_for_year
+from management_routes.utils import (
+    add_academic_periods_for_year,
+    backfill_missing_semesters,
+    sync_academic_periods_for_school_year,
+    sync_semesters_from_quarters,
+)
 
 
 def _date_str(value: date | None) -> str | None:
@@ -62,6 +67,9 @@ def _serialize_year(year: SchoolYear) -> dict[str, Any]:
 
 def query_school_years_page() -> dict[str, Any]:
     school_years = SchoolYear.query.order_by(SchoolYear.start_date.desc()).all()
+    for year in school_years:
+        backfill_missing_semesters(year.id, commit=False)
+    db.session.commit()
     active = SchoolYear.query.filter_by(is_active=True).first()
     serialized = [_serialize_year(y) for y in school_years]
     active_data = next((y for y in serialized if y["is_active"]), None)
@@ -79,88 +87,50 @@ def query_school_years_page() -> dict[str, Any]:
 
 
 def _sync_periods_after_year_edit(school_year: SchoolYear) -> None:
-    academic_periods = AcademicPeriod.query.filter_by(school_year_id=school_year.id).all()
-    period_map = {period.name: period for period in academic_periods}
-    start_date = school_year.start_date
-    end_date = school_year.end_date
-    if not start_date or not end_date:
-        return
-
-    year_duration = (end_date - start_date).days
-    quarter_duration = year_duration // 4
-
-    if "Quarter 1" in period_map:
-        period_map["Quarter 1"].start_date = start_date
-        period_map["Quarter 1"].end_date = start_date + timedelta(days=quarter_duration - 1)
-
-    if "Semester 1" in period_map:
-        period_map["Semester 1"].start_date = start_date
-
-    if "Quarter 2" in period_map:
-        q2_start = start_date + timedelta(days=quarter_duration)
-        q2_end = q2_start + timedelta(days=quarter_duration - 1)
-        period_map["Quarter 2"].start_date = q2_start
-        period_map["Quarter 2"].end_date = q2_end
-        if "Semester 1" in period_map:
-            period_map["Semester 1"].end_date = q2_end
-
-    if "Quarter 3" in period_map:
-        q3_start = start_date + timedelta(days=quarter_duration * 2)
-        q3_end = q3_start + timedelta(days=quarter_duration - 1)
-        period_map["Quarter 3"].start_date = q3_start
-        period_map["Quarter 3"].end_date = q3_end
-        if "Semester 2" in period_map:
-            period_map["Semester 2"].start_date = q3_start
-
-    if "Quarter 4" in period_map:
-        q4_start = start_date + timedelta(days=quarter_duration * 3)
-        period_map["Quarter 4"].start_date = q4_start
-        period_map["Quarter 4"].end_date = end_date
-
-    if "Semester 2" in period_map:
-        period_map["Semester 2"].end_date = end_date
+    """Redistribute Q1–Q4/S1–S2 when the school year span changes."""
+    sync_academic_periods_for_school_year(school_year.id, commit=False)
 
 
 def _sync_period_edit(period: AcademicPeriod) -> None:
+    """When a linked quarter/semester is edited, keep related periods aligned."""
     academic_periods = AcademicPeriod.query.filter_by(school_year_id=period.school_year_id).all()
     period_map = {p.name: p for p in academic_periods}
     start_date = period.start_date
     end_date = period.end_date
+    school_year = SchoolYear.query.get(period.school_year_id)
 
-    if period.name == "Quarter 1":
-        if "Semester 1" in period_map:
-            period_map["Semester 1"].start_date = start_date
-        school_year = SchoolYear.query.get(period.school_year_id)
+    if period.name == 'Q1':
+        if 'S1' in period_map:
+            period_map['S1'].start_date = start_date
         if school_year and school_year.start_date != start_date:
             school_year.start_date = start_date
-    elif period.name == "Quarter 2":
-        if "Semester 1" in period_map:
-            period_map["Semester 1"].end_date = end_date
-    elif period.name == "Quarter 3":
-        if "Semester 2" in period_map:
-            period_map["Semester 2"].start_date = start_date
-    elif period.name == "Quarter 4":
-        if "Semester 2" in period_map:
-            period_map["Semester 2"].end_date = end_date
-        school_year = SchoolYear.query.get(period.school_year_id)
+    elif period.name == 'Q2':
+        if 'S1' in period_map:
+            period_map['S1'].end_date = end_date
+    elif period.name == 'Q3':
+        if 'S2' in period_map:
+            period_map['S2'].start_date = start_date
+    elif period.name == 'Q4':
+        if 'S2' in period_map:
+            period_map['S2'].end_date = end_date
         if school_year and school_year.end_date != end_date:
             school_year.end_date = end_date
-    elif period.name == "Semester 1":
-        if "Quarter 1" in period_map:
-            period_map["Quarter 1"].start_date = start_date
-        school_year = SchoolYear.query.get(period.school_year_id)
+    elif period.name == 'S1':
+        if 'Q1' in period_map:
+            period_map['Q1'].start_date = start_date
         if school_year and school_year.start_date != start_date:
             school_year.start_date = start_date
-        if "Quarter 2" in period_map:
-            period_map["Quarter 2"].end_date = end_date
-    elif period.name == "Semester 2":
-        if "Quarter 3" in period_map:
-            period_map["Quarter 3"].start_date = start_date
-        if "Quarter 4" in period_map:
-            period_map["Quarter 4"].end_date = end_date
-        school_year = SchoolYear.query.get(period.school_year_id)
+        if 'Q2' in period_map:
+            period_map['Q2'].end_date = end_date
+    elif period.name == 'S2':
+        if 'Q3' in period_map:
+            period_map['Q3'].start_date = start_date
+        if 'Q4' in period_map:
+            period_map['Q4'].end_date = end_date
         if school_year and school_year.end_date != end_date:
             school_year.end_date = end_date
+
+    sync_semesters_from_quarters(period.school_year_id)
 
 
 def create_school_year_from_body(body: dict[str, Any]) -> dict[str, Any]:
@@ -186,14 +156,26 @@ def create_school_year_from_body(body: dict[str, Any]) -> dict[str, Any]:
     if auto_generate_quarters:
         try:
             add_academic_periods_for_year(new_year.id)
-            message = f'School year "{name}" created successfully with academic periods!'
+            backfill_missing_semesters(new_year.id, commit=False)
+            message = (
+                f'School year "{name}" created with quarters, semesters, and calendar dates synced!'
+            )
         except Exception as exc:
             message = (
                 f'School year "{name}" created but there was an error generating academic periods: {exc}'
             )
 
     db.session.commit()
-    return {"success": True, "message": message, "school_year_id": new_year.id}
+    calendar_note = (
+        ' Calendar quarter/semester dates are live when this year is active.'
+        if is_active and auto_generate_quarters
+        else ''
+    )
+    return {
+        "success": True,
+        "message": message + calendar_note,
+        "school_year_id": new_year.id,
+    }
 
 
 def set_active_school_year(year_id: int) -> dict[str, Any]:
@@ -225,7 +207,7 @@ def edit_school_year_dates(year_id: int, body: dict[str, Any]) -> dict[str, Any]
     return {
         "success": True,
         "message": (
-            f'School year "{school_year.name}" dates updated successfully with automatic academic period synchronization!'
+            f'School year "{school_year.name}" dates updated — quarters, semesters, and calendar synced!'
         ),
     }
 
@@ -242,12 +224,14 @@ def generate_academic_periods(year_id: int) -> dict[str, Any]:
     if not school_year:
         raise ValueError("School year not found.")
     AcademicPeriod.query.filter_by(school_year_id=year_id).delete()
-    add_academic_periods_for_year(year_id)
+    db.session.flush()
+    sync_academic_periods_for_school_year(year_id, commit=False)
+    backfill_missing_semesters(year_id, commit=False)
     db.session.commit()
     return {
         "success": True,
         "message": (
-            f"Academic periods for {school_year.name} have been regenerated successfully with proper linking!"
+            f"Academic periods for {school_year.name} regenerated — calendar quarter/semester dates updated!"
         ),
     }
 
@@ -289,8 +273,13 @@ def add_academic_period(year_id: int, body: dict[str, Any]) -> dict[str, Any]:
         school_year_id=year_id,
     )
     db.session.add(new_period)
+    if period_type == 'quarter':
+        sync_semesters_from_quarters(year_id)
     db.session.commit()
-    return {"success": True, "message": f'Academic period "{name}" added successfully!'}
+    return {
+        "success": True,
+        "message": f'Academic period "{name}" added — calendar will show its start/end dates when this year is active.',
+    }
 
 
 def edit_academic_period(period_id: int, body: dict[str, Any]) -> dict[str, Any]:
@@ -311,5 +300,35 @@ def edit_academic_period(period_id: int, body: dict[str, Any]) -> dict[str, Any]
     db.session.commit()
     return {
         "success": True,
-        "message": f"{period.name} dates updated successfully with automatic synchronization!",
+        "message": f"{period.name} updated — related periods and calendar dates synced.",
     }
+
+
+def upload_calendar_pdf_from_request() -> dict[str, Any]:
+    """
+    Handle calendar PDF upload from multipart form (SPA or legacy).
+
+    PDF extraction is not wired yet; validates input and returns a clear message.
+    """
+    from flask import request
+
+    school_year_raw = request.form.get("school_year", "").strip()
+    if not school_year_raw:
+        raise ValueError("Select a school year for this calendar.")
+
+    school_year = SchoolYear.query.get(int(school_year_raw))
+    if not school_year:
+        raise ValueError("School year not found.")
+
+    upload = request.files.get("calendar_pdf")
+    if not upload or not upload.filename:
+        raise ValueError("A calendar PDF file is required.")
+
+    if not upload.filename.lower().endswith(".pdf"):
+        raise ValueError("Only PDF files are supported.")
+
+    # calendar_name = (request.form.get("calendar_name") or "").strip()
+    raise ValueError(
+        "PDF processing is temporarily unavailable. "
+        "Add dates manually via School Years or the calendar until this feature is re-enabled."
+    )

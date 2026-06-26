@@ -14,137 +14,182 @@ import json
 
 bp = Blueprint('calendar', __name__)
 
-def get_academic_dates_for_calendar(year, month):
-    """Get academic dates (quarters, semesters, holidays) for a specific month/year."""
-    academic_dates = []
-    
-    # Get the active school year
-    active_year = SchoolYear.query.filter_by(is_active=True).first()
-    if not active_year:
-        return academic_dates
-    
-    # Get academic periods for this month
+
+def _month_bounds(year: int, month: int) -> tuple[date, date]:
     start_of_month = date(year, month, 1)
     if month == 12:
         end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         end_of_month = date(year, month + 1, 1) - timedelta(days=1)
-    
-    # Get academic periods that overlap with this month
-    academic_periods = AcademicPeriod.query.filter(
-        AcademicPeriod.school_year_id == active_year.id,
-        AcademicPeriod.start_date <= end_of_month,
-        AcademicPeriod.end_date >= start_of_month
-    ).all()
-    
-    for period in academic_periods:
-        # Add start date event
-        if period.start_date.month == month:
-            event_type = f"{period.period_type}_start"
+    return start_of_month, end_of_month
+
+
+def _date_in_calendar_month(d: date | None, year: int, month: int) -> bool:
+    return d is not None and d.year == year and d.month == month
+
+
+def get_academic_dates_for_calendar(year, month):
+    """Academic markers for every school year overlapping this calendar month."""
+    academic_dates = []
+    start_of_month, end_of_month = _month_bounds(year, month)
+
+    overlapping_years = (
+        SchoolYear.query.filter(
+            SchoolYear.start_date.isnot(None),
+            SchoolYear.end_date.isnot(None),
+            SchoolYear.start_date <= end_of_month,
+            SchoolYear.end_date >= start_of_month,
+        )
+        .order_by(SchoolYear.start_date)
+        .all()
+    )
+
+    if not overlapping_years:
+        return academic_dates
+
+    multi_year_month = len(overlapping_years) > 1
+
+    for sy in overlapping_years:
+        period_tag = f' ({sy.name})' if (multi_year_month or not sy.is_active) else ''
+
+        if _date_in_calendar_month(sy.start_date, year, month):
             academic_dates.append({
-                'day': period.start_date.day,
-                'title': f"{period.name} Start",
-                'category': f"{period.period_type.title()}",
-                'type': event_type
+                'day': sy.start_date.day,
+                'title': f'{sy.name} begins',
+                'category': 'School Year',
+                'type': 'school_year_start',
+                'source': 'school_year',
+                'deletable': False,
             })
-        
-        # Add end date event
-        if period.end_date.month == month:
-            event_type = f"{period.period_type}_end"
+
+        if _date_in_calendar_month(sy.end_date, year, month):
             academic_dates.append({
-                'day': period.end_date.day,
-                'title': f"{period.name} End",
-                'category': f"{period.period_type.title()}",
-                'type': event_type
+                'day': sy.end_date.day,
+                'title': f'{sy.name} ends',
+                'category': 'School Year',
+                'type': 'school_year_end',
+                'source': 'school_year',
+                'deletable': False,
             })
-    
-    # Get calendar events for this month
-    calendar_events = CalendarEvent.query.filter(
-        CalendarEvent.school_year_id == active_year.id,
-        CalendarEvent.start_date <= end_of_month,
-        CalendarEvent.end_date >= start_of_month
-    ).all()
-    
-    for event in calendar_events:
-        if event.start_date.month == month:
-            event_type = event.event_type if event.event_type else 'other_event'
-            academic_dates.append({
-                'day': event.start_date.day,
-                'title': event.name,
-                'category': event.event_type.replace('_', ' ').title() if event.event_type else 'Other Event',
-                'type': event_type,
-                'description': event.description or ''
-            })
-    
-    # Get teacher work days for this month
-    teacher_work_days = TeacherWorkDay.query.filter(
-        TeacherWorkDay.school_year_id == active_year.id,
-        TeacherWorkDay.date >= start_of_month,
-        TeacherWorkDay.date <= end_of_month
-    ).all()
-    
-    for work_day in teacher_work_days:
-        if work_day.date.month == month:
-            short_title = work_day.title
-            if "Professional Development" in short_title:
-                short_title = "PD Day"
-            elif "First Day" in short_title:
-                short_title = "First Day"
-            
-            academic_dates.append({
-                'day': work_day.date.day,
-                'title': short_title,
-                'category': 'Teacher Work Day',
-                'type': 'teacher_work_day',
-                'description': work_day.description or ''
-            })
-    
-    # Get school breaks for this month
-    school_breaks = SchoolBreak.query.filter(
-        SchoolBreak.school_year_id == active_year.id,
-        SchoolBreak.start_date <= end_of_month,
-        SchoolBreak.end_date >= start_of_month
-    ).all()
-    
-    for school_break in school_breaks:
-        if (school_break.start_date.month == month or 
-            school_break.end_date.month == month or
-            (school_break.start_date.month < month and school_break.end_date.month > month)):
-            
-            if school_break.start_date.month == month:
+
+        academic_periods = AcademicPeriod.query.filter(
+            AcademicPeriod.school_year_id == sy.id,
+            AcademicPeriod.start_date <= end_of_month,
+            AcademicPeriod.end_date >= start_of_month,
+        ).all()
+
+        for period in academic_periods:
+            if _date_in_calendar_month(period.start_date, year, month):
+                academic_dates.append({
+                    'day': period.start_date.day,
+                    'title': f'{period.name} Start{period_tag}',
+                    'category': period.period_type.title(),
+                    'type': f'{period.period_type}_start',
+                    'source': 'academic_period',
+                    'deletable': False,
+                })
+            if _date_in_calendar_month(period.end_date, year, month):
+                academic_dates.append({
+                    'day': period.end_date.day,
+                    'title': f'{period.name} End{period_tag}',
+                    'category': period.period_type.title(),
+                    'type': f'{period.period_type}_end',
+                    'source': 'academic_period',
+                    'deletable': False,
+                })
+
+        calendar_events = CalendarEvent.query.filter(
+            CalendarEvent.school_year_id == sy.id,
+            CalendarEvent.start_date <= end_of_month,
+            CalendarEvent.end_date >= start_of_month,
+        ).all()
+
+        for event in calendar_events:
+            if _date_in_calendar_month(event.start_date, year, month):
+                event_type = event.event_type if event.event_type else 'other_event'
+                academic_dates.append({
+                    'day': event.start_date.day,
+                    'title': event.name,
+                    'category': event.event_type.replace('_', ' ').title() if event.event_type else 'Other Event',
+                    'type': event_type,
+                    'description': event.description or '',
+                    'source': 'calendar_event',
+                    'entity_id': event.id,
+                    'deletable': True,
+                })
+
+        teacher_work_days = TeacherWorkDay.query.filter(
+            TeacherWorkDay.school_year_id == sy.id,
+            TeacherWorkDay.date >= start_of_month,
+            TeacherWorkDay.date <= end_of_month,
+        ).all()
+
+        for work_day in teacher_work_days:
+            if _date_in_calendar_month(work_day.date, year, month):
+                short_title = work_day.title
+                if 'Professional Development' in short_title:
+                    short_title = 'PD Day'
+                elif 'First Day' in short_title:
+                    short_title = 'First Day'
+
+                academic_dates.append({
+                    'day': work_day.date.day,
+                    'title': short_title,
+                    'category': 'Teacher Work Day',
+                    'type': 'teacher_work_day',
+                    'description': work_day.description or '',
+                    'source': 'teacher_work_day',
+                    'entity_id': work_day.id,
+                    'deletable': True,
+                })
+
+        school_breaks = SchoolBreak.query.filter(
+            SchoolBreak.school_year_id == sy.id,
+            SchoolBreak.start_date <= end_of_month,
+            SchoolBreak.end_date >= start_of_month,
+        ).all()
+
+        for school_break in school_breaks:
+            if _date_in_calendar_month(school_break.start_date, year, month):
                 short_name = school_break.name
-                if "Thanksgiving" in short_name:
-                    short_name = "Thanksgiving"
-                elif "Winter" in short_name:
-                    short_name = "Winter"
-                elif "Spring" in short_name:
-                    short_name = "Spring"
-                
+                if 'Thanksgiving' in short_name:
+                    short_name = 'Thanksgiving'
+                elif 'Winter' in short_name:
+                    short_name = 'Winter'
+                elif 'Spring' in short_name:
+                    short_name = 'Spring'
+
                 academic_dates.append({
                     'day': school_break.start_date.day,
-                    'title': f"{short_name} Start",
+                    'title': f'{short_name} Start{period_tag}',
                     'category': school_break.break_type,
                     'type': 'school_break_start',
-                    'description': school_break.description or ''
+                    'description': school_break.description or '',
+                    'source': 'school_break',
+                    'entity_id': school_break.id,
+                    'deletable': True,
                 })
-            
-            if school_break.end_date.month == month:
+
+            if _date_in_calendar_month(school_break.end_date, year, month):
                 short_name = school_break.name
-                if "Thanksgiving" in short_name:
-                    short_name = "Thanksgiving"
-                elif "Winter" in short_name:
-                    short_name = "Winter"
-                elif "Spring" in short_name:
-                    short_name = "Spring"
-                
+                if 'Thanksgiving' in short_name:
+                    short_name = 'Thanksgiving'
+                elif 'Winter' in short_name:
+                    short_name = 'Winter'
+                elif 'Spring' in short_name:
+                    short_name = 'Spring'
+
                 academic_dates.append({
                     'day': school_break.end_date.day,
-                    'title': f"{short_name} End",
+                    'title': f'{short_name} End{period_tag}',
                     'category': school_break.break_type,
                     'type': 'school_break_end',
-                    'description': school_break.description or ''
+                    'description': school_break.description or '',
+                    'source': 'school_break',
+                    'entity_id': school_break.id,
+                    'deletable': True,
                 })
-    
+
     return academic_dates
 
 
@@ -331,6 +376,12 @@ def delete_calendar_event(event_id):
 @management_required
 def school_breaks():
     """View and manage school breaks"""
+    from utils.spa_management_urls import spa_calendar_school_breaks_redirect
+
+    spa_redirect = spa_calendar_school_breaks_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     # Get active school year
     active_year = SchoolYear.query.filter_by(is_active=True).first()
     if not active_year:
@@ -459,9 +510,14 @@ def delete_school_break(break_id):
 @management_required
 def upload_calendar_pdf():
     """Upload and process a school calendar PDF."""
-    # PDF processing temporarily disabled due to import issues
-    flash('PDF processing is temporarily unavailable. Please check back later.', 'warning')
-    return redirect(url_for('management.calendar'))
+    from management_routes.school_years_spa_helpers import upload_calendar_pdf_from_request
+
+    try:
+        result = upload_calendar_pdf_from_request()
+        flash(result['message'], 'success' if result.get('success') else 'warning')
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+    return redirect(url_for('management.school_years'))
 
 
 # def process_calendar_pdf(filepath):

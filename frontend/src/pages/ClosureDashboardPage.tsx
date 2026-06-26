@@ -8,8 +8,7 @@ import {
   runClosureAction,
 } from '../api/schoolYearClosure'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
-import { CLOSURE_LEGACY_CSS } from '../config/legacyPages'
-import { useLegacyStyles } from '../hooks/useLegacyStyles'
+import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
 import type { ClosureDashboardResponse, ClosureExtension } from '../types/schoolYearClosure'
 import {
   adminWindowPhaseState,
@@ -24,7 +23,6 @@ import { daysUntilLabel, formatDateLong, formatDateTime } from '../utils/formatD
 type ModalId = 'postpone' | 'reset' | 'advance' | 'finalize' | 'cancel' | 'reopen' | 'extension' | null
 
 export function ClosureDashboardPage() {
-  useLegacyStyles([CLOSURE_LEGACY_CSS])
   const { closureId: closureIdParam } = useParams()
   const closureId = closureIdParam && /^\d+$/.test(closureIdParam) ? Number(closureIdParam) : null
 
@@ -74,35 +72,41 @@ export function ClosureDashboardPage() {
 
   if (!closureId) {
     return (
-      <div className="mgmt-syc container-fluid px-0 px-md-1">
-        <div className="mgmt-syc-shell p-5">
-          <p>Invalid closure.</p>
-          <Link to="/management/school-year/closure/schedule" className="mgmt-syc-btn mgmt-syc-btn--ghost">
-            Schedule closure
-          </Link>
+      <LegacyMgmtScope>
+        <div className="mgmt-syc container-fluid px-0 px-md-1">
+          <div className="mgmt-syc-shell p-5">
+            <p>Invalid closure.</p>
+            <Link to="/management/school-year/closure/schedule" className="mgmt-syc-btn mgmt-syc-btn--ghost">
+              Schedule closure
+            </Link>
+          </div>
         </div>
-      </div>
+      </LegacyMgmtScope>
     )
   }
 
   if (loading) {
     return (
-      <div className="mgmt-syc container-fluid px-0 px-md-1">
-        <div className="mgmt-syc-shell p-5 text-center">Loading closure…</div>
-      </div>
+      <LegacyMgmtScope>
+        <div className="mgmt-syc container-fluid px-0 px-md-1">
+          <div className="mgmt-syc-shell p-5 text-center">Loading closure…</div>
+        </div>
+      </LegacyMgmtScope>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="mgmt-syc container-fluid px-0 px-md-1">
-        <div className="mgmt-syc-shell p-5">
-          <p>{error || 'Could not load closure'}</p>
-          <Link to="/management/calendar" className="mgmt-syc-btn mgmt-syc-btn--ghost">
-            School calendar
-          </Link>
+      <LegacyMgmtScope>
+        <div className="mgmt-syc container-fluid px-0 px-md-1">
+          <div className="mgmt-syc-shell p-5">
+            <p>{error || 'Could not load closure'}</p>
+            <Link to="/management/calendar" className="mgmt-syc-btn mgmt-syc-btn--ghost">
+              School calendar
+            </Link>
+          </div>
         </div>
-      </div>
+      </LegacyMgmtScope>
     )
   }
 
@@ -113,7 +117,8 @@ export function ClosureDashboardPage() {
   const isFinalized = phase === 'finalized'
 
   return (
-    <>
+    <LegacyMgmtScope>
+      <>
       <div className="mgmt-syc container-fluid px-0 px-md-1">
         <div className="mgmt-syc-shell">
           {flash ? (
@@ -534,6 +539,7 @@ export function ClosureDashboardPage() {
         }}
       />
     </>
+    </LegacyMgmtScope>
   )
 }
 

@@ -92,3 +92,10 @@ from api_spa import redo as _spa_redo  # noqa: F401, E402
 from api_spa import calendar as _spa_calendar  # noqa: F401, E402
 from api_spa import school_year_closure as _spa_school_year_closure  # noqa: F401, E402
 from api_spa import school_years as _spa_school_years  # noqa: F401, E402
+from api_spa import attendance as _spa_attendance  # noqa: F401, E402
+from api_spa import report_cards as _spa_report_cards  # noqa: F401, E402
+from api_spa import grade_standards as _spa_grade_standards  # noqa: F401, E402
+from api_spa import billing as _spa_billing  # noqa: F401, E402
+from api_spa import student_jobs as _spa_student_jobs  # noqa: F401, E402
+from api_spa import settings as _spa_settings  # noqa: F401, E402
+from api_spa import bug_reports as _spa_bug_reports  # noqa: F401, E402

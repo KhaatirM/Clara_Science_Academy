@@ -34,6 +34,12 @@ def _parse_dt_ymd(s):
 @management_required
 def billing():
     """Billing and financials management"""
+    from utils.spa_management_urls import spa_billing_redirect
+
+    spa_resp = spa_billing_redirect()
+    if spa_resp is not None:
+        return spa_resp
+
     # Placeholder metrics until billing models are connected
     from utils.student_roster import active_roster_students_query
     students = active_roster_students_query(require_active_enrollment=False).order_by(
@@ -98,6 +104,13 @@ def record_payment():
 @management_required
 def settings():
     """Management settings page."""
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_settings_redirect
+
+        spa_resp = spa_settings_redirect()
+        if spa_resp is not None:
+            return spa_resp
+
     # Check if admin has connected their Google account
     user = User.query.get(current_user.id)
     google_connected = user.google_refresh_token is not None

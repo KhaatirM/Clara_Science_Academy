@@ -68,6 +68,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
     id: 'attendance',
     label: 'Attendance',
     icon: 'bi-calendar-check-fill',
+    reactTo: '/management/attendance',
     legacyHref: '/management/unified-attendance',
     perm: 'attendance:manage',
   },
@@ -75,6 +76,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
     id: 'report-cards',
     label: 'Report Cards',
     icon: 'bi-mortarboard-fill',
+    reactTo: '/management/report-cards',
     legacyHref: '/management/report-cards',
     perm: ['report_cards:view', 'report_cards:generate'],
   },
@@ -82,6 +84,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
     id: 'billing',
     label: 'Billing & Financials',
     icon: 'bi-currency-dollar',
+    reactTo: '/management/billing',
     legacyHref: '/management/billing',
     perm: 'billing:manage',
   },
@@ -97,19 +100,15 @@ export const MANAGEMENT_NAV: NavItem[] = [
     id: 'student-jobs',
     label: 'Student Jobs',
     icon: 'bi-briefcase-fill',
+    reactTo: '/management/student-jobs',
     legacyHref: '/management/student-jobs',
     adminOnly: true,
-  },
-  {
-    id: 'bug-reports',
-    label: 'Bug Reports',
-    icon: 'bi-bug-fill',
-    legacyHref: '/bug-reports',
   },
   {
     id: 'settings',
     label: 'Settings',
     icon: 'bi-gear-fill',
+    reactTo: '/management/settings',
     legacyHref: '/management/settings',
   },
 ]
@@ -122,6 +121,10 @@ export function navItemLabel(item: NavItem, user: SessionUser): string {
 }
 
 export function hasNavAccess(user: SessionUser, item: NavItem): boolean {
+  if (item.id === 'billing') {
+    if (user.role_canonical === 'Director') return true
+    return user.permissions.includes('billing:manage')
+  }
   if (item.adminOnly && !user.management_entry) {
     return false
   }

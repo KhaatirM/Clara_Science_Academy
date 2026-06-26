@@ -12,6 +12,11 @@ MGMT_NAV_ROUTES: dict[str, tuple[str, str]] = {
     "teachers": ("teachers", "management.teachers"),
     "classes": ("classes", "management.classes"),
     "assignments": ("assignments", "management.assignments_and_grades"),
+    "attendance": ("attendance", "management.unified_attendance"),
+    "report-cards": ("report-cards", "management.report_cards"),
+    "billing": ("billing", "management.billing"),
+    "student-jobs": ("student-jobs", "management.student_jobs"),
+    "settings": ("settings", "management.settings"),
 }
 
 
@@ -271,6 +276,39 @@ def spa_class_workflow_redirect(class_id: int, suffix: str = ""):
     return redirect(path)
 
 
+def spa_billing_redirect():
+    """Redirect legacy billing GET to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    return redirect("/app/management/billing")
+
+
+def spa_student_jobs_redirect():
+    """Redirect legacy student jobs GET to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    return redirect("/app/management/student-jobs")
+
+
+def spa_settings_redirect():
+    """Redirect legacy settings GET to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    return redirect("/app/management/settings")
+
+
 def spa_calendar_redirect():
     """Redirect legacy school calendar GET to the React SPA."""
     from flask import redirect, request
@@ -284,6 +322,17 @@ def spa_calendar_redirect():
     if query:
         path = f"{path}?{query}"
     return redirect(path)
+
+
+def spa_calendar_school_breaks_redirect():
+    """Redirect legacy school-breaks page to the SPA calendar breaks modal."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    return redirect("/app/management/calendar?open=school-breaks")
 
 
 def spa_closure_schedule_redirect():

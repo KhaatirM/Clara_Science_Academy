@@ -1,4 +1,4 @@
-import { apiFetch } from './client'
+import { apiFetch, getCsrfToken } from './client'
 import type { ActionResponse, SchoolYearsPageResponse } from '../types/schoolYears'
 
 export async function fetchSchoolYearsPage() {
@@ -64,4 +64,26 @@ export async function editSchoolYearPeriod(
     method: 'PATCH',
     body: JSON.stringify(body),
   })
+}
+
+export async function uploadCalendarPdf(form: FormData): Promise<{ message: string }> {
+  const csrf = getCsrfToken()
+  if (csrf) form.append('csrf_token', csrf)
+
+  const response = await fetch('/api/spa/school-years/upload-calendar-pdf', {
+    method: 'POST',
+    body: form,
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(csrf ? { 'X-CSRFToken': csrf } : {}),
+    },
+  })
+
+  const data = (await response.json().catch(() => ({}))) as ActionResponse
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Could not upload calendar PDF')
+  }
+  return { message: data.message || 'Calendar PDF uploaded.' }
 }

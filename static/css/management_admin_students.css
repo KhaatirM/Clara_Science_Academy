@@ -112,6 +112,16 @@
   color: #fff;
   filter: brightness(1.05);
 }
+
+/* Scoped Bootstrap Reboot sets button { border-radius: 0 } — restore pill buttons */
+.legacy-mgmt-bootstrap .mgmt-stu button.mgmt-stu-btn {
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 .mgmt-stu-insights {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -119,7 +129,10 @@
   margin-bottom: 1.25rem;
 }
 @media (min-width: 768px) {
-  .mgmt-stu-insights { grid-template-columns: repeat(4, 1fr); }
+  .mgmt-stu-insights { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1100px) {
+  .mgmt-stu-insights { grid-template-columns: repeat(5, 1fr); }
 }
 .mgmt-stu-insight {
   display: flex;
@@ -533,6 +546,35 @@ STUDENTS TAB STYLES ==================== */
     }
 
     /* Student Action Buttons */
+.mgmt-stu-content .students-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  min-width: 11rem;
+}
+
+.mgmt-stu-content .students-action-group .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.mgmt-stu-content .students-action-group .btn .bi {
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+  font-size: 0.95rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .mgmt-stu-content .btn-students-action-view {
         background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
         color: white;
@@ -1046,4 +1088,458 @@ STUDENTS TAB STYLES ==================== */
         }
     }
 
-    /* ==================== 
+/* SPA student modals */
+.mgmt-stu-modal .mgmt-cal-modal-backdrop {
+  background: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(4px);
+}
+
+.mgmt-stu-modal .mgmt-cal-modal-dialog {
+  animation: mgmt-stu-modal-in 0.22s ease-out;
+}
+
+@keyframes mgmt-stu-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mgmt-stu-modal .modal-content {
+  border: none !important;
+  border-radius: 1rem !important;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22) !important;
+}
+
+.mgmt-stu-modal-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 55%, #115e59 100%);
+  border: none;
+  border-radius: 1rem 1rem 0 0;
+  padding: 1.15rem 1.35rem !important;
+}
+
+.mgmt-stu-modal-header .modal-title {
+  font-size: 1.05rem;
+}
+
+.mgmt-stu-modal-header--edit {
+  background: linear-gradient(135deg, #0891b2 0%, #0d9488 55%, #0f766e 100%);
+}
+
+.mgmt-stu-modal-body {
+  background: #f1f5f9;
+  padding: 1.25rem 1.35rem !important;
+}
+
+.mgmt-stu-detail-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin: -0.25rem 0 1.15rem;
+  background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.mgmt-stu-detail-avatar {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f766e;
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+  border: 2px solid #5eead4;
+}
+
+.mgmt-stu-detail-hero h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0 0 0.2rem;
+  color: #0f172a;
+}
+
+.mgmt-stu-detail-hero .mgmt-stu-detail-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.mgmt-stu-detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1.15rem;
+}
+
+.mgmt-stu-detail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.mgmt-stu-detail-chip .bi {
+  font-family: bootstrap-icons !important;
+  color: #0d9488;
+}
+
+.mgmt-stu-modal-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.mgmt-stu-modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.mgmt-stu-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 0.85rem 1.25rem !important;
+  border-top: 1px solid #e2e8f0 !important;
+  background: #fff;
+  border-radius: 0 0 1rem 1rem;
+}
+
+.mgmt-stu-modal-footer .mgmt-stu-btn--footer-close {
+  min-width: 6.5rem;
+  padding: 0.55rem 1.15rem;
+  font-weight: 600;
+  border-radius: 10px;
+  color: #334155 !important;
+  background: linear-gradient(180deg, #fff, #f8fafc) !important;
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.mgmt-stu-modal-footer .mgmt-stu-btn--footer-close:hover {
+  color: #0f172a !important;
+  border-color: rgba(13, 148, 136, 0.45) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-stu-modal .bi {
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+}
+
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--footer-close {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+/* Modals render in .legacy-mgmt-portal — scoped Bootstrap resets button backgrounds */
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--footer-save,
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--primary {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  min-width: 8.5rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  color: #fff !important;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--footer-save:hover:not(:disabled),
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.42);
+  color: #fff !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--footer-save:disabled,
+.legacy-mgmt-bootstrap .mgmt-stu-modal button.mgmt-stu-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.mgmt-stu-modal-block {
+  margin-bottom: 1rem;
+}
+
+.mgmt-stu-modal-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.mgmt-stu-modal-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+}
+
+.mgmt-stu-modal-dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.mgmt-stu-modal-dd {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.mgmt-stu-form-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0f766e;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.2);
+}
+
+/* Mobile: students list, actions, modals */
+@media (max-width: 768px) {
+  .mgmt-stu-content .students-table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mgmt-stu-content .students-table-body .table {
+    min-width: 640px;
+  }
+
+  .mgmt-stu-content .students-action-group {
+    min-width: 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mgmt-stu-content .students-action-group .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .legacy-mgmt-portal .mgmt-stu-modal .modal-dialog {
+    margin: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+
+  .mgmt-stu-modal-body {
+    padding: 1rem !important;
+  }
+
+  .mgmt-stu-detail-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .mgmt-stu-detail-chips {
+    justify-content: center;
+  }
+
+  .mgmt-stu-insights {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ===== Grouped by grade view ===== */
+.mgmt-stu-content .students-grouped-body {
+  padding: 0.25rem 0 1rem;
+}
+
+.mgmt-stu-content .grade-group-section {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.mgmt-stu-content .grade-group-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 55%, #115e59 100%);
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mgmt-stu-content .grade-group-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.35rem;
+}
+
+.mgmt-stu-content .grade-group-header h5 {
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.mgmt-stu-content .grade-group-header small {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.mgmt-stu-content .grade-group-body {
+  padding: 1.25rem;
+  background: #f1f5f9;
+}
+
+.mgmt-stu-content .student-grouped-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e2e8f0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mgmt-stu-content .student-grouped-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+}
+
+.mgmt-stu-content .student-card-alert-critical {
+  border-left: 4px solid #dc3545;
+}
+
+.mgmt-stu-content .student-card-alert-warning {
+  border-left: 4px solid #ffc107;
+}
+
+.mgmt-stu-content .student-card-alert-excellent {
+  border-left: 4px solid #198754;
+}
+
+.mgmt-stu-content .student-grouped-header {
+  padding: 1rem 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mgmt-stu-content .student-grouped-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.mgmt-stu-content .student-grouped-info h6 {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.15rem;
+}
+
+.mgmt-stu-content .student-grouped-info small {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.mgmt-stu-content .student-grouped-stats {
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  justify-content: space-around;
+  gap: 0.75rem;
+}
+
+.mgmt-stu-content .grouped-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.mgmt-stu-content .grouped-stat-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  background: #f1f5f9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0d9488;
+  font-size: 1rem;
+}
+
+.mgmt-stu-content .grouped-stat-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.mgmt-stu-content .grouped-stat-label {
+  font-size: 0.68rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.mgmt-stu-content .student-grouped-footer {
+  padding: 0.85rem 1.15rem 1.1rem;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  margin-top: auto;
+}
+
+.mgmt-stu-content .student-grouped-footer .students-action-group {
+  min-width: 0;
+  width: 100%;
+} 

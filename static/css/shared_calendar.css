@@ -248,6 +248,18 @@
     color: white;
 }
 
+.calendar-event.event-school_year_start,
+.calendar-legend-item.event-school_year_start {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    color: white;
+}
+
+.calendar-event.event-school_year_end,
+.calendar-legend-item.event-school_year_end {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    color: white;
+}
+
 .calendar-event.event-teacher_work_day,
 .calendar-legend-item.event-teacher_work_day {
     background: linear-gradient(135deg, #fd7e14 0%, #e8650e 100%);

@@ -6,7 +6,7 @@ from flask import jsonify, request
 from flask_login import current_user, login_required
 
 from decorators import permissions_required
-from management_routes.students import _can_student_admin_ui, query_students_list
+from management_routes.students import _can_student_admin_ui, query_students_list, serialize_student_detail
 
 from . import spa_api_blueprint
 
@@ -27,3 +27,13 @@ def students_list():
             },
         }
     )
+
+
+@spa_api_blueprint.route("/students/<int:student_id>")
+@login_required
+@permissions_required("students:view", "students:edit")
+def student_detail(student_id: int):
+    try:
+        return jsonify(serialize_student_detail(student_id))
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 404

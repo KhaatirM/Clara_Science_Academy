@@ -405,7 +405,7 @@ def create_next_school_year(body: dict[str, Any]) -> dict[str, Any]:
     if auto_generate_quarters:
         try:
             add_academic_periods_for_year(new_year.id)
-            message += " Academic periods generated."
+            message += " Academic periods and calendar dates generated."
         except Exception as exc:
             message += f" Warning: could not generate periods: {exc}"
 

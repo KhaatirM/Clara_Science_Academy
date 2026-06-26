@@ -69,15 +69,35 @@ export interface StudentAssignedClass {
   subject?: string | null
 }
 
+export interface StudentClassesSchoolYear {
+  id: number
+  name: string
+  is_active: boolean
+}
+
 export interface StudentParentPortalStatus {
-  linked?: boolean
-  status?: string
-  [key: string]: unknown
+  parent1?: {
+    has_email?: boolean
+    has_login?: boolean
+    is_linked?: boolean
+    username?: string | null
+    email?: string | null
+    name?: string
+  } | null
+  parent2?: {
+    has_email?: boolean
+    has_login?: boolean
+    is_linked?: boolean
+    username?: string | null
+    email?: string | null
+    name?: string
+  } | null
 }
 
 export interface StudentDetail extends Record<string, unknown> {
   id: number
   first_name: string
+  middle_name: string | null
   last_name: string
   dob: string | null
   age: number | null
@@ -91,6 +111,7 @@ export interface StudentDetail extends Record<string, unknown> {
   suggested_google_workspace_email: string | null
   gpa: number
   assigned_classes: StudentAssignedClass[]
+  assigned_classes_school_year: StudentClassesSchoolYear | null
   photo_filename: string | null
   parent1_first_name: string | null
   parent1_last_name: string | null
@@ -112,5 +133,8 @@ export interface StudentDetail extends Record<string, unknown> {
   city: string | null
   state: string | null
   zip_code: string | null
+  previous_school?: string | null
+  medical_concerns?: string | null
+  notes?: string | null
   parent_portal?: StudentParentPortalStatus | null
 }

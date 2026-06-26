@@ -148,3 +148,16 @@
   color: var(--rh-warm);
   background: var(--rh-warm-soft);
 }
+
+/* Scoped Bootstrap Reboot zeros button { border-radius: 0 } */
+.legacy-mgmt-bootstrap .fp-admin button.rh-btn {
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+}
+
+.legacy-mgmt-bootstrap .fp-admin .bi {
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+}

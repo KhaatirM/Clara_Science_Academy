@@ -632,3 +632,60 @@ body:has(.mgmt-syc) {
 .mgmt-syc-next-year-checks li { display: flex; gap: 0.5rem; align-items: flex-start; }
 .mgmt-syc-next-year-checks .bi-check2-circle { color: var(--syc-success); }
 .mgmt-syc-next-year-checks .bi-info-circle { color: var(--syc-info); }
+
+/*
+ * Scoped Bootstrap reboot overrides — restore hero buttons & icons in SPA shell.
+ */
+.legacy-mgmt-bootstrap .mgmt-syc a.mgmt-syc-btn,
+.legacy-mgmt-bootstrap .mgmt-syc button.mgmt-syc-btn {
+  text-decoration: none !important;
+  border-radius: 12px !important;
+  line-height: 1.25 !important;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.legacy-mgmt-bootstrap .mgmt-syc a.mgmt-syc-btn--ghost,
+.legacy-mgmt-bootstrap .mgmt-syc button.mgmt-syc-btn--ghost {
+  color: #fff !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-syc a.mgmt-syc-btn--ghost:hover,
+.legacy-mgmt-bootstrap .mgmt-syc button.mgmt-syc-btn--ghost:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-syc a.mgmt-syc-btn--primary,
+.legacy-mgmt-bootstrap .mgmt-syc button.mgmt-syc-btn--primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--syc-accent), var(--syc-accent-2)) !important;
+  border: none !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-syc a.mgmt-syc-btn--danger,
+.legacy-mgmt-bootstrap .mgmt-syc button.mgmt-syc-btn--danger {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--syc-danger), #c5325b) !important;
+  border: none !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-syc a.mgmt-syc-btn--outline,
+.legacy-mgmt-bootstrap .mgmt-syc button.mgmt-syc-btn--outline {
+  color: #ffc6d1 !important;
+  background: transparent !important;
+  border: 1px solid rgba(239, 79, 108, 0.55) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-syc .mgmt-syc-hero .bi,
+.legacy-mgmt-bootstrap .mgmt-syc .mgmt-syc-subtitle .bi,
+.legacy-mgmt-bootstrap .mgmt-syc .mgmt-syc-section-title .bi {
+  font-style: normal;
+  font-family: bootstrap-icons !important;
+  font-size: inherit;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: -0.125em;
+}

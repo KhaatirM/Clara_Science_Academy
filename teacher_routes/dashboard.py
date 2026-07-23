@@ -127,6 +127,12 @@ def report_card_comments(student_id):
 @teacher_required
 def teacher_dashboard():
     """Main teacher dashboard with overview and recent activity."""
+    from utils.spa_teacher_urls import spa_teacher_dashboard_redirect
+
+    spa_redirect = spa_teacher_dashboard_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     try:
         # Update assignment statuses before displaying
         update_assignment_statuses()
@@ -386,6 +392,12 @@ def teacher_dashboard():
 @teacher_required
 def view_class(class_id):
     """View detailed information for a specific class."""
+    from utils.spa_teacher_urls import spa_teacher_class_view_redirect
+
+    spa_redirect = spa_teacher_class_view_redirect(class_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     # Get teacher object or None for administrators
     teacher = get_teacher_or_admin()
     class_obj = Class.query.get_or_404(class_id)
@@ -395,9 +407,11 @@ def view_class(class_id):
         flash("You are not authorized to access this class.", "danger")
         return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
-    from services.class_google_group import try_provision_class_google_group
-    try_provision_class_google_group(class_id)
-    db.session.refresh(class_obj)
+    from services.class_google_group import class_needs_google_integration, try_provision_class_google_group
+
+    if class_needs_google_integration(class_obj):
+        try_provision_class_google_group(class_id)
+        db.session.refresh(class_obj)
 
     # Get only actively enrolled students for this class (exclude archived student records)
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -448,6 +462,12 @@ def view_class(class_id):
 @teacher_required
 def my_classes():
     """Display all classes for the current teacher."""
+    from utils.spa_teacher_urls import spa_teacher_classes_redirect
+
+    spa_redirect = spa_teacher_classes_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     try:
         # Get teacher object or None for administrators
         teacher = get_teacher_or_admin()
@@ -493,6 +513,11 @@ def my_classes():
                 # If there's an error, set count to 0
                 current_app.logger.error(f"Error calculating enrollment count for class {class_obj.id}: {e}")
                 class_obj.active_student_count = 0
+
+        from services.class_google_group import class_needs_google_integration
+
+        for class_obj in classes:
+            class_obj.show_google_integration = class_needs_google_integration(class_obj)
     
         return render_template('management/role_classes.html', classes=classes, teacher=teacher, use_teacher_hub=True)
     
@@ -719,6 +744,12 @@ def my_assignments():
 @teacher_required
 def my_students():
     """Display all students for the current teacher's classes."""
+    from utils.spa_teacher_urls import spa_teacher_students_redirect
+
+    spa_redirect = spa_teacher_students_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     # Get teacher object or None for administrators
     teacher = get_teacher_or_admin()
     
@@ -786,6 +817,12 @@ def teachers_staff():
 @teacher_required  
 def assignments_and_grades():
     """Combined view of assignments and grades for teachers"""
+    from utils.spa_teacher_urls import spa_teacher_assignments_grades_redirect
+
+    spa_redirect = spa_teacher_assignments_grades_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     import json
     try:
         from utils.school_year_filters import get_school_year_filter_context
@@ -1506,6 +1543,12 @@ def resources():
 @teacher_required
 def calendar():
     """Display the school calendar (same design and data as students/admins)."""
+    from utils.spa_teacher_urls import spa_teacher_calendar_redirect
+
+    spa_redirect = spa_teacher_calendar_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     from management_routes.calendar import get_academic_dates_for_calendar
     from models import SchoolYear
 
@@ -1568,6 +1611,12 @@ def calendar():
 @teacher_required
 def teacher_schedule():
     """Display teacher's weekly class schedule."""
+    from utils.spa_teacher_urls import spa_teacher_schedule_redirect
+
+    spa_redirect = spa_teacher_schedule_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     from models import ClassSchedule
     
     # Get teacher object or None for administrators

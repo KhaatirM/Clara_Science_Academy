@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { submitStudentAddForm } from '../api/students'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import { StaffCredentialModal } from '../components/staff/StaffCredentialModal'
 import {
   buildEntranceSchoolYearOptions,
@@ -88,7 +89,8 @@ export function StudentFormPage() {
   }
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell>
+      <MgmtBootstrapRoot>
       <div className="mgmt-stu container-fluid px-0 px-md-1">
         <div className="mgmt-stu-shell">
           {credentialModal ? (
@@ -333,6 +335,7 @@ export function StudentFormPage() {
           </div>
         </div>
       </div>
-    </LegacyMgmtScope>
+      </MgmtBootstrapRoot>
+    </ManagementPageShell>
   )
 }

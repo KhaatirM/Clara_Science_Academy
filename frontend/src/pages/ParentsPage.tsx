@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { fetchParentsHub, provisionAllParentLogins } from '../api/parents'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ParentAccountItem, ParentsHubStats } from '../types/parents'
 
@@ -190,7 +191,7 @@ export function ParentsPage() {
   }
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-rose-50 via-orange-50/70 to-amber-50 p-5 md:p-8">
+    <ManagementPageShell director={isDirector}>
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-muted">Management</p>
@@ -214,7 +215,7 @@ export function ParentsPage() {
               type="button"
               onClick={() => void handleProvisionAll()}
               disabled={provisioning}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105 disabled:opacity-60"
+              className="spa-mgmt-btn-primary rounded-full px-3.5 py-2 text-[0.82rem] shadow-sm disabled:opacity-60"
             >
               <i className="bi bi-person-plus" aria-hidden />
               {provisioning ? 'Provisioning…' : 'Provision all parent logins'}
@@ -296,6 +297,6 @@ export function ParentsPage() {
         </Link>{' '}
         and use Family portal access in the edit view.
       </p>
-    </div>
+    </ManagementPageShell>
   )
 }

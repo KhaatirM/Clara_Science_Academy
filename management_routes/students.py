@@ -2733,7 +2733,12 @@ def get_team_detailed_description(team):
 @login_required
 def student_jobs():
     """Student Jobs management page for cleaning crews, computer teams, and other teams"""
+    from utils.spa_student_urls import spa_student_jobs_redirect as spa_student_portal_jobs_redirect
     from utils.spa_management_urls import spa_student_jobs_redirect
+
+    spa_student = spa_student_portal_jobs_redirect()
+    if spa_student is not None:
+        return spa_student
 
     spa_resp = spa_student_jobs_redirect()
     if spa_resp is not None:
@@ -3276,10 +3281,35 @@ def api_save_inspection():
 @login_required
 @management_required
 def api_dynamic_teams():
-    """GET: list dynamic teams (empty). POST: not implemented."""
+    """GET: list non-cleaning/custom teams. POST: create a new team."""
+    from management_routes.student_jobs_spa_helpers import create_cleaning_team
+
     if request.method == 'GET':
-        return jsonify({'success': True, 'teams': []})
-    return jsonify({'success': False, 'error': 'Creating new teams from this panel is not available. Use existing cleaning teams.'}), 400
+        try:
+            teams = CleaningTeam.query.filter_by(is_active=True).order_by(CleaningTeam.team_name).all()
+            payload = [
+                {
+                    'id': team.id,
+                    'name': team.team_name,
+                    'type': getattr(team, 'team_type', None) or 'other',
+                    'description': team.team_description or '',
+                }
+                for team in teams
+                if getattr(team, 'team_type', None) not in (None, 'cleaning', 'computer')
+            ]
+        except Exception:
+            payload = []
+        return jsonify({'success': True, 'teams': payload})
+
+    data = request.get_json(silent=True) or {}
+    result = create_cleaning_team(
+        name=data.get('name', ''),
+        description=data.get('description', ''),
+        team_type=data.get('type') or data.get('team_type') or 'other',
+        student_ids=data.get('members') or data.get('student_ids') or [],
+    )
+    status = 200 if result.get('success') else 400
+    return jsonify(result), status
 
 
 # ============================================================

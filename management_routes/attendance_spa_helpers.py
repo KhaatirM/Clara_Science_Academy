@@ -153,11 +153,8 @@ def query_unified_attendance_hub(
                 "attendance_taken": attendance_taken,
                 "today_present": today_present,
                 "today_absent": today_absent,
-                "take_attendance_url": (
-                    url_for("management.take_class_attendance", class_id=class_obj.id)
-                    + f"?date={class_date_str_out}"
-                ),
-                "view_class_url": url_for("management.view_class", class_id=class_obj.id),
+                "take_attendance_url": f"/app/management/attendance/take/{class_obj.id}?date={class_date_str_out}",
+                "view_class_url": f"/app/management/classes/{class_obj.id}",
             }
         )
 
@@ -515,3 +512,355 @@ def mark_class_all_present(class_id: int, date_str: str) -> dict[str, Any]:
         return {"success": False, "message": f"Error marking all present: {exc}"}
 
     return {"success": True, "message": "All students marked as present."}
+
+
+def query_take_class_attendance(class_id: int, date_str: str | None = None) -> dict[str, Any]:
+    """Payload for class-period attendance (React SPA)."""
+    from utils.attendance_status import (
+        VALID_ATTENDANCE_STATUSES,
+        attendance_status_form_value,
+        count_class_attendance_stats,
+    )
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not getattr(class_obj, "school_year_id", None):
+        raise ValueError("This class is not associated with an active school year.")
+    if getattr(class_obj, "is_active", True) is False:
+        raise ValueError("This class is archived or inactive.")
+
+    enrolled = (
+        db.session.query(Student)
+        .join(Enrollment)
+        .filter(Enrollment.class_id == class_id, Enrollment.is_active.is_(True))
+        .order_by(Student.last_name, Student.first_name)
+        .all()
+    )
+    if not enrolled:
+        raise ValueError("No students are enrolled in this class.")
+
+    today = datetime.now().date()
+    attendance_date, attendance_date_str = _parse_date_arg(date_str, today)
+    if attendance_date > today:
+        attendance_date = today
+        attendance_date_str = today.strftime("%Y-%m-%d")
+
+    existing_records = {
+        rec.student_id: rec
+        for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()
+    }
+    school_day_records = {
+        rec.student_id: rec
+        for rec in SchoolDayAttendance.query.filter_by(date=attendance_date).all()
+    }
+    selected_rows = list(existing_records.values())
+    stats = count_class_attendance_stats(selected_rows, len(enrolled))
+    stats["total"] = len(enrolled)
+    stats["suspended"] = sum(
+        1 for rec in selected_rows if (rec.status or "").strip().lower() == "suspended"
+    )
+
+    rows = []
+    for student in enrolled:
+        rec = existing_records.get(student.id)
+        school_day = school_day_records.get(student.id)
+        rows.append(
+            {
+                "student_id": student.id,
+                "display_name": f"{student.first_name or ''} {student.last_name or ''}".strip(),
+                "grade_level": getattr(student, "grade_level", None),
+                "status": attendance_status_form_value(rec.status) if rec else "",
+                "notes": (rec.notes or "") if rec else "",
+                "school_day_status": school_day.status if school_day else None,
+            }
+        )
+
+    return {
+        "class": {
+            "id": class_obj.id,
+            "name": class_obj.name,
+            "subject": getattr(class_obj, "subject", None),
+        },
+        "date": attendance_date_str,
+        "statuses": list(VALID_ATTENDANCE_STATUSES),
+        "rows": rows,
+        "stats": stats,
+        "urls": {
+            "attendance_hub": "/app/management/attendance",
+            "class_view": f"/app/management/classes/{class_id}",
+        },
+    }
+
+
+def save_take_class_attendance(
+    class_id: int,
+    date_str: str,
+    entries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    from utils.attendance_status import VALID_ATTENDANCE_STATUSES, normalize_attendance_status
+
+    Class.query.get_or_404(class_id)
+    try:
+        attendance_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return {"success": False, "message": "Invalid date. Use YYYY-MM-DD."}
+
+    if attendance_date > datetime.now().date():
+        return {"success": False, "message": "Cannot record attendance for a future date."}
+
+    teacher_id = getattr(current_user, "teacher_staff_id", None)
+    saved = 0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        student_id = entry.get("student_id")
+        status = normalize_attendance_status(entry.get("status"))
+        notes = (entry.get("notes") or "").strip()
+        if not student_id or not status:
+            continue
+        if status not in VALID_ATTENDANCE_STATUSES:
+            continue
+        enrollment = Enrollment.query.filter_by(
+            student_id=int(student_id),
+            class_id=class_id,
+            is_active=True,
+        ).first()
+        if not enrollment:
+            continue
+        record = Attendance.query.filter_by(
+            student_id=int(student_id),
+            class_id=class_id,
+            date=attendance_date,
+        ).first()
+        if record:
+            record.status = status
+            record.notes = notes
+            record.teacher_id = teacher_id
+        else:
+            db.session.add(
+                Attendance(
+                    student_id=int(student_id),
+                    class_id=class_id,
+                    date=attendance_date,
+                    status=status,
+                    notes=notes,
+                    teacher_id=teacher_id,
+                )
+            )
+        saved += 1
+
+    if not saved:
+        return {"success": False, "message": "No attendance rows were saved."}
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        return {"success": False, "message": f"Error saving attendance: {exc}"}
+    return {
+        "success": True,
+        "message": "Attendance recorded successfully.",
+        "redirect_url": f"/app/management/attendance?class_date={date_str}",
+    }
+
+
+def query_class_attendance_records(
+    class_id: int,
+    *,
+    start_date_str: str | None = None,
+    end_date_str: str | None = None,
+    student_id: int | None = None,
+    status_filter: str | None = None,
+) -> dict[str, Any]:
+    from datetime import timedelta
+    from sqlalchemy.orm import joinedload
+
+    class_obj = Class.query.get_or_404(class_id)
+    today = datetime.now().date()
+    if not start_date_str:
+        start_date = today - timedelta(days=30)
+    else:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            start_date = today - timedelta(days=30)
+
+    if not end_date_str:
+        end_date = today
+    else:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            end_date = today
+
+    query = (
+        Attendance.query.options(joinedload(Attendance.student))
+        .join(Student)
+        .filter(
+            Attendance.class_id == class_id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date,
+        )
+    )
+    if student_id:
+        query = query.filter(Attendance.student_id == student_id)
+    if status_filter:
+        query = query.filter(Attendance.status.ilike(f"%{status_filter}%"))
+
+    records = query.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all()
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students = [
+        {
+            "id": e.student.id,
+            "display_name": f"{e.student.first_name or ''} {e.student.last_name or ''}".strip(),
+            "student_id": getattr(e.student, "student_id", None),
+        }
+        for e in enrollments
+        if e.student is not None
+    ]
+
+    records_by_date: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        if not record.student:
+            continue
+        date_key = record.date.isoformat()
+        records_by_date.setdefault(date_key, []).append(
+            {
+                "id": record.id,
+                "student_id": record.student_id,
+                "display_name": f"{record.student.first_name or ''} {record.student.last_name or ''}".strip(),
+                "status": record.status or "",
+                "notes": record.notes or "",
+            }
+        )
+
+    total_records = len(records)
+    present_count = sum(1 for r in records if (r.status or "").lower() == "present")
+    late_count = sum(1 for r in records if (r.status or "").lower() == "late")
+    absent_count = sum(
+        1
+        for r in records
+        if (r.status or "").lower() in ("absent", "unexcused absence", "excused absence")
+    )
+
+    return {
+        "class": {
+            "id": class_obj.id,
+            "name": class_obj.name,
+            "subject": getattr(class_obj, "subject", None),
+        },
+        "students": students,
+        "records_by_date": records_by_date,
+        "summary": {
+            "total": total_records,
+            "present": present_count,
+            "late": late_count,
+            "absent": absent_count,
+            "rate": round((present_count / total_records * 100) if total_records > 0 else 0, 1),
+        },
+        "filters": {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "student_id": student_id,
+            "status": status_filter or "",
+        },
+    }
+
+
+def process_attendance_csv_upload(class_id: int, file_storage, teacher_id: int | None) -> dict[str, Any]:
+    import csv
+    import io
+    from datetime import date as date_cls
+
+    Class.query.get_or_404(class_id)
+    if not file_storage or not getattr(file_storage, "filename", ""):
+        return {"success": False, "message": "No file uploaded."}
+    if not file_storage.filename.lower().endswith(".csv"):
+        return {"success": False, "message": "Please upload a CSV file."}
+
+    stream = io.StringIO(file_storage.stream.read().decode("UTF-8"), newline=None)
+    csv_reader = csv.DictReader(stream)
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    student_id_map = {
+        enrollment.student.student_id: enrollment.student.id
+        for enrollment in enrollments
+        if enrollment.student and enrollment.student.student_id
+    }
+    valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
+    records_added = 0
+    records_updated = 0
+    records_skipped = 0
+    errors: list[str] = []
+
+    for row_num, row in enumerate(csv_reader, start=2):
+        try:
+            date_str = (row.get("Date (MM/DD/YYYY)") or "").strip()
+            if date_str.startswith("#") or not date_str:
+                continue
+            student_id_str = (row.get("Student ID") or "").strip()
+            status = (row.get("Status") or "").strip()
+            notes = (row.get("Notes (Optional)") or "").strip()
+            if not date_str or not student_id_str or not status:
+                errors.append(f"Row {row_num}: Missing required fields")
+                records_skipped += 1
+                continue
+            try:
+                attendance_date = datetime.strptime(date_str, "%m/%d/%Y").date()
+            except ValueError:
+                try:
+                    attendance_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    errors.append(f'Row {row_num}: Invalid date "{date_str}"')
+                    records_skipped += 1
+                    continue
+            if attendance_date > date_cls.today():
+                errors.append(f"Row {row_num}: Future date {date_str}")
+                records_skipped += 1
+                continue
+            if status not in valid_statuses:
+                errors.append(f'Row {row_num}: Invalid status "{status}"')
+                records_skipped += 1
+                continue
+            if student_id_str not in student_id_map:
+                errors.append(f'Row {row_num}: Student ID "{student_id_str}" not in roster')
+                records_skipped += 1
+                continue
+            student_db_id = student_id_map[student_id_str]
+            existing_record = Attendance.query.filter_by(
+                class_id=class_id,
+                student_id=student_db_id,
+                date=attendance_date,
+            ).first()
+            if existing_record:
+                existing_record.status = status
+                existing_record.notes = notes or existing_record.notes
+                existing_record.teacher_id = teacher_id
+                records_updated += 1
+            else:
+                db.session.add(
+                    Attendance(
+                        class_id=class_id,
+                        student_id=student_db_id,
+                        date=attendance_date,
+                        status=status,
+                        notes=notes,
+                        teacher_id=teacher_id,
+                    )
+                )
+                records_added += 1
+        except Exception as exc:
+            errors.append(f"Row {row_num}: {exc}")
+            records_skipped += 1
+
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        return {"success": False, "message": f"Error saving CSV data: {exc}"}
+
+    return {
+        "success": True,
+        "message": f"CSV processed: {records_added} added, {records_updated} updated, {records_skipped} skipped.",
+        "records_added": records_added,
+        "records_updated": records_updated,
+        "records_skipped": records_skipped,
+        "errors": errors[:20],
+    }

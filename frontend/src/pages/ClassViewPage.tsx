@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { Link, useOutletContext, useParams } from 'react-router-dom'
+import type { AssessmentToolSlug } from '../api/classTools'
 import { fetchClassDetail } from '../api/classes'
+import { ClassAnalyticsModal } from '../components/classes/ClassAnalyticsModal'
+import { ClassAssessmentToolModal } from '../components/classes/ClassAssessmentToolModal'
+import { ClassDeadlineRemindersModal } from '../components/classes/ClassDeadlineRemindersModal'
 import { ClassManagementPanel } from '../components/classes/ClassManagementPanel'
 import { ClassSubpageShell } from '../components/classes/ClassSubpageShell'
 import { ClassWorkflowNav } from '../components/classes/ClassWorkflowNav'
@@ -59,11 +63,13 @@ export function ClassViewPage() {
   const { user } = useOutletContext<ManagementOutletContext>()
   const { classId } = useParams()
   const id = Number(classId)
-  const navigate = useNavigate()
   const isDirector = user.role_canonical === 'Director'
   const [data, setData] = useState<ClassDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [deadlineRemindersOpen, setDeadlineRemindersOpen] = useState(false)
+  const [assessmentTool, setAssessmentTool] = useState<AssessmentToolSlug | null>(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -97,6 +103,8 @@ export function ClassViewPage() {
   }
 
   const pendingAssistantCount = data?.pending_assistant_count ?? 0
+  const studentAssistantCount = data?.student_assistant_count ?? 0
+  const hasStudentAssistants = studentAssistantCount > 0
   const features = data?.features ?? { grade1_standards: false, grade3_standards: false }
   const links: Partial<ClassManagementLinks> = data?.links ?? {}
 
@@ -143,7 +151,7 @@ export function ClassViewPage() {
             ))}
           </div>
 
-          {pendingAssistantCount > 0 && links.assistant_approvals ? (
+          {hasStudentAssistants && pendingAssistantCount > 0 && links.assistant_approvals ? (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <span>
                 <i className="bi bi-stars me-1 text-amber-600" aria-hidden />
@@ -158,7 +166,7 @@ export function ClassViewPage() {
             </div>
           ) : null}
 
-          {links.assistant_approvals ? (
+          {hasStudentAssistants && links.assistant_approvals ? (
             <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-hub-muted">
               <a
                 href={links.assistant_approvals}
@@ -205,18 +213,30 @@ export function ClassViewPage() {
               </div>
             </section>
 
-            <ClassManagementPanel links={links} features={features} canAdminUi={data.meta.can_admin_ui} />
+            <ClassManagementPanel
+              links={links}
+              features={features}
+              canAdminUi={data.meta.can_admin_ui}
+              onOpenAnalytics={() => setAnalyticsOpen(true)}
+              onOpenDeadlineReminders={() => setDeadlineRemindersOpen(true)}
+              onOpenAssessmentTool={(tool) => setAssessmentTool(tool)}
+            />
           </div>
 
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => navigate(`/management/classes/${id}/roster`)}
-              className="text-sm font-semibold text-teal-700 hover:underline"
-            >
-              Manage roster
-            </button>
-          </div>
+          <ClassAnalyticsModal open={analyticsOpen} classId={id} onClose={() => setAnalyticsOpen(false)} />
+          <ClassDeadlineRemindersModal
+            open={deadlineRemindersOpen}
+            classId={id}
+            onClose={() => setDeadlineRemindersOpen(false)}
+          />
+          {assessmentTool ? (
+            <ClassAssessmentToolModal
+              open
+              classId={id}
+              tool={assessmentTool}
+              onClose={() => setAssessmentTool(null)}
+            />
+          ) : null}
         </>
       ) : null}
     </ClassSubpageShell>

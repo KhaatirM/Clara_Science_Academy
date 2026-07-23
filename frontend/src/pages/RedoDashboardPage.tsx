@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchRedoDashboard, grantRedoRequest, rejectRedoRequest, revokeRedo } from '../api/redo'
+import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ActiveRedoItem, RedoDashboardResponse, RedoRequestItem, ReopeningItem } from '../types/redo'
+import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
 
 function formatDate(iso: string | null) {
   if (!iso) return '—'
@@ -60,6 +62,8 @@ function matchesFilters(
 }
 
 export function RedoDashboardPage() {
+  const workspaceScope = useAssignmentWorkspaceScope()
+  const hubPath = assignmentWorkspaceHubPath(workspaceScope)
   const [data, setData] = useState<RedoDashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,13 +79,13 @@ export function RedoDashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchRedoDashboard())
+      setData(await fetchRedoDashboard(workspaceScope))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load redo dashboard')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [workspaceScope])
 
   useEffect(() => {
     void load()
@@ -133,8 +137,9 @@ export function RedoDashboardPage() {
   }
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-amber-50 via-slate-50 to-slate-100 p-5 md:p-6">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 p-5 text-white shadow-lg">
+    <ManagementPageShell>
+      <ManagementPageHero className="mb-4 !rounded-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
             <i className="bi bi-arrow-repeat text-xl" aria-hidden />
@@ -148,7 +153,7 @@ export function RedoDashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            to="/management/assignments"
+            to={hubPath}
             className="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
           >
             <i className="bi bi-arrow-left" aria-hidden />
@@ -163,7 +168,8 @@ export function RedoDashboardPage() {
             Refresh
           </button>
         </div>
-      </header>
+        </div>
+      </ManagementPageHero>
 
       {toast ? (
         <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900">{toast}</div>
@@ -279,7 +285,7 @@ export function RedoDashboardPage() {
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => void runAction(() => rejectRedoRequest(r.id))}
+                      onClick={() => void runAction(() => rejectRedoRequest(r.id, workspaceScope))}
                       className="rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
                     >
                       Reject
@@ -335,7 +341,7 @@ export function RedoDashboardPage() {
                         disabled={busy}
                         onClick={() => {
                           if (window.confirm('Revoke this redo permission?')) {
-                            void runAction(() => revokeRedo(r.id))
+                            void runAction(() => revokeRedo(r.id, workspaceScope))
                           }
                         }}
                         className="rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
@@ -377,7 +383,7 @@ export function RedoDashboardPage() {
               <button
                 type="button"
                 disabled={busy || !grantDeadline}
-                onClick={() => void runAction(() => grantRedoRequest(grantModal.id, grantDeadline))}
+                onClick={() => void runAction(() => grantRedoRequest(grantModal.id, grantDeadline, workspaceScope))}
                 className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white"
               >
                 Grant redo
@@ -386,7 +392,7 @@ export function RedoDashboardPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </ManagementPageShell>
   )
 }
 

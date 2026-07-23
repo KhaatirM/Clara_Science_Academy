@@ -24,6 +24,16 @@ from services.google_directory_service import (
 
 CLASS_GROUP_DOMAIN = "clarascienceacademy.org"
 
+
+def class_needs_google_integration(class_obj: Class | None) -> bool:
+    """K–2 classes do not need Google Groups or Classroom (no student Gmail yet)."""
+    if class_obj is None:
+        return False
+    levels = class_obj.get_grade_levels() if hasattr(class_obj, "get_grade_levels") else []
+    if not levels:
+        return True
+    return any(g > 2 for g in levels)
+
 # School-wide Workspace groups — never delete during year-end class group cleanup.
 PROTECTED_SCHOOL_GROUP_EMAILS = frozenset({
     f"studentassembly@{CLASS_GROUP_DOMAIN}",
@@ -135,6 +145,9 @@ def provision_and_sync_class_google_group(class_id: int) -> bool:
 
     if not c.is_active:
         # Archived classes: groups are removed during school-year closure; do not recreate.
+        return True
+
+    if not class_needs_google_integration(c):
         return True
 
     group_email_stored = (c.google_group_email or "").strip()

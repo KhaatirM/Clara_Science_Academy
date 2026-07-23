@@ -8,6 +8,8 @@ import { ClassCard } from '../components/classes/ClassCard'
 
 import { CreateClassModal } from '../components/classes/CreateClassModal'
 
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+
 import { LinkGoogleClassroomModal } from '../components/classes/LinkGoogleClassroomModal'
 
 import type { ManagementOutletContext } from '../types/layout'
@@ -184,27 +186,9 @@ export function ClassesPage() {
 
 
 
-  const shellBg = isDirector
-
-    ? 'bg-gradient-to-br from-violet-50 via-purple-50/80 to-slate-100'
-
-    : 'bg-gradient-to-br from-emerald-50 via-teal-50/70 to-slate-100'
-
-  const primaryBtn = isDirector
-
-    ? 'bg-gradient-to-br from-violet-600 to-purple-700'
-
-    : 'bg-gradient-to-br from-teal-600 to-teal-800'
-
   const ghostHover = isDirector ? 'hover:border-violet-500 hover:text-violet-800' : 'hover:border-teal-500 hover:text-teal-800'
 
   const accentRing = isDirector ? 'focus:border-violet-500 focus:ring-violet-500/20' : 'focus:border-teal-500 focus:ring-teal-500/20'
-
-  const exportBtn = isDirector
-
-    ? 'bg-gradient-to-br from-violet-600 to-purple-700'
-
-    : 'bg-gradient-to-br from-teal-600 to-teal-800'
 
   const gridAccent = isDirector ? 'border-violet-500' : 'border-amber-400'
 
@@ -306,6 +290,20 @@ export function ClassesPage() {
 
 
 
+  useEffect(() => {
+
+    const sy = searchParams.get('school_year_id')
+
+    if (sy && /^\d+$/.test(sy)) {
+
+      setFilters((prev) => ({ ...prev, schoolYearId: Number(sy) }))
+
+    }
+
+  }, [searchParams])
+
+
+
   const yearItems = useMemo(
 
     () => itemsForSchoolYear(allItems, filters.schoolYearId),
@@ -380,7 +378,7 @@ export function ClassesPage() {
 
   return (
 
-    <div className={`rounded-3xl p-5 md:p-8 ${shellBg}`}>
+    <ManagementPageShell director={isDirector}>
 
       <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
 
@@ -450,7 +448,7 @@ export function ClassesPage() {
 
               onClick={() => setShowCreate(true)}
 
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105 ${primaryBtn}`}
+              className="spa-mgmt-btn-primary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[0.82rem] shadow-sm"
 
             >
 
@@ -562,7 +560,7 @@ export function ClassesPage() {
 
                 onClick={() => exportClassesCsv(visibleItems)}
 
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${exportBtn}`}
+                className="spa-mgmt-btn-primary inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
 
               >
 
@@ -984,7 +982,7 @@ export function ClassesPage() {
 
       ) : null}
 
-    </div>
+    </ManagementPageShell>
 
   )
 

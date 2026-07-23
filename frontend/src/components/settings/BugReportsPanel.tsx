@@ -17,7 +17,15 @@ const STATUS_CLASS: Record<string, string> = {
   closed: 'bg-slate-100 text-slate-700',
 }
 
-export function BugReportsPanel() {
+export function BugReportsPanel({
+  fetchReports = fetchBugReports,
+  submitReport = submitBugReport,
+  updateStatus = updateBugReportStatus,
+}: {
+  fetchReports?: typeof fetchBugReports
+  submitReport?: typeof submitBugReport
+  updateStatus?: typeof updateBugReportStatus
+} = {}) {
   const [data, setData] = useState<BugReportsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,13 +43,13 @@ export function BugReportsPanel() {
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchBugReports())
+      setData(await fetchReports())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load bug reports.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetchReports])
 
   useEffect(() => {
     void load()
@@ -52,7 +60,7 @@ export function BugReportsPanel() {
     setBusy(true)
     setMessage(null)
     try {
-      const result = await submitBugReport({
+      const result = await submitReport({
         ...form,
         page_url: window.location.href,
       })
@@ -70,7 +78,7 @@ export function BugReportsPanel() {
   async function handleStatusChange(report: BugReportItem, status: string) {
     setBusy(true)
     try {
-      await updateBugReportStatus(report.id, status)
+      await updateStatus(report.id, status)
       await load()
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Could not update status.')

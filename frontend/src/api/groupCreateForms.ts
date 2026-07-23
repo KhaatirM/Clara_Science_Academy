@@ -1,11 +1,13 @@
 import { apiFetch } from './client'
 import type { ClassBrief } from './assignmentCreateForms'
+import type { AssignmentCreateScope } from '../utils/assignmentCreateScope'
+import { assignmentCreateApiBase } from '../utils/assignmentCreateScope'
 
 export interface GroupClassPickerMeta {
   classes: ClassBrief[]
   back_url: string
   type_selector_url: string
-  meta?: { can_manage?: boolean }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
 export interface GroupTypeSelectorMeta {
@@ -16,9 +18,9 @@ export interface GroupTypeSelectorMeta {
   links: {
     pdf: string
     quiz: string
-    discussion: string | null
+    discussion: string
   }
-  meta?: { can_manage?: boolean }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
 export interface GroupQuizFormMeta {
@@ -36,7 +38,7 @@ export interface GroupQuizFormMeta {
     passing_score: number
     group_size_min: number
   }
-  meta?: { can_manage?: boolean }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
 export interface AcademicPeriodBrief {
@@ -62,23 +64,53 @@ export interface GroupPdfFormMeta {
   back_url: string
   type_selector_url: string
   assignments_url: string
-  meta?: { can_manage?: boolean }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
-export async function fetchGroupClassPicker() {
-  return apiFetch<GroupClassPickerMeta>('/api/spa/assignments/create/group')
+export interface GroupDiscussionFormMeta {
+  class: ClassBrief
+  current_quarter: string
+  academic_periods: AcademicPeriodBrief[]
+  groups_api_url: string
+  post_url: string
+  back_url: string
+  type_selector_url: string
+  assignments_url: string
+  defaults: {
+    min_posts: number
+    min_words: number
+    max_posts: number
+    group_size_min: number
+  }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
-export async function fetchGroupTypeSelector(classId: number) {
-  return apiFetch<GroupTypeSelectorMeta>(`/api/spa/assignments/create/group/${classId}`)
+const groupApiBase = (scope: AssignmentCreateScope) => `${assignmentCreateApiBase(scope)}/group`
+
+export async function fetchGroupDiscussionForm(
+  classId: number,
+  scope: AssignmentCreateScope = 'management',
+) {
+  return apiFetch<GroupDiscussionFormMeta>(`${groupApiBase(scope)}/${classId}/discussion`)
 }
 
-export async function fetchGroupPdfForm(classId: number) {
-  return apiFetch<GroupPdfFormMeta>(`/api/spa/assignments/create/group/${classId}/pdf`)
+export async function fetchGroupClassPicker(scope: AssignmentCreateScope = 'management') {
+  return apiFetch<GroupClassPickerMeta>(groupApiBase(scope))
 }
 
-export async function fetchGroupQuizForm(classId: number) {
-  return apiFetch<GroupQuizFormMeta>(`/api/spa/assignments/create/group/${classId}/quiz`)
+export async function fetchGroupTypeSelector(
+  classId: number,
+  scope: AssignmentCreateScope = 'management',
+) {
+  return apiFetch<GroupTypeSelectorMeta>(`${groupApiBase(scope)}/${classId}`)
+}
+
+export async function fetchGroupPdfForm(classId: number, scope: AssignmentCreateScope = 'management') {
+  return apiFetch<GroupPdfFormMeta>(`${groupApiBase(scope)}/${classId}/pdf`)
+}
+
+export async function fetchGroupQuizForm(classId: number, scope: AssignmentCreateScope = 'management') {
+  return apiFetch<GroupQuizFormMeta>(`${groupApiBase(scope)}/${classId}/quiz`)
 }
 
 export async function fetchClassGroups(apiUrl: string) {

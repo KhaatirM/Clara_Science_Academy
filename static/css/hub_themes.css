@@ -328,6 +328,18 @@ body.theme-mint {
   --hub-schedule-accent-deep: #2d7a6a;
 }
 
+/*
+ * Director shells (--director modifiers, spa-mgmt--director) read --hub-mgmt-director-*.
+ * Mirror the active theme's management palette so site themes apply for directors too.
+ * theme-default keeps the separate purple director look from the root block above.
+ */
+body[class*="theme-"]:not(.theme-default) {
+  --hub-mgmt-director-bg: var(--hub-mgmt-bg);
+  --hub-mgmt-director-accent: var(--hub-mgmt-accent);
+  --hub-mgmt-director-accent-deep: var(--hub-mgmt-accent-deep);
+  --hub-mgmt-director-accent-soft: var(--hub-mgmt-accent-soft);
+}
+
 /* Calendar grid accents (shared/calendar.html) */
 body {
   --hub-cal-accent: var(--hub-mgmt-accent);

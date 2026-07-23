@@ -1,14 +1,16 @@
 @import 'tailwindcss';
 
-/* Design tokens aligned with static/css/role_hub.css (management theme) */
+@import './styles/spa-themes.css';
+
+/* Design tokens aligned with static/css/hub_themes.css */
 @theme {
-  --color-hub-text: #0f172a;
-  --color-hub-muted: #64748b;
-  --color-hub-accent: #4f46e5;
-  --color-hub-accent-deep: #4338ca;
-  --color-hub-accent-soft: rgba(79, 70, 229, 0.12);
-  --color-hub-surface: rgba(255, 255, 255, 0.94);
-  --color-hub-border: rgba(255, 255, 255, 0.92);
+  --color-hub-text: var(--hub-text);
+  --color-hub-muted: var(--hub-muted);
+  --color-hub-accent: var(--hub-schedule-accent);
+  --color-hub-accent-deep: var(--hub-schedule-accent-deep);
+  --color-hub-accent-soft: var(--hub-schedule-accent-soft);
+  --color-hub-surface: var(--hub-surface);
+  --color-hub-border: var(--hub-border);
   --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -22,8 +24,8 @@ body {
   margin: 0;
   overflow: hidden;
   font-family: var(--font-sans);
-  color: var(--color-hub-text);
-  background: linear-gradient(165deg, #eef2ff 0%, #e8e4f8 45%, #e0e7ff 100%);
+  color: var(--hub-text, #0f172a);
+  background: var(--hub-schedule-bg, linear-gradient(165deg, #eef2ff 0%, #e8e4f8 45%, #e0e7ff 100%));
 }
 
 /* Legacy management pages (school years, closure) — match Jinja dashboard_content */
@@ -119,4 +121,104 @@ body.spa-legacy-mgmt-shell {
 
 .legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-footer {
   flex-shrink: 0;
+}
+
+@keyframes quiz-btn-wiggle {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-1.5px) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(1.5px) rotate(4deg);
+  }
+}
+
+@keyframes quiz-btn-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@theme {
+  --animate-quiz-btn-wiggle: quiz-btn-wiggle 360ms ease-in-out;
+  --animate-quiz-btn-bob: quiz-btn-bob 420ms ease-in-out;
+}
+
+/* Quiz authoring action buttons */
+.quiz-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 160ms ease;
+}
+
+.quiz-action-btn i {
+  display: inline-block;
+  transition: transform 180ms ease;
+}
+
+.quiz-action-btn--remove {
+  border-color: #fecaca;
+  background: #fff;
+  color: #dc2626;
+}
+
+.quiz-action-btn--remove:hover {
+  border-color: #f87171;
+  background: #fef2f2;
+  color: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.18);
+  transform: translateY(-1px);
+}
+
+.quiz-action-btn--remove:hover i {
+  animation: quiz-btn-wiggle 360ms ease-in-out;
+}
+
+.quiz-action-btn--remove:active {
+  transform: translateY(0) scale(0.94);
+  box-shadow: none;
+  background: #fee2e2;
+}
+
+.quiz-action-btn--bank {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.quiz-action-btn--bank:hover {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.22);
+  transform: translateY(-1px);
+}
+
+.quiz-action-btn--bank:hover i {
+  animation: quiz-btn-bob 420ms ease-in-out;
+}
+
+.quiz-action-btn--bank:active {
+  transform: translateY(0) scale(0.94);
+  box-shadow: none;
+  background: #fde68a;
 }

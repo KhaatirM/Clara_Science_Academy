@@ -11,11 +11,13 @@ import {
 import { appendDatetime, appendIfChecked, postAssignmentForm } from '../api/assignmentCreateActions'
 import { fetchPdfAssignmentForm, type PdfAssignmentFormMeta } from '../api/assignmentCreateForms'
 import { spaRoute } from '../utils/spaRoute'
+import { assignmentCreateRoutePrefix, useAssignmentCreateScope } from '../utils/assignmentCreateScope'
 
 const CATEGORIES = ['', 'Homework', 'Tests', 'Quizzes', 'Projects', 'Labs', 'Participation', 'Other']
 
 export function CreatePdfAssignmentPage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const [searchParams] = useSearchParams()
   const contextParam = searchParams.get('context') === 'in-class' ? 'in-class' : 'homework'
   const classIdParam = searchParams.get('class_id')
@@ -50,7 +52,7 @@ export function CreatePdfAssignmentPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchPdfAssignmentForm(contextParam, classId)
+      const data = await fetchPdfAssignmentForm(contextParam, classId, scope)
       setMeta(data)
       setQuarter(data.current_quarter || '1')
       setAssignmentContext(data.context)
@@ -65,7 +67,7 @@ export function CreatePdfAssignmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [classId, contextParam])
+  }, [classId, contextParam, scope])
 
   useEffect(() => {
     void load()
@@ -79,7 +81,7 @@ export function CreatePdfAssignmentPage() {
   }, [assignmentContext, meta])
 
   const lockedClass = Boolean(meta?.preselected_class)
-  const backTo = spaRoute(meta?.type_selector_url || '/management/assignments/create')
+  const backTo = spaRoute(meta?.type_selector_url || assignmentCreateRoutePrefix(scope))
   const classBadge = meta?.preselected_class
     ? `${meta.preselected_class.name}${meta.preselected_class.subject ? ` · ${meta.preselected_class.subject}` : ''}`
     : null

@@ -221,7 +221,7 @@ function StudentCardsView({ data }: { data: ClassGradesResponse }) {
                 {today}
               </span>
               <a
-                href={`/management/view-student/${row.student.id}`}
+                href={`/management/students?edit=${row.student.id}`}
                 className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-teal-800 hover:border-teal-500"
               >
                 View details

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { bulkReviewExtensionRequests, fetchExtensionsHub, reviewExtensionRequest } from '../api/extensions'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ExtensionRequestItem } from '../types/extensions'
+import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
 
 type StatusTab = 'pending' | 'approved' | 'rejected' | 'all'
 
@@ -159,6 +161,8 @@ function ExtensionCard({
 }
 
 export function ExtensionRequestsPage() {
+  const workspaceScope = useAssignmentWorkspaceScope()
+  const hubPath = assignmentWorkspaceHubPath(workspaceScope)
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchExtensionsHub>> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -177,7 +181,7 @@ export function ExtensionRequestsPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchExtensionsHub()
+      const res = await fetchExtensionsHub(workspaceScope)
       setData(res)
       setSelected(new Set())
     } catch (err) {
@@ -185,7 +189,7 @@ export function ExtensionRequestsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [workspaceScope])
 
   useEffect(() => {
     void load()
@@ -219,8 +223,8 @@ export function ExtensionRequestsPage() {
     try {
       const res =
         reviewModal.ids.length === 1
-          ? await reviewExtensionRequest(reviewModal.ids[0], reviewModal.action, reviewNotes)
-          : await bulkReviewExtensionRequests(reviewModal.ids, reviewModal.action, reviewNotes)
+          ? await reviewExtensionRequest(reviewModal.ids[0], reviewModal.action, reviewNotes, workspaceScope)
+          : await bulkReviewExtensionRequests(reviewModal.ids, reviewModal.action, reviewNotes, workspaceScope)
       setToast(res.message)
       setReviewModal(null)
       setReviewNotes('')
@@ -237,10 +241,10 @@ export function ExtensionRequestsPage() {
   }
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-indigo-50 via-slate-50 to-slate-100 p-5 md:p-6">
+    <ManagementPageShell>
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-teal-700 text-white shadow">
+          <span className="spa-mgmt-badge flex h-12 w-12 items-center justify-center rounded-2xl text-xl shadow">
             <i className="bi bi-clock-history text-xl" aria-hidden />
           </span>
           <div>
@@ -252,7 +256,7 @@ export function ExtensionRequestsPage() {
           </div>
         </div>
         <Link
-          to="/management/assignments"
+          to={hubPath}
           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-teal-500"
         >
           <i className="bi bi-arrow-left" aria-hidden />
@@ -433,6 +437,6 @@ export function ExtensionRequestsPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </ManagementPageShell>
   )
 }

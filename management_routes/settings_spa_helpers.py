@@ -6,6 +6,7 @@ from typing import Any
 
 from models import User
 from utils.user_roles import canonical_role_label
+from utils.user_theme import get_effective_theme, get_site_theme_override
 
 THEME_OPTIONS = [
     {"value": "default", "label": "Default", "group": "Standard"},
@@ -35,6 +36,8 @@ def query_settings_hub(*, user) -> dict[str, Any]:
     db_user = User.query.get(user.id) if getattr(user, "id", None) else None
     role = canonical_role_label(getattr(user, "role", None))
     google_connected = bool(db_user and db_user.google_refresh_token)
+    site_override = get_site_theme_override()
+    saved_theme = (db_user.theme_preference if db_user else None) or "default"
 
     return {
         "role_canonical": role,
@@ -45,7 +48,10 @@ def query_settings_hub(*, user) -> dict[str, Any]:
             "role": getattr(user, "role", None),
         },
         "preferences": {
-            "theme": (db_user.theme_preference if db_user else None) or "default",
+            "theme": get_effective_theme(db_user or user),
+            "saved_theme": saved_theme,
+            "theme_locked": bool(site_override),
+            "site_theme_override": site_override,
             "theme_options": THEME_OPTIONS,
             "notifications_coming_soon": True,
             "timezone_coming_soon": True,

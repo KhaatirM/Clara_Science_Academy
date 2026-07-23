@@ -71,7 +71,6 @@ def redo_dashboard_api():
 
 @spa_api_blueprint.route("/redo-requests/<int:request_id>/grant", methods=["POST"])
 @login_required
-@permissions_required("assignments_grades:manage")
 def redo_request_grant(request_id: int):
     req = RedoRequest.query.get_or_404(request_id)
     if req.status != "Pending":
@@ -180,7 +179,6 @@ def redo_request_grant(request_id: int):
 
 @spa_api_blueprint.route("/redo-requests/<int:request_id>/reject", methods=["POST"])
 @login_required
-@permissions_required("assignments_grades:manage")
 def redo_request_reject(request_id: int):
     req = RedoRequest.query.get_or_404(request_id)
     if req.status != "Pending":
@@ -215,18 +213,19 @@ def redo_request_reject(request_id: int):
 
 @spa_api_blueprint.route("/redos/<int:redo_id>/revoke", methods=["POST"])
 @login_required
-@permissions_required("assignments_grades:manage")
 def redo_revoke(redo_id: int):
     redo = AssignmentRedo.query.get_or_404(redo_id)
 
-    if current_user.role == "Teacher":
-        if current_user.teacher_staff_id:
-            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
-            if not redo.assignment or not redo.assignment.class_info or redo.assignment.class_info.teacher_id != teacher.id:
-                return jsonify({"success": False, "message": "You can only revoke redos for your own classes."}), 403
-        else:
-            return jsonify({"success": False, "message": "Teacher record not found."}), 403
-    elif not user_can_manage_assignments_and_grades(current_user):
+    if user_can_manage_assignments_and_grades(current_user):
+        pass
+    elif is_teacher_role(current_user.role):
+        from teacher_routes.utils import is_authorized_for_class
+
+        if not redo.assignment or not redo.assignment.class_info:
+            return jsonify({"success": False, "message": "Assignment class not found."}), 403
+        if not is_authorized_for_class(redo.assignment.class_info):
+            return jsonify({"success": False, "message": "You can only revoke redos for your own classes."}), 403
+    else:
         return jsonify({"success": False, "message": "You are not authorized to revoke redos."}), 403
 
     if redo.is_used:

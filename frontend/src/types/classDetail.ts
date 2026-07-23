@@ -68,6 +68,7 @@ export interface ClassDetailResponse {
     grade_levels_display: string
   }
   pending_assistant_count: number
+  student_assistant_count: number
   features: { grade1_standards: boolean; grade3_standards: boolean }
   links: ClassManagementLinks
   meta: ClassMeta

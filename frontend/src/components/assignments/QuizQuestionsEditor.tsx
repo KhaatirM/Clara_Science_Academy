@@ -4,7 +4,7 @@ import { FieldLabel, inputClass } from './AssignmentCreateLayout'
 export type QuizQuestionDraft = {
   id: string
   questionText: string
-  questionType: 'multiple_choice' | 'true_false' | 'short_answer'
+  questionType: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay'
   points: string
   options: string[]
   correctIndex: string
@@ -96,6 +96,7 @@ export function QuizQuestionsEditor({
                 <option value="multiple_choice">Multiple choice</option>
                 <option value="true_false">True / false</option>
                 <option value="short_answer">Short answer</option>
+                <option value="essay">Long essay</option>
               </select>
             </div>
             <div>
@@ -157,8 +158,12 @@ export function QuizQuestionsEditor({
             </div>
           ) : null}
 
-          {q.questionType === 'short_answer' ? (
-            <p className="mt-2 text-xs text-slate-500">Short-answer questions are graded manually after submission.</p>
+          {q.questionType === 'short_answer' || q.questionType === 'essay' ? (
+            <p className="mt-2 text-xs text-slate-500">
+              {q.questionType === 'essay'
+                ? 'Essay responses are graded manually after students submit.'
+                : 'Short-answer questions are graded manually after submission.'}
+            </p>
           ) : null}
         </div>
       ))}

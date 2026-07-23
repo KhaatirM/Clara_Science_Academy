@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { fetchAttendanceAnalytics, type AttendanceAnalyticsQuery } from '../api/attendance'
+import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { AttendanceAnalyticsResponse } from '../types/attendance'
 
 function rateBadgeClass(rate: number): string {
@@ -109,15 +110,16 @@ export default function AttendanceAnalyticsPage() {
   }, [data])
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-1 pb-10 pt-2">
-      <header className="rounded-3xl border border-white/80 bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 p-6 text-white shadow-lg md:p-8">
+    <ManagementPageShell>
+      <div className="mx-auto max-w-7xl space-y-6">
+      <ManagementPageHero>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-100/90">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] spa-mgmt-hero-muted">
               Class-period attendance
             </p>
             <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Attendance analytics</h1>
-            <p className="mt-2 text-sm text-indigo-50/90">
+            <p className="mt-2 text-sm spa-mgmt-hero-muted">
               Spot trends, absences, and students who may need follow-up.
             </p>
           </div>
@@ -147,7 +149,7 @@ export default function AttendanceAnalyticsPage() {
             </Link>
           </div>
         </div>
-      </header>
+      </ManagementPageHero>
 
       {error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -454,6 +456,7 @@ export default function AttendanceAnalyticsPage() {
           </div>
         </>
       ) : null}
-    </div>
+      </div>
+    </ManagementPageShell>
   )
 }

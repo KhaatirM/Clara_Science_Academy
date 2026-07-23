@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
-import { fetchGoogleClassroomOptions, googleClassroomAction } from '../../api/classes'
+import {
+  fetchGoogleClassroomOptions,
+  googleClassroomAction,
+  type GoogleClassroomScope,
+} from '../../api/classes'
 import type { GoogleClassroomOption } from '../../types/classDetail'
 
 interface LinkGoogleClassroomModalProps {
@@ -7,16 +11,23 @@ interface LinkGoogleClassroomModalProps {
   className: string
   onClose: () => void
   onLinked: () => void
+  scope?: GoogleClassroomScope
 }
 
-export function LinkGoogleClassroomModal({ classId, className, onClose, onLinked }: LinkGoogleClassroomModalProps) {
+export function LinkGoogleClassroomModal({
+  classId,
+  className,
+  onClose,
+  onLinked,
+  scope = 'management',
+}: LinkGoogleClassroomModalProps) {
   const [items, setItems] = useState<GoogleClassroomOption[]>([])
   const [loading, setLoading] = useState(true)
   const [linking, setLinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    void fetchGoogleClassroomOptions(classId)
+    void fetchGoogleClassroomOptions(classId, scope)
       .then((res) => {
         if (!res.success) {
           if (res.settings_url) {
@@ -30,13 +41,13 @@ export function LinkGoogleClassroomModal({ classId, className, onClose, onLinked
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Could not load options'))
       .finally(() => setLoading(false))
-  }, [classId])
+  }, [classId, scope])
 
   const onLink = async (googleId: string) => {
     setLinking(true)
     setError(null)
     try {
-      const res = await googleClassroomAction(classId, 'link', googleId)
+      const res = await googleClassroomAction(classId, 'link', googleId, scope)
       if (!res.success) throw new Error(res.message)
       onLinked()
       onClose()

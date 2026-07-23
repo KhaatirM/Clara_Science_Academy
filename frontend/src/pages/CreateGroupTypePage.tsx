@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchGroupTypeSelector } from '../api/groupCreateForms'
 import { spaRoute } from '../utils/spaRoute'
+import { assignmentCreateRoutePrefix, useAssignmentCreateScope } from '../utils/assignmentCreateScope'
 
 export function CreateGroupTypePage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const { classId: classIdParam } = useParams()
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
 
@@ -14,6 +16,7 @@ export function CreateGroupTypePage() {
   const [backUrl, setBackUrl] = useState('/management/assignments')
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [quizUrl, setQuizUrl] = useState<string | null>(null)
+  const [discussionUrl, setDiscussionUrl] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!classId) {
@@ -24,17 +27,18 @@ export function CreateGroupTypePage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchGroupTypeSelector(classId)
+      const data = await fetchGroupTypeSelector(classId, scope)
       setClassName(data.class.name)
       setBackUrl(spaRoute(data.back_url))
       setPdfUrl(spaRoute(data.links.pdf))
       setQuizUrl(spaRoute(data.links.quiz))
+      setDiscussionUrl(spaRoute(data.links.discussion))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load group types')
     } finally {
       setLoading(false)
     }
-  }, [classId])
+  }, [classId, scope])
 
   useEffect(() => {
     void load()
@@ -44,7 +48,7 @@ export function CreateGroupTypePage() {
     return (
       <div className="rounded-2xl bg-white p-8 shadow-sm">
         <p className="text-red-700">Invalid class</p>
-        <Link to="/management/assignments/create/group" className="mt-4 inline-block text-sm font-semibold text-teal-700">
+        <Link to={`${assignmentCreateRoutePrefix(scope)}/group`} className="mt-4 inline-block text-sm font-semibold text-teal-700">
           Pick a class
         </Link>
       </div>
@@ -55,7 +59,7 @@ export function CreateGroupTypePage() {
     return <div className="rounded-2xl bg-white p-10 text-center text-hub-muted shadow-sm">Loading group types…</div>
   }
 
-  if (error || !pdfUrl || !quizUrl) {
+  if (error || !pdfUrl || !quizUrl || !discussionUrl) {
     return (
       <div className="rounded-2xl bg-white p-8 shadow-sm">
         <p className="text-red-700">{error || 'Could not load page'}</p>
@@ -124,20 +128,21 @@ export function CreateGroupTypePage() {
           </span>
         </button>
 
-        <div className="relative flex h-full flex-col rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 opacity-80 md:col-span-2 lg:col-span-1">
-          <span className="absolute right-4 top-4 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
-            Coming soon
-          </span>
-          <i className="bi bi-chat-dots-fill mb-3 text-4xl text-slate-400" aria-hidden />
-          <h2 className="text-lg font-bold text-slate-600">Discussion Assignment</h2>
-          <p className="mt-2 flex-1 text-sm text-slate-500">
-            Group discussion assignments are under development and temporarily unavailable.
+        <button
+          type="button"
+          onClick={() => navigate(discussionUrl)}
+          className="flex h-full flex-col rounded-2xl border-2 border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md"
+        >
+          <i className="bi bi-chat-dots-fill mb-3 text-4xl text-cyan-600" aria-hidden />
+          <h2 className="text-lg font-bold text-slate-800">Discussion Assignment</h2>
+          <p className="mt-2 flex-1 text-sm text-slate-600">
+            Structured prompts and collaborative participation — groups discuss and respond as teams.
           </p>
-          <span className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-bold text-slate-500">
-            <i className="bi bi-lock-fill" aria-hidden />
-            Unavailable
+          <span className="mt-5 inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-bold text-white">
+            <i className="bi bi-chat-dots" aria-hidden />
+            Create group discussion
           </span>
-        </div>
+        </button>
       </div>
     </div>
   )

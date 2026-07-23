@@ -151,9 +151,25 @@ def _class_management_links(class_id: int) -> dict[str, str]:
     if user_should_use_spa_management_shell():
         grade1_standards = f"/app{grade_standards_editor_path(1, class_id)}"
         grade3_standards = f"/app{grade_standards_editor_path(3, class_id)}"
-    else:
-        grade1_standards = url_for("teacher.grade1_standards.grade1_standards_editor", class_id=class_id)
-        grade3_standards = url_for("teacher.grade3_standards.grade3_standards_editor", class_id=class_id)
+        legacy_class = f"/management/class/{class_id}"
+        return {
+            "add_assignment": f"/app/management/assignments/create?class_id={class_id}",
+            "attendance": "/app/management/attendance",
+            "manage_roster": f"/app/management/classes/{class_id}/roster",
+            "grade1_standards": grade1_standards,
+            "grade3_standards": grade3_standards,
+            "assistant_approvals": url_for("teacher.assignments.pending_assistant_assignments", class_id=class_id),
+            "view_grades": f"/app/management/assignments/{class_id}",
+            "edit_class": f"/app/management/classes/{class_id}/edit",
+            "analytics": "modal:analytics",
+            "feedback_360": "modal:360-feedback",
+            "reflection_journals": "modal:reflection-journals",
+            "conflicts": "modal:conflicts",
+            "manage_groups": f"/app/management/classes/{class_id}/groups",
+            "deadline_reminders": "modal:deadline-reminders",
+            "class_assignments": f"/app/management/assignments/{class_id}",
+            "take_attendance": f"/app/management/attendance/take/{class_id}",
+        }
 
     return {
         "add_assignment": url_for("management.assignment_type_selector", class_id=class_id),
@@ -217,6 +233,7 @@ def query_class_detail(class_id: int) -> dict[str, Any]:
             "grade_levels_display": class_info.get_grade_levels_display() or "All",
         },
         "pending_assistant_count": count_pending_assistant_proposals_for_class(class_id),
+        "student_assistant_count": StudentAssistant.query.filter_by(class_id=class_id).count(),
         "features": _standards_flags(class_info),
         "links": _class_management_links(class_id),
     }
@@ -959,9 +976,19 @@ def core_setup_create(body: dict[str, Any]) -> dict[str, Any]:
     result = run_core_class_setup(school_year_id, grade_levels, teacher_assignments)
     if result.get("errors"):
         return {"success": False, "message": "; ".join(result["errors"]), "result": result}
+    created = result.get("created_count", 0)
+    enrolled = (result.get("enrollment") or {}).get("enrolled_count", 0)
+    parts = []
+    if created:
+        parts.append(f"Created {created} core class(es)")
+    else:
+        parts.append("No new classes were needed")
+    if enrolled:
+        parts.append(f"enrolled {enrolled} student(s) by grade level")
+    message = ". ".join(parts) + "."
     return {
         "success": True,
-        "message": f"Created {result.get('created_count', 0)} core class(es).",
+        "message": message,
         "result": result,
         "redirect": f"/app/management/classes?school_year_id={school_year_id}",
     }

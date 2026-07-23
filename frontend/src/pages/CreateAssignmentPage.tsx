@@ -7,6 +7,11 @@ import {
 } from '../components/assignments/AssignmentTypeCarousel'
 import { fetchCreateAssignmentMeta, type CreateAssignmentMeta } from '../api/createAssignment'
 import { spaRoute } from '../utils/spaRoute'
+import {
+  assignmentCreateHubPath,
+  assignmentCreateRoutePrefix,
+  useAssignmentCreateScope,
+} from '../utils/assignmentCreateScope'
 
 const ASSIGNMENT_TYPES: AssignmentTypeOption[] = [
   {
@@ -64,6 +69,7 @@ const ASSIGNMENT_TYPES: AssignmentTypeOption[] = [
 
 export function CreateAssignmentPage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const [searchParams] = useSearchParams()
   const classIdParam = searchParams.get('class_id')
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
@@ -76,13 +82,13 @@ export function CreateAssignmentPage() {
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchCreateAssignmentMeta(classId))
+      setData(await fetchCreateAssignmentMeta(classId, scope))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load assignment types')
     } finally {
       setLoading(false)
     }
-  }, [classId])
+  }, [classId, scope])
 
   useEffect(() => {
     void load()
@@ -107,8 +113,8 @@ export function CreateAssignmentPage() {
       case 'group':
         navigate(
           classId
-            ? `/management/assignments/create/group/${classId}`
-            : '/management/assignments/create/group',
+            ? `${assignmentCreateRoutePrefix(scope)}/group/${classId}`
+            : `${assignmentCreateRoutePrefix(scope)}/group`,
         )
         break
       default:
@@ -118,8 +124,8 @@ export function CreateAssignmentPage() {
 
   const backTo = useMemo(() => {
     if (data?.back_url) return spaRoute(data.back_url)
-    return classId ? `/management/assignments/${classId}` : '/management/assignments'
-  }, [classId, data?.back_url])
+    return assignmentCreateHubPath(scope, classId)
+  }, [classId, data?.back_url, scope])
 
   if (loading) {
     return <div className="rounded-2xl bg-white p-10 text-center text-hub-muted shadow-sm">Loading assignment types…</div>

@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import type { AssessmentToolSlug } from '../../api/classTools'
+
+const actionClassName =
+  'inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:border-teal-500 hover:bg-teal-50'
 
 function ActionLink({
   href,
@@ -12,12 +16,10 @@ function ActionLink({
   label: string
   external?: boolean
 }) {
-  if (!href) return null
-  const className =
-    'inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:border-teal-500 hover:bg-teal-50'
+  if (!href || href.startsWith('modal:')) return null
   if (href.startsWith('/app/')) {
     return (
-      <Link to={href.replace('/app', '')} className={className}>
+      <Link to={href.replace('/app', '')} className={actionClassName}>
         <i className={`bi ${icon}`} aria-hidden />
         {label}
       </Link>
@@ -25,17 +27,26 @@ function ActionLink({
   }
   if (external || href.startsWith('/management/') || href.startsWith('/teacher/')) {
     return (
-      <a href={href} className={className}>
+      <a href={href} className={actionClassName}>
         <i className={`bi ${icon}`} aria-hidden />
         {label}
       </a>
     )
   }
   return (
-    <Link to={href} className={className}>
+    <Link to={href} className={actionClassName}>
       <i className={`bi ${icon}`} aria-hidden />
       {label}
     </Link>
+  )
+}
+
+function ActionButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={actionClassName}>
+      <i className={`bi ${icon}`} aria-hidden />
+      {label}
+    </button>
   )
 }
 
@@ -64,7 +75,6 @@ export interface ClassManagementLinks {
   feedback_360: string
   reflection_journals: string
   conflicts: string
-  assignments_and_grades: string
   manage_groups: string
   deadline_reminders: string
 }
@@ -73,11 +83,23 @@ export function ClassManagementPanel({
   links,
   features = { grade1_standards: false, grade3_standards: false },
   canAdminUi,
+  onOpenAnalytics,
+  onOpenDeadlineReminders,
+  onOpenAssessmentTool,
 }: {
   links: Partial<ClassManagementLinks>
   features?: { grade1_standards: boolean; grade3_standards: boolean }
   canAdminUi: boolean
+  onOpenAnalytics?: () => void
+  onOpenDeadlineReminders?: () => void
+  onOpenAssessmentTool?: (tool: AssessmentToolSlug) => void
 }) {
+  const analyticsIsModal = links.analytics?.startsWith('modal:')
+  const remindersIsModal = links.deadline_reminders?.startsWith('modal:')
+  const feedbackIsModal = links.feedback_360?.startsWith('modal:')
+  const journalsIsModal = links.reflection_journals?.startsWith('modal:')
+  const conflictsIsModal = links.conflicts?.startsWith('modal:')
+
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-teal-100 bg-gradient-to-r from-teal-100/80 to-teal-50/50 px-5 py-4">
@@ -96,6 +118,7 @@ export function ClassManagementPanel({
           <ActionLink href={links.add_assignment} icon="bi-plus-circle" label="Add Assignment" />
           <ActionLink href={links.attendance} icon="bi-clipboard-check" label="Attendance" />
           <ActionLink href={links.manage_roster} icon="bi-people" label="Manage Roster" />
+          <ActionLink href={links.manage_groups} icon="bi-people-fill" label="Manage Groups" />
           {features.grade1_standards && links.grade1_standards ? (
             <ActionLink href={links.grade1_standards} icon="bi-check2-square" label="1st Grade Standards" />
           ) : null}
@@ -105,20 +128,44 @@ export function ClassManagementPanel({
         </Section>
         {canAdminUi ? (
           <Section title="Administrative" icon="bi-shield-check">
-            <ActionLink href={links.view_grades} icon="bi-journal-plus" label="View Grades" />
+            <ActionLink href={links.view_grades} icon="bi-journal-plus" label="View Assignments & Grades" />
             <ActionLink href={links.edit_class} icon="bi-pencil" label="Edit Class" />
-            <ActionLink href={links.analytics} icon="bi-graph-up" label="Reports & Analytics" />
+            {analyticsIsModal && onOpenAnalytics ? (
+              <ActionButton icon="bi-graph-up" label="Reports & Analytics" onClick={onOpenAnalytics} />
+            ) : (
+              <ActionLink href={links.analytics} icon="bi-graph-up" label="Reports & Analytics" />
+            )}
           </Section>
         ) : null}
         <Section title="Assessment & Feedback" icon="bi-star">
-          <ActionLink href={links.feedback_360} icon="bi-arrow-repeat" label="360° Feedback" />
-          <ActionLink href={links.reflection_journals} icon="bi-journal-text" label="Reflection Journals" />
-          <ActionLink href={links.conflicts} icon="bi-exclamation-triangle" label="Conflict Resolution" />
-        </Section>
-        <Section title="Group Management" icon="bi-people-fill">
-          <ActionLink href={links.assignments_and_grades} icon="bi-journal-plus" label="Assignments & Grades" />
-          <ActionLink href={links.manage_groups} icon="bi-people" label="Manage Groups" />
-          <ActionLink href={links.deadline_reminders} icon="bi-bell" label="Deadline Reminders" />
+          {feedbackIsModal && onOpenAssessmentTool ? (
+            <ActionButton icon="bi-arrow-repeat" label="360° Feedback" onClick={() => onOpenAssessmentTool('360-feedback')} />
+          ) : (
+            <ActionLink href={links.feedback_360} icon="bi-arrow-repeat" label="360° Feedback" />
+          )}
+          {journalsIsModal && onOpenAssessmentTool ? (
+            <ActionButton
+              icon="bi-journal-text"
+              label="Reflection Journals"
+              onClick={() => onOpenAssessmentTool('reflection-journals')}
+            />
+          ) : (
+            <ActionLink href={links.reflection_journals} icon="bi-journal-text" label="Reflection Journals" />
+          )}
+          {conflictsIsModal && onOpenAssessmentTool ? (
+            <ActionButton
+              icon="bi-exclamation-triangle"
+              label="Conflict Resolution"
+              onClick={() => onOpenAssessmentTool('conflicts')}
+            />
+          ) : (
+            <ActionLink href={links.conflicts} icon="bi-exclamation-triangle" label="Conflict Resolution" />
+          )}
+          {remindersIsModal && onOpenDeadlineReminders ? (
+            <ActionButton icon="bi-bell" label="Deadline Reminders" onClick={onOpenDeadlineReminders} />
+          ) : (
+            <ActionLink href={links.deadline_reminders} icon="bi-bell" label="Deadline Reminders" />
+          )}
         </Section>
       </div>
     </section>

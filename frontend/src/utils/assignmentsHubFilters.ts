@@ -54,9 +54,9 @@ export function filterAssignmentsHubClasses(
   const search = filters.search.trim().toLowerCase()
   let result = items.filter((item) => {
     if (item.school_year_id !== filters.schoolYearId) return false
-    if (search && !item.search_text.includes(search)) return false
+    if (search && !(item.search_text || '').includes(search)) return false
     if (filters.subject && item.subject !== filters.subject) return false
-    if (filters.grade && !item.grade_levels.map(String).includes(filters.grade)) return false
+    if (filters.grade && !(item.grade_levels || []).map(String).includes(filters.grade)) return false
     if (filters.teacherKey && teacherKeyForItem(item) !== filters.teacherKey) return false
     if (filters.enrollment === 'with' && item.enrollment_count <= 0) return false
     if (filters.enrollment === 'empty' && item.enrollment_count > 0) return false
@@ -86,7 +86,7 @@ export function filterAssignmentsHubClasses(
 export function computeAssignmentsHubStats(items: ClassListItem[]) {
   const teacherKeys = new Set(
     items
-      .map((i) => i.teacher.display_name.trim().toLowerCase())
+      .map((i) => (i.teacher?.display_name || '').trim().toLowerCase())
       .filter((k) => k && k !== 'n/a'),
   )
   return {

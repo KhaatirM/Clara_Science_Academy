@@ -10,7 +10,7 @@ from __future__ import annotations
 from flask import Request
 
 from extensions import db
-from models import Class, TeacherStaff
+from models import Class, Enrollment, Student, TeacherStaff
 from utils.core_class_catalog import (
     SETUP_GRADE_LEVELS,
     all_catalog_entries,
@@ -161,6 +161,80 @@ def preview_core_class_setup(
     return {'to_create': to_create, 'skipped': skipped, 'errors': errors}
 
 
+def _class_ids_for_setup(preview: dict) -> list[int]:
+    """Class IDs touched by a core setup run (newly created + already-existing skipped)."""
+    ids: list[int] = []
+    for row in preview.get('created') or []:
+        cid = row.get('id')
+        if cid:
+            ids.append(int(cid))
+    for row in preview.get('skipped') or []:
+        cid = row.get('existing_class_id')
+        if cid:
+            ids.append(int(cid))
+    seen: set[int] = set()
+    out: list[int] = []
+    for cid in ids:
+        if cid not in seen:
+            seen.add(cid)
+            out.append(cid)
+    return out
+
+
+def auto_enroll_students_by_grade(class_ids: list[int], school_year_id: int) -> dict:
+    """
+    Enroll active students whose grade level matches each class's grade band.
+    Idempotent: skips students already enrolled in the class.
+    """
+    enrolled_count = 0
+    by_class: list[dict] = []
+
+    for class_id in class_ids:
+        class_obj = Class.query.get(class_id)
+        if not class_obj or class_obj.school_year_id != school_year_id:
+            continue
+        grade_levels = class_obj.get_grade_levels() or []
+        if not grade_levels:
+            continue
+
+        students = (
+            Student.query.filter(
+                Student.grade_level.in_(grade_levels),
+                Student.is_deleted.is_(False),
+            ).all()
+        )
+        added = 0
+        for student in students:
+            if student.grade_level is None:
+                continue
+            exists = Enrollment.query.filter_by(
+                class_id=class_id,
+                student_id=student.id,
+                is_active=True,
+            ).first()
+            if exists:
+                continue
+            db.session.add(
+                Enrollment(student_id=student.id, class_id=class_id, is_active=True)
+            )
+            added += 1
+
+        if added:
+            enrolled_count += added
+            by_class.append(
+                {
+                    'class_id': class_id,
+                    'class_name': class_obj.name,
+                    'enrolled': added,
+                }
+            )
+
+    if enrolled_count:
+        db.session.commit()
+
+    return {'enrolled_count': enrolled_count, 'by_class': by_class}
+
+
 def run_core_class_setup(
     school_year_id: int,
     grade_levels: list[int] | None,
@@ -206,12 +280,20 @@ def run_core_class_setup(
 
     if created:
         db.session.commit()
-        from services.class_google_group import try_provision_class_google_group
-        for row in created:
-            try_provision_class_google_group(row['id'])
-    else:
-        db.session.rollback()
 
     preview['created'] = created
     preview['created_count'] = len(created)
+
+    class_ids = _class_ids_for_setup(preview)
+    enrollment = auto_enroll_students_by_grade(class_ids, school_year_id)
+    preview['enrollment'] = enrollment
+
+    from services.class_google_group import try_provision_class_google_group
+
+    for cid in class_ids:
+        try_provision_class_google_group(cid)
+
+    if not created and not enrollment.get('enrolled_count'):
+        db.session.rollback()
+
     return preview

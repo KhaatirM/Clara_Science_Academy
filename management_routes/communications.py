@@ -16,6 +16,12 @@ import json
 bp = Blueprint('communications', __name__)
 
 
+@bp.before_request
+def _communications_hidden():
+    """Management communications UI is disabled until a React migration exists."""
+    abort(404)
+
+
 # ============================================================
 # Route: /communications
 # Function: communications

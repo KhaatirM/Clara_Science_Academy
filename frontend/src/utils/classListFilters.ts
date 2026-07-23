@@ -32,7 +32,7 @@ export const defaultClassFilters: ClassFilters = {
 }
 
 export function teacherKeyForItem(item: ClassListItem): string {
-  return item.teacher.display_name.trim().toLowerCase()
+  return (item.teacher?.display_name || '').trim().toLowerCase()
 }
 
 export function itemsForSchoolYear(items: ClassListItem[], schoolYearId: number | ''): ClassListItem[] {
@@ -55,7 +55,7 @@ export function teacherOptions(
   const teachers = new Map<string, string>()
   items.forEach((item) => {
     const key = teacherKeyForItem(item)
-    const label = item.teacher.display_name.trim()
+    const label = (item.teacher?.display_name || '').trim()
     if (key && label && label !== 'N/A') teachers.set(key, label)
   })
   return Array.from(teachers.entries())

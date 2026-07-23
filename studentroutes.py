@@ -555,7 +555,13 @@ def submit_conflict_report():
 @login_required
 @student_required
 def student_submissions():
-    """Student submissions page for 360 feedback, journals, and conflicts"""
+    """Legacy route: group collaboration hub (feedback, journals, conflicts)."""
+    from utils.spa_student_urls import spa_student_collaborate_redirect
+
+    spa_redirect = spa_student_collaborate_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     
     # Initialize empty lists as defaults
@@ -628,6 +634,12 @@ def student_submissions():
 @login_required
 @student_required
 def student_dashboard():
+    from utils.spa_student_urls import spa_student_dashboard_redirect
+
+    spa_redirect = spa_student_dashboard_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     
     # Get current school year
@@ -885,6 +897,12 @@ def student_dashboard():
 @login_required
 @student_required
 def student_assignments():
+    from utils.spa_student_urls import spa_student_assignments_redirect
+
+    spa_redirect = spa_student_assignments_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     from datetime import datetime, timedelta
     
@@ -1242,6 +1260,12 @@ def class_assignments(class_id):
 @login_required
 @student_required
 def student_classes():
+    from utils.spa_student_urls import spa_student_classes_redirect
+
+    spa_redirect = spa_student_classes_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     
     # Get current school year
@@ -1563,6 +1587,12 @@ def update_low_grade_threshold():
 @login_required
 @student_required
 def student_grades():
+    from utils.spa_student_urls import spa_student_grades_redirect
+
+    spa_redirect = spa_student_grades_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     
     # Get active school year
@@ -2002,6 +2032,12 @@ def student_grades():
 @login_required
 @student_required
 def student_schedule():
+    from utils.spa_student_urls import spa_student_schedule_redirect
+
+    spa_redirect = spa_student_schedule_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     
     # Get student's enrolled classes
@@ -2033,6 +2069,12 @@ def student_schedule():
 @student_required
 def student_school_calendar():
     """View school calendar (read-only for students)"""
+    from utils.spa_student_urls import spa_student_calendar_redirect
+
+    spa_redirect = spa_student_calendar_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     from datetime import datetime, timedelta
     import calendar as cal
     from management_routes.calendar import get_academic_dates_for_calendar
@@ -2100,6 +2142,12 @@ def student_school_calendar():
 @login_required
 @student_required
 def student_settings():
+    from utils.spa_student_urls import spa_student_settings_redirect
+
+    spa_redirect = spa_student_settings_redirect()
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     
     # Get current school year
@@ -2164,6 +2212,12 @@ def student_settings():
 @student_required
 def view_class(class_id):
     """View comprehensive class information including teacher, students, assignments, grades, and announcements"""
+    from utils.spa_student_urls import spa_student_class_detail_redirect
+
+    spa_redirect = spa_student_class_detail_redirect(class_id)
+    if spa_redirect:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     class_obj = Class.query.get_or_404(class_id)
     
@@ -2595,12 +2649,18 @@ def take_quiz(assignment_id):
 
     has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in questions)
     
-    # Shuffle questions only on retake if enabled
-    # Reshuffle is only for retakes, not for initial attempts
+    # Shuffle within each section (preserve section order). Retakes only.
     if is_retake and assignment.shuffle_questions:
         import random
+        from itertools import groupby
+
         questions = list(questions)
-        random.shuffle(questions)
+        shuffled: list = []
+        for _section_id, group in groupby(questions, key=lambda q: q.section_id):
+            chunk = list(group)
+            random.shuffle(chunk)
+            shuffled.extend(chunk)
+        questions = shuffled
     
     # Load student's existing answers if any (only for viewing, not for retaking)
     existing_answers = {}
@@ -3508,13 +3568,20 @@ def create_discussion_thread(assignment_id):
         db.session.commit()
         
         flash('Discussion thread created successfully!', 'success')
-        return redirect(url_for('student.view_discussion_thread', thread_id=new_thread.id))
+        redirect_kwargs = {'thread_id': new_thread.id}
+        target = url_for('student.view_discussion_thread', **redirect_kwargs)
+        if request.args.get('embed') == '1' or request.form.get('embed') == '1':
+            target += ('&' if '?' in target else '?') + 'embed=1'
+        return redirect(target)
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating discussion thread: {e}")
         flash(f'Error creating thread: {str(e)}', 'danger')
-        return redirect(url_for('student.view_discussion', assignment_id=assignment_id))
+        target = url_for('student.view_discussion', assignment_id=assignment_id)
+        if request.args.get('embed') == '1' or request.form.get('embed') == '1':
+            target += ('&' if '?' in target else '?') + 'embed=1'
+        return redirect(target)
 
 
 @student_blueprint.route('/discussion/thread/<int:thread_id>')

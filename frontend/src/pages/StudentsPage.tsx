@@ -7,7 +7,8 @@ import {
   removeStudent,
   uploadStudentsCsv,
 } from '../api/students'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import { StudentDetailModal } from '../components/students/StudentDetailModal'
 import { StudentEditModal } from '../components/students/StudentEditModal'
 import type { ManagementOutletContext } from '../types/layout'
@@ -319,18 +320,21 @@ export function StudentsPage() {
 
   if (loading && items.length === 0 && !error) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell director={isDirector}>
+        <MgmtBootstrapRoot>
         <div className="mgmt-stu container-fluid px-0 px-md-1">
           <div className={shellClass}>
             <div className="p-5 text-center text-muted">Loading students…</div>
           </div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell director={isDirector}>
+      <MgmtBootstrapRoot>
       <div className="mgmt-stu container-fluid px-0 px-md-1">
         <div className={shellClass}>
           <header className="mgmt-stu-hero">
@@ -756,7 +760,8 @@ export function StudentsPage() {
           }}
         />
       ) : null}
-    </LegacyMgmtScope>
+      </MgmtBootstrapRoot>
+    </ManagementPageShell>
   )
 }
 

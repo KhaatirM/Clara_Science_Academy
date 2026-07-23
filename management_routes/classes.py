@@ -258,14 +258,19 @@ def calculate_group_assignment_graded_status(group_assignment):
 
 @bp.route('/api/class/<int:class_id>/groups', methods=['GET'])
 @login_required
-@management_required
 def management_api_class_groups(class_id):
     """API endpoint to get groups for a class - Management access."""
+    from flask_login import current_user
+    from teacher_routes.utils import user_can_create_class_group_content
+
     try:
         print(f"DEBUG: Management API called for class {class_id}")
         
-        # Verify management has access to this class
+        # Verify user may access this class
         class_obj = Class.query.get_or_404(class_id)
+        if not user_can_create_class_group_content(class_obj):
+            from flask import abort
+            abort(403)
         
         # Get groups for this class
         groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
@@ -1307,6 +1312,12 @@ def admin_class_group_assignments(class_id):
 @management_required
 def admin_class_deadline_reminders(class_id):
     """View deadline reminders for a specific class - Management view."""
+    from utils.spa_management_urls import spa_class_tool_redirect
+
+    spa_redirect = spa_class_tool_redirect(class_id, "deadline-reminders")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     # Get all deadline reminders for this class
@@ -1387,6 +1398,12 @@ def admin_class_deadline_reminders(class_id):
 @management_required
 def admin_class_analytics(class_id):
     """View analytics for a specific class - Management view."""
+    from utils.spa_management_urls import spa_class_tool_redirect
+
+    spa_redirect = spa_class_tool_redirect(class_id, "analytics")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     # Get analytics data
@@ -1425,6 +1442,12 @@ def admin_class_analytics(class_id):
 @management_required
 def admin_class_360_feedback(class_id):
     """View 360 feedback for a specific class - Management view."""
+    from utils.spa_management_urls import spa_class_tool_redirect
+
+    spa_redirect = spa_class_tool_redirect(class_id, "360-feedback")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     # Get feedback sessions
@@ -1450,6 +1473,12 @@ def admin_class_360_feedback(class_id):
 @management_required
 def admin_class_reflection_journals(class_id):
     """View reflection journals for a specific class - Management view."""
+    from utils.spa_management_urls import spa_class_tool_redirect
+
+    spa_redirect = spa_class_tool_redirect(class_id, "reflection-journals")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     # Get reflection journals
@@ -1475,6 +1504,12 @@ def admin_class_reflection_journals(class_id):
 @management_required
 def admin_class_conflicts(class_id):
     """View conflicts for a specific class - Management view."""
+    from utils.spa_management_urls import spa_class_tool_redirect
+
+    spa_redirect = spa_class_tool_redirect(class_id, "conflicts")
+    if spa_redirect is not None:
+        return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
     
     # Get conflicts - GroupConflict doesn't have class_id, so we need to get it through groups
@@ -2148,6 +2183,12 @@ def class_assignments(class_id):
 @management_required
 def take_class_attendance(class_id):
     """Take attendance for a specific class (management view)"""
+    from utils.spa_management_urls import spa_take_class_attendance_redirect
+
+    spa_redirect = spa_take_class_attendance_redirect(class_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     try:
         from datetime import datetime
         
@@ -2586,6 +2627,12 @@ def manage_class_roster(class_id):
 @management_required
 def admin_class_groups(class_id):
     """View and manage groups for a class (Administrator access)."""
+    from utils.spa_management_urls import spa_class_workflow_redirect
+
+    spa_redirect = spa_class_workflow_redirect(class_id, "groups")
+    if spa_redirect is not None:
+        return spa_redirect
+
     try:
         class_obj = Class.query.get_or_404(class_id)
         
@@ -2773,14 +2820,21 @@ def admin_group_assignment_type_selector(class_id):
 
 @bp.route('/class/<int:class_id>/group-assignment/create/pdf', methods=['GET', 'POST'])
 @login_required
-@management_required
 def admin_create_group_pdf_assignment(class_id):
     """Create a new PDF group assignment - Management view."""
+    from flask_login import current_user
+    from teacher_routes.utils import user_can_create_class_group_content
+    from utils.spa_assignment_create_urls import assignment_create_success_redirect
     from werkzeug.utils import secure_filename
     import time
     import os
     import json
     from .assignment_create_json import create_form_err, create_form_ok
+
+    class_obj = Class.query.get_or_404(class_id)
+    if not user_can_create_class_group_content(class_obj):
+        from flask import abort
+        abort(403)
 
     if request.method == 'GET':
         from utils.spa_management_urls import spa_group_pdf_create_redirect
@@ -2788,8 +2842,6 @@ def admin_create_group_pdf_assignment(class_id):
         spa_redirect = spa_group_pdf_create_redirect(class_id)
         if spa_redirect is not None:
             return spa_redirect
-
-    class_obj = Class.query.get_or_404(class_id)
     accessible_classes = Class.query.order_by(Class.name).all()
     
     # Get current school year and academic periods
@@ -2960,7 +3012,7 @@ def admin_create_group_pdf_assignment(class_id):
         success_msg = f'Group PDF assignment "{title}" created successfully!'
         return create_form_ok(
             success_msg,
-            redirect_url=f'/app/management/assignments/{effective_class_id}',
+            redirect_url=assignment_create_success_redirect(effective_class_id),
         )
     
     return render_template('shared/create_group_pdf_assignment.html',
@@ -2978,11 +3030,12 @@ def admin_create_group_pdf_assignment(class_id):
 
 @bp.route('/class/<int:class_id>/group-assignment/create/quiz', methods=['GET', 'POST'])
 @login_required
-@management_required
 def admin_create_group_quiz_assignment(class_id):
     """Create a new quiz group assignment - Management view."""
     import json
     from management_routes.assignment_create_json import create_form_err, create_form_ok
+    from teacher_routes.utils import user_can_create_class_group_content
+    from utils.spa_assignment_create_urls import assignment_create_success_redirect
 
     if request.method == 'GET':
         from utils.spa_management_urls import spa_group_quiz_create_redirect
@@ -2992,6 +3045,9 @@ def admin_create_group_quiz_assignment(class_id):
             return spa_redirect
 
     class_obj = Class.query.get_or_404(class_id)
+    if not user_can_create_class_group_content(class_obj):
+        from flask import abort
+        abort(403)
     
     # Get current school year and academic periods
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
@@ -3149,7 +3205,7 @@ def admin_create_group_quiz_assignment(class_id):
         success_msg = f'Group quiz assignment "{title}" created successfully!'
         return create_form_ok(
             success_msg,
-            redirect_url=f'/app/management/assignments/{class_id}',
+            redirect_url=assignment_create_success_redirect(class_id),
         )
     
     return render_template('shared/create_group_quiz_assignment.html',
@@ -3166,12 +3222,25 @@ def admin_create_group_quiz_assignment(class_id):
 
 @bp.route('/class/<int:class_id>/group-assignment/create/discussion', methods=['GET', 'POST'])
 @login_required
-@management_required
 def admin_create_group_discussion_assignment(class_id):
     """Create a new discussion group assignment - Management view."""
     import json
-    
+
+    from management_routes.assignment_create_json import create_form_err, create_form_ok
+    from teacher_routes.utils import user_can_create_class_group_content
+    from utils.spa_assignment_create_urls import assignment_create_success_redirect
+
+    if request.method == 'GET':
+        from utils.spa_management_urls import spa_group_discussion_create_redirect
+
+        spa_redirect = spa_group_discussion_create_redirect(class_id)
+        if spa_redirect is not None:
+            return spa_redirect
+
     class_obj = Class.query.get_or_404(class_id)
+    if not user_can_create_class_group_content(class_obj):
+        from flask import abort
+        abort(403)
     
     # Get current school year and academic periods
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
@@ -3210,20 +3279,22 @@ def admin_create_group_discussion_assignment(class_id):
             selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
         
         if not title or not due_date_str or not quarter:
-            flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('shared/create_group_discussion_assignment.html', 
-                                 class_obj=class_obj, 
-                                 academic_periods=academic_periods,
-                                 admin_view=True)
+            return create_form_err(
+                'Title, due date, and quarter are required.',
+                redirect_target=url_for(
+                    'management.classes.admin_create_group_discussion_assignment', class_id=class_id
+                ),
+            )
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         except ValueError:
-            flash('Invalid due date format.', 'danger')
-            return render_template('shared/create_group_discussion_assignment.html', 
-                                 class_obj=class_obj, 
-                                 academic_periods=academic_periods,
-                                 admin_view=True)
+            return create_form_err(
+                'Invalid due date format.',
+                redirect_target=url_for(
+                    'management.classes.admin_create_group_discussion_assignment', class_id=class_id
+                ),
+            )
         
         # Get assignment context from form or query parameter
         assignment_context = request.form.get('assignment_context', 'homework')
@@ -3269,8 +3340,10 @@ def admin_create_group_discussion_assignment(class_id):
                 prompt_count += 1
         
         db.session.commit()
-        flash(f'Group discussion assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('management.assignments_and_grades', class_id=class_id))
+        return create_form_ok(
+            f'Group discussion assignment "{title}" created successfully!',
+            redirect_url=assignment_create_success_redirect(class_id),
+        )
     
     return render_template('shared/create_group_discussion_assignment.html',
                          class_obj=class_obj,

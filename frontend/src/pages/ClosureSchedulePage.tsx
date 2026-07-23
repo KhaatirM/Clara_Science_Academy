@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { fetchClosureScheduleForm, scheduleClosure } from '../api/schoolYearClosure'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ClosureScheduleResponse } from '../types/schoolYearClosure'
 import { previewOffsetDate } from '../utils/formatDate'
@@ -87,17 +88,20 @@ export function ClosureSchedulePage() {
 
   if (loading) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell director={isDirector}>
+        <MgmtBootstrapRoot>
         <div className="mgmt-syc container-fluid px-0 px-md-1">
           <div className="mgmt-syc-shell p-5 text-center">Loading…</div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   if (error && !data) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell director={isDirector}>
+        <MgmtBootstrapRoot>
         <div className="mgmt-syc container-fluid px-0 px-md-1">
           <div className="mgmt-syc-shell p-5">
             <p>{error}</p>
@@ -106,12 +110,14 @@ export function ClosureSchedulePage() {
             </Link>
           </div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell director={isDirector}>
+      <MgmtBootstrapRoot>
     <div className="mgmt-syc container-fluid px-0 px-md-1">
         <div className={`mgmt-syc-shell${isDirector ? ' mgmt-syc-shell--director' : ''}`}>
           <header className="mgmt-syc-hero">
@@ -393,6 +399,7 @@ export function ClosureSchedulePage() {
           </section>
         </div>
       </div>
-    </LegacyMgmtScope>
+    </MgmtBootstrapRoot>
+    </ManagementPageShell>
   )
 }

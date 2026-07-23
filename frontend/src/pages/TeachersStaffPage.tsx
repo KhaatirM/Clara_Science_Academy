@@ -4,6 +4,7 @@ import { fetchStaffDetail, fetchStaffList, removeStaff } from '../api/staff'
 import { StaffCard } from '../components/staff/StaffCard'
 import { StaffDetailModal } from '../components/staff/StaffDetailModal'
 import { StaffPageHeader } from '../components/staff/StaffPageHeader'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { useStaffRecordsView } from '../hooks/useStaffRecordsView'
 import type { ManagementOutletContext } from '../types/layout'
 import type { StaffDetail, StaffFilters, StaffListItem } from '../types/staff'
@@ -138,14 +139,7 @@ export function TeachersStaffPage() {
   }
 
   return (
-    <div
-      className={[
-        'rounded-3xl p-5 md:p-8',
-        isDirector
-          ? 'bg-gradient-to-br from-violet-50 via-violet-50/80 to-indigo-100'
-          : 'bg-gradient-to-br from-emerald-50 via-teal-50/80 to-cyan-50',
-      ].join(' ')}
-    >
+    <ManagementPageShell director={isDirector}>
       <StaffPageHeader user={user} mode="manage" />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="list">
@@ -156,7 +150,7 @@ export function TeachersStaffPage() {
       </div>
 
       <section className="mb-5 overflow-hidden rounded-2xl border border-white/90 bg-white/95 shadow-lg">
-        <div className="bg-gradient-to-br from-emerald-400 to-cyan-300 px-5 py-4 text-white">
+        <div className="spa-mgmt-band px-5 py-4">
           <h2 className="flex items-center gap-2 text-base font-bold">
             <i className="bi bi-search" aria-hidden />
             Search &amp; filter staff
@@ -232,7 +226,7 @@ export function TeachersStaffPage() {
           <div className="flex flex-wrap items-end gap-2 md:col-span-2">
             <button
               type="submit"
-              className="rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-300 px-4 py-2 text-sm font-semibold text-white hover:brightness-105"
+              className="spa-mgmt-btn-primary rounded-xl px-4 py-2 text-sm"
             >
               <i className="bi bi-search me-1" /> Search
             </button>
@@ -261,7 +255,7 @@ export function TeachersStaffPage() {
       ) : null}
 
       <section className="overflow-hidden rounded-2xl border border-white/90 bg-white/95 shadow-lg">
-        <div className="flex flex-col items-center gap-3 bg-gradient-to-br from-emerald-400 to-cyan-300 px-5 py-5 text-center text-white">
+        <div className="spa-mgmt-band flex flex-col items-center gap-3 px-5 py-5 text-center">
           <h2 className="flex items-center gap-2 text-base font-bold">
             <i className="bi bi-table" aria-hidden />
             Staff Records
@@ -376,7 +370,7 @@ export function TeachersStaffPage() {
                         <Link
                           title="Edit"
                           to={`/management/teachers/${staff.id}/edit`}
-                          className="rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-300 px-2.5 py-1.5 text-white"
+                          className="spa-mgmt-btn-primary rounded-lg px-2.5 py-1.5 text-sm"
                         >
                           <i className="bi bi-pencil" />
                         </Link>
@@ -412,15 +406,15 @@ export function TeachersStaffPage() {
       </section>
 
       <StaffDetailModal detail={detail} loading={detailLoading} onClose={() => setDetail(null)} />
-    </div>
+    </ManagementPageShell>
   )
 }
 
 function StatCard({ label, value, icon }: { label: string; value: number; icon: string }) {
   return (
-    <div className="rounded-2xl border border-white/90 bg-white/95 p-4 shadow-md" role="listitem">
+    <div className="spa-mgmt-stat p-4 shadow-md" role="listitem">
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-800">
+        <span className="spa-mgmt-badge flex h-10 w-10 items-center justify-center rounded-xl text-lg">
           <i className={`bi ${icon}`} aria-hidden />
         </span>
         <div>

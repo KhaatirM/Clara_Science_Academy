@@ -35,12 +35,12 @@ export function SidebarSchoolClock({ timezone, collapsed }: SidebarSchoolClockPr
 
   return (
     <div
-      className="spa-sidebar-school-tz mx-[0.65rem] mb-2 rounded-[10px] border border-white/20 bg-white/10 px-[0.65rem] py-[0.55rem] text-center leading-tight text-slate-100"
+      className="spa-sidebar-school-tz mx-[0.65rem] mb-2 rounded-[10px] border px-[0.65rem] py-[0.55rem] text-center leading-tight"
       title="School timezone for due dates and schedules"
       data-iana={resolved.iana}
     >
       <div className="flex flex-wrap items-center justify-center gap-x-[0.45rem] gap-y-[0.35rem] text-[0.92rem] font-bold tracking-wide">
-        <i className="bi bi-clock text-[0.95rem] text-sky-300" aria-hidden />
+        <i className="bi bi-clock text-[0.95rem]" aria-hidden />
         <time className="tabular-nums">{display.clock || '--:-- --'}</time>
         {display.zone ? (
           <span className="inline-block rounded-full bg-white/15 px-[0.4rem] py-[0.1rem] text-[0.68rem] font-extrabold uppercase tracking-wide">

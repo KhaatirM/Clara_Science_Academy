@@ -7,6 +7,7 @@ import {
   saveSchoolDayAttendance,
 } from '../api/attendance'
 import { AttendanceReportsPanel } from './AttendanceReportsPage'
+import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 import type {
   AttendanceHubResponse,
@@ -14,6 +15,7 @@ import type {
   SchoolDayStatus,
   SchoolDayStudentRow,
 } from '../types/attendance'
+import { spaRoute } from '../utils/spaRoute'
 
 type AttendanceTab = 'school-day' | 'class-period' | 'reports'
 
@@ -190,21 +192,28 @@ function ClassPeriodCard({
       </div>
 
       <div className="mt-auto space-y-2 pt-5">
-        <a
-          href={item.take_attendance_url}
+        <Link
+          to={spaRoute(item.take_attendance_url)}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800"
         >
           <i className="bi bi-clipboard-check" aria-hidden />
           Take Attendance
-        </a>
+        </Link>
         <div className="flex gap-2">
-          <a
-            href={item.view_class_url}
+          <Link
+            to={spaRoute(item.take_attendance_url)}
             className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-hub-text transition hover:bg-white"
           >
             <i className="bi bi-eye" aria-hidden />
             View
-          </a>
+          </Link>
+          <Link
+            to={`/management/attendance/records/${item.id}`}
+            className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-hub-text transition hover:bg-white"
+          >
+            <i className="bi bi-list-check" aria-hidden />
+            Records
+          </Link>
           <button
             type="button"
             disabled={busyClassId === item.id}
@@ -363,13 +372,14 @@ export default function AttendancePage() {
   const isDirector = user.role_canonical === 'Director'
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-1 pb-10 pt-2">
-      <header className="rounded-3xl border border-white/80 bg-gradient-to-br from-teal-900 via-teal-800 to-cyan-900 p-6 text-white shadow-lg md:p-8">
+    <ManagementPageShell director={isDirector}>
+      <div className="mx-auto max-w-7xl space-y-6">
+      <ManagementPageHero>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-100/90">Attendance</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] spa-mgmt-hero-muted">Attendance</p>
             <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Unified attendance</h1>
-            <p className="mt-2 flex items-center gap-2 text-sm text-teal-50/90">
+            <p className="mt-2 flex items-center gap-2 text-sm spa-mgmt-hero-muted">
               <i className="bi bi-calendar-week" aria-hidden />
               School day, class period, and reports in one place
             </p>
@@ -409,7 +419,7 @@ export default function AttendancePage() {
             </button>
           </div>
         </div>
-      </header>
+      </ManagementPageHero>
 
       {hub ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="list">
@@ -698,6 +708,7 @@ export default function AttendancePage() {
 
         {!loading && tab === 'reports' ? <AttendanceReportsPanel embedded /> : null}
       </div>
-    </div>
+      </div>
+    </ManagementPageShell>
   )
 }

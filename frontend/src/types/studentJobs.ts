@@ -30,9 +30,32 @@ export type StudentJobsInspectionHistoryItem = {
   team_name: string
   score: number
   major_deductions: number
+  moderate_deductions?: number
+  minor_deductions?: number
   bonus_points: number
   status: string
   inspector_name: string
+  inspector_notes?: string
+}
+
+export type StudentJobsInspectionPagination = {
+  page: number
+  per_page: number
+  total: number
+  total_pages: number
+}
+
+export type StudentJobsInspectionHistoryResponse = {
+  items: StudentJobsInspectionHistoryItem[]
+  pagination: StudentJobsInspectionPagination
+  passed_on_page: number
+}
+
+export type CreateStudentJobsTeamPayload = {
+  name: string
+  description?: string
+  team_type: string
+  student_ids?: number[]
 }
 
 export type StudentJobsHubResponse = {
@@ -46,6 +69,7 @@ export type StudentJobsHubResponse = {
   }
   teams: StudentJobsTeam[]
   inspection_history: StudentJobsInspectionHistoryItem[]
+  inspection_pagination: StudentJobsInspectionPagination
   point_system: {
     starting_points: number
     redo_threshold: number

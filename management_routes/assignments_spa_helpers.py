@@ -179,25 +179,39 @@ def _serialize_assignment_item(
     assignment: Assignment | GroupAssignment,
     stats: dict[str, Any],
     class_id: int,
+    *,
+    scope: str = "management",
 ) -> dict[str, Any]:
     is_group = item_type == "group"
     aid = assignment.id
-    links = {
-        "class": f"/app/management/classes/{class_id}",
-        "class_spa_grades": f"/app/management/classes/{class_id}/grades",
-    }
-    if is_group:
-        links["view"] = f"/management/assignments/{class_id}/group/{aid}/view"
-        links["grade"] = f"/management/assignments/{class_id}/group/{aid}/grade"
+    if scope == "teacher":
+        links = {
+            "class": f"/app/teacher/classes/{class_id}",
+            "class_spa_grades": f"/app/teacher/assignments-and-grades/{class_id}",
+        }
+        if is_group:
+            links["view"] = f"/teacher/assignments-and-grades/{class_id}/group/{aid}/view"
+            links["grade"] = f"/teacher/assignments-and-grades/{class_id}/group/{aid}/grade"
+        else:
+            links["view"] = f"/teacher/assignments-and-grades/{class_id}/individual/{aid}/view"
+            links["grade"] = f"/teacher/assignments-and-grades/{class_id}/individual/{aid}/grade"
     else:
-        links["view"] = f"/management/assignments/{class_id}/individual/{aid}/view"
-        links["grade"] = f"/management/assignments/{class_id}/individual/{aid}/grade"
+        links = {
+            "class": f"/app/management/classes/{class_id}",
+            "class_spa_grades": f"/app/management/classes/{class_id}/grades",
+        }
+        if is_group:
+            links["view"] = f"/management/assignments/{class_id}/group/{aid}/view"
+            links["grade"] = f"/management/assignments/{class_id}/group/{aid}/grade"
+        else:
+            links["view"] = f"/management/assignments/{class_id}/individual/{aid}/view"
+            links["grade"] = f"/management/assignments/{class_id}/individual/{aid}/grade"
     return {
         "id": aid,
         "key": f"group_{aid}" if is_group else str(aid),
         "title": assignment.title,
         "type": item_type,
-        "assignment_type": getattr(assignment, "assignment_type", None) if not is_group else "group",
+        "assignment_type": getattr(assignment, "assignment_type", None),
         "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
         "quarter": getattr(assignment, "quarter", None),
         "status": assignment.status,
@@ -242,6 +256,8 @@ def query_assignments_class(
     view_mode: str = "grades",
     sort_by: str = "due_date",
     sort_order: str = "desc",
+    *,
+    scope: str = "management",
 ) -> dict[str, Any]:
     """Per-class assignments & grades workspace."""
     class_obj = Class.query.get_or_404(class_id)
@@ -292,7 +308,28 @@ def query_assignments_class(
             active_count += 1
         if stats.get("average_score", 0) > 0 and not stats.get("all_voided"):
             avg_scores.append(float(stats["average_score"]))
-        items.append(_serialize_assignment_item(item_type, assignment, stats, class_id))
+        items.append(_serialize_assignment_item(item_type, assignment, stats, class_id, scope=scope))
+
+    if scope == "teacher":
+        toolbar = {
+            "extension_request_count": count_pending_extension_requests(class_ids=[class_id]),
+            "redo_request_count": count_pending_redo_requests(class_ids=[class_id]),
+            "pending_assistant_count": count_pending_assistant_proposals_for_class(class_id),
+            "new_assignment_url": f"/app/teacher/assignments/create?class_id={class_id}",
+            "redo_url": "/app/teacher/redo",
+            "extensions_url": "/app/teacher/extensions",
+            "assistant_proposals_url": f"/app/teacher/classes/{class_id}/assistant-approvals",
+        }
+    else:
+        toolbar = {
+            "extension_request_count": count_pending_extension_requests(),
+            "redo_request_count": count_pending_redo_requests(),
+            "pending_assistant_count": count_pending_assistant_proposals_for_class(class_id),
+            "new_assignment_url": f"/app/management/assignments/create?class_id={class_id}",
+            "redo_url": "/app/management/redo" if user_should_use_spa_management_shell() else url_for("management.redo_dashboard"),
+            "extensions_url": "/app/management/extensions" if user_should_use_spa_management_shell() else url_for("management.view_extension_requests"),
+            "assistant_proposals_url": f"/app/management/classes/{class_id}/assistant-approvals",
+        }
 
     return {
         "class": {
@@ -313,15 +350,5 @@ def query_assignments_class(
             "students": enrollment_count,
             "average_score": round(sum(avg_scores) / len(avg_scores), 1) if avg_scores else None,
         },
-        "toolbar": {
-            "extension_request_count": count_pending_extension_requests(),
-            "redo_request_count": count_pending_redo_requests(),
-            "pending_assistant_count": count_pending_assistant_proposals_for_class(class_id),
-            "new_assignment_url": f"/app/management/assignments/create?class_id={class_id}",
-            "redo_url": "/app/management/redo" if user_should_use_spa_management_shell() else url_for("management.redo_dashboard"),
-            "extensions_url": "/app/management/extensions" if user_should_use_spa_management_shell() else url_for("management.view_extension_requests"),
-            "assistant_proposals_url": url_for(
-                "teacher.assignments.pending_assistant_assignments", class_id=class_id
-            ),
-        },
+        "toolbar": toolbar,
     }

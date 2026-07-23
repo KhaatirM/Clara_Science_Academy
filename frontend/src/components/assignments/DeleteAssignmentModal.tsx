@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { removeGroupAssignment, removeIndividualAssignment, type DeleteAssignmentTarget } from '../../api/assignmentActions'
+import type { AssignmentWorkspaceScope } from '../../utils/assignmentWorkspaceScope'
 
 export function DeleteAssignmentModal({
   target,
   classId,
+  workspaceScope = 'management',
   onClose,
   onSuccess,
 }: {
   target: DeleteAssignmentTarget | null
   classId: number
+  workspaceScope?: AssignmentWorkspaceScope
   onClose: () => void
   onSuccess: (message: string) => void
 }) {
@@ -29,8 +32,8 @@ export function DeleteAssignmentModal({
     try {
       const res =
         target.type === 'group'
-          ? await removeGroupAssignment(target.id)
-          : await removeIndividualAssignment(target.id, classId)
+          ? await removeGroupAssignment(target.id, workspaceScope)
+          : await removeIndividualAssignment(target.id, classId, workspaceScope)
       onSuccess(res.message)
       onClose()
     } catch (err) {

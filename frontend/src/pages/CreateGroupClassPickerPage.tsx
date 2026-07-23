@@ -2,26 +2,28 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchGroupClassPicker } from '../api/groupCreateForms'
 import { spaRoute } from '../utils/spaRoute'
+import { assignmentCreateRoutePrefix, useAssignmentCreateScope } from '../utils/assignmentCreateScope'
 
 export function CreateGroupClassPickerPage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const [searchParams] = useSearchParams()
   const classIdParam = searchParams.get('class_id')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [backUrl, setBackUrl] = useState('/management/assignments/create')
+  const [backUrl, setBackUrl] = useState(assignmentCreateRoutePrefix('management'))
   const [classes, setClasses] = useState<{ id: number; name: string; subject?: string | null }[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchGroupClassPicker()
+      const data = await fetchGroupClassPicker(scope)
       setBackUrl(spaRoute(data.type_selector_url))
       setClasses(data.classes)
       if (classIdParam && /^\d+$/.test(classIdParam)) {
-        navigate(`/management/assignments/create/group/${classIdParam}`, { replace: true })
+        navigate(`${assignmentCreateRoutePrefix(scope)}/group/${classIdParam}`, { replace: true })
         return
       }
     } catch (e) {
@@ -29,7 +31,7 @@ export function CreateGroupClassPickerPage() {
     } finally {
       setLoading(false)
     }
-  }, [classIdParam, navigate])
+  }, [classIdParam, navigate, scope])
 
   useEffect(() => {
     void load()
@@ -82,7 +84,7 @@ export function CreateGroupClassPickerPage() {
             <button
               key={c.id}
               type="button"
-              onClick={() => navigate(`/management/assignments/create/group/${c.id}`)}
+              onClick={() => navigate(`${assignmentCreateRoutePrefix(scope)}/group/${c.id}`)}
               className="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
             >
               <i className="bi bi-house-door-fill mb-3 block text-3xl text-violet-600" aria-hidden />

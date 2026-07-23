@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { useLegacyMgmtPortal } from './LegacyMgmtScope'
+import { useLegacyMgmtPortal } from './MgmtBootstrapRoot'
 
 /** Bootstrap-styled modal matching legacy Jinja templates (no Bootstrap JS). */
 export function LegacyBootstrapModal({

@@ -1,4 +1,6 @@
 import { apiFetch } from './client'
+import type { AssignmentCreateScope } from '../utils/assignmentCreateScope'
+import { assignmentCreateApiBase } from '../utils/assignmentCreateScope'
 
 export interface ClassBrief {
   id: number
@@ -13,7 +15,7 @@ export interface AssignmentFormCommon {
   back_url: string
   type_selector_url: string
   post_url: string
-  meta?: { can_manage?: boolean }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
 export interface PdfAssignmentFormMeta extends AssignmentFormCommon {
@@ -37,20 +39,32 @@ export interface QuizQuestionTypeOption {
 
 export interface QuizAssignmentFormMeta extends AssignmentFormCommon {
   question_types: QuizQuestionTypeOption[]
+  question_banks_url?: string
+  save_to_bank_url?: string
 }
 
-export async function fetchPdfAssignmentForm(context: string, classId?: number | null) {
+export async function fetchPdfAssignmentForm(
+  context: string,
+  classId?: number | null,
+  scope: AssignmentCreateScope = 'management',
+) {
   const params = new URLSearchParams({ context })
   if (classId) params.set('class_id', String(classId))
-  return apiFetch<PdfAssignmentFormMeta>(`/api/spa/assignments/create/pdf?${params}`)
+  return apiFetch<PdfAssignmentFormMeta>(`${assignmentCreateApiBase(scope)}/pdf?${params}`)
 }
 
-export async function fetchDiscussionAssignmentForm(classId?: number | null) {
+export async function fetchDiscussionAssignmentForm(
+  classId?: number | null,
+  scope: AssignmentCreateScope = 'management',
+) {
   const qs = classId ? `?class_id=${classId}` : ''
-  return apiFetch<DiscussionAssignmentFormMeta>(`/api/spa/assignments/create/discussion${qs}`)
+  return apiFetch<DiscussionAssignmentFormMeta>(`${assignmentCreateApiBase(scope)}/discussion${qs}`)
 }
 
-export async function fetchQuizAssignmentForm(classId?: number | null) {
+export async function fetchQuizAssignmentForm(
+  classId?: number | null,
+  scope: AssignmentCreateScope = 'management',
+) {
   const qs = classId ? `?class_id=${classId}` : ''
-  return apiFetch<QuizAssignmentFormMeta>(`/api/spa/assignments/create/quiz${qs}`)
+  return apiFetch<QuizAssignmentFormMeta>(`${assignmentCreateApiBase(scope)}/quiz${qs}`)
 }

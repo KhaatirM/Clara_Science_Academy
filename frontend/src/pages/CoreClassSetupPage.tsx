@@ -16,6 +16,12 @@ export function CoreClassSetupPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [successModal, setSuccessModal] = useState<{
+    message: string
+    createdCount: number
+    enrolledCount: number
+    redirect: string
+  } | null>(null)
 
   useEffect(() => {
     void fetchCoreSetupForm()
@@ -68,16 +74,29 @@ export function CoreClassSetupPage() {
     if (!window.confirm('Create core classes for the selected grades?')) return
     setBusy(true)
     setError(null)
+    setMessage(null)
     try {
       const res = await createCoreSetup(buildBody())
       if (!res.success) throw new Error(res.message)
-      setMessage(res.message)
-      if (res.redirect) setTimeout(() => navigate('/management/classes'), 1000)
+      const result = res.result as { created_count?: number; enrollment?: { enrolled_count?: number } } | undefined
+      setSuccessModal({
+        message: res.message,
+        createdCount: result?.created_count ?? 0,
+        enrolledCount: result?.enrollment?.enrolled_count ?? 0,
+        redirect: res.redirect || '/app/management/classes',
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Create failed')
     } finally {
       setBusy(false)
     }
+  }
+
+  const goToClasses = () => {
+    if (!successModal) return
+    const url = successModal.redirect.replace(/^\/app/, '')
+    navigate(url)
+    setSuccessModal(null)
   }
 
   const toggleGrade = (g: number) => {
@@ -254,6 +273,49 @@ export function CoreClassSetupPage() {
               </p>
             </section>
           ) : null}
+        </div>
+      ) : null}
+
+      {successModal ? (
+        <div
+          className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="core-setup-success-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <i className="bi bi-check-lg text-2xl" aria-hidden />
+            </div>
+            <h2 id="core-setup-success-title" className="text-xl font-bold text-hub-text">
+              Core classes ready
+            </h2>
+            <p className="mt-2 text-sm text-hub-muted">{successModal.message}</p>
+            <ul className="mt-4 space-y-2 text-sm text-hub-text">
+              <li>
+                <strong>{successModal.createdCount}</strong> class(es) created
+              </li>
+              <li>
+                <strong>{successModal.enrolledCount}</strong> student enrollment(s) added by grade level
+              </li>
+            </ul>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={goToClasses}
+                className="rounded-full bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800"
+              >
+                Go to Classes
+              </button>
+              <button
+                type="button"
+                onClick={() => setSuccessModal(null)}
+                className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                Stay here
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </ClassSubpageShell>

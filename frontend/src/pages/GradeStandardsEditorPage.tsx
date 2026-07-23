@@ -1,10 +1,11 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import {
   fetchGradeStandardsEditor,
   saveGradeStandardsMarks,
   type GradeLevelRoute,
+  type GradeStandardsScope,
 } from '../api/gradeStandards'
 import type { GradeStandardsEditorResponse, GradeStandardsStandard } from '../types/gradeStandards'
 import { spaRoute } from '../utils/spaRoute'
@@ -133,6 +134,8 @@ export default function GradeStandardsEditorPage() {
   const gradeRoute = grade === 'grade3' ? 'grade3' : 'grade1'
   const classIdNum = Number(classId)
   const navigate = useNavigate()
+  const location = useLocation()
+  const scope: GradeStandardsScope = location.pathname.startsWith('/teacher/') ? 'teacher' : 'management'
   const [searchParams, setSearchParams] = useSearchParams()
 
   const quarter = searchParams.get('quarter') || undefined
@@ -149,6 +152,11 @@ export default function GradeStandardsEditorPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const backHref =
+    scope === 'teacher'
+      ? `/teacher/classes/${classIdNum}`
+      : spaRoute(`/management/report-cards/standards/${gradeRoute}`)
+
   const load = useCallback(async () => {
     if (!classIdNum) return
     setLoading(true)
@@ -159,6 +167,7 @@ export default function GradeStandardsEditorPage() {
         quarter,
         view,
         studentId,
+        scope,
       })
       setData(response)
       setGridDraft(buildGridDraft(response))
@@ -168,7 +177,7 @@ export default function GradeStandardsEditorPage() {
     } finally {
       setLoading(false)
     }
-  }, [classIdNum, gradeRoute, quarter, view, studentId])
+  }, [classIdNum, gradeRoute, quarter, view, studentId, scope])
 
   useEffect(() => {
     void load()
@@ -218,10 +227,15 @@ export default function GradeStandardsEditorPage() {
             )
           : collectGridChanges(gridDraft, data.marks_grid, studentIds, standardIds)
 
-      const result = await saveGradeStandardsMarks(gradeRoute, classIdNum, {
-        quarter: data.quarter,
-        marks,
-      })
+      const result = await saveGradeStandardsMarks(
+        gradeRoute,
+        classIdNum,
+        {
+          quarter: data.quarter,
+          marks,
+        },
+        scope,
+      )
       setMessage(result.message)
       await load()
     } catch (err) {
@@ -247,10 +261,15 @@ export default function GradeStandardsEditorPage() {
     setMessage(null)
     setError(null)
     try {
-      const result = await saveGradeStandardsMarks(gradeRoute, classIdNum, {
-        quarter: data.quarter,
-        bulk_action: action,
-      })
+      const result = await saveGradeStandardsMarks(
+        gradeRoute,
+        classIdNum,
+        {
+          quarter: data.quarter,
+          bulk_action: action,
+        },
+        scope,
+      )
       setMessage(result.message)
       await load()
     } catch (err) {
@@ -273,11 +292,11 @@ export default function GradeStandardsEditorPage() {
       <div className="space-y-4">
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">{error}</div>
         <Link
-          to={spaRoute(`/management/report-cards/standards/${gradeRoute}`)}
+          to={backHref}
           className="inline-flex items-center gap-2 text-sm font-semibold text-violet-700"
         >
           <i className="bi bi-arrow-left" aria-hidden />
-          Back to all classes
+          {scope === 'teacher' ? 'Back to class' : 'Back to all classes'}
         </Link>
       </div>
     )
@@ -295,7 +314,7 @@ export default function GradeStandardsEditorPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <Link
-              to={spaRoute(data.urls.hub)}
+              to={scope === 'teacher' ? backHref : spaRoute(data.urls.hub)}
               className="inline-flex items-center gap-1 text-sm font-semibold text-violet-700 hover:text-violet-900"
             >
               <i className="bi bi-arrow-left" aria-hidden />
@@ -407,7 +426,9 @@ export default function GradeStandardsEditorPage() {
                   const nextId = event.target.value
                   navigate(
                     spaRoute(
-                      `/management/report-cards/standards/${gradeRoute}/${nextId}?quarter=${data.quarter}&view=${data.view_mode}`,
+                      scope === 'teacher'
+                        ? `/teacher/classes/${nextId}/standards/${gradeRoute}?quarter=${data.quarter}&view=${data.view_mode}`
+                        : `/management/report-cards/standards/${gradeRoute}/${nextId}?quarter=${data.quarter}&view=${data.view_mode}`,
                     ),
                   )
                 }}

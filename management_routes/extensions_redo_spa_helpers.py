@@ -76,6 +76,60 @@ def _serialize_extension_request(req: ExtensionRequest) -> dict[str, Any]:
     }
 
 
+def query_teacher_extensions_hub() -> dict[str, Any]:
+    """Extension requests visible to the current teacher (or all for school admins)."""
+    from teacher_routes.utils import get_teacher_or_admin, is_admin
+    from utils.school_year_filters import teacher_class_ids_active_school_year
+
+    active = get_active_school_year()
+    teacher = get_teacher_or_admin()
+    if is_admin():
+        rows = (
+            extension_requests_query()
+            .options(
+                joinedload(ExtensionRequest.assignment).joinedload(Assignment.class_info),
+                joinedload(ExtensionRequest.student),
+            )
+            .order_by(ExtensionRequest.requested_at.desc())
+            .all()
+        )
+    elif teacher is None:
+        rows = []
+    else:
+        class_ids = teacher_class_ids_active_school_year(teacher.id)
+        rows = (
+            extension_requests_query(class_ids=class_ids)
+            .options(
+                joinedload(ExtensionRequest.assignment).joinedload(Assignment.class_info),
+                joinedload(ExtensionRequest.student),
+            )
+            .order_by(ExtensionRequest.requested_at.desc())
+            .all()
+        )
+    items = [_serialize_extension_request(r) for r in rows if r.assignment and r.student]
+    pending = [i for i in items if i["status"] == "Pending"]
+    approved = [i for i in items if i["status"] == "Approved"]
+    rejected = [i for i in items if i["status"] == "Rejected"]
+    return {
+        "items": items,
+        "pending": pending,
+        "approved": approved,
+        "rejected": rejected,
+        "stats": {
+            "total": len(items),
+            "pending": len(pending),
+            "approved": len(approved),
+            "rejected": len(rejected),
+        },
+        "meta": {
+            "active_school_year_id": active.id if active else None,
+            "active_school_year_name": active.name if active else None,
+            "has_active_school_year": active is not None,
+            "scope": "teacher",
+        },
+    }
+
+
 def query_extensions_hub() -> dict[str, Any]:
     """All extension requests for the active school year, grouped by status."""
     active = get_active_school_year()

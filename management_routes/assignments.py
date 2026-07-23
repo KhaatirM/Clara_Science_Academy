@@ -5579,14 +5579,14 @@ def admin_grade_group_assignment(assignment_id):
 
 @bp.route('/group-assignment/<int:assignment_id>/delete', methods=['POST'])
 @login_required
-@management_required
 def admin_delete_group_assignment(assignment_id):
-    """Delete a group assignment - Management view."""
+    """Delete a group assignment - Management or authorized teacher."""
     from werkzeug.exceptions import NotFound
+    from teacher_routes.utils import user_can_create_class_group_content
 
     group_assignment = None
     try:
-        from models import GroupAssignment, GroupGrade, GroupSubmission, DeadlineReminder
+        from models import GroupAssignment, GroupGrade, GroupSubmission
 
         group_assignment = GroupAssignment.query.get(assignment_id)
         if not group_assignment:
@@ -5599,24 +5599,27 @@ def admin_delete_group_assignment(assignment_id):
                 return jsonify({"success": True, "message": "Assignment already removed."})
             flash("Group assignment already removed.", "info")
             return redirect(url_for("management.assignments_and_grades"))
-        
+
+        class_obj = group_assignment.class_info
+        if not class_obj or not user_can_create_class_group_content(class_obj):
+            from flask import abort
+            abort(403)
+
         # Delete related grades first
         GroupGrade.query.filter_by(group_assignment_id=assignment_id).delete()
-        
+
         # Delete related submissions
         GroupSubmission.query.filter_by(group_assignment_id=assignment_id).delete()
-        
+
         # Delete deadline reminders (they reference group assignments)
-        # Use raw SQL directly to avoid ORM trying to load columns that may not exist
         try:
             db.session.execute(
                 db.text("DELETE FROM deadline_reminder WHERE group_assignment_id = :assignment_id"),
-                {"assignment_id": assignment_id}
+                {"assignment_id": assignment_id},
             )
         except Exception as e:
             current_app.logger.warning(f"Could not delete deadline reminders: {e}")
-        
-        # Delete the assignment itself
+
         db.session.delete(group_assignment)
         db.session.commit()
 
@@ -5641,12 +5644,11 @@ def admin_delete_group_assignment(assignment_id):
         if wants_json:
             return jsonify({"success": False, "message": f"Error deleting assignment: {str(e)}"}), 500
         flash(f"Error deleting assignment: {str(e)}", "danger")
-    
-    # Redirect back to the appropriate page
-    class_id = getattr(group_assignment, 'class_id', None) if group_assignment else None
+
+    class_id = getattr(group_assignment, "class_id", None) if group_assignment else None
     if class_id:
-        return redirect(url_for('management.assignments_and_grades', class_id=class_id))
-    return redirect(url_for('management.assignments_and_grades'))
+        return redirect(url_for("management.assignments_and_grades", class_id=class_id))
+    return redirect(url_for("management.assignments_and_grades"))
 
 
 

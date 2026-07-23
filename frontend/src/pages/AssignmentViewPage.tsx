@@ -5,7 +5,10 @@ import {
   fetchIndividualAssignmentView,
   type AssignmentViewResponse,
 } from '../api/assignmentWorkspace'
+import { spaRoute } from '../utils/spaRoute'
+import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
 import { DeleteAssignmentModal } from '../components/assignments/DeleteAssignmentModal'
+import { EditAssignmentModal } from '../components/assignments/EditAssignmentModal'
 import {
   AssignmentActionsCard,
   AssignmentDetailsGrid,
@@ -43,6 +46,7 @@ export function AssignmentViewPage() {
   const { classId, assignmentId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
+  const workspaceScope = useAssignmentWorkspaceScope()
   const isGroup = location.pathname.includes('/group/')
   const numericClassId = Number(classId)
   const numericAssignmentId = Number(assignmentId)
@@ -57,6 +61,7 @@ export function AssignmentViewPage() {
   const [redoOpen, setRedoOpen] = useState(false)
   const [reopenOpen, setReopenOpen] = useState(false)
   const [unvoidOpen, setUnvoidOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
     if (!assignmentId) return
@@ -66,12 +71,8 @@ export function AssignmentViewPage() {
     }
     try {
       const payload = isGroup
-        ? await fetchGroupAssignmentView(numericAssignmentId)
-        : await fetchIndividualAssignmentView(numericAssignmentId)
-      if (payload.legacy_only && payload.legacy_view_url) {
-        window.location.assign(payload.legacy_view_url)
-        return
-      }
+        ? await fetchGroupAssignmentView(numericAssignmentId, workspaceScope)
+        : await fetchIndividualAssignmentView(numericAssignmentId, workspaceScope)
       setData(payload)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load assignment')
@@ -80,11 +81,19 @@ export function AssignmentViewPage() {
         setLoading(false)
       }
     }
-  }, [assignmentId, isGroup, numericAssignmentId])
+  }, [assignmentId, isGroup, numericAssignmentId, workspaceScope])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const state = location.state as { openEdit?: boolean } | null
+    if (state?.openEdit) {
+      setEditOpen(true)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location.pathname, location.state, navigate])
 
   const assignment = data?.assignment as {
     id?: number
@@ -114,6 +123,8 @@ export function AssignmentViewPage() {
       show_unvoid?: boolean
       grade_disabled?: boolean
       grade_disabled_label?: string | null
+      grade_via_submissions?: boolean
+      grade_label?: string
       is_quiz?: boolean
       max_attempts?: number | null
     }
@@ -143,18 +154,25 @@ export function AssignmentViewPage() {
     return Boolean((data.attachments && data.attachments.length > 0) || data.attachment)
   }, [data])
 
-  const classPath = `/management/assignments/${classId}`
+  const classPath = assignmentWorkspaceHubPath(workspaceScope, Number(classId))
+  const base = workspaceScope === 'teacher' ? `/teacher/assignments-and-grades/${classId}` : `/management/assignments/${classId}`
   const gradePath = isGroup
-    ? `/management/assignments/${classId}/group/${assignmentId}/grade`
-    : `/management/assignments/${classId}/individual/${assignmentId}/grade`
+    ? `${base}/group/${assignmentId}/grade`
+    : `${base}/individual/${assignmentId}/grade`
+
+  const submissionsPath = isGroup
+    ? `${base}/group/${assignmentId}/submissions`
+    : `${base}/individual/${assignmentId}/submissions`
 
   const actionHandlers = {
-    editHref: data?.links?.edit,
-    submissionsHref: data?.links?.submissions,
+    onEdit: () => setEditOpen(true),
+    submissionsTo: data?.links?.submissions ? spaRoute(data.links.submissions) : submissionsPath,
     onGrade: () => {
       if (actionMeta.grade_disabled) return
-      if (data?.legacy_grade_url && (data.legacy_only || data.legacy_reason === 'quiz_open_ended_grade')) {
-        window.location.assign(data.legacy_grade_url)
+      if (actionMeta.grade_via_submissions) {
+        navigate(
+          data?.links?.submissions ? spaRoute(data.links.submissions) : submissionsPath,
+        )
         return
       }
       navigate(gradePath)
@@ -233,11 +251,53 @@ export function AssignmentViewPage() {
         allVoided={Boolean(voidScope.all_voided)}
       />
 
+      {!isGroup && data.discussion ? (
+        <div className="mb-4 space-y-4">
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-sky-900">Discussion activity</h2>
+            <p className="mt-1 text-sm text-sky-900/80">
+              Requires {data.discussion.requirements.min_initial_posts} initial post(s) and{' '}
+              {data.discussion.requirements.min_replies} reply/replies per student.
+            </p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-hub-text">Threads</h3>
+              <ul className="mt-3 space-y-2 text-sm">
+                {data.discussion.threads.map((thread) => (
+                  <li key={thread.id} className="rounded-xl border border-slate-100 px-3 py-2">
+                    <div className="font-semibold text-hub-text">
+                      {thread.is_pinned ? '📌 ' : ''}
+                      {thread.title}
+                    </div>
+                    <div className="text-hub-muted">
+                      {thread.student.display_name} · {thread.reply_count} replies
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-hub-text">Participants</h3>
+              <ul className="mt-3 space-y-2 text-sm">
+                {data.discussion.participants.map((p, idx) => (
+                  <li key={idx} className="flex justify-between gap-2 rounded-xl border border-slate-100 px-3 py-2">
+                    <span className="font-medium text-hub-text">{p.student.display_name}</span>
+                    <span className="text-hub-muted">
+                      {p.threads} threads · {p.replies} replies
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-5 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-8">
           {hasDocument ? (
             <>
-              <DocumentViewer attachments={data.attachments} single={data.attachment} />
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <AssignmentDetailsGrid
                   dueDate={assignment.due_date}
@@ -245,6 +305,7 @@ export function AssignmentViewPage() {
                   assignmentType={assignment.assignment_type}
                 />
               </div>
+              <DocumentViewer attachments={data.attachments} single={data.attachment} />
             </>
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -349,6 +410,17 @@ export function AssignmentViewPage() {
         }}
       />
 
+      <EditAssignmentModal
+        open={editOpen}
+        assignmentId={numericAssignmentId}
+        isGroup={isGroup}
+        onClose={() => setEditOpen(false)}
+        onSaved={(msg) => {
+          setMessage(msg)
+          void load({ silent: true })
+        }}
+      />
+
       <DeleteAssignmentModal
         target={
           deleteOpen
@@ -360,6 +432,7 @@ export function AssignmentViewPage() {
             : null
         }
         classId={numericClassId}
+        workspaceScope={workspaceScope}
         onClose={() => setDeleteOpen(false)}
         onSuccess={(msg) => {
           setMessage(msg)

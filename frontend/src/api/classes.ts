@@ -85,18 +85,28 @@ export async function removeClass(classId: number): Promise<ClassSaveResponse> {
   return data
 }
 
+export type GoogleClassroomScope = 'management' | 'teacher'
+
+function googleClassroomBase(classId: number, scope: GoogleClassroomScope) {
+  return scope === 'teacher'
+    ? `/api/spa/teacher/classes/${classId}/google-classroom`
+    : `/api/spa/classes/${classId}/google-classroom`
+}
+
 export async function fetchGoogleClassroomOptions(
   classId: number,
+  scope: GoogleClassroomScope = 'management',
 ): Promise<{ success: boolean; message?: string; items?: GoogleClassroomOption[]; settings_url?: string }> {
-  return apiFetch(`/api/spa/classes/${classId}/google-classroom/options`)
+  return apiFetch(`${googleClassroomBase(classId, scope)}/options`)
 }
 
 export async function googleClassroomAction(
   classId: number,
   action: 'create' | 'link' | 'unlink',
   googleClassroomId?: string,
+  scope: GoogleClassroomScope = 'management',
 ): Promise<{ success: boolean; message: string; google_classroom_id?: string; settings_url?: string }> {
-  return apiFetch(`/api/spa/classes/${classId}/google-classroom`, {
+  return apiFetch(googleClassroomBase(classId, scope), {
     method: 'POST',
     body: JSON.stringify({ action, google_classroom_id: googleClassroomId }),
   })
@@ -121,6 +131,10 @@ export async function createCoreSetup(body: Record<string, unknown>): Promise<{
   success: boolean
   message: string
   redirect?: string
+  result?: {
+    created_count?: number
+    enrollment?: { enrolled_count?: number }
+  }
 }> {
   return apiFetch('/api/spa/classes/core-setup/create', {
     method: 'POST',

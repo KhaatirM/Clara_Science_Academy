@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { AssignmentViewResponse } from '../../api/assignmentWorkspace'
+import { spaRoute } from '../../utils/spaRoute'
 
 type Attachment = NonNullable<AssignmentViewResponse['attachments']>[number]
 
@@ -387,8 +389,8 @@ type ActionItem = {
 }
 
 export function AssignmentActionsCard({
-  editHref,
-  submissionsHref,
+  onEdit,
+  submissionsTo,
   onGrade,
   onExtensions,
   onReopen,
@@ -399,8 +401,8 @@ export function AssignmentActionsCard({
   onBack,
   actions,
 }: {
-  editHref?: string
-  submissionsHref?: string
+  onEdit?: () => void
+  submissionsTo?: string
   onGrade: () => void
   onExtensions: () => void
   onReopen: () => void
@@ -415,23 +417,29 @@ export function AssignmentActionsCard({
     show_unvoid?: boolean
     grade_disabled?: boolean
     grade_disabled_label?: string | null
+    grade_via_submissions?: boolean
+    grade_label?: string
   }
 }) {
   const cellClass =
     'flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 text-center text-[0.68rem] font-bold transition'
 
   const actionsList: ActionItem[] = [
-    { key: 'edit', label: 'Edit', icon: 'bi-pencil-square', href: editHref, className: 'border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100' },
-    { key: 'submissions', label: 'Submissions', icon: 'bi-file-earmark-arrow-up', href: submissionsHref, className: 'border-slate-800 bg-white text-slate-900 hover:bg-slate-50' },
+    { key: 'edit', label: 'Edit', icon: 'bi-pencil-square', onClick: onEdit, className: 'border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100' },
+    { key: 'submissions', label: 'Submissions', icon: 'bi-file-earmark-arrow-up', href: submissionsTo, className: 'border-slate-800 bg-white text-slate-900 hover:bg-slate-50' },
     {
       key: 'grade',
-      label: actions.grade_disabled ? (actions.grade_disabled_label || 'Auto-Graded') : 'Grade',
+      label: actions.grade_disabled
+        ? (actions.grade_disabled_label || 'Auto-Graded')
+        : (actions.grade_label || 'Grade'),
       icon: 'bi-check-circle-fill',
       onClick: onGrade,
       disabled: Boolean(actions.grade_disabled),
       className: actions.grade_disabled
         ? 'border-violet-300 bg-violet-100 text-violet-700 opacity-60 cursor-not-allowed'
-        : 'border-violet-700 bg-violet-700 text-white hover:bg-violet-800',
+        : actions.grade_via_submissions
+          ? 'border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700'
+          : 'border-violet-700 bg-violet-700 text-white hover:bg-violet-800',
     },
     { key: 'extensions', label: 'Extensions', icon: 'bi-clock-history', onClick: onExtensions, className: 'border-teal-400 bg-teal-50 text-teal-900 hover:bg-teal-100' },
   ]
@@ -461,14 +469,14 @@ export function AssignmentActionsCard({
       <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-3">
         {actionsList.map((action) =>
           action.href ? (
-            <a
+            <Link
               key={action.key}
-              href={action.href}
+              to={spaRoute(action.href)}
               className={`${cellClass} ${action.className}`}
             >
               <i className={`bi ${action.icon} text-lg`} aria-hidden />
               {action.label}
-            </a>
+            </Link>
           ) : (
             <button
               key={action.key}

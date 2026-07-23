@@ -8,7 +8,8 @@ import {
   runClosureAction,
 } from '../api/schoolYearClosure'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import type { ClosureDashboardResponse, ClosureExtension } from '../types/schoolYearClosure'
 import {
   adminWindowPhaseState,
@@ -72,7 +73,8 @@ export function ClosureDashboardPage() {
 
   if (!closureId) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell>
+        <MgmtBootstrapRoot>
         <div className="mgmt-syc container-fluid px-0 px-md-1">
           <div className="mgmt-syc-shell p-5">
             <p>Invalid closure.</p>
@@ -81,23 +83,27 @@ export function ClosureDashboardPage() {
             </Link>
           </div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   if (loading) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell>
+        <MgmtBootstrapRoot>
         <div className="mgmt-syc container-fluid px-0 px-md-1">
           <div className="mgmt-syc-shell p-5 text-center">Loading closure…</div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   if (error || !data) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell>
+        <MgmtBootstrapRoot>
         <div className="mgmt-syc container-fluid px-0 px-md-1">
           <div className="mgmt-syc-shell p-5">
             <p>{error || 'Could not load closure'}</p>
@@ -106,7 +112,8 @@ export function ClosureDashboardPage() {
             </Link>
           </div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
@@ -117,7 +124,8 @@ export function ClosureDashboardPage() {
   const isFinalized = phase === 'finalized'
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell>
+      <MgmtBootstrapRoot>
       <>
       <div className="mgmt-syc container-fluid px-0 px-md-1">
         <div className="mgmt-syc-shell">
@@ -539,7 +547,8 @@ export function ClosureDashboardPage() {
         }}
       />
     </>
-    </LegacyMgmtScope>
+    </MgmtBootstrapRoot>
+    </ManagementPageShell>
   )
 }
 

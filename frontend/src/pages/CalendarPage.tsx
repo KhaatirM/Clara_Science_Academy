@@ -10,7 +10,8 @@ import {
   fetchCalendarPage,
 } from '../api/calendar'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import type { CalendarEventItem, CalendarPageResponse } from '../types/calendar'
 import type { ManagementOutletContext } from '../types/layout'
 import { calendarEventClass } from '../utils/calendarEventColors'
@@ -215,28 +216,33 @@ export function CalendarPage() {
 
   if (booting && !data) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell director={isDirector}>
+        <MgmtBootstrapRoot>
         <div className="mgmt-cal mgmt-cal-page container-fluid px-0 px-md-1">
           <div className="mgmt-cal-shell p-5 text-center">Loading calendar…</div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   if ((error && !data) || !data) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell director={isDirector}>
+        <MgmtBootstrapRoot>
         <div className="mgmt-cal mgmt-cal-page container-fluid px-0 px-md-1">
           <div className="mgmt-cal-shell p-5">
             <p>{error || 'Could not load calendar'}</p>
           </div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell director={isDirector}>
+      <MgmtBootstrapRoot>
       <>
       <div className="mgmt-cal mgmt-cal-page mgmt-cal-page--compact container-fluid px-0 px-md-1">
         <div className={`mgmt-cal-shell mgmt-cal-shell--compact${isDirector ? ' mgmt-cal-shell--director' : ''}`}>
@@ -1016,6 +1022,7 @@ export function CalendarPage() {
         </div>
       </LegacyBootstrapModal>
     </>
-    </LegacyMgmtScope>
+    </MgmtBootstrapRoot>
+    </ManagementPageShell>
   )
 }

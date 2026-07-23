@@ -1,273 +1,225 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/discussion.css') }}">
-<style>
-    .discussion-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-    }
-    
-    .discussion-prompt {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        border-left: 4px solid #667eea;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .participation-tracker {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .thread-card {
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    
-    .thread-card:hover {
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-    }
-    
-    .thread-card.pinned {
-        border-left: 4px solid #ffc107;
-        background: #fff9e6;
-    }
-    
-    .thread-card.locked {
-        opacity: 0.7;
-    }
-    
-    .thread-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        margin-bottom: 1rem;
-    }
-    
-    .thread-meta {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-    
-    .thread-badges {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .reply-count {
-        background: #e7f3ff;
-        color: #0066cc;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-    }
-    
-    .post-content {
-        color: #495057;
-        line-height: 1.6;
-        margin-top: 0.5rem;
-    }
-    
-    .post-author {
-        font-weight: 600;
-        color: #212529;
-    }
-    
-    .create-thread-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .create-thread-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-    }
-    
-    .modal-content {
-        border-radius: 15px;
-        border: none;
-    }
-    
-    .modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px 15px 0 0;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/discussion.css') }}?v=3">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-3 px-md-4 px-lg-5">
-    <!-- Discussion Header -->
-    <div class="discussion-header">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+{% set posts_done = student_threads|length >= min_initial_posts %}
+{% set replies_done = student_replies|length >= min_replies %}
+{% set participation_complete = posts_done and replies_done %}
+{% set raw_desc = assignment.description or '' %}
+{% if '**Discussion Prompt:**' in raw_desc %}
+  {% set prompt_text = raw_desc.split('**Discussion Prompt:**', 1)[1] %}
+{% else %}
+  {% set prompt_text = raw_desc %}
+{% endif %}
+{% if '**Instructions:**' in prompt_text %}
+  {% set prompt_text = prompt_text.split('**Instructions:**', 1)[0] %}
+{% endif %}
+{% if '**Participation Requirements:**' in prompt_text %}
+  {% set prompt_text = prompt_text.split('**Participation Requirements:**', 1)[0] %}
+{% endif %}
+{% set prompt_text = prompt_text.replace('**', '')|trim %}
+<div class="disc-page container-fluid px-2 px-md-4">
+    <!-- 1. Assignment info -->
+    <section class="disc-info-section mb-3">
+        <div class="card border-0 shadow-lg disc-hero mb-0">
+            <div class="card-header text-white disc-hero__banner border-0">
+                <div class="disc-meta-strip mb-2">
+                    {% if assignment.class_info %}
+                    <span class="disc-meta-chip">
+                        <i class="bi bi-book-fill" aria-hidden></i>
+                        <span class="disc-meta-chip__label">Class</span>
+                        <strong>{{ assignment.class_info.name }}</strong>
+                    </span>
+                    {% endif %}
+                    <span class="disc-meta-chip">
+                        <i class="bi bi-calendar-event" aria-hidden></i>
+                        <span class="disc-meta-chip__label">Due</span>
+                        <strong>{{ assignment.due_date.strftime('%b %d, %Y · %I:%M %p') if assignment.due_date else 'No due date' }}</strong>
+                    </span>
+                    {% if assignment.quarter %}
+                    <span class="disc-meta-chip">
+                        <i class="bi bi-calendar3" aria-hidden></i>
+                        <span class="disc-meta-chip__label">Quarter</span>
+                        <strong>{{ assignment.quarter }}</strong>
+                    </span>
+                    {% endif %}
+                    <span class="disc-meta-chip">
+                        <i class="bi bi-activity" aria-hidden></i>
+                        <span class="disc-meta-chip__label">Status</span>
+                        <strong>{{ assignment.status }}</strong>
+                    </span>
+                </div>
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                    <div>
+                        <h2 class="disc-hero__title mb-1">
+                            <i class="bi bi-chat-dots-fill me-2"></i>{{ assignment.title }}
+                        </h2>
+                        <p class="disc-hero__subtitle mb-0">
+                            <i class="bi bi-people me-1"></i>Class Discussion
+                        </p>
+                    </div>
+                    <span class="disc-status-badge">
+                        {% if participation_complete %}
+                            <i class="bi bi-check-circle me-1"></i>Participation complete
+                        {% else %}
+                            <i class="bi bi-hourglass-split me-1"></i>In progress
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% if prompt_text %}
+            <div class="card-body disc-hero__body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="disc-hero__info-icon me-2">
+                        <i class="bi bi-info-circle-fill text-white"></i>
+                    </div>
+                    <h5 class="mb-0 fw-bold disc-hero__instructions-title">Discussion Prompt</h5>
+                </div>
+                <div class="disc-hero__instructions">
+                    <p class="mb-0">{{ prompt_text }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- 2. Actions + participation -->
+    <section class="disc-actions-card mb-3">
+        <div class="disc-actions-card__top">
             <div>
-                <h2 class="mb-2">
-                    <i class="bi bi-chat-dots me-2"></i>{{ assignment.title }}
-                </h2>
-                <p class="mb-0 opacity-90">
-                    <i class="bi bi-calendar me-2"></i>Due: {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}
+                <h4 class="disc-actions-card__title mb-1">
+                    <i class="bi bi-lightning-charge-fill me-2"></i>Discussion actions
+                </h4>
+                <p class="disc-actions-card__hint mb-0">
+                    {{ threads|length }} thread{{ 's' if threads|length != 1 else '' }} ·
+                    {{ min_initial_posts }} post{{ 's' if min_initial_posts != 1 else '' }} +
+                    {{ min_replies }} {{ 'replies' if min_replies != 1 else 'reply' }} required
                 </p>
             </div>
-            <div>
-                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-light">
-                    <i class="bi bi-arrow-left me-2"></i>Back to Assignments
+            <div class="disc-actions-card__buttons">
+                <a href="{{ url_for('student.student_assignments') }}"
+                   class="btn disc-btn disc-btn--muted"{% if request.args.get('embed') == '1' %} target="_top"{% endif %}>
+                    <i class="bi bi-box-arrow-left me-1"></i>Exit
                 </a>
+                {% if allow_student_threads and assignment.status == 'Active' %}
+                <button type="button" class="btn disc-btn disc-btn--submit" data-bs-toggle="modal" data-bs-target="#createThreadModal">
+                    <i class="bi bi-plus-circle me-1"></i>New Thread
+                </button>
+                {% endif %}
             </div>
         </div>
-    </div>
 
-    <!-- Discussion Prompt -->
-    <div class="discussion-prompt">
-        <h5 class="mb-3">
-            <i class="bi bi-question-circle me-2 text-primary"></i>Discussion Prompt
-        </h5>
-        <div class="prompt-content">
-            {{ assignment.description.split('**Discussion Prompt:**')[1].split('**Instructions:**')[0].strip() if '**Discussion Prompt:**' in assignment.description else assignment.description }}
-        </div>
-    </div>
-
-    <!-- Participation Tracker -->
-    <div class="participation-tracker">
-        <h5 class="mb-3">
-            <i class="bi bi-clipboard-check me-2 text-success"></i>Your Participation
-        </h5>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <div class="d-flex align-items-center">
-                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
-                        <i class="bi bi-chat-left-text text-primary fs-4"></i>
+        <div class="disc-participation mt-3">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <div class="disc-participation__stat {% if posts_done %}is-done{% endif %}">
+                        <div class="disc-participation__icon"><i class="bi bi-chat-left-text"></i></div>
+                        <div>
+                            <div class="disc-participation__label">Initial posts</div>
+                            <div class="disc-participation__value">
+                                <strong>{{ student_threads|length }}</strong>
+                                <span>/ {{ min_initial_posts }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="mb-0">Initial Posts</h6>
-                        <p class="mb-0 text-muted">
-                            <strong class="text-primary">{{ student_threads|length }}</strong> / {{ min_initial_posts }} required
-                        </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="disc-participation__stat {% if replies_done %}is-done{% endif %}">
+                        <div class="disc-participation__icon"><i class="bi bi-reply"></i></div>
+                        <div>
+                            <div class="disc-participation__label">Replies</div>
+                            <div class="disc-participation__value">
+                                <strong>{{ student_replies|length }}</strong>
+                                <span>/ {{ min_replies }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="disc-participation__stat {% if participation_complete %}is-done{% endif %}">
+                        <div class="disc-participation__icon"><i class="bi bi-check2-circle"></i></div>
+                        <div>
+                            <div class="disc-participation__label">Overall</div>
+                            <div class="disc-participation__value">
+                                {% if participation_complete %}
+                                    <strong class="text-success">Complete</strong>
+                                {% else %}
+                                    <strong>Keep going</strong>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="d-flex align-items-center">
-                    <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
-                        <i class="bi bi-reply text-success fs-4"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0">Replies</h6>
-                        <p class="mb-0 text-muted">
-                            <strong class="text-success">{{ student_replies|length }}</strong> / {{ min_replies }} required
-                        </p>
-                    </div>
+            {% set posts_pct = 100 if min_initial_posts == 0 else [((student_threads|length) * 100 / min_initial_posts)|int, 100]|min %}
+            {% set replies_pct = 100 if min_replies == 0 else [((student_replies|length) * 100 / min_replies)|int, 100]|min %}
+            {% set overall_pct = ((posts_pct + replies_pct) / 2)|int %}
+            <div class="disc-participation__progress mt-3">
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: {{ overall_pct }}%;" aria-valuenow="{{ overall_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="d-flex align-items-center">
-                    <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
-                        <i class="bi bi-check-circle text-info fs-4"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0">Status</h6>
-                        <p class="mb-0">
-                            {% if student_threads|length >= min_initial_posts and student_replies|length >= min_replies %}
-                                <span class="badge bg-success">Complete</span>
-                            {% else %}
-                                <span class="badge bg-warning">In Progress</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
+                <small class="disc-participation__progress-text">Participation progress: {{ overall_pct }}%</small>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Action Buttons -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <div>
+    <!-- 3. Threads -->
+    <section class="disc-threads-card">
+        <div class="disc-threads-card__head">
             <h4 class="mb-0">
-                <i class="bi bi-chat-square-text me-2"></i>Discussion Threads
-                <span class="badge bg-primary ms-2">{{ threads|length }}</span>
+                <i class="bi bi-list-ul me-2"></i>Threads
+                <span class="disc-count-badge">{{ threads|length }}</span>
             </h4>
         </div>
-        {% if allow_student_threads and assignment.status == 'Active' %}
-        <button type="button" class="btn create-thread-btn" data-bs-toggle="modal" data-bs-target="#createThreadModal">
-            <i class="bi bi-plus-circle me-2"></i>Create New Thread
-        </button>
-        {% endif %}
-    </div>
-
-    <!-- Discussion Threads -->
-    {% if threads %}
-        {% for thread in threads %}
-        <div class="thread-card {% if thread.is_pinned %}pinned{% endif %} {% if thread.is_locked %}locked{% endif %}" 
-             onclick="{% if not thread.is_locked %}viewThread({{ thread.id }}){% endif %}">
-            <div class="thread-header">
-                <div class="flex-grow-1">
-                    <h5 class="mb-2">
-                        {{ thread.title }}
+        <div class="disc-threads-card__body">
+            {% if threads %}
+                {% for thread in threads %}
+                <article class="disc-thread {% if thread.is_pinned %}is-pinned{% endif %} {% if thread.is_locked %}is-locked{% endif %}"
+                         {% if not thread.is_locked %}role="button" tabindex="0" onclick="viewThread({{ thread.id }})" onkeydown="if(event.key==='Enter')viewThread({{ thread.id }})"{% endif %}>
+                    <div class="disc-thread__top">
+                        <h5 class="disc-thread__title mb-0">
+                            {% if thread.is_pinned %}<i class="bi bi-pin-angle-fill disc-thread__pin" title="Pinned"></i>{% endif %}
+                            {% if thread.is_locked %}<i class="bi bi-lock-fill disc-thread__lock" title="Locked"></i>{% endif %}
+                            {{ thread.title }}
+                        </h5>
                         {% if allow_student_edit_posts and thread.student_id == student.id and assignment.status == 'Active' %}
-                        <a href="{{ url_for('student.edit_discussion_thread', thread_id=thread.id) }}" class="btn btn-sm btn-outline-primary ms-2" onclick="event.stopPropagation();" title="Edit your post">
+                        <a href="{{ url_for('student.edit_discussion_thread', thread_id=thread.id) }}"
+                           class="btn disc-btn disc-btn--icon"
+                           onclick="event.stopPropagation();"
+                           title="Edit your post">
                             <i class="bi bi-pencil"></i>
                         </a>
                         {% endif %}
-                        {% if thread.is_pinned %}
-                            <i class="bi bi-pin-fill text-warning ms-2" title="Pinned"></i>
-                        {% endif %}
-                        {% if thread.is_locked %}
-                            <i class="bi bi-lock-fill text-danger ms-2" title="Locked"></i>
-                        {% endif %}
-                    </h5>
-                    <div class="thread-meta">
-                        <span class="post-author">
-                            <i class="bi bi-person-circle me-1"></i>{{ thread.student.first_name }} {{ thread.student.last_name }}
-                        </span>
-                        <span>
-                            <i class="bi bi-clock me-1"></i>{{ thread.created_at.strftime('%B %d, %Y at %I:%M %p') }}
-                        </span>
-                        <span class="reply-count">
+                    </div>
+                    <div class="disc-thread__meta">
+                        <span><i class="bi bi-person-circle me-1"></i>{{ thread.student.first_name }} {{ thread.student.last_name }}</span>
+                        <span><i class="bi bi-clock me-1"></i>{{ thread.created_at.strftime('%b %d, %Y · %I:%M %p') }}</span>
+                        <span class="disc-thread__replies">
                             <i class="bi bi-chat-dots me-1"></i>{{ thread.posts|length }} {{ 'reply' if thread.posts|length == 1 else 'replies' }}
                         </span>
                     </div>
+                    <div class="disc-thread__preview">
+                        {{ thread.content | discussion_preview(200) }}
+                    </div>
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="disc-empty text-center py-5">
+                    <i class="bi bi-chat-square-text disc-empty__icon"></i>
+                    <h5 class="mb-1">No threads yet</h5>
+                    <p class="text-muted mb-3">Be the first to start the conversation.</p>
+                    {% if allow_student_threads and assignment.status == 'Active' %}
+                    <button type="button" class="btn disc-btn disc-btn--submit" data-bs-toggle="modal" data-bs-target="#createThreadModal">
+                        <i class="bi bi-plus-circle me-1"></i>Create First Thread
+                    </button>
+                    {% endif %}
                 </div>
-            </div>
-            <div class="post-content">
-                {{ thread.content | discussion_preview(200) }}
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-chat-square-text display-1 text-muted mb-3"></i>
-            <h5 class="text-muted">No Discussion Threads Yet</h5>
-            <p class="text-muted">Be the first to start a discussion!</p>
-            {% if allow_student_threads and assignment.status == 'Active' %}
-            <button type="button" class="btn create-thread-btn mt-3" data-bs-toggle="modal" data-bs-target="#createThreadModal">
-                <i class="bi bi-plus-circle me-2"></i>Create First Thread
-            </button>
             {% endif %}
         </div>
-    {% endif %}
+    </section>
 </div>
 {% endblock %}
 
@@ -276,7 +228,7 @@
 <div class="modal fade" id="createThreadModal" tabindex="-1" aria-labelledby="createThreadModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header disc-modal-header">
                 <h5 class="modal-title" id="createThreadModalLabel">
                     <i class="bi bi-plus-circle me-2"></i>Create New Discussion Thread
                 </h5>
@@ -285,9 +237,12 @@
             <form id="createThreadForm" method="POST" action="{{ url_for('student.create_discussion_thread', assignment_id=assignment.id) }}" enctype="multipart/form-data">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if request.args.get('embed') == '1' %}
+                    <input type="hidden" name="embed" value="1">
+                    {% endif %}
                     <div class="mb-3">
                         <label for="thread_title" class="form-label fw-semibold">Thread Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="thread_title" name="thread_title" 
+                        <input type="text" class="form-control" id="thread_title" name="thread_title"
                                placeholder="Enter a clear, descriptive title for your discussion thread..." required>
                     </div>
                     <div class="mb-3">
@@ -315,13 +270,13 @@
                             </select>
                         </div>
                         <div class="discussion-editor-text-area" id="threadTextArea">
-                            <textarea class="form-control" id="thread_content" name="thread_content" rows="8" 
+                            <textarea class="form-control" id="thread_content" name="thread_content" rows="8"
                                       placeholder="Share your thoughts, ideas, or questions about the discussion topic..." required></textarea>
                         </div>
                         <div class="discussion-editor-code-area" id="threadCodeArea">
                             <div class="code-editor-wrapper">
                                 <pre class="line-numbers-display" id="threadLineNumbers">1</pre>
-                                <textarea class="form-control code-textarea" id="thread_code_content" rows="12" 
+                                <textarea class="form-control code-textarea" id="thread_code_content" rows="12"
                                           placeholder="Paste or type your code here..."></textarea>
                             </div>
                         </div>
@@ -331,15 +286,15 @@
                         <label for="thread_attachments" class="form-label fw-semibold">
                             <i class="bi bi-paperclip me-1"></i>Attachments
                         </label>
-                        <input type="file" class="form-control" id="thread_attachments" name="attachments" 
+                        <input type="file" class="form-control" id="thread_attachments" name="attachments"
                                multiple accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.md">
                         <div class="form-text">Upload images or documents (PDF, Word, Excel, PowerPoint, text, images). Multiple files allowed.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-send me-2"></i>Create Thread
+                    <button type="button" class="btn disc-btn disc-btn--muted" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn disc-btn disc-btn--submit">
+                        <i class="bi bi-send me-1"></i>Create Thread
                     </button>
                 </div>
             </form>
@@ -351,7 +306,11 @@
 {% block scripts %}
 <script>
 function viewThread(threadId) {
-    window.location.href = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+    var url = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+    {% if request.args.get('embed') == '1' %}
+    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'embed=1';
+    {% endif %}
+    window.location.href = url;
 }
 
 (function() {
@@ -408,8 +367,3 @@ function viewThread(threadId) {
 })();
 </script>
 {% endblock %}
-
-
-
-
-

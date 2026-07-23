@@ -36,6 +36,11 @@ def allowed_file(filename):
 @teacher_required
 def assignment_type_selector():
     """Assignment type selection page"""
+    from utils.spa_teacher_urls import spa_teacher_assignment_type_selector_redirect
+
+    spa_redirect = spa_teacher_assignment_type_selector_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
     preselected_class_id = request.args.get('class_id', type=int)
     return render_template('shared/assignment_type_selector.html', preselected_class_id=preselected_class_id)
 
@@ -47,11 +52,16 @@ def add_assignment():
     context = request.args.get('context', 'homework')
     
     if request.method == 'POST':
-        class_id = request.form.get('class_id', type=int)
+        from management_routes.assignment_create_json import create_form_err, create_form_ok, create_form_wants_json
+
+        class_ids = [int(x) for x in request.form.getlist('class_ids') if x]
+        class_id = request.form.get('class_id', type=int) or (class_ids[0] if class_ids else None)
         if class_id:
-            return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id, context=context))
-        else:
-            flash("Please select a class.", "danger")
+            return add_assignment_for_class(class_id)
+
+        if create_form_wants_json():
+            return create_form_err("Please select a class.")
+        flash("Please select a class.", "danger")
     
     teacher = get_teacher_or_admin()
     
@@ -100,6 +110,9 @@ def add_assignment_for_class(class_id):
         return redirect(url_for('teacher.dashboard.my_classes'))
     
     if request.method == 'POST':
+        from management_routes.assignment_create_json import create_form_err, create_form_ok
+        from utils.spa_assignment_create_urls import assignment_create_success_redirect
+
         try:
             title = request.form.get('title', '').strip()
             description = request.form.get('description', '').strip()
@@ -115,8 +128,10 @@ def add_assignment_for_class(class_id):
             late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
             
             if not all([title, due_date_str, quarter]):
-                flash("Title, Due Date, and Quarter are required.", "danger")
-                return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
+                return create_form_err(
+                    "Title, Due Date, and Quarter are required.",
+                    redirect_target=url_for('teacher.assignments.add_assignment_for_class', class_id=class_id),
+                )
             
             if total_points is None or total_points <= 0:
                 total_points = 100.0
@@ -124,8 +139,10 @@ def add_assignment_for_class(class_id):
             tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
-                flash("Invalid due date format.", "danger")
-                return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
+                return create_form_err(
+                    "Invalid due date format.",
+                    redirect_target=url_for('teacher.assignments.add_assignment_for_class', class_id=class_id),
+                )
             
             # Parse open_date and close_date if provided (school timezone → UTC)
             open_date_str = request.form.get('open_date', '').strip()
@@ -138,8 +155,10 @@ def add_assignment_for_class(class_id):
             
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
-                flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
+                return create_form_err(
+                    "Cannot create assignment: No active school year.",
+                    redirect_target=url_for('teacher.assignments.add_assignment_for_class', class_id=class_id),
+                )
             
             # IMPORTANT:
             # Assignment.created_by is a FK to user.id (not teacher_staff.id).
@@ -208,14 +227,18 @@ def add_assignment_for_class(class_id):
                     new_assignment.attachment_mime_type = file.content_type
 
             db.session.commit()
-            flash('Assignment created successfully!', 'success')
-            return redirect(url_for('teacher.dashboard.view_class', class_id=class_id))
+            return create_form_ok(
+                'Assignment created successfully!',
+                redirect_url=assignment_create_success_redirect(class_id),
+            )
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error creating assignment: {str(e)}")
-            flash(f'Error creating assignment: {str(e)}', 'danger')
-            return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
+            return create_form_err(
+                f'Error creating assignment: {str(e)}',
+                redirect_target=url_for('teacher.assignments.add_assignment_for_class', class_id=class_id),
+            )
     
     current_quarter = get_current_quarter()
     context = request.args.get('context', 'homework')
@@ -1224,6 +1247,11 @@ def bulk_void_assignments():
 @teacher_required
 def view_extension_requests():
     """View extension requests for the active school year (scoped by role)."""
+    from utils.spa_teacher_urls import spa_teacher_extension_requests_redirect
+
+    spa_redirect = spa_teacher_extension_requests_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
     from models import ExtensionRequest
     from datetime import datetime
     from utils.school_year_filters import (

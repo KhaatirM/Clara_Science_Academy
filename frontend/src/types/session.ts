@@ -12,8 +12,12 @@ export interface SessionUser {
   email: string | null
   permissions: string[]
   management_entry: boolean
+  teacher_entry: boolean
+  student_entry: boolean
+  student_id: number | null
   sidebar_title: string
   csrf_token: string
+  theme: string
 }
 
 export interface SessionResponse {

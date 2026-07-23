@@ -14,6 +14,9 @@ export type SettingsHubResponse = {
   }
   preferences: {
     theme: string
+    saved_theme: string
+    theme_locked: boolean
+    site_theme_override: string | null
     theme_options: ThemeOption[]
     notifications_coming_soon: boolean
     timezone_coming_soon: boolean

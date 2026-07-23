@@ -6,6 +6,7 @@ import {
   billingRecordPaymentPlaceholder,
   fetchBillingHub,
 } from '../api/billing'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { useSession } from '../hooks/useSession'
 import type { BillingHubResponse } from '../types/billing'
 import { spaRoute } from '../utils/spaRoute'
@@ -24,8 +25,8 @@ function InsightCard({
   label: string
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/95 p-4 shadow-sm" role="listitem">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-lg text-teal-800">
+    <div className="spa-mgmt-stat flex items-start gap-3 p-4 shadow-sm" role="listitem">
+      <span className="spa-mgmt-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg">
         <i className={`bi ${icon}`} aria-hidden />
       </span>
       <div>
@@ -39,7 +40,7 @@ function InsightCard({
 function SectionCard({
   title,
   icon,
-  tone,
+  tone: _tone,
   description,
   actions,
 }: {
@@ -49,14 +50,11 @@ function SectionCard({
   description: string
   actions: string[]
 }) {
-  const headerClass =
-    tone === 'success'
-      ? 'border-emerald-200 bg-gradient-to-r from-emerald-50 to-white text-emerald-900'
-      : 'border-amber-200 bg-gradient-to-r from-amber-50 to-white text-amber-950'
+  const headerClass = 'spa-mgmt-insight border-b px-5 py-4 text-hub-text'
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className={`border-b px-5 py-4 ${headerClass}`}>
+    <section className="spa-mgmt-card flex h-full flex-col overflow-hidden shadow-sm">
+      <div className={headerClass}>
         <h2 className="flex items-center gap-2 text-base font-bold">
           <i className={`bi ${icon}`} aria-hidden />
           {title}
@@ -156,12 +154,9 @@ export default function BillingPage() {
   }
 
   const { metrics } = data
-  const shellClass = data.is_director
-    ? 'bg-gradient-to-br from-violet-50 via-[#f0ecf5] to-[#e8e4f0]'
-    : 'bg-gradient-to-br from-teal-50 via-[#e8f0ec] to-[#dce8e4]'
 
   return (
-    <div className={`rounded-3xl p-5 shadow-sm md:p-6 ${shellClass}`}>
+    <ManagementPageShell director={data.is_director}>
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Financial operations</p>
@@ -173,19 +168,19 @@ export default function BillingPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {data.is_director ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-900">
+            <span className="spa-mgmt-badge px-3 py-1.5 text-xs">
               <i className="bi bi-award-fill" aria-hidden />
               Director
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-3 py-1.5 text-xs font-bold text-teal-900">
+            <span className="spa-mgmt-badge px-3 py-1.5 text-xs">
               <i className="bi bi-shield-fill" aria-hidden />
               Billing access
             </span>
           )}
           <Link
             to={spaRoute(data.urls.home)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+            className="spa-mgmt-btn-ghost px-4 py-2 text-sm"
           >
             <i className="bi bi-house-door" aria-hidden />
             Dashboard
@@ -203,7 +198,7 @@ export default function BillingPage() {
             type="button"
             disabled={actionBusy}
             onClick={() => void handlePlaceholderAction('payment')}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
+            className="spa-mgmt-btn-primary px-4 py-2 text-sm disabled:opacity-60"
           >
             <i className="bi bi-cash-coin" aria-hidden />
             Record payment
@@ -285,6 +280,6 @@ export default function BillingPage() {
           </div>
         </section>
       </div>
-    </div>
+    </ManagementPageShell>
   )
 }

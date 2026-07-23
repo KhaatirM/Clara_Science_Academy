@@ -1,0 +1,242 @@
+/* SPA shell theming — reuses legacy hub + site theme tokens */
+@import '../../../static/css/hub_themes.css';
+@import '../../../static/css/themes.css';
+
+/* Default management sidebar (React SPA) when theme-default is active */
+body.theme-default .sidebar {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  border-right-color: #334155;
+  --sidebar-tz-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-tz-border: rgba(255, 255, 255, 0.2);
+  --sidebar-tz-accent: #7dd3fc;
+  --sidebar-toggle-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  --sidebar-toggle-bg-hover: linear-gradient(135deg, #334155 0%, #475569 100%);
+  --sidebar-toggle-border: #475569;
+  --sidebar-toggle-border-hover: #64748b;
+  --sidebar-toggle-accent: #94a3b8;
+  --sidebar-logout-bg: #b91c1c;
+  --sidebar-logout-border: #991b1b;
+  --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.72);
+}
+
+.spa-main {
+  background: var(--hub-schedule-bg, #f1f5f9);
+  color: var(--hub-text, #0f172a);
+}
+
+aside.sidebar.spa-sidebar {
+  color: #fff;
+  border-right-width: 1px;
+  border-right-style: solid;
+}
+
+.spa-sidebar-heading {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.spa-sidebar-school-tz {
+  background: var(--sidebar-tz-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--sidebar-tz-border, rgba(255, 255, 255, 0.2));
+  color: #f8fafc;
+}
+
+.spa-sidebar-school-tz .bi-clock {
+  color: var(--sidebar-tz-accent, #7dd3fc);
+}
+
+.spa-sidebar-toggle {
+  background: var(--sidebar-toggle-bg, linear-gradient(135deg, #1e293b 0%, #334155 100%));
+  border-bottom: 1px solid var(--sidebar-toggle-border, #475569);
+  color: #fff;
+}
+
+.spa-sidebar-toggle:hover {
+  background: var(--sidebar-toggle-bg-hover, linear-gradient(135deg, #334155 0%, #475569 100%));
+  border-bottom-color: var(--sidebar-toggle-border-hover, #64748b);
+}
+
+.spa-sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+}
+
+.spa-sidebar-logout {
+  background: var(--sidebar-logout-bg, #dc2626);
+  border: 1px solid var(--sidebar-logout-border, #b91c1c);
+}
+
+.spa-sidebar-logout:hover {
+  filter: brightness(1.08);
+}
+
+.spa-sidebar-nav .spa-sidebar-nav-link.is-active {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.spa-sidebar-nav .spa-sidebar-nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ----- Themed management tab shells (React SPA pages) ----- */
+.spa-mgmt {
+  --spa-mgmt-bg: var(--hub-mgmt-bg, linear-gradient(165deg, #e8f0ec 0%, #dce8e4 45%, #d4e2de 100%));
+  --spa-mgmt-surface: var(--hub-surface, rgba(255, 255, 255, 0.94));
+  --spa-mgmt-border: var(--hub-border, rgba(255, 255, 255, 0.92));
+  --spa-mgmt-text: var(--hub-text, #0f172a);
+  --spa-mgmt-muted: var(--hub-muted, #64748b);
+  --spa-mgmt-accent: var(--hub-mgmt-accent, #0d9488);
+  --spa-mgmt-accent-deep: var(--hub-mgmt-accent-deep, #0f766e);
+  --spa-mgmt-accent-soft: var(--hub-mgmt-accent-soft, rgba(13, 148, 136, 0.12));
+  --spa-mgmt-hero-text: #fff;
+  color: var(--spa-mgmt-text);
+}
+
+.spa-mgmt--director {
+  /* Uses --hub-mgmt-director-* (synced to the active theme in hub_themes.css) */
+  --spa-mgmt-bg: var(--hub-mgmt-director-bg, var(--hub-mgmt-bg));
+  --spa-mgmt-accent: var(--hub-mgmt-director-accent, var(--hub-mgmt-accent));
+  --spa-mgmt-accent-deep: var(--hub-mgmt-director-accent-deep, var(--hub-mgmt-accent-deep));
+  --spa-mgmt-accent-soft: var(--hub-mgmt-director-accent-soft, var(--hub-mgmt-accent-soft));
+}
+
+.spa-mgmt-shell {
+  background: var(--spa-mgmt-bg);
+  border-radius: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 1.5rem);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.spa-mgmt-hero {
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--spa-mgmt-accent) 28%, transparent);
+  background: linear-gradient(
+    135deg,
+    var(--spa-mgmt-accent-deep) 0%,
+    var(--spa-mgmt-accent) 52%,
+    color-mix(in srgb, var(--spa-mgmt-accent-deep) 88%, #0f172a) 100%
+  );
+  color: var(--spa-mgmt-hero-text);
+  padding: 1.5rem 2rem;
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--spa-mgmt-accent) 22%, transparent);
+}
+
+.spa-mgmt-hero .text-hub-muted,
+.spa-mgmt-hero .spa-mgmt-hero-muted {
+  color: color-mix(in srgb, var(--spa-mgmt-hero-text) 78%, transparent);
+}
+
+.spa-mgmt-card {
+  background: var(--spa-mgmt-surface);
+  border: 1px solid var(--spa-mgmt-border);
+  color: var(--spa-mgmt-text);
+  border-radius: 1rem;
+}
+
+.spa-mgmt-stat {
+  background: color-mix(in srgb, var(--spa-mgmt-surface) 96%, transparent);
+  border: 1px solid var(--spa-mgmt-border);
+  border-radius: 1rem;
+  color: var(--spa-mgmt-text);
+}
+
+.spa-mgmt-insight {
+  background: color-mix(in srgb, var(--spa-mgmt-accent-soft) 55%, var(--spa-mgmt-surface));
+  border: 1px solid color-mix(in srgb, var(--spa-mgmt-accent) 18%, transparent);
+  border-radius: 1rem;
+  color: var(--spa-mgmt-text);
+}
+
+.spa-mgmt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--spa-mgmt-accent) 0%, var(--spa-mgmt-accent-deep) 100%);
+  color: #fff;
+  font-weight: 600;
+  transition: filter 0.15s ease;
+}
+
+.spa-mgmt-btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+.spa-mgmt-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.spa-mgmt-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--spa-mgmt-accent) 22%, var(--spa-mgmt-border));
+  background: color-mix(in srgb, var(--spa-mgmt-surface) 90%, transparent);
+  color: var(--spa-mgmt-text);
+  font-weight: 600;
+}
+
+.spa-mgmt-btn-ghost:hover {
+  background: var(--spa-mgmt-surface);
+}
+
+.spa-mgmt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--spa-mgmt-muted);
+  background: var(--spa-mgmt-surface);
+  border: 1px solid var(--spa-mgmt-border);
+}
+
+.spa-mgmt-tab.is-active {
+  background: var(--spa-mgmt-accent-deep);
+  border-color: transparent;
+  color: #fff;
+}
+
+.spa-mgmt .text-hub-text {
+  color: var(--spa-mgmt-text);
+}
+
+.spa-mgmt .text-hub-muted {
+  color: var(--spa-mgmt-muted);
+}
+
+.spa-mgmt-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--spa-mgmt-accent-soft);
+  color: var(--spa-mgmt-accent-deep);
+}
+
+.spa-mgmt-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--spa-mgmt-accent) 0%, var(--spa-mgmt-accent-deep) 100%);
+  color: #fff;
+  font-weight: 700;
+}
+
+.spa-mgmt-band {
+  background: linear-gradient(135deg, var(--spa-mgmt-accent) 0%, var(--spa-mgmt-accent-deep) 100%);
+  color: #fff;
+}
+
+.spa-mgmt-accent-bar {
+  height: 0.25rem;
+  border-radius: 9999px 9999px 0 0;
+  background: linear-gradient(90deg, var(--spa-mgmt-accent) 0%, var(--spa-mgmt-accent-deep) 100%);
+}

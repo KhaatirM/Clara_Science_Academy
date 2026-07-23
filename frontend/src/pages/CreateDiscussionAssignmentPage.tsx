@@ -11,9 +11,11 @@ import {
 import { appendIfChecked, postAssignmentForm } from '../api/assignmentCreateActions'
 import { fetchDiscussionAssignmentForm, type DiscussionAssignmentFormMeta } from '../api/assignmentCreateForms'
 import { spaRoute } from '../utils/spaRoute'
+import { assignmentCreateRoutePrefix, useAssignmentCreateScope } from '../utils/assignmentCreateScope'
 
 export function CreateDiscussionAssignmentPage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const [searchParams] = useSearchParams()
   const classIdParam = searchParams.get('class_id')
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
@@ -46,7 +48,7 @@ export function CreateDiscussionAssignmentPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchDiscussionAssignmentForm(classId)
+      const data = await fetchDiscussionAssignmentForm(classId, scope)
       setMeta(data)
       setQuarter(data.current_quarter || '1')
       setMinInitialPosts(String(data.defaults.min_initial_posts))
@@ -60,13 +62,13 @@ export function CreateDiscussionAssignmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [classId])
+  }, [classId, scope])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const backTo = spaRoute(meta?.type_selector_url || '/management/assignments/create')
+  const backTo = spaRoute(meta?.type_selector_url || assignmentCreateRoutePrefix(scope))
   const classBadge = meta?.preselected_class
     ? `${meta.preselected_class.name}${meta.preselected_class.subject ? ` · ${meta.preselected_class.subject}` : ''}`
     : null

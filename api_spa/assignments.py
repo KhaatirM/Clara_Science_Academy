@@ -18,15 +18,25 @@ from management_routes.assignment_create_spa_helpers import (
 )
 from management_routes.group_create_spa_helpers import (
     query_group_class_picker,
+    query_group_discussion_form,
     query_group_pdf_form,
     query_group_quiz_form,
     query_group_type_selector,
 )
 from management_routes.assignment_workspace_spa_helpers import (
+    query_assignment_edit_meta,
+    query_group_assignment_edit,
     query_group_assignment_grade,
+    query_group_assignment_submissions,
     query_group_assignment_view,
+    query_individual_assignment_edit,
     query_individual_assignment_grade,
+    query_individual_assignment_grade_statistics,
+    query_individual_assignment_submissions,
     query_individual_assignment_view,
+    save_group_assignment_edit,
+    save_individual_assignment_edit,
+    save_quiz_open_ended_grades,
 )
 
 from . import spa_api_blueprint
@@ -97,6 +107,13 @@ def group_quiz_form_meta(class_id: int):
     return jsonify({**query_group_quiz_form(class_id), "meta": _assignments_meta()})
 
 
+@spa_api_blueprint.route("/assignments/create/group/<int:class_id>/discussion")
+@login_required
+@permissions_required("assignments_grades:manage")
+def group_discussion_form_meta(class_id: int):
+    return jsonify({**query_group_discussion_form(class_id), "meta": _assignments_meta()})
+
+
 @spa_api_blueprint.route("/assignments/hub")
 @login_required
 @permissions_required("assignments_grades:manage")
@@ -134,6 +151,15 @@ def individual_assignment_grade(assignment_id: int):
     return jsonify({**query_individual_assignment_grade(assignment_id), "meta": _assignments_meta()})
 
 
+@spa_api_blueprint.route("/assignments/individual/<int:assignment_id>/grade/statistics")
+@login_required
+@permissions_required("assignments_grades:manage")
+def individual_assignment_grade_statistics(assignment_id: int):
+    return jsonify(
+        {**query_individual_assignment_grade_statistics(assignment_id), "meta": _assignments_meta()}
+    )
+
+
 @spa_api_blueprint.route("/assignments/group/<int:assignment_id>/view")
 @login_required
 @permissions_required("assignments_grades:manage")
@@ -146,3 +172,65 @@ def group_assignment_view(assignment_id: int):
 @permissions_required("assignments_grades:manage")
 def group_assignment_grade(assignment_id: int):
     return jsonify({**query_group_assignment_grade(assignment_id), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/individual/<int:assignment_id>/edit-meta")
+@login_required
+@permissions_required("assignments_grades:manage")
+def individual_assignment_edit_meta(assignment_id: int):
+    return jsonify({**query_assignment_edit_meta(assignment_id), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/group/<int:assignment_id>/edit-meta")
+@login_required
+@permissions_required("assignments_grades:manage")
+def group_assignment_edit_meta(assignment_id: int):
+    return jsonify({**query_assignment_edit_meta(assignment_id, is_group=True), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/individual/<int:assignment_id>/edit", methods=["GET", "POST"])
+@login_required
+@permissions_required("assignments_grades:manage")
+def individual_assignment_edit(assignment_id: int):
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        result = save_individual_assignment_edit(assignment_id, body)
+        status = 200 if result.get("success") else 400
+        return jsonify(result), status
+    return jsonify({**query_individual_assignment_edit(assignment_id), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/group/<int:assignment_id>/edit", methods=["GET", "POST"])
+@login_required
+@permissions_required("assignments_grades:manage")
+def group_assignment_edit(assignment_id: int):
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        result = save_group_assignment_edit(assignment_id, body)
+        status = 200 if result.get("success") else 400
+        return jsonify(result), status
+    return jsonify({**query_group_assignment_edit(assignment_id), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/individual/<int:assignment_id>/submissions")
+@login_required
+@permissions_required("assignments_grades:manage")
+def individual_assignment_submissions(assignment_id: int):
+    return jsonify({**query_individual_assignment_submissions(assignment_id), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/group/<int:assignment_id>/submissions")
+@login_required
+@permissions_required("assignments_grades:manage")
+def group_assignment_submissions(assignment_id: int):
+    return jsonify({**query_group_assignment_submissions(assignment_id), "meta": _assignments_meta()})
+
+
+@spa_api_blueprint.route("/assignments/individual/<int:assignment_id>/grade/quiz", methods=["POST"])
+@login_required
+@permissions_required("assignments_grades:manage")
+def individual_assignment_quiz_grade_save(assignment_id: int):
+    payload = request.get_json(silent=True) or {}
+    result = save_quiz_open_ended_grades(assignment_id, payload.get("entries") or [])
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status

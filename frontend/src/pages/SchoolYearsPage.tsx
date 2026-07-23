@@ -12,7 +12,8 @@ import {
   uploadCalendarPdf,
 } from '../api/schoolYears'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import type { AcademicPeriod, CalendarEventRow, SchoolYearRow, SchoolYearsPageResponse } from '../types/schoolYears'
 import { formatDateLong, formatDateShort } from '../utils/formatDate'
 import { invalidateCalendarPageCache } from '../utils/calendarPageCache'
@@ -92,17 +93,20 @@ export function SchoolYearsPage() {
 
   if (loading) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell>
+        <MgmtBootstrapRoot>
         <div className="mgmt-sy">
           <div className="mgmt-sy-shell p-5 text-center">Loading…</div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
   if (error || !data || !stats) {
     return (
-      <LegacyMgmtScope>
+      <ManagementPageShell>
+        <MgmtBootstrapRoot>
         <div className="mgmt-sy">
           <div className="mgmt-sy-shell p-5">
             <p>{error || 'Could not load school years'}</p>
@@ -111,7 +115,8 @@ export function SchoolYearsPage() {
             </Link>
           </div>
         </div>
-      </LegacyMgmtScope>
+        </MgmtBootstrapRoot>
+      </ManagementPageShell>
     )
   }
 
@@ -119,7 +124,8 @@ export function SchoolYearsPage() {
   const semesters = active?.academic_periods.filter((p) => p.period_type === 'semester') ?? []
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell>
+      <MgmtBootstrapRoot>
       <>
       <div className="mgmt-sy">
         <div className="mgmt-sy-shell">
@@ -464,7 +470,8 @@ export function SchoolYearsPage() {
         />
       ) : null}
     </>
-    </LegacyMgmtScope>
+    </MgmtBootstrapRoot>
+    </ManagementPageShell>
   )
 }
 

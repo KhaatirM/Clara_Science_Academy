@@ -94,6 +94,122 @@ def _serialize_member(member: CleaningTeamMember) -> dict[str, Any] | None:
     }
 
 
+VALID_TEAM_TYPES = frozenset(
+    {"cleaning", "computer", "lunch_duty", "experiment_duty", "other"}
+)
+
+
+def _serialize_inspection(inspection: CleaningInspection) -> dict[str, Any]:
+    team = CleaningTeam.query.get(inspection.team_id)
+    team_name = team.team_name if team else f"Team {inspection.team_id}"
+    status = "Passed" if inspection.final_score >= 60 else "Failed - Re-do Required"
+    return {
+        "id": inspection.id,
+        "date": inspection.inspection_date.isoformat()
+        if hasattr(inspection.inspection_date, "isoformat")
+        else str(inspection.inspection_date),
+        "team_id": inspection.team_id,
+        "team_name": team_name,
+        "score": inspection.final_score,
+        "major_deductions": inspection.major_deductions,
+        "moderate_deductions": inspection.moderate_deductions,
+        "minor_deductions": inspection.minor_deductions,
+        "bonus_points": inspection.bonus_points,
+        "status": status,
+        "inspector_name": inspection.inspector_name,
+        "inspector_notes": inspection.inspector_notes or "",
+    }
+
+
+def query_inspection_history(*, page: int = 1, per_page: int = 10) -> dict[str, Any]:
+    page = max(1, page)
+    per_page = max(1, min(per_page, 100))
+
+    try:
+        total = CleaningInspection.query.count()
+        inspections = (
+            CleaningInspection.query.order_by(CleaningInspection.inspection_date.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+    except Exception:
+        total = 0
+        inspections = []
+
+    items = [_serialize_inspection(inspection) for inspection in inspections]
+    passed_on_page = sum(1 for item in items if item["status"] == "Passed")
+
+    return {
+        "items": items,
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": max(1, (total + per_page - 1) // per_page) if total else 1,
+        },
+        "passed_on_page": passed_on_page,
+    }
+
+
+def create_cleaning_team(
+    *,
+    name: str,
+    description: str,
+    team_type: str,
+    student_ids: list[int] | None = None,
+) -> dict[str, Any]:
+    team_name = (name or "").strip()
+    if not team_name:
+        return {"success": False, "error": "Team name is required."}
+
+    normalized_type = (team_type or "other").strip().lower()
+    if normalized_type not in VALID_TEAM_TYPES:
+        return {"success": False, "error": f"Invalid team type. Choose one of: {', '.join(sorted(VALID_TEAM_TYPES))}."}
+
+    existing = CleaningTeam.query.filter_by(team_name=team_name).first()
+    if existing:
+        return {"success": False, "error": "A team with this name already exists."}
+
+    team = CleaningTeam(
+        team_name=team_name,
+        team_description=(description or "").strip() or team_name,
+        team_type=normalized_type,
+        is_active=True,
+    )
+    db.session.add(team)
+    db.session.flush()
+
+    added = 0
+    for raw_id in student_ids or []:
+        try:
+            sid = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        already = CleaningTeamMember.query.filter_by(
+            team_id=team.id, student_id=sid, is_active=True
+        ).first()
+        if already:
+            continue
+        db.session.add(
+            CleaningTeamMember(
+                team_id=team.id,
+                student_id=sid,
+                role="Team Member",
+                is_active=True,
+            )
+        )
+        added += 1
+
+    db.session.commit()
+    member_note = f" with {added} member(s)" if added else ""
+    return {
+        "success": True,
+        "team_id": team.id,
+        "message": f'Team "{team_name}" created{member_note}.',
+    }
+
+
 def query_student_jobs_hub(*, user) -> dict[str, Any]:
     role = canonical_role_label(getattr(user, "role", None))
     teams = _load_teams()
@@ -147,35 +263,13 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
         )
 
     try:
-        all_inspections = (
-            CleaningInspection.query.order_by(CleaningInspection.inspection_date.desc()).limit(50).all()
-        )
+        inspection_total = CleaningInspection.query.count()
+        passed_count = CleaningInspection.query.filter(CleaningInspection.final_score >= 60).count()
     except Exception:
-        all_inspections = []
+        inspection_total = 0
+        passed_count = 0
 
-    inspection_history: list[dict[str, Any]] = []
-    passed_count = 0
-    for inspection in all_inspections:
-        team = CleaningTeam.query.get(inspection.team_id)
-        team_name = team.team_name if team else f"Team {inspection.team_id}"
-        status = "Passed" if inspection.final_score >= 60 else "Failed - Re-do Required"
-        if status == "Passed":
-            passed_count += 1
-        inspection_history.append(
-            {
-                "id": inspection.id,
-                "date": inspection.inspection_date.isoformat()
-                if hasattr(inspection.inspection_date, "isoformat")
-                else str(inspection.inspection_date),
-                "team_id": inspection.team_id,
-                "team_name": team_name,
-                "score": inspection.final_score,
-                "major_deductions": inspection.major_deductions,
-                "bonus_points": inspection.bonus_points,
-                "status": status,
-                "inspector_name": inspection.inspector_name,
-            }
-        )
+    inspection_page = query_inspection_history(page=1, per_page=10)
 
     return {
         "role_canonical": role,
@@ -183,11 +277,12 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
         "summary": {
             "teams": len(team_payloads),
             "members": total_members,
-            "inspections": len(inspection_history),
+            "inspections": inspection_total,
             "passed": passed_count,
         },
         "teams": team_payloads,
-        "inspection_history": inspection_history,
+        "inspection_history": inspection_page["items"],
+        "inspection_pagination": inspection_page["pagination"],
         "point_system": {
             "starting_points": 100,
             "redo_threshold": 60,

@@ -22,6 +22,7 @@ import {
   type GroupQuizFormMeta,
 } from '../api/groupCreateForms'
 import { spaRoute } from '../utils/spaRoute'
+import { assignmentCreateRoutePrefix, useAssignmentCreateScope } from '../utils/assignmentCreateScope'
 
 let questionCounter = 1
 function nextQuestionId() {
@@ -40,6 +41,7 @@ function quarterOptionValue(q: string): string {
 
 export function CreateGroupQuizAssignmentPage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const { classId: classIdParam } = useParams()
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
 
@@ -73,7 +75,7 @@ export function CreateGroupQuizAssignmentPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchGroupQuizForm(classId)
+      const data = await fetchGroupQuizForm(classId, scope)
       setMeta(data)
       setQuarter(quarterOptionValue(data.current_quarter || '1'))
       setAllowSaveAndContinue(data.defaults.allow_save_and_continue)
@@ -95,13 +97,13 @@ export function CreateGroupQuizAssignmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [classId])
+  }, [classId, scope])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const backTo = spaRoute(meta?.back_url || `/management/assignments/create/group/${classId ?? ''}`)
+  const backTo = spaRoute(meta?.back_url || `${assignmentCreateRoutePrefix(scope)}/group/${classId ?? ''}`)
   const classBadge = meta?.class
     ? `${meta.class.name}${meta.class.subject ? ` · ${meta.class.subject}` : ''}`
     : null
@@ -160,7 +162,7 @@ export function CreateGroupQuizAssignmentPage() {
   }
 
   if (!classId) {
-    return <FormError message="Invalid class" backTo="/management/assignments/create/group" />
+    return <FormError message="Invalid class" backTo={`${assignmentCreateRoutePrefix(scope)}/group`} />
   }
   if (loading) return <FormLoading label="Loading group quiz form…" />
   if (error || !meta) return <FormError message={error || 'Could not load form'} backTo={backTo} />
@@ -254,6 +256,9 @@ export function CreateGroupQuizAssignmentPage() {
                   className="rounded border-slate-300"
                 />
                 Shuffle questions
+                <span className="mt-0.5 block text-xs font-normal text-hub-muted">
+                  Randomizes order within each section
+                </span>
               </label>
               <label className="flex items-center gap-2 text-sm font-semibold">
                 <input

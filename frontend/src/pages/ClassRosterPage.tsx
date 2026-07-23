@@ -112,7 +112,7 @@ function EnrolledStudentCard({
       </div>
       <div className="border-t border-slate-100 p-3">
         <a
-          href={student.view_url || `/management/view-student/${student.id}`}
+          href={student.view_url || `/management/students?edit=${student.id}`}
           className="flex w-full items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 py-2 text-sm font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
         >
           <i className="bi bi-eye" aria-hidden />

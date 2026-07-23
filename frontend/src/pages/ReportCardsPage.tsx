@@ -6,6 +6,7 @@ import { Link, useOutletContext } from 'react-router-dom'
 
 import { deleteReportCard, fetchReportCardsHub, reportCardPdfUrl } from '../api/reportCards'
 import PendingApprovalNotifier from '../components/reportCards/PendingApprovalNotifier'
+import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { spaRoute } from '../utils/spaRoute'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ReportCardCategoryCard, ReportCardItem, ReportCardsHubResponse } from '../types/reportCards'
@@ -479,19 +480,21 @@ export default function ReportCardsPage() {
 
   return (
 
-    <div className="mx-auto max-w-7xl space-y-6 px-1 pb-10 pt-2">
+    <ManagementPageShell director={isDirector}>
 
-      <header className="rounded-3xl border border-white/80 bg-gradient-to-br from-violet-900 via-violet-800 to-indigo-900 p-6 text-white shadow-lg md:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+      <ManagementPageHero>
 
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 
           <div>
 
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-100/90">Academic reporting</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] spa-mgmt-hero-muted">Academic reporting</p>
 
             <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Report cards</h1>
 
-            <p className="mt-2 flex items-center gap-2 text-sm text-violet-50/90">
+            <p className="mt-2 flex items-center gap-2 text-sm spa-mgmt-hero-muted">
 
               <i className="bi bi-file-earmark-text" aria-hidden />
 
@@ -543,7 +546,7 @@ export default function ReportCardsPage() {
 
         </div>
 
-      </header>
+      </ManagementPageHero>
 
 
 
@@ -749,7 +752,9 @@ export default function ReportCardsPage() {
 
       <PendingApprovalNotifier enabled={isDirector} />
 
-    </div>
+      </div>
+
+    </ManagementPageShell>
 
   )
 

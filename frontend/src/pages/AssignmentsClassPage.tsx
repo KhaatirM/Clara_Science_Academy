@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { openAssignmentGrade, openAssignmentView, type DeleteAssignmentTarget } from '../api/assignmentActions'
 import { fetchAssignmentsClass } from '../api/assignments'
+import { fetchTeacherAssignmentsClass } from '../api/teacherTabs'
 import { DeleteAssignmentModal } from '../components/assignments/DeleteAssignmentModal'
 import { GradeBadge } from '../components/classes/GradeBadge'
 import { VoidAssignmentModal, type VoidAssignmentTarget } from '../components/classes/VoidAssignmentModal'
+import type { AssignmentWorkspaceScope } from '../utils/assignmentWorkspaceScope'
 import type { ManagementOutletContext } from '../types/layout'
 import type { AssignmentWorkspaceItem, AssignmentsClassResponse } from '../types/assignments'
 
@@ -32,18 +34,37 @@ function avgClass(score: number | null | undefined) {
   return 'border-red-300 bg-red-50 text-red-800'
 }
 
+function formatAssignmentTypeLabel(raw: string | null | undefined) {
+  const t = (raw || '').toLowerCase().replace(/[/\s-]+/g, '_')
+  if (t === 'pdf' || t === 'paper' || t === 'pdf_paper') return 'PDF/Paper'
+  if (t === 'discussion') return 'Discussion'
+  if (t === 'quiz') return 'Quiz'
+  if (!raw) return '—'
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function assignmentTypeBadgeClass(raw: string | null | undefined) {
+  const t = (raw || '').toLowerCase()
+  if (t === 'quiz') return 'border-violet-300 bg-violet-50 text-violet-800'
+  if (t === 'discussion') return 'border-indigo-300 bg-indigo-50 text-indigo-800'
+  if (t === 'pdf' || t === 'paper' || t === 'pdf_paper') return 'border-amber-300 bg-amber-50 text-amber-900'
+  return 'border-slate-300 bg-slate-50 text-slate-700'
+}
+
 function AssignmentActionButtons({
   item,
   classId,
   onVoid,
   onDelete,
   layout = 'inline',
+  workspaceScope = 'management',
 }: {
   item: AssignmentWorkspaceItem
   classId: number
   onVoid: (target: VoidAssignmentTarget) => void
   onDelete: (target: DeleteAssignmentTarget) => void
   layout?: 'inline' | 'stacked'
+  workspaceScope?: AssignmentWorkspaceScope
 }) {
   const navigate = useNavigate()
   const voided = item.stats.all_voided || item.status === 'Voided'
@@ -54,7 +75,7 @@ function AssignmentActionButtons({
   const viewBtn = (
     <button
       type="button"
-      onClick={() => openAssignmentView(item, navigate, classId)}
+      onClick={() => openAssignmentView(item, navigate, classId, workspaceScope)}
       className={layout === 'stacked' ? `${stacked} border border-slate-200 bg-white hover:border-teal-400` : `${pill} border-slate-300 bg-white text-slate-700 hover:border-teal-500`}
     >
       <i className="bi bi-eye me-1" aria-hidden />
@@ -64,7 +85,7 @@ function AssignmentActionButtons({
   const gradeBtn = (
     <button
       type="button"
-      onClick={() => openAssignmentGrade(item, navigate, classId)}
+      onClick={() => openAssignmentGrade(item, navigate, classId, workspaceScope)}
       className={
         layout === 'stacked'
           ? `${stacked} bg-teal-700 text-white hover:bg-teal-800`
@@ -122,11 +143,13 @@ function GradesByAssignmentTable({
   classId,
   onVoid,
   onDelete,
+  workspaceScope = 'management',
 }: {
   items: AssignmentWorkspaceItem[]
   classId: number
   onVoid: (t: VoidAssignmentTarget) => void
   onDelete: (t: DeleteAssignmentTarget) => void
+  workspaceScope?: AssignmentWorkspaceScope
 }) {
   return (
     <div className="overflow-x-auto">
@@ -134,6 +157,7 @@ function GradesByAssignmentTable({
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-hub-muted">
             <th className="px-3 py-2.5">Assignment</th>
+            <th className="px-2 py-2.5 text-center">Type</th>
             <th className="px-2 py-2.5 text-center">Due</th>
             <th className="px-2 py-2.5 text-center">Quarter</th>
             <th className="px-2 py-2.5 text-center">Submissions</th>
@@ -168,6 +192,13 @@ function GradesByAssignmentTable({
                     ) : null}
                   </div>
                 </td>
+                <td className="px-2 py-2.5 text-center">
+                  <span
+                    className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold ${assignmentTypeBadgeClass(item.assignment_type)}`}
+                  >
+                    {formatAssignmentTypeLabel(item.assignment_type)}
+                  </span>
+                </td>
                 <td className="px-2 py-2.5 text-center text-xs text-hub-muted">
                   {item.due_date ? new Date(item.due_date).toLocaleDateString() : '—'}
                 </td>
@@ -188,7 +219,13 @@ function GradesByAssignmentTable({
                   )}
                 </td>
                 <td className="px-2 py-2.5">
-                  <AssignmentActionButtons item={item} classId={classId} onVoid={onVoid} onDelete={onDelete} />
+                  <AssignmentActionButtons
+                    item={item}
+                    classId={classId}
+                    onVoid={onVoid}
+                    onDelete={onDelete}
+                    workspaceScope={workspaceScope}
+                  />
                 </td>
               </tr>
             )
@@ -204,11 +241,13 @@ function AssignmentCards({
   classId,
   onVoid,
   onDelete,
+  workspaceScope = 'management',
 }: {
   items: AssignmentWorkspaceItem[]
   classId: number
   onVoid: (t: VoidAssignmentTarget) => void
   onDelete: (t: DeleteAssignmentTarget) => void
+  workspaceScope?: AssignmentWorkspaceScope
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -237,7 +276,14 @@ function AssignmentCards({
               {voided ? <GradeBadge grade="Voided" /> : null}
             </div>
             <div className="border-t border-slate-100 bg-slate-50 p-3">
-              <AssignmentActionButtons item={item} classId={classId} onVoid={onVoid} onDelete={onDelete} layout="stacked" />
+              <AssignmentActionButtons
+                item={item}
+                classId={classId}
+                onVoid={onVoid}
+                onDelete={onDelete}
+                layout="stacked"
+                workspaceScope={workspaceScope}
+              />
             </div>
           </article>
         )
@@ -246,7 +292,9 @@ function AssignmentCards({
   )
 }
 
-export function AssignmentsClassPage() {
+export type AssignmentsClassScope = 'management' | 'teacher'
+
+export function AssignmentsClassPage({ scope = 'management' }: { scope?: AssignmentsClassScope }) {
   const { user } = useOutletContext<ManagementOutletContext>()
   const { classId } = useParams()
   const id = Number(classId)
@@ -254,6 +302,8 @@ export function AssignmentsClassPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const viewMode = (searchParams.get('view') as ViewMode) || 'grades'
   const isDirector = user.role_canonical === 'Director'
+  const isTeacherScope = scope === 'teacher'
+  const workspaceScope: AssignmentWorkspaceScope = isTeacherScope ? 'teacher' : 'management'
 
   const [data, setData] = useState<AssignmentsClassResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -267,23 +317,27 @@ export function AssignmentsClassPage() {
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchAssignmentsClass(id, { view: viewMode }))
+      setData(
+        isTeacherScope
+          ? await fetchTeacherAssignmentsClass(id, { view: viewMode })
+          : await fetchAssignmentsClass(id, { view: viewMode }),
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load class assignments')
     } finally {
       setLoading(false)
     }
-  }, [id, viewMode])
+  }, [id, viewMode, isTeacherScope])
 
   useEffect(() => {
     void load()
   }, [load])
 
   useEffect(() => {
-    if (viewMode === 'table' && id) {
+    if (viewMode === 'table' && id && !isTeacherScope) {
       navigate(`/management/classes/${id}/grades`, { replace: true })
     }
-  }, [viewMode, id, navigate])
+  }, [viewMode, id, navigate, isTeacherScope])
 
   const setView = (view: ViewMode) => {
     setSearchParams(view === 'grades' ? {} : { view })
@@ -297,9 +351,11 @@ export function AssignmentsClassPage() {
   return (
     <div
       className={`rounded-3xl p-5 md:p-6 ${
-        isDirector
-          ? 'bg-gradient-to-br from-violet-50 via-purple-50/70 to-slate-100'
-          : 'bg-gradient-to-br from-indigo-50 via-slate-50 to-slate-100'
+        isTeacherScope
+          ? 'bg-gradient-to-br from-teal-50 via-slate-50 to-slate-100'
+          : isDirector
+            ? 'bg-gradient-to-br from-violet-50 via-purple-50/70 to-slate-100'
+            : 'bg-gradient-to-br from-indigo-50 via-slate-50 to-slate-100'
       }`}
     >
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -312,7 +368,12 @@ export function AssignmentsClassPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isDirector ? (
+          {isTeacherScope ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-1 text-xs font-bold text-teal-900">
+              <i className="bi bi-mortarboard-fill" aria-hidden />
+              Teacher
+            </span>
+          ) : isDirector ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-900">
               <i className="bi bi-award-fill" aria-hidden />
               Director
@@ -324,7 +385,7 @@ export function AssignmentsClassPage() {
             </span>
           )}
           <Link
-            to="/management/assignments"
+            to={isTeacherScope ? '/teacher/assignments-and-grades' : '/management/assignments'}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500"
           >
             <i className="bi bi-arrow-left" aria-hidden />
@@ -332,33 +393,69 @@ export function AssignmentsClassPage() {
           </Link>
           {toolbar ? (
             <>
-              <a href={toolbar.redo_url} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500">
-                <i className="bi bi-arrow-repeat" aria-hidden />
-                Redo
-                {toolbar.redo_request_count > 0 ? (
-                  <span className="rounded-full bg-red-600 px-1.5 text-[0.65rem] text-white">{toolbar.redo_request_count}</span>
-                ) : null}
-              </a>
-              <a href={toolbar.extensions_url} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500">
-                <i className="bi bi-clock-history" aria-hidden />
-                Extensions
-                {toolbar.extension_request_count > 0 ? (
-                  <span className="rounded-full bg-red-600 px-1.5 text-[0.65rem] text-white">{toolbar.extension_request_count}</span>
-                ) : null}
-              </a>
+              {isTeacherScope ? (
+                <Link
+                  to="/teacher/redo"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500"
+                >
+                  <i className="bi bi-arrow-repeat" aria-hidden />
+                  Redo
+                  {toolbar.redo_request_count > 0 ? (
+                    <span className="rounded-full bg-red-600 px-1.5 text-[0.65rem] text-white">{toolbar.redo_request_count}</span>
+                  ) : null}
+                </Link>
+              ) : (
+                <a href={toolbar.redo_url} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500">
+                  <i className="bi bi-arrow-repeat" aria-hidden />
+                  Redo
+                  {toolbar.redo_request_count > 0 ? (
+                    <span className="rounded-full bg-red-600 px-1.5 text-[0.65rem] text-white">{toolbar.redo_request_count}</span>
+                  ) : null}
+                </a>
+              )}
+              {isTeacherScope ? (
+                <Link
+                  to="/teacher/extensions"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500"
+                >
+                  <i className="bi bi-clock-history" aria-hidden />
+                  Extensions
+                  {toolbar.extension_request_count > 0 ? (
+                    <span className="rounded-full bg-red-600 px-1.5 text-[0.65rem] text-white">{toolbar.extension_request_count}</span>
+                  ) : null}
+                </Link>
+              ) : (
+                <a href={toolbar.extensions_url} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500">
+                  <i className="bi bi-clock-history" aria-hidden />
+                  Extensions
+                  {toolbar.extension_request_count > 0 ? (
+                    <span className="rounded-full bg-red-600 px-1.5 text-[0.65rem] text-white">{toolbar.extension_request_count}</span>
+                  ) : null}
+                </a>
+              )}
               {toolbar.pending_assistant_count > 0 ? (
                 <a href={toolbar.assistant_proposals_url} className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900">
                   <i className="bi bi-person-badge" aria-hidden />
                   Proposals ({toolbar.pending_assistant_count})
                 </a>
               ) : null}
-              <Link
-                to={`/management/assignments/create?class_id=${id}`}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-800 to-teal-900 px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105"
-              >
-                <i className="bi bi-plus-circle" aria-hidden />
-                New assignment
-              </Link>
+              {isTeacherScope ? (
+                <Link
+                  to={`/teacher/assignments/create?class_id=${id}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-800 to-teal-900 px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105"
+                >
+                  <i className="bi bi-plus-circle" aria-hidden />
+                  New assignment
+                </Link>
+              ) : (
+                <Link
+                  to={`/management/assignments/create?class_id=${id}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-800 to-teal-900 px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105"
+                >
+                  <i className="bi bi-plus-circle" aria-hidden />
+                  New assignment
+                </Link>
+              )}
             </>
           ) : null}
         </div>
@@ -384,7 +481,7 @@ export function AssignmentsClassPage() {
           </div>
 
           <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Assignments view mode">
-            {(['grades', 'assignments', 'table'] as const).map((view) => (
+            {(isTeacherScope ? (['grades', 'assignments'] as const) : (['grades', 'assignments', 'table'] as const)).map((view) => (
               <button
                 key={view}
                 type="button"
@@ -419,10 +516,22 @@ export function AssignmentsClassPage() {
               {data.assignments.length ? (
                 viewMode === 'assignments' ? (
                   <div className="p-4">
-                    <AssignmentCards items={data.assignments} classId={id} onVoid={setVoidTarget} onDelete={setDeleteTarget} />
+                    <AssignmentCards
+                      items={data.assignments}
+                      classId={id}
+                      onVoid={setVoidTarget}
+                      onDelete={setDeleteTarget}
+                      workspaceScope={workspaceScope}
+                    />
                   </div>
                 ) : (
-                  <GradesByAssignmentTable items={data.assignments} classId={id} onVoid={setVoidTarget} onDelete={setDeleteTarget} />
+                  <GradesByAssignmentTable
+                    items={data.assignments}
+                    classId={id}
+                    onVoid={setVoidTarget}
+                    onDelete={setDeleteTarget}
+                    workspaceScope={workspaceScope}
+                  />
                 )
               ) : (
                 <div className="px-4 py-12 text-center">
@@ -430,13 +539,23 @@ export function AssignmentsClassPage() {
                   <h3 className="font-bold text-hub-text">No assignments yet</h3>
                   <p className="mt-1 text-sm text-hub-muted">Create an assignment to get started.</p>
                   {toolbar ? (
-                    <Link
-                      to={`/management/assignments/create?class_id=${id}`}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white"
-                    >
-                      <i className="bi bi-plus-circle" aria-hidden />
-                      New assignment
-                    </Link>
+                    isTeacherScope ? (
+                      <Link
+                        to={`/teacher/assignments/create?class_id=${id}`}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white"
+                      >
+                        <i className="bi bi-plus-circle" aria-hidden />
+                        New assignment
+                      </Link>
+                    ) : (
+                      <Link
+                        to={`/management/assignments/create?class_id=${id}`}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white"
+                      >
+                        <i className="bi bi-plus-circle" aria-hidden />
+                        New assignment
+                      </Link>
+                    )
                   ) : null}
                 </div>
               )}
@@ -444,15 +563,17 @@ export function AssignmentsClassPage() {
           </section>
 
           <div className="mt-4 flex flex-wrap gap-2">
+            {!isTeacherScope ? (
+              <Link
+                to={`/management/classes/${id}/grades`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500"
+              >
+                <i className="bi bi-table" aria-hidden />
+                Student grades matrix
+              </Link>
+            ) : null}
             <Link
-              to={`/management/classes/${id}/grades`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500"
-            >
-              <i className="bi bi-table" aria-hidden />
-              Student grades matrix
-            </Link>
-            <Link
-              to={`/management/classes/${id}`}
+              to={isTeacherScope ? `/teacher/classes/${id}` : `/management/classes/${id}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500"
             >
               <i className="bi bi-building" aria-hidden />
@@ -474,6 +595,7 @@ export function AssignmentsClassPage() {
       <DeleteAssignmentModal
         target={deleteTarget}
         classId={id}
+        workspaceScope={workspaceScope}
         onClose={() => setDeleteTarget(null)}
         onSuccess={(msg) => {
           setMessage(msg)

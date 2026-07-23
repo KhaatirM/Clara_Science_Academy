@@ -4,8 +4,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchSettingsHub, updateTheme } from '../api/settings'
 import { getCsrfToken } from '../api/client'
 import { BugReportsPanel } from '../components/settings/BugReportsPanel'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { SettingsHubResponse } from '../types/settings'
 import { spaRoute } from '../utils/spaRoute'
+import { applyUserTheme } from '../utils/userTheme'
 
 type SettingsTab = 'account' | 'preferences' | 'google' | 'bug-reports'
 
@@ -36,7 +38,8 @@ export default function SettingsPage() {
     try {
       const hub = await fetchSettingsHub()
       setData(hub)
-      setTheme(hub.preferences.theme)
+      setTheme(hub.preferences.saved_theme)
+      applyUserTheme(hub.preferences.theme)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load settings.')
     } finally {
@@ -65,13 +68,31 @@ export default function SettingsPage() {
   }
 
   async function handleThemeSave() {
+    if (data?.preferences.theme_locked) {
+      setMessage('Theme is locked by a site-wide override set by Tech.')
+      return
+    }
     setSavingTheme(true)
     setMessage(null)
     try {
       const result = await updateTheme(theme)
       if (result.success) {
-        setMessage('Theme updated. Refresh the page to see the new theme.')
-        document.documentElement.setAttribute('data-theme', theme)
+        const saved = result.theme || theme
+        applyUserTheme(saved)
+        setTheme(saved)
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                preferences: {
+                  ...prev.preferences,
+                  theme: saved,
+                  saved_theme: saved,
+                },
+              }
+            : prev,
+        )
+        setMessage('Theme updated.')
       } else {
         setMessage(result.message || 'Could not update theme.')
       }
@@ -79,6 +100,13 @@ export default function SettingsPage() {
       setMessage(err instanceof Error ? err.message : 'Could not update theme.')
     } finally {
       setSavingTheme(false)
+    }
+  }
+
+  function handleThemePreview(nextTheme: string) {
+    setTheme(nextTheme)
+    if (!data?.preferences.theme_locked) {
+      applyUserTheme(nextTheme)
     }
   }
 
@@ -109,12 +137,8 @@ export default function SettingsPage() {
     return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">{error || 'Could not load settings.'}</div>
   }
 
-  const shellClass = data.is_director
-    ? 'bg-gradient-to-br from-violet-50 via-[#f0ecf5] to-[#e8e4f0]'
-    : 'bg-gradient-to-br from-slate-50 to-white'
-
   return (
-    <div className={`rounded-3xl p-5 shadow-sm md:p-6 ${shellClass}`}>
+    <ManagementPageShell director={data.is_director}>
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Settings</p>
@@ -126,7 +150,7 @@ export default function SettingsPage() {
         </div>
         <Link
           to={spaRoute(data.urls.home)}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+          className="spa-mgmt-btn-ghost px-4 py-2 text-sm"
         >
           <i className="bi bi-arrow-left" aria-hidden />
           Dashboard
@@ -134,19 +158,19 @@ export default function SettingsPage() {
       </header>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-white/80 bg-white/95 p-4 shadow-sm">
+        <div className="spa-mgmt-stat p-4 shadow-sm">
           <div className="text-sm font-bold text-hub-text">{data.google.connected ? 'Connected' : 'Not linked'}</div>
           <div className="text-sm text-hub-muted">Google Classroom</div>
         </div>
-        <div className="rounded-2xl border border-white/80 bg-white/95 p-4 shadow-sm">
+        <div className="spa-mgmt-stat p-4 shadow-sm">
           <div className="text-sm font-bold text-hub-text">{data.preferences.theme}</div>
           <div className="text-sm text-hub-muted">Theme</div>
         </div>
-        <div className="rounded-2xl border border-white/80 bg-white/95 p-4 shadow-sm">
+        <div className="spa-mgmt-stat p-4 shadow-sm">
           <div className="truncate text-sm font-bold text-hub-text">{data.account.email || '—'}</div>
           <div className="text-sm text-hub-muted">Email</div>
         </div>
-        <div className="rounded-2xl border border-white/80 bg-white/95 p-4 shadow-sm">
+        <div className="spa-mgmt-stat p-4 shadow-sm">
           <div className="text-sm font-bold text-hub-text">Secure</div>
           <div className="text-sm text-hub-muted">Password</div>
         </div>
@@ -162,10 +186,7 @@ export default function SettingsPage() {
             key={tab.id}
             type="button"
             onClick={() => switchTab(tab.id)}
-            className={[
-              'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold',
-              activeTab === tab.id ? 'bg-violet-700 text-white' : 'bg-white text-hub-muted ring-1 ring-slate-200',
-            ].join(' ')}
+            className={['spa-mgmt-tab', activeTab === tab.id ? 'is-active' : ''].join(' ')}
           >
             <i className={`bi ${tab.icon}`} aria-hidden />
             {tab.label}
@@ -173,7 +194,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mt-5 spa-mgmt-card p-5 shadow-sm">
         {activeTab === 'account' ? (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-hub-text">Account settings</h2>
@@ -201,19 +222,28 @@ export default function SettingsPage() {
               <i className="bi bi-lock-fill" aria-hidden />
               Change password
             </a>
-            <p className="text-xs text-hub-muted">Email updates from this screen are coming soon.</p>
+            <p className="text-xs text-hub-muted">
+              Contact your school administrator if you need to update your account email.
+            </p>
           </div>
         ) : null}
 
         {activeTab === 'preferences' ? (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-hub-text">Preferences</h2>
+            {data.preferences.theme_locked ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                A site-wide theme ({data.preferences.site_theme_override}) is active. Personal theme
+                changes are disabled until Tech removes the override.
+              </div>
+            ) : null}
             <label className="block text-sm text-hub-muted">
               Theme
               <select
                 value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                className="mt-1 w-full max-w-md rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                disabled={data.preferences.theme_locked}
+                onChange={(e) => handleThemePreview(e.target.value)}
+                className="mt-1 w-full max-w-md rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
               >
                 {[...themeGroups.entries()].map(([group, options]) => (
                   <optgroup key={group} label={group}>
@@ -226,15 +256,40 @@ export default function SettingsPage() {
                 ))}
               </select>
             </label>
+            <p className="text-xs text-hub-muted">
+              Changes apply immediately to the sidebar and page background. Click save to keep your
+              preference for future visits.
+            </p>
             <button
               type="button"
-              disabled={savingTheme}
+              disabled={savingTheme || data.preferences.theme_locked}
               onClick={() => void handleThemeSave()}
-              className="rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="spa-mgmt-btn-primary px-4 py-2 text-sm"
             >
               Save theme
             </button>
-            <p className="text-xs text-hub-muted">Notification and timezone preferences are coming soon.</p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-hub-muted">
+              <p className="font-semibold text-hub-text">School operations</p>
+              <p className="mt-1">
+                Manage academic years and schedule end-of-year closure from the dedicated pages below.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  to={spaRoute('/management/school-years')}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                >
+                  <i className="bi bi-calendar3" aria-hidden />
+                  School years
+                </Link>
+                <Link
+                  to={spaRoute('/management/school-year/closure/schedule')}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                >
+                  <i className="bi bi-flag-fill" aria-hidden />
+                  End-of-year closure
+                </Link>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -262,7 +317,7 @@ export default function SettingsPage() {
                 </p>
                 <a
                   href={data.google.connect_url}
-                  className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800"
+                  className="spa-mgmt-btn-primary px-4 py-2 text-sm hover:brightness-105"
                 >
                   <i className="bi bi-google" aria-hidden />
                   Connect Google account
@@ -274,6 +329,6 @@ export default function SettingsPage() {
 
         {activeTab === 'bug-reports' ? <BugReportsPanel /> : null}
       </div>
-    </div>
+    </ManagementPageShell>
   )
 }

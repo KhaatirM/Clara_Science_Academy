@@ -1,12 +1,33 @@
 import { apiFetch } from './client'
 import type {
   CleaningInspectionPayload,
+  CreateStudentJobsTeamPayload,
   StudentJobsHubResponse,
+  StudentJobsInspectionHistoryResponse,
   StudentJobsStudentOption,
 } from '../types/studentJobs'
 
 export async function fetchStudentJobsHub(): Promise<StudentJobsHubResponse> {
   return apiFetch<StudentJobsHubResponse>('/api/spa/student-jobs/hub')
+}
+
+export async function createStudentJobsTeam(payload: CreateStudentJobsTeamPayload) {
+  return apiFetch<{ success: boolean; team_id?: number; message?: string; error?: string }>(
+    '/api/spa/student-jobs/teams',
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+}
+
+export async function fetchInspectionHistory(page = 1, perPage = 10) {
+  return apiFetch<StudentJobsInspectionHistoryResponse>(
+    `/api/spa/student-jobs/inspections?page=${page}&per_page=${perPage}`,
+  )
+}
+
+export async function fetchAllInspectionsForExport() {
+  return apiFetch<StudentJobsInspectionHistoryResponse>(
+    '/api/spa/student-jobs/inspections?export=true&per_page=5000',
+  )
 }
 
 export async function fetchStudentJobsStudents(): Promise<StudentJobsStudentOption[]> {

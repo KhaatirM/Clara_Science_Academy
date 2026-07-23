@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { fetchAssignmentsHub } from '../api/assignments'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ClassListItem, SchoolYearOption } from '../types/classes'
 import {
@@ -205,13 +206,7 @@ export function AssignmentsGradesHubPage() {
   }
 
   return (
-    <div
-      className={`rounded-3xl p-5 md:p-6 ${
-        isDirector
-          ? 'bg-gradient-to-br from-violet-50 via-purple-50/70 to-slate-100'
-          : 'bg-gradient-to-br from-indigo-50 via-slate-50 to-slate-100'
-      }`}
-    >
+    <ManagementPageShell director={isDirector}>
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-muted">Assignments & grades</p>
@@ -257,7 +252,7 @@ export function AssignmentsGradesHubPage() {
           </Link>
           <Link
             to="/management/assignments/create"
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-rose-800 to-teal-900 px-3.5 py-2 text-[0.82rem] font-semibold text-white shadow-sm hover:brightness-105"
+            className="spa-mgmt-btn-primary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[0.82rem] shadow-sm hover:brightness-105"
           >
             <i className="bi bi-plus-circle" aria-hidden />
             New assignment
@@ -463,6 +458,6 @@ export function AssignmentsGradesHubPage() {
           ))}
         </div>
       )}
-    </div>
+    </ManagementPageShell>
   )
 }

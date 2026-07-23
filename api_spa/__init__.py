@@ -7,7 +7,12 @@ from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 
 from decorators import get_user_permissions
-from utils.user_roles import canonical_role_label, user_has_management_entry_access
+from utils.user_roles import (
+    canonical_role_label,
+    user_has_management_entry_access,
+    user_has_student_spa_entry,
+    user_has_teacher_spa_entry,
+)
 
 spa_api_blueprint = Blueprint("spa_api", __name__, url_prefix="/api/spa")
 
@@ -45,6 +50,7 @@ def spa_me():
 
     try:
         from utils.school_timezone import get_school_timezone_sidebar_payload
+        from utils.user_theme import get_effective_theme
 
         tz_payload = get_school_timezone_sidebar_payload()
         school_timezone = {
@@ -69,8 +75,12 @@ def spa_me():
                 "email": getattr(current_user, "email", None),
                 "permissions": perms,
                 "management_entry": user_has_management_entry_access(current_user),
+                "teacher_entry": user_has_teacher_spa_entry(current_user),
+                "student_entry": user_has_student_spa_entry(current_user),
+                "student_id": getattr(current_user, "student_id", None),
                 "sidebar_title": _sidebar_title(current_user),
                 "csrf_token": generate_csrf(),
+                "theme": get_effective_theme(current_user),
             },
         }
     )
@@ -99,3 +109,18 @@ from api_spa import billing as _spa_billing  # noqa: F401, E402
 from api_spa import student_jobs as _spa_student_jobs  # noqa: F401, E402
 from api_spa import settings as _spa_settings  # noqa: F401, E402
 from api_spa import bug_reports as _spa_bug_reports  # noqa: F401, E402
+from api_spa import class_tools as _spa_class_tools  # noqa: F401, E402
+from api_spa import class_groups as _spa_class_groups  # noqa: F401, E402
+from api_spa import teacher_dashboard as _spa_teacher_dashboard  # noqa: F401, E402
+from api_spa import teacher_classes as _spa_teacher_classes  # noqa: F401, E402
+from api_spa import teacher_tabs as _spa_teacher_tabs  # noqa: F401, E402
+from api_spa import teacher_assignments_create as _spa_teacher_assignments_create  # noqa: F401, E402
+from api_spa import teacher_assignments_workspace as _spa_teacher_assignments_workspace  # noqa: F401, E402
+from api_spa import teacher_extensions_redo as _spa_teacher_extensions_redo  # noqa: F401, E402
+from api_spa import teacher_class_tools as _spa_teacher_class_tools  # noqa: F401, E402
+from api_spa import student_dashboard as _spa_student_dashboard  # noqa: F401, E402
+from api_spa import student_assignments as _spa_student_assignments  # noqa: F401, E402
+from api_spa import student_classes as _spa_student_classes  # noqa: F401, E402
+from api_spa import student_grades as _spa_student_grades  # noqa: F401, E402
+from api_spa import student_collaborate as _spa_student_collaborate  # noqa: F401, E402
+from api_spa import student_tabs as _spa_student_tabs  # noqa: F401, E402

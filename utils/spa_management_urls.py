@@ -166,6 +166,17 @@ def spa_group_quiz_create_redirect(class_id: int):
     return redirect(f"/app/management/assignments/create/group/{class_id}/quiz")
 
 
+def spa_group_discussion_create_redirect(class_id: int):
+    """Redirect legacy group discussion create GET to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    return redirect(f"/app/management/assignments/create/group/{class_id}/discussion")
+
+
 def spa_assignments_hub_redirect():
     """Redirect legacy assignments & grades hub GET to the React SPA."""
     from flask import redirect, request
@@ -228,8 +239,6 @@ def spa_assignment_view_redirect(assignment_id: int, *, is_group: bool = False):
     assignment = Assignment.query.get(assignment_id)
     if not assignment or not assignment.class_id:
         return None
-    if (assignment.assignment_type or "") == "discussion":
-        return None
     return redirect(f"/app/management/assignments/{assignment.class_id}/individual/{assignment.id}/view")
 
 
@@ -249,13 +258,6 @@ def spa_assignment_grade_redirect(assignment_id: int, *, is_group: bool = False)
     assignment = Assignment.query.get(assignment_id)
     if not assignment or not assignment.class_id:
         return None
-    atype = assignment.assignment_type or ""
-    if atype == "discussion":
-        return None
-    if atype == "quiz":
-        questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
-        if not any(q.question_type in ("short_answer", "essay") for q in questions):
-            return None
     return redirect(f"/app/management/assignments/{assignment.class_id}/individual/{assignment.id}/grade")
 
 
@@ -357,6 +359,32 @@ def spa_school_years_redirect():
     return redirect("/app/management/school-years")
 
 
+def spa_class_tool_redirect(class_id: int, tool: str):
+    """Redirect legacy class admin tool GET requests to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    return redirect(f"/app/management/classes/{class_id}/tools/{tool}")
+
+
+def spa_take_class_attendance_redirect(class_id: int):
+    """Redirect legacy take-class-attendance GET to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    path = f"/app/management/attendance/take/{class_id}"
+    date = request.args.get("date", "").strip()
+    if date:
+        path = f"{path}?date={date}"
+    return redirect(path)
+
+
 def spa_closure_dashboard_redirect(closure_id: int):
     """Redirect legacy closure dashboard GET to the React SPA."""
     from flask import redirect, request
@@ -366,3 +394,4 @@ def spa_closure_dashboard_redirect(closure_id: int):
     if request.method != "GET" or request.args.get("legacy") == "1":
         return None
     return redirect(f"/app/management/school-year/closure/{closure_id}")
+

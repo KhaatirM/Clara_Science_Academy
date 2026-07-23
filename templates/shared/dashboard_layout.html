@@ -32,7 +32,38 @@
     {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
-<body class="theme-{{ effective_theme | default('default') }} {% block body_class %}{% endblock %}">
+<body class="theme-{{ effective_theme | default('default') }} {% if request.args.get('embed') == '1' %}spa-embed-frame{% endif %} {% block body_class %}{% endblock %}">
+    {% if request.args.get('embed') == '1' %}
+    <style>
+      body.spa-embed-frame .sidebar,
+      body.spa-embed-frame .dashboard-sidebar-spacer,
+      body.spa-embed-frame .sidebar-overlay,
+      body.spa-embed-frame .navbar-modern,
+      body.spa-embed-frame nav.navbar {
+        display: none !important;
+      }
+      body.spa-embed-frame .dashboard-flex-wrapper {
+        display: block !important;
+        min-height: 100vh;
+      }
+      body.spa-embed-frame .dashboard-main-content,
+      body.spa-embed-frame .main-content,
+      body.spa-embed-frame .content-area {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.75rem 1rem 1.25rem !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+      }
+      body.spa-embed-frame,
+      body.spa-embed-frame .dashboard-flex-wrapper {
+        background: transparent !important;
+      }
+    </style>
+    {% endif %}
     <div class="dashboard-flex-wrapper d-flex flex-row">
         <!-- Mobile sidebar overlay -->
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
@@ -197,11 +228,10 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_assignments' %}active{% endif %}" href="{{ url_for('student.student_assignments') }}"><i class="bi bi-file-earmark-text-fill"></i><span> Assignments</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_classes' %}active{% endif %}" href="{{ url_for('student.student_classes') }}"><i class="bi bi-journal-bookmark-fill"></i><span> Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_grades' %}active{% endif %}" href="{{ url_for('student.student_grades') }}"><i class="bi bi-card-checklist"></i><span> Grades</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_submissions' %}active{% endif %}" href="{{ url_for('student.student_submissions') }}"><i class="bi bi-pencil-square"></i><span> Submissions</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_submissions' %}active{% endif %}" href="{{ url_for('student.student_submissions') }}"><i class="bi bi-people-fill"></i><span> Collaborate</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_schedule' %}active{% endif %}" href="{{ url_for('student.student_schedule') }}"><i class="bi bi-calendar-week-fill"></i><span> Schedule</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_school_calendar' %}active{% endif %}" href="{{ url_for('student.student_school_calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.student_jobs' %}active{% endif %}" href="{{ url_for('management.student_jobs') }}"><i class="bi bi-briefcase-fill"></i><span> Student Jobs</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'auth.bug_reports' %}active{% endif %}" href="{{ url_for('auth.bug_reports') }}"><i class="bi bi-bug-fill"></i><span> Bug Reports</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_settings' %}active{% endif %}" href="{{ url_for('student.student_settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- IT TABS --- #}

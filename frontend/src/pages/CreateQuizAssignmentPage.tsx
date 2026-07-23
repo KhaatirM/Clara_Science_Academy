@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   AssignmentCreateHeader,
   FieldLabel,
@@ -9,26 +9,22 @@ import {
   inputClass,
 } from '../components/assignments/AssignmentCreateLayout'
 import {
-  QuizQuestionsEditor,
-  appendQuizQuestionsToForm,
-  createEmptyQuestion,
-  type QuizQuestionDraft,
-} from '../components/assignments/QuizQuestionsEditor'
+  QuizAuthoringBlocksEditor,
+  appendQuizBlocksToForm,
+  type QuizBlock,
+} from '../components/assignments/QuizAuthoringBlocksEditor'
+import { QuizCreateSidebar } from '../components/assignments/QuizCreateSidebar'
+import { createEmptyQuestion } from '../components/assignments/QuizQuestionsEditor'
 import { appendDatetime, appendIfChecked, postAssignmentForm } from '../api/assignmentCreateActions'
 import { fetchQuizAssignmentForm, type QuizAssignmentFormMeta } from '../api/assignmentCreateForms'
 import { spaRoute } from '../utils/spaRoute'
-
-let questionCounter = 1
-
-function nextQuestionId() {
-  questionCounter += 1
-  return String(questionCounter)
-}
+import { assignmentCreateRoutePrefix, useAssignmentCreateScope } from '../utils/assignmentCreateScope'
 
 const CATEGORIES = ['', 'Homework', 'Tests', 'Quizzes', 'Projects', 'Labs', 'Participation', 'Other']
 
 export function CreateQuizAssignmentPage() {
   const navigate = useNavigate()
+  const scope = useAssignmentCreateScope()
   const [searchParams] = useSearchParams()
   const classIdParam = searchParams.get('class_id')
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
@@ -61,13 +57,15 @@ export function CreateQuizAssignmentPage() {
   const [allowSaveAndContinue, setAllowSaveAndContinue] = useState(true)
   const [maxSaveAttempts, setMaxSaveAttempts] = useState('10')
   const [saveTimeoutMinutes, setSaveTimeoutMinutes] = useState('30')
-  const [questions, setQuestions] = useState<QuizQuestionDraft[]>([createEmptyQuestion('1')])
+  const [blocks, setBlocks] = useState<QuizBlock[]>([
+    { kind: 'question', question: createEmptyQuestion('1') },
+  ])
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchQuizAssignmentForm(classId)
+      const data = await fetchQuizAssignmentForm(classId, scope)
       setMeta(data)
       setQuarter(data.current_quarter || '1')
       if (data.preselected_class) {
@@ -78,13 +76,13 @@ export function CreateQuizAssignmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [classId])
+  }, [classId, scope])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const backTo = spaRoute(meta?.type_selector_url || '/management/assignments/create')
+  const backTo = spaRoute(meta?.type_selector_url || assignmentCreateRoutePrefix(scope))
   const classBadge = meta?.preselected_class
     ? `${meta.preselected_class.name}${meta.preselected_class.subject ? ` · ${meta.preselected_class.subject}` : ''}`
     : null
@@ -120,7 +118,12 @@ export function CreateQuizAssignmentPage() {
       form.append('save_timeout_minutes', saveTimeoutMinutes)
 
       if (!linkGoogleForm) {
-        appendQuizQuestionsToForm(form, questions.filter((q) => q.questionText.trim()))
+        appendQuizBlocksToForm(
+          form,
+          blocks.filter(
+            (b) => b.kind === 'section' || b.question.questionText.trim(),
+          ),
+        )
       }
 
       const result = await postAssignmentForm(meta.post_url, form)
@@ -143,7 +146,7 @@ export function CreateQuizAssignmentPage() {
   if (error || !meta) return <FormError message={error || 'Could not load form'} backTo={backTo} />
 
   return (
-    <div className="mx-auto max-w-[1100px] px-1 pb-10">
+    <div className="mx-auto max-w-[1280px] px-1 pb-10">
       <AssignmentCreateHeader
         title="Create Quiz Assignment"
         subtitle="Build auto-graded quizzes with multiple question types"
@@ -153,13 +156,14 @@ export function CreateQuizAssignmentPage() {
         badge={classBadge}
       />
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          void submitQuiz(saveActionRef.current)
-        }}
-        className="space-y-5"
-      >
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submitQuiz(saveActionRef.current)
+          }}
+          className="min-w-0 space-y-5"
+        >
         <FormSection title="Quiz Information" icon="bi-info-circle" tone="purple">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -355,7 +359,12 @@ export function CreateQuizAssignmentPage() {
                 onChange={(e) => setShuffleQuestions(e.target.checked)}
                 className="rounded border-slate-300"
               />
-              Shuffle questions
+              <span>
+                Shuffle questions
+                <span className="mt-0.5 block text-xs font-normal text-hub-muted">
+                  Randomizes order within each section (section order stays the same)
+                </span>
+              </span>
             </label>
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input
@@ -367,7 +376,7 @@ export function CreateQuizAssignmentPage() {
               Show correct answers after submission
             </label>
           </div>
-          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mt-4 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input
                 type="checkbox"
@@ -375,8 +384,12 @@ export function CreateQuizAssignmentPage() {
                 onChange={(e) => setLinkGoogleForm(e.target.checked)}
                 className="rounded border-slate-300"
               />
-              Link to Google Form instead of native questions
+              Link to Google Form
             </label>
+            <p className="mt-2 text-xs text-slate-600">
+              Students submit through your Google Form instead of native quiz questions. You can paste an existing
+              form URL, or publish first and export questions to Google Forms from the assignment actions menu.
+            </p>
             {linkGoogleForm ? (
               <div className="mt-3">
                 <FieldLabel htmlFor="google_form_url">Google Form URL</FieldLabel>
@@ -386,7 +399,7 @@ export function CreateQuizAssignmentPage() {
                   className={inputClass()}
                   value={googleFormUrl}
                   onChange={(e) => setGoogleFormUrl(e.target.value)}
-                  placeholder="https://docs.google.com/forms/d/e/…"
+                  placeholder="https://docs.google.com/forms/d/e/…/viewform"
                 />
               </div>
             ) : null}
@@ -432,39 +445,29 @@ export function CreateQuizAssignmentPage() {
 
         {!linkGoogleForm ? (
           <FormSection title="Questions" icon="bi-list-check">
-            <QuizQuestionsEditor
-              questions={questions}
-              onChange={setQuestions}
-              onAdd={() => setQuestions((prev) => [...prev, createEmptyQuestion(nextQuestionId())])}
-              onRemove={(id) => setQuestions((prev) => prev.filter((q) => q.id !== id))}
+            <QuizAuthoringBlocksEditor
+              blocks={blocks}
+              onChange={setBlocks}
+              questionBanksUrl={meta.question_banks_url}
+              saveToBankUrl={meta.save_to_bank_url}
             />
           </FormSection>
         ) : null}
 
-        {formError ? <p className="text-sm font-semibold text-red-700">{formError}</p> : null}
+        {formError ? <p className="text-sm font-semibold text-red-700 lg:hidden">{formError}</p> : null}
+        </form>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => void submitQuiz('publish')}
-            className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-md hover:from-emerald-600 hover:to-teal-700 disabled:opacity-60"
-          >
-            {submitting && saveActionRef.current === 'publish' ? 'Publishing…' : 'Publish quiz'}
-          </button>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => void submitQuiz('draft')}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
-            {submitting && saveActionRef.current === 'draft' ? 'Saving…' : 'Save draft'}
-          </button>
-          <Link to={backTo} className="rounded-xl px-5 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700">
-            Cancel
-          </Link>
-        </div>
-      </form>
+        <QuizCreateSidebar
+          blocks={blocks}
+          googleFormLinked={linkGoogleForm}
+          submitting={submitting}
+          saveAction={saveActionRef.current}
+          formError={formError}
+          backTo={backTo}
+          onPublish={() => void submitQuiz('publish')}
+          onSaveDraft={() => void submitQuiz('draft')}
+        />
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { fetchDashboardHome } from '../api/dashboard'
-import { LegacyMgmtScope } from '../components/legacy/LegacyMgmtScope'
+import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import {
   homeActionsForGroup,
   type HomeActionGroup,
@@ -92,7 +92,7 @@ export function HomePage() {
   }, [])
 
   return (
-    <LegacyMgmtScope>
+    <ManagementPageShell director={isDirector}>
       <div className="mgmt-home container-fluid px-0 px-md-1">
         <div className="mgmt-home-shell">
           {loading ? (
@@ -104,7 +104,7 @@ export function HomePage() {
           )}
         </div>
       </div>
-    </LegacyMgmtScope>
+    </ManagementPageShell>
   )
 }
 

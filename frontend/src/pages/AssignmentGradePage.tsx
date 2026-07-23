@@ -1,21 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { assignmentTypeGradesViaSubmissions } from '../api/assignmentActions'
 import {
+  fetchAssignmentSubmissions,
   fetchGroupAssignmentGrade,
   fetchIndividualAssignmentGrade,
   saveGroupAssignmentGrades,
   saveIndividualStudentGrade,
   type AssignmentGradeResponse,
   type GradeStudentRow,
+  type PdfSubmissionRow,
 } from '../api/assignmentWorkspace'
-
-type RowDraft = {
-  score: string
-  comment: string
-  submission_type: string
-  submission_notes_type: string
-  submission_notes: string
-}
+import { AssignmentDetailsStrip } from '../components/assignments/grading/AssignmentDetailsStrip'
+import {
+  GRADING_HELP_DISMISS_KEY,
+  GradingHelpModal,
+} from '../components/assignments/grading/GradingHelpModal'
+import { GradeStatisticsModal } from '../components/assignments/grading/GradeStatisticsModal'
+import {
+  draftFromGradeRow,
+  isPdfPaperAssignmentType,
+} from '../components/assignments/grading/gradeDraftUtils'
+import {
+  PdfPaperGradingPanel,
+  type StudentSubmissionFile,
+} from '../components/assignments/grading/PdfPaperGradingPanel'
+import type { GradeRowDraft } from '../components/assignments/grading/PdfPaperGradeCard'
+import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return '—'
@@ -27,29 +38,24 @@ function formatDate(iso: string | null | undefined) {
 function rowKey(row: GradeStudentRow) {
   return `${row.group_id ?? 0}-${row.student.id}`
 }
-
-function draftFromRow(row: GradeStudentRow): RowDraft {
-  const score = row.grade.score
-  return {
-    score: score != null && score > 0 ? String(score) : '',
-    comment: row.grade.comment || '',
-    submission_type: row.submission?.submission_type || row.submission_type || 'not_submitted',
-    submission_notes_type: 'On-Time',
-    submission_notes: row.submission?.submission_notes || row.submission_notes || '',
-  }
-}
-
 export function AssignmentGradePage() {
   const { classId, assignmentId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
+  const workspaceScope = useAssignmentWorkspaceScope()
   const isGroup = location.pathname.includes('/group/')
   const [data, setData] = useState<AssignmentGradeResponse | null>(null)
-  const [drafts, setDrafts] = useState<Record<string, RowDraft>>({})
+  const [drafts, setDrafts] = useState<Record<string, GradeRowDraft>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [rowStatus, setRowStatus] = useState<Record<string, 'saved' | 'error'>>({})
+  const [filesByStudent, setFilesByStudent] = useState<Record<number, StudentSubmissionFile>>({})
+  const [statsOpen, setStatsOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(
+    () => localStorage.getItem(GRADING_HELP_DISMISS_KEY) !== '1',
+  )
 
   const load = useCallback(async () => {
     if (!assignmentId) return
@@ -57,41 +63,71 @@ export function AssignmentGradePage() {
     setError(null)
     try {
       const payload = isGroup
-        ? await fetchGroupAssignmentGrade(Number(assignmentId))
-        : await fetchIndividualAssignmentGrade(Number(assignmentId))
-      if (
-        payload.legacy_only ||
-        payload.legacy_reason === 'quiz_open_ended_grade'
-      ) {
+        ? await fetchGroupAssignmentGrade(Number(assignmentId), workspaceScope)
+        : await fetchIndividualAssignmentGrade(Number(assignmentId), workspaceScope)
+      const assignmentType = (payload.assignment as { assignment_type?: string } | undefined)?.assignment_type
+      const gradeOnSubmissions =
+        !isGroup &&
+        (payload.grade_via_submissions || assignmentTypeGradesViaSubmissions(assignmentType))
+      if (gradeOnSubmissions && classId && assignmentId) {
+        const workspaceBase =
+          workspaceScope === 'teacher'
+            ? `/teacher/assignments-and-grades/${classId}`
+            : `/management/assignments/${classId}`
+        navigate(`${workspaceBase}/individual/${assignmentId}/submissions`, { replace: true })
+        return
+      }
+      if (payload.legacy_only && !payload.students && !payload.groups) {
         if (payload.legacy_grade_url) {
           window.location.assign(payload.legacy_grade_url)
           return
         }
+        throw new Error('This assignment must be graded in the legacy interface.')
       }
       if (!payload.students && !payload.groups) {
         throw new Error('This assignment must be graded in the legacy interface.')
       }
       setData(payload)
-      const next: Record<string, RowDraft> = {}
+      const next: Record<string, GradeRowDraft> = {}
       if (payload.students) {
         for (const row of payload.students) {
-          next[String(row.student.id)] = draftFromRow(row)
+          next[String(row.student.id)] = draftFromGradeRow(row)
         }
       }
       if (payload.groups) {
         for (const group of payload.groups) {
           for (const row of group.members) {
-            next[rowKey(row)] = draftFromRow(row)
+            next[rowKey(row)] = draftFromGradeRow(row)
           }
         }
       }
       setDrafts(next)
+
+      if (!isGroup && isPdfPaperAssignmentType(assignmentType)) {
+        try {
+          const subs = await fetchAssignmentSubmissions(Number(assignmentId), false, workspaceScope)
+          const files: Record<number, StudentSubmissionFile> = {}
+          for (const row of subs.rows as unknown as PdfSubmissionRow[]) {
+            if (row.download_url && row.file_name) {
+              files[row.student.id] = {
+                download_url: row.download_url,
+                file_name: row.file_name,
+              }
+            }
+          }
+          setFilesByStudent(files)
+        } catch {
+          setFilesByStudent({})
+        }
+      } else {
+        setFilesByStudent({})
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load gradebook')
     } finally {
       setLoading(false)
     }
-  }, [assignmentId, isGroup])
+  }, [assignmentId, classId, isGroup, navigate, workspaceScope])
 
   useEffect(() => {
     void load()
@@ -102,13 +138,22 @@ export function AssignmentGradePage() {
     due_date?: string | null
     quarter?: string | null
     total_points?: number
+    assignment_type?: string | null
+    description?: string
+    allow_extra_credit?: boolean
+    max_extra_credit_points?: number
+    subject?: string | null
   } | undefined
 
+  const isPdfPaper =
+    !isGroup && isPdfPaperAssignmentType(assignment?.assignment_type)
+
   const totalPoints = assignment?.total_points ?? 100
-  const classPath = `/management/assignments/${classId}`
+  const classPath = assignmentWorkspaceHubPath(workspaceScope, Number(classId))
+  const base = workspaceScope === 'teacher' ? `/teacher/assignments-and-grades/${classId}` : `/management/assignments/${classId}`
   const viewPath = isGroup
-    ? `/management/assignments/${classId}/group/${assignmentId}/view`
-    : `/management/assignments/${classId}/individual/${assignmentId}/view`
+    ? `${base}/group/${assignmentId}/view`
+    : `${base}/individual/${assignmentId}/view`
 
   const flatRows = useMemo(() => {
     if (!data) return [] as GradeStudentRow[]
@@ -116,7 +161,7 @@ export function AssignmentGradePage() {
     return (data.groups || []).flatMap((g) => g.members)
   }, [data])
 
-  function updateDraft(key: string, patch: Partial<RowDraft>) {
+  function updateDraft(key: string, patch: Partial<GradeRowDraft>) {
     setDrafts((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }))
   }
 
@@ -128,13 +173,18 @@ export function AssignmentGradePage() {
     setSaving(true)
     setMessage(null)
     try {
-      await saveIndividualStudentGrade(Number(assignmentId), row.student.id, {
-        score: draft.score,
-        comment: draft.comment,
-        submission_type: draft.submission_type,
-        submission_notes_type: draft.submission_notes_type,
-        submission_notes: draft.submission_notes,
-      })
+        await saveIndividualStudentGrade(
+          Number(assignmentId),
+          row.student.id,
+          {
+            score: draft.score,
+            comment: draft.comment,
+            submission_type: draft.submission_type,
+            submission_notes_type: draft.submission_notes_type,
+            submission_notes: draft.submission_notes,
+          },
+          workspaceScope,
+        )
       setRowStatus((prev) => ({ ...prev, [key]: 'saved' }))
       setMessage(`Saved grade for ${row.student.display_name}`)
     } catch (e) {
@@ -164,7 +214,7 @@ export function AssignmentGradePage() {
     setSaving(true)
     setMessage(null)
     try {
-      const result = await saveGroupAssignmentGrades(Number(assignmentId), formData)
+      const result = await saveGroupAssignmentGrades(Number(assignmentId), formData, workspaceScope)
       setMessage(result.message || 'Grades saved')
       await load()
     } catch (e) {
@@ -219,6 +269,22 @@ export function AssignmentGradePage() {
           >
             View
           </Link>
+          {!isGroup && assignmentId ? (
+            <button
+              type="button"
+              onClick={() => setStatsOpen(true)}
+              className="rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-800 hover:bg-violet-100"
+            >
+              Statistics
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+          >
+            Help
+          </button>
           {isGroup ? (
             <button
               type="button"
@@ -253,7 +319,27 @@ export function AssignmentGradePage() {
         </div>
       ) : null}
 
-      {!isGroup ? (
+      {!isGroup && isPdfPaper ? (
+        <>
+          <AssignmentDetailsStrip
+            className={data.class.name}
+            subject={assignment?.subject}
+            dueDate={assignment?.due_date}
+            quarter={assignment?.quarter}
+            description={assignment?.description}
+          />
+          <PdfPaperGradingPanel
+            assignmentId={Number(assignmentId)}
+            rows={flatRows}
+            totalPoints={totalPoints}
+            allowExtraCredit={Boolean(assignment?.allow_extra_credit)}
+            maxExtraCreditPoints={Number(assignment?.max_extra_credit_points || 0)}
+            filesByStudent={filesByStudent}
+            workspaceScope={workspaceScope}
+            onSaved={() => void load()}
+          />
+        </>
+      ) : !isGroup ? (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full text-sm">
             <thead>
@@ -268,7 +354,7 @@ export function AssignmentGradePage() {
             <tbody>
               {flatRows.map((row) => {
                 const key = String(row.student.id)
-                const draft = drafts[key] || draftFromRow(row)
+                const draft = drafts[key] || draftFromGradeRow(row)
                 const voided = row.grade.is_voided
                 return (
                   <tr key={key} className="border-b border-slate-100">
@@ -350,7 +436,7 @@ export function AssignmentGradePage() {
                 <tbody>
                   {group.members.map((row) => {
                     const key = rowKey(row)
-                    const draft = drafts[key] || draftFromRow(row)
+                    const draft = drafts[key] || draftFromGradeRow(row)
                     return (
                       <tr key={key} className="border-b border-slate-100">
                         <td className="px-4 py-2.5 font-semibold">{row.student.display_name}</td>
@@ -393,6 +479,22 @@ export function AssignmentGradePage() {
           ))}
         </div>
       )}
+
+      {!isGroup && assignmentId ? (
+        <GradeStatisticsModal
+          open={statsOpen}
+          assignmentId={Number(assignmentId)}
+          workspaceScope={workspaceScope}
+          onClose={() => setStatsOpen(false)}
+        />
+      ) : null}
+
+      <GradingHelpModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        allowExtraCredit={Boolean(assignment?.allow_extra_credit)}
+        assignmentType={assignment?.assignment_type}
+      />
     </div>
   )
 }

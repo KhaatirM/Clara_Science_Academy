@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchSession } from '../api/client'
 import type { SchoolTimezone, SessionUser } from '../types/session'
 import { DEFAULT_SCHOOL_TIMEZONE } from '../utils/schoolTimezone'
+import { applyUserTheme } from '../utils/userTheme'
 
 interface UseSessionResult {
   user: SessionUser | null
@@ -27,6 +28,7 @@ export function useSession(): UseSessionResult {
         return
       }
       setUser(data.user)
+      applyUserTheme(data.user.theme)
       setSchoolTimezone(
         data.school_timezone?.iana
           ? data.school_timezone

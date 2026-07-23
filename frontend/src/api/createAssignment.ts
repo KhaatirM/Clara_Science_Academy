@@ -1,4 +1,6 @@
 import { apiFetch } from './client'
+import type { AssignmentCreateScope } from '../utils/assignmentCreateScope'
+import { assignmentCreateApiBase } from '../utils/assignmentCreateScope'
 
 export interface CreateAssignmentMeta {
   preselected_class: { id: number; name: string; subject?: string | null } | null
@@ -10,10 +12,13 @@ export interface CreateAssignmentMeta {
     discussion: string
     group: string
   }
-  meta?: { can_manage?: boolean }
+  meta?: { can_manage?: boolean; scope?: string }
 }
 
-export async function fetchCreateAssignmentMeta(classId?: number | null) {
+export async function fetchCreateAssignmentMeta(
+  classId?: number | null,
+  scope: AssignmentCreateScope = 'management',
+) {
   const qs = classId ? `?class_id=${classId}` : ''
-  return apiFetch<CreateAssignmentMeta>(`/api/spa/assignments/create${qs}`)
+  return apiFetch<CreateAssignmentMeta>(`${assignmentCreateApiBase(scope)}${qs}`)
 }

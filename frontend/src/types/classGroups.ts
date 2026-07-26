@@ -16,7 +16,7 @@ export interface ClassGroupItem {
 }
 
 export interface ClassGroupsResponse {
-  class: { id: number; name: string; subject: string | null }
+  class: { id: number; name: string; subject: string | null; grade_levels?: number[] }
   groups: ClassGroupItem[]
   enrolled_students: StudentBrief[]
   stats: {

@@ -48,18 +48,38 @@ export function hasManagementNavAccess(user: SessionUser, item: NavItem): boolea
 }
 
 export function isTeacherShellUser(user: SessionUser): boolean {
-  return Boolean(user.teacher_entry && !user.management_entry)
+  if (isTechShellUser(user)) return false
+  if (isManagementShellUser(user)) return false
+  return Boolean(user.teacher_entry)
 }
 
 export function isStudentShellUser(user: SessionUser): boolean {
-  return Boolean(user.student_entry && !user.management_entry && !user.teacher_entry)
+  if (isTechShellUser(user)) return false
+  if (isManagementShellUser(user)) return false
+  return Boolean(user.student_entry && !user.teacher_entry)
+}
+
+export function isParentShellUser(user: SessionUser): boolean {
+  if (isTechShellUser(user)) return false
+  if (isManagementShellUser(user)) return false
+  return Boolean(user.parent_entry && !user.teacher_entry && !user.student_entry)
+}
+
+export function isTechShellUser(user: SessionUser): boolean {
+  if (!user.tech_entry) return false
+  if (user.staff_dashboard_target === 'tech') return true
+  if (user.management_entry || user.management_shell) return false
+  return true
 }
 
 export function isManagementShellUser(user: SessionUser): boolean {
-  return Boolean(user.management_entry)
+  if (isTechShellUser(user)) return false
+  return Boolean(user.management_entry || user.management_shell)
 }
 
 export function spaHomePath(user: SessionUser): string {
+  if (isTechShellUser(user)) return '/tech'
+  if (isParentShellUser(user)) return '/parent'
   if (isStudentShellUser(user)) return '/student'
   if (isTeacherShellUser(user)) return '/teacher'
   return '/management'

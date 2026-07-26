@@ -68,7 +68,16 @@ def pdf_assignment_form_meta():
 @permissions_required("assignments_grades:manage")
 def discussion_assignment_form_meta():
     class_id = request.args.get("class_id", type=int)
-    return jsonify({**query_discussion_assignment_form(class_id), "meta": _assignments_meta()})
+    edit_id = request.args.get("edit", type=int)
+    try:
+        return jsonify(
+            {
+                **query_discussion_assignment_form(class_id, edit_id=edit_id),
+                "meta": _assignments_meta(),
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
 
 
 @spa_api_blueprint.route("/assignments/create/quiz")
@@ -76,7 +85,16 @@ def discussion_assignment_form_meta():
 @permissions_required("assignments_grades:manage")
 def quiz_assignment_form_meta():
     class_id = request.args.get("class_id", type=int)
-    return jsonify({**query_quiz_assignment_form(class_id), "meta": _assignments_meta()})
+    edit_id = request.args.get("edit", type=int)
+    try:
+        return jsonify(
+            {
+                **query_quiz_assignment_form(class_id, edit_id=edit_id),
+                "meta": _assignments_meta(),
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
 
 
 @spa_api_blueprint.route("/assignments/create/group")

@@ -19,6 +19,8 @@ export function CreateDiscussionAssignmentPage() {
   const [searchParams] = useSearchParams()
   const classIdParam = searchParams.get('class_id')
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
+  const editParam = searchParams.get('edit')
+  const editId = editParam && /^\d+$/.test(editParam) ? Number(editParam) : null
 
   const [meta, setMeta] = useState<DiscussionAssignmentFormMeta | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,12 +45,13 @@ export function CreateDiscussionAssignmentPage() {
   const [closeDate, setCloseDate] = useState('')
   const [useRubric, setUseRubric] = useState(false)
   const [rubricCriteria, setRubricCriteria] = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchDiscussionAssignmentForm(classId, scope)
+      const data = await fetchDiscussionAssignmentForm(classId, scope, editId)
       setMeta(data)
       setQuarter(data.current_quarter || '1')
       setMinInitialPosts(String(data.defaults.min_initial_posts))
@@ -57,12 +60,33 @@ export function CreateDiscussionAssignmentPage() {
       if (data.preselected_class) {
         setSelectedClassId(data.preselected_class.id)
       }
+      if (data.edit) {
+        const e = data.edit
+        setEditingId(e.id)
+        setTitle(e.title)
+        setSelectedClassId(e.class_id)
+        setDiscussionPrompt(e.discussion_prompt || '')
+        setDescription(e.description || '')
+        setMinInitialPosts(String(e.min_initial_posts))
+        setMinReplies(String(e.min_replies))
+        setRequirePeerResponse(Boolean(e.require_peer_response))
+        setAllowStudentThreads(Boolean(e.allow_student_threads))
+        setAllowStudentEditPosts(Boolean(e.allow_student_edit_posts))
+        setTotalPoints(String(e.total_points))
+        setQuarter(e.quarter || data.current_quarter || '1')
+        setAssignmentContext(e.assignment_context || 'homework')
+        setDueDate(e.due_date || '')
+        setOpenDate(e.open_date || '')
+        setCloseDate(e.close_date || '')
+        setUseRubric(Boolean(e.use_rubric))
+        setRubricCriteria(e.rubric_criteria || '')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load form')
     } finally {
       setLoading(false)
     }
-  }, [classId, scope])
+  }, [classId, scope, editId])
 
   useEffect(() => {
     void load()
@@ -80,6 +104,7 @@ export function CreateDiscussionAssignmentPage() {
     setSubmitting(true)
     try {
       const form = new FormData()
+      if (editingId) form.append('edit_id', String(editingId))
       form.append('title', title.trim())
       form.append('class_id', String(selectedClassId))
       form.append('discussion_prompt', discussionPrompt.trim())
@@ -115,8 +140,12 @@ export function CreateDiscussionAssignmentPage() {
   return (
     <div className="mx-auto max-w-[1100px] px-1 pb-10">
       <AssignmentCreateHeader
-        title="Create Discussion Assignment"
-        subtitle="Foster critical thinking through structured academic discussions"
+        title={editingId ? 'Edit Discussion Assignment' : 'Create Discussion Assignment'}
+        subtitle={
+          editingId
+            ? 'Update discussion prompt and participation requirements'
+            : 'Foster critical thinking through structured academic discussions'
+        }
         icon="bi-chat-dots"
         backTo={backTo}
         backLabel="Back to types"

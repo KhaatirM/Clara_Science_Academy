@@ -49,7 +49,6 @@ export const STAFF_PERMISSIONS: { key: string; label: string }[] = [
   { key: 'teachers_staff:manage', label: 'Manage teachers & staff' },
   { key: 'attendance:manage', label: 'Manage attendance' },
   { key: 'assignments_grades:manage', label: 'Manage assignments & grades' },
-  { key: 'communications:manage', label: 'Manage communications' },
   { key: 'billing:manage', label: 'Manage billing & financials' },
   { key: 'classes:assignable', label: 'Allow this staff member to be assigned to classes' },
 ]

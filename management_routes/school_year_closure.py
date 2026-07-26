@@ -137,7 +137,7 @@ def schedule():
 
     # If closure_date was today or in the past, immediately advance phases so the
     # workflow doesn't sit at 'scheduled' until midnight.
-    syc.advance_closure_if_due(closure, actor_label='manual_create')
+    syc.advance_closure_if_due(closure, actor_label='manual_create', allow_finalize=False)
 
     if closure_date < today:
         flash(
@@ -173,11 +173,13 @@ def dashboard(closure_id: int):
 
     closure = _closure_or_404(closure_id)
 
-    # Run the tick once per request — gives directors immediate visibility into
-    # state changes without depending on the scheduler.
+    # Light tick only: advance lockout phases. Never run bulk finalize on GET —
+    # that recalculates every student's quarters and exceeds gunicorn timeouts.
     if closure.phase not in syc.TERMINAL_PHASES and closure.phase != syc.PHASE_PAUSED:
         try:
-            syc.advance_closure_if_due(closure, actor_label='dashboard_view')
+            syc.advance_closure_if_due(
+                closure, actor_label='dashboard_view', allow_finalize=False
+            )
         except Exception:
             current_app.logger.exception("Dashboard tick for closure %s failed", closure_id)
 

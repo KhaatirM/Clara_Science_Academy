@@ -236,3 +236,58 @@ def staff_directory_only_modal_payload(
             "Unexpected outcome: if you expected a login, confirm the Portal login checkbox was selected on the add form.",
         ],
     }
+
+
+def parent_credentials_modal_payload(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Credential summary after parent portal accounts are created or temp passwords re-issued."""
+    fields: List[Dict[str, Any]] = []
+    for row in rows:
+        if not row.get("portal_password"):
+            continue
+        label_prefix = (row.get("parent_name") or f"Parent {row.get('slot') or ''}").strip()
+        child = (row.get("student_name") or "").strip()
+        fields.append(
+            {
+                "label": f"{label_prefix} — username" + (f" (child: {child})" if child else ""),
+                "value": row.get("username") or "—",
+                "mono": True,
+            }
+        )
+        fields.append(
+            {
+                "label": f"{label_prefix} — temporary password",
+                "value": row.get("portal_password") or "—",
+                "mono": True,
+            }
+        )
+        if row.get("email"):
+            fields.append(
+                {
+                    "label": f"{label_prefix} — email on file",
+                    "value": row["email"],
+                    "mono": True,
+                }
+            )
+
+    return {
+        "variant": "parent_portal",
+        "title": "Parent portal login ready",
+        "subtitle": "Copy these details before closing — share them securely with the family",
+        "fields": fields,
+        "alerts": [
+            {
+                "type": "info",
+                "text": (
+                    "Each parent is emailed only their own username and temporary password when mail "
+                    "is configured. School Administrators also receive a staff copy. Temporary passwords "
+                    "use Parent + last 4 digits of the phone on file when available."
+                ),
+            }
+        ],
+        "notes": [
+            "Parents sign in on the website login page with the username and temporary password above.",
+            "They will be asked to set a new password on first login.",
+            "If you already provisioned earlier and see these again, temporary passwords were re-issued "
+            "because the parent had not finished changing their password yet.",
+        ],
+    }

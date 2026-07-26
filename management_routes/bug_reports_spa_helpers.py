@@ -23,8 +23,9 @@ def _serialize_bug_report(report: BugReport) -> dict[str, Any]:
 
 
 def query_bug_reports(*, user) -> dict[str, Any]:
-    role = getattr(user, "role", None)
-    can_manage = role in ("Tech", "IT Support")
+    from utils.user_roles import user_has_tech_spa_entry
+
+    can_manage = user_has_tech_spa_entry(user)
     if can_manage:
         reports = BugReport.query.order_by(BugReport.created_at.desc()).all()
     else:

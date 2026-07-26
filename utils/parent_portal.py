@@ -142,6 +142,9 @@ def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[d
     """
     Create or reuse a Parent User and link them to ``student`` for slot 1 or 2.
     Caller must commit. Returns credential dict or None if slot has no email.
+
+    If a Parent account already exists with ``is_temporary_password`` still True,
+    a new temporary password is issued so staff can retrieve credentials again.
     """
     if getattr(student, "is_deleted", False):
         return None
@@ -154,6 +157,7 @@ def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[d
     first_name = info["first_name"] or "Parent"
     last_name = info["last_name"] or (student.last_name or "Guardian")
     created_new = False
+    password_reissued = False
     temp_password: Optional[str] = None
 
     user = find_parent_user_by_email(email)
@@ -176,6 +180,12 @@ def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[d
             db.session.add(user)
             db.session.flush()
             created_new = True
+    elif getattr(user, "is_temporary_password", False):
+        # Account exists but parent never finished setup — re-issue so staff can share again.
+        temp_password = _temporary_parent_password(info["phone"])
+        user.password_hash = generate_password_hash(temp_password)
+        user.is_temporary_password = True
+        password_reissued = True
 
     link = ParentStudentLink.query.filter_by(
         parent_user_id=user.id,
@@ -201,6 +211,7 @@ def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[d
         "email": email,
         "username": user.username,
         "created_new": created_new,
+        "password_reissued": password_reissued,
         "portal_password": temp_password,
     }
     return result
@@ -233,7 +244,8 @@ def sync_student_parent_portal(student: Student) -> list[dict[str, Any]]:
     - Changed email → replace link for that slot
     - Present email → ensure Parent user exists and is linked
 
-    Caller must commit. Returns credential dicts only for newly created parent accounts.
+    Caller must commit. Returns credential dicts for newly created accounts and for
+    temporary passwords that were re-issued.
     """
     if getattr(student, "is_deleted", False):
         return []
@@ -259,7 +271,9 @@ def sync_student_parent_portal(student: Student) -> list[dict[str, Any]]:
                 db.session.delete(existing)
 
         row = provision_parent_for_student_slot(student, slot)
-        if row and row.get("created_new") and row.get("portal_password"):
+        if row and row.get("portal_password") and (
+            row.get("created_new") or row.get("password_reissued")
+        ):
             created.append(row)
 
     return created

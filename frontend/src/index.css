@@ -48,6 +48,31 @@ body.spa-legacy-mgmt-shell {
   pointer-events: none;
 }
 
+/*
+ * Scoped Bootstrap Reboot paints body background on .legacy-mgmt-bootstrap.
+ * That creates a white “frame” around themed page shells (students/calendar).
+ */
+.legacy-mgmt-bootstrap {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Corner app toasts (login / flash feedback) — fade in, then host removes after timer */
+@keyframes spa-app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) translateX(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.spa-app-toast {
+  animation: spa-app-toast-in 220ms ease-out;
+}
+
 .legacy-mgmt-portal > * {
   pointer-events: auto;
 }

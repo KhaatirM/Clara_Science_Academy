@@ -616,7 +616,7 @@ def create_discussion_assignment():
     """Create or edit a discussion assignment - management version"""
     from teacher_routes.assignment_utils import calculate_assignment_status
 
-    if request.method == 'GET' and not request.args.get('edit', type=int):
+    if request.method == 'GET':
         from utils.spa_management_urls import spa_create_discussion_redirect
 
         spa_redirect = spa_create_discussion_redirect()

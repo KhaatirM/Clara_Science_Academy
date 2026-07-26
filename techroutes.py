@@ -53,6 +53,11 @@ def _parse_dt_ymd(s):
 @tech_required
 def audit_logs():
     """View management audit logs (Tech-only)."""
+    from utils.spa_tech_urls import spa_tech_audit_logs_redirect
+
+    spa = spa_tech_audit_logs_redirect()
+    if spa:
+        return spa
     q = (request.args.get('q') or '').strip()
     method = (request.args.get('method') or '').strip().upper()
     status = request.args.get('status', '').strip()
@@ -181,6 +186,11 @@ def export_audit_logs_csv():
 @login_required
 @tech_required
 def tech_dashboard():
+    from utils.spa_tech_urls import spa_tech_dashboard_redirect
+
+    spa = spa_tech_dashboard_redirect()
+    if spa:
+        return spa
     users = User.query.all()
     # Check if maintenance mode is active
     maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
@@ -199,6 +209,11 @@ def tech_dashboard():
 @tech_required
 def settings():
     """Account preferences (password, theme) for Tech / IT Support — same layout as other staff settings."""
+    from utils.spa_tech_urls import spa_tech_settings_redirect
+
+    spa = spa_tech_settings_redirect()
+    if spa:
+        return spa
     return render_template(
         'management/management_settings.html',
         settings_back_url=url_for('tech.tech_dashboard'),
@@ -212,6 +227,11 @@ def settings():
 @tech_required
 def activity_log():
     """View user activity log with filtering options."""
+    from utils.spa_tech_urls import spa_tech_activity_log_redirect
+
+    spa = spa_tech_activity_log_redirect()
+    if spa:
+        return spa
     # Get filter parameters
     user_id = request.args.get('user_id', type=int)
     action = request.args.get('action', '')
@@ -266,6 +286,11 @@ def activity_log():
 @tech_required
 def system():
     """Unified System page combining Status, Config, and Maintenance."""
+    from utils.spa_tech_urls import spa_tech_system_redirect
+
+    spa = spa_tech_system_redirect()
+    if spa:
+        return spa
     import psutil
     from models import User, Student, TeacherStaff, ActivityLog, BugReport, MaintenanceMode, SystemConfig
     import sys
@@ -672,6 +697,11 @@ def system_status():
 @tech_required
 def error_reports():
     """Unified Error/Bug Log with both system errors and user-submitted bug reports."""
+    from utils.spa_tech_urls import spa_tech_error_reports_redirect
+
+    spa = spa_tech_error_reports_redirect()
+    if spa:
+        return spa
     from models import BugReport
     
     # Get error logs from activity log
@@ -1005,6 +1035,11 @@ def reset_user_password(user_id):
 @login_required
 @tech_required
 def view_user_details(user_id):
+    from utils.spa_tech_urls import spa_tech_user_detail_redirect
+
+    spa = spa_tech_user_detail_redirect(user_id)
+    if spa:
+        return spa
     user = User.query.get_or_404(user_id)
     
     # --- GPA IMPACT ANALYSIS ---
@@ -1204,6 +1239,11 @@ def update_system_config():
 @login_required
 @tech_required
 def user_management():
+    from utils.spa_tech_urls import spa_tech_user_management_redirect
+
+    spa = spa_tech_user_management_redirect()
+    if spa:
+        return spa
     users = (
         User.query.options(
             joinedload(User.student_profile),
@@ -1684,6 +1724,11 @@ def devices_bulk_upload():
 @tech_required
 def devices():
     """List assigned laptops and tablets."""
+    from utils.spa_tech_urls import spa_tech_devices_redirect
+
+    spa = spa_tech_devices_redirect()
+    if spa:
+        return spa
     device_type = request.args.get('type', '').strip().lower()
     search = (request.args.get('q') or '').strip()
 
@@ -1714,6 +1759,12 @@ def devices():
 @login_required
 @tech_required
 def device_new():
+    if request.method == 'GET':
+        from utils.spa_tech_urls import spa_tech_device_new_redirect
+
+        spa = spa_tech_device_new_redirect()
+        if spa:
+            return spa
     if request.method == 'POST':
         device_type, asset_name, device_name, cord_number, operating_system, student_id = _parse_device_form()
         if not device_type:
@@ -1768,6 +1819,12 @@ def device_new():
 @login_required
 @tech_required
 def device_edit(device_id):
+    if request.method == 'GET':
+        from utils.spa_tech_urls import spa_tech_device_edit_redirect
+
+        spa = spa_tech_device_edit_redirect(device_id)
+        if spa:
+            return spa
     device = StudentDevice.query.get_or_404(device_id)
     if request.method == 'POST':
         device_type, asset_name, device_name, cord_number, operating_system, student_id = _parse_device_form()
@@ -1845,9 +1902,13 @@ def device_delete(device_id):
 @login_required
 @tech_required
 def bug_reports():
-    """View all bug reports - temporarily shows placeholder."""
-    flash('Bug reporting system is being set up. Please check back later.', 'info')
-    return redirect(url_for('tech.tech_dashboard'))
+    """Redirect Tech bug reports stub to the SPA bug reports tab."""
+    from utils.spa_tech_urls import spa_tech_bug_reports_redirect
+
+    spa = spa_tech_bug_reports_redirect()
+    if spa:
+        return spa
+    return redirect('/app/tech/bug-reports')
 
 @tech_blueprint.route('/resources')
 @login_required

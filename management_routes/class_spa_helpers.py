@@ -132,6 +132,8 @@ def _subject_has_standards(subject: str | None) -> bool:
 def _standards_flags(class_info: Class) -> dict[str, bool]:
     from flask import current_app
 
+    from management_routes.class_syllabus_spa_helpers import class_supports_syllabus
+
     levels = class_info.get_grade_levels() if hasattr(class_info, "get_grade_levels") else []
     eligible = _subject_has_standards(class_info.subject)
     g1 = 1 in (levels or []) and eligible
@@ -139,20 +141,24 @@ def _standards_flags(class_info: Class) -> dict[str, bool]:
     return {
         "grade1_standards": g1 and "teacher.grade1_standards.grade1_standards_editor" in current_app.view_functions,
         "grade3_standards": g3 and "teacher.grade3_standards.grade3_standards_editor" in current_app.view_functions,
+        "syllabus": class_supports_syllabus(class_info),
     }
 
 
 def _class_management_links(class_id: int) -> dict[str, str]:
     from flask import url_for
 
+    from management_routes.class_syllabus_spa_helpers import class_supports_syllabus
     from management_routes.grade_standards_spa_helpers import grade_standards_editor_path
     from utils.spa_management_urls import user_should_use_spa_management_shell
+
+    class_info = Class.query.get(class_id)
+    include_syllabus = class_supports_syllabus(class_info)
 
     if user_should_use_spa_management_shell():
         grade1_standards = f"/app{grade_standards_editor_path(1, class_id)}"
         grade3_standards = f"/app{grade_standards_editor_path(3, class_id)}"
-        legacy_class = f"/management/class/{class_id}"
-        return {
+        links = {
             "add_assignment": f"/app/management/assignments/create?class_id={class_id}",
             "attendance": "/app/management/attendance",
             "manage_roster": f"/app/management/classes/{class_id}/roster",
@@ -167,11 +173,17 @@ def _class_management_links(class_id: int) -> dict[str, str]:
             "conflicts": "modal:conflicts",
             "manage_groups": f"/app/management/classes/{class_id}/groups",
             "deadline_reminders": "modal:deadline-reminders",
+            "class_notes": f"/app/management/classes/{class_id}/notes",
             "class_assignments": f"/app/management/assignments/{class_id}",
             "take_attendance": f"/app/management/attendance/take/{class_id}",
         }
+        if include_syllabus:
+            links["syllabus"] = "modal:syllabus"
+        return links
 
-    return {
+    grade1_standards = f"/app{grade_standards_editor_path(1, class_id)}"
+    grade3_standards = f"/app{grade_standards_editor_path(3, class_id)}"
+    links = {
         "add_assignment": url_for("management.assignment_type_selector", class_id=class_id),
         "attendance": url_for("management.unified_attendance"),
         "manage_roster": f"/app/management/classes/{class_id}/roster",
@@ -187,9 +199,13 @@ def _class_management_links(class_id: int) -> dict[str, str]:
         "assignments_and_grades": f"/app/management/assignments/{class_id}",
         "manage_groups": url_for("management.admin_class_groups", class_id=class_id),
         "deadline_reminders": url_for("management.admin_class_deadline_reminders", class_id=class_id),
+        "class_notes": f"/app/management/classes/{class_id}/notes",
         "class_assignments": f"/management/assignments/class/{class_id}",
         "take_attendance": url_for("management.take_class_attendance", class_id=class_id),
     }
+    if include_syllabus:
+        links["syllabus"] = "modal:syllabus"
+    return links
 
 
 def query_class_detail(class_id: int) -> dict[str, Any]:
@@ -213,6 +229,20 @@ def query_class_detail(class_id: int) -> dict[str, Any]:
     )
     room = class_info.room_number or None
     schedule = class_info.schedule or None
+    from shared_communications import get_past_announcements_for_class_page, serialize_announcement_for_panel
+
+    past_announcements = [
+        {
+            **serialize_announcement_for_panel(a),
+            "timestamp_display": (
+                a.timestamp.strftime("%b %d, %Y · %I:%M %p") if a.timestamp else ""
+            ),
+            "message_preview": (
+                ((a.message or "")[:140] + ("…" if a.message and len(a.message) > 140 else ""))
+            ),
+        }
+        for a in get_past_announcements_for_class_page(class_id, limit=12)
+    ]
     return {
         "class": {
             **item,
@@ -236,6 +266,7 @@ def query_class_detail(class_id: int) -> dict[str, Any]:
         "student_assistant_count": StudentAssistant.query.filter_by(class_id=class_id).count(),
         "features": _standards_flags(class_info),
         "links": _class_management_links(class_id),
+        "announcements": past_announcements,
     }
 
 

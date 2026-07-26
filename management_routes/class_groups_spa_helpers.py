@@ -84,6 +84,7 @@ def query_class_groups(class_id: int) -> dict[str, Any]:
             "id": class_obj.id,
             "name": class_obj.name,
             "subject": class_obj.subject,
+            "grade_levels": class_obj.get_grade_levels() or [],
         },
         "groups": payload_groups,
         "enrolled_students": [serialize_student_brief(s) for s in enrolled],

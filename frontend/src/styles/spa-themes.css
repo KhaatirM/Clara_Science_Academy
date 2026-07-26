@@ -107,6 +107,14 @@ aside.sidebar.spa-sidebar {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
+/* Pages that already paint their own rounded shell (cal/students/home) — avoid double frame */
+.spa-mgmt-shell--flush {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
 .spa-mgmt-hero {
   border-radius: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--spa-mgmt-accent) 28%, transparent);

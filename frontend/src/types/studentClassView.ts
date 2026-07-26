@@ -63,6 +63,8 @@ export interface StudentClassDetailAssignment {
 export interface StudentClassDetailLinks {
   back: string
   assignments: string
+  class_notes?: string
+  syllabus?: string
   assistant: string | null
 }
 

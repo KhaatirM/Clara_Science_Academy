@@ -1,17 +1,28 @@
 import { Outlet } from 'react-router-dom'
 import type { ManagementOutletContext } from '../../types/layout'
-import type { SchoolTimezone, SessionUser } from '../../types/session'
+import type { AppVersionInfo, SchoolTimezone, SessionUser } from '../../types/session'
+import {
+  isManagementShellUser,
+  isTeacherShellUser,
+} from '../../config/navTypes'
 import { useLegacyMgmtShell } from '../../hooks/useLegacyStyles'
+import { AcademicConcernsHost } from '../academic/AcademicConcernsHost'
+import { AppToastHost } from '../toasts/AppToastHost'
+import { PortalUpdatesHost } from '../updates/PortalUpdatesHost'
 import { Sidebar } from './Sidebar'
 
 interface AppLayoutProps {
   user: SessionUser
   schoolTimezone: SchoolTimezone | null
+  appVersion?: AppVersionInfo | null
 }
 
-export function AppLayout({ user, schoolTimezone }: AppLayoutProps) {
+export function AppLayout({ user, schoolTimezone, appVersion }: AppLayoutProps) {
   const legacyShell = useLegacyMgmtShell()
   const outletContext: ManagementOutletContext = { user, schoolTimezone }
+  const showAcademicConcerns =
+    isManagementShellUser(user) || isTeacherShellUser(user)
+  const academicScope = isTeacherShellUser(user) ? 'teacher' : 'management'
 
   return (
     <div className="flex h-dvh w-full overflow-hidden">
@@ -25,6 +36,9 @@ export function AppLayout({ user, schoolTimezone }: AppLayoutProps) {
       >
         <Outlet context={outletContext} />
       </main>
+      <AppToastHost />
+      <PortalUpdatesHost version={appVersion} />
+      {showAcademicConcerns ? <AcademicConcernsHost scope={academicScope} /> : null}
     </div>
   )
 }

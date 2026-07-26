@@ -1,10 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchTeacherClassView } from '../api/teacherClasses'
 import type { AssessmentToolSlug } from '../api/classTools'
+import { AnnouncementComposeModal } from '../components/announcements/AnnouncementComposeModal'
 import { ClassAnalyticsModal } from '../components/classes/ClassAnalyticsModal'
 import { ClassAssessmentToolModal } from '../components/classes/ClassAssessmentToolModal'
 import { ClassDeadlineRemindersModal } from '../components/classes/ClassDeadlineRemindersModal'
+import { ClassSyllabusModal } from '../components/classes/ClassSyllabusModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { TeacherClassRosterModal } from '../components/teacher/TeacherClassRosterModal'
 import type { TeacherClassViewAssistantLog, TeacherClassViewResponse } from '../types/teacherClassView'
@@ -71,18 +73,29 @@ export function TeacherClassViewPage() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [deadlineRemindersOpen, setDeadlineRemindersOpen] = useState(false)
   const [assessmentTool, setAssessmentTool] = useState<AssessmentToolSlug | null>(null)
+  const [announceOpen, setAnnounceOpen] = useState(false)
+  const [syllabusOpen, setSyllabusOpen] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!classId) {
       setError('Missing class id')
       setLoading(false)
       return
     }
-    void fetchTeacherClassView(classId)
-      .then(setData)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load class'))
-      .finally(() => setLoading(false))
+    setLoading(true)
+    setError(null)
+    try {
+      setData(await fetchTeacherClassView(classId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load class')
+    } finally {
+      setLoading(false)
+    }
   }, [classId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   return (
     <ManagementPageShell>
@@ -99,6 +112,8 @@ export function TeacherClassViewPage() {
               onOpenAnalytics={() => setAnalyticsOpen(true)}
               onOpenDeadlineReminders={() => setDeadlineRemindersOpen(true)}
               onOpenAssessmentTool={setAssessmentTool}
+              onOpenAnnouncements={() => setAnnounceOpen(true)}
+              onOpenSyllabus={() => setSyllabusOpen(true)}
             />
             <TeacherClassRosterModal
               open={rosterOpen}
@@ -114,6 +129,7 @@ export function TeacherClassViewPage() {
                   scope="teacher"
                   onClose={() => setAnalyticsOpen(false)}
                 />
+                <ClassSyllabusModal open={syllabusOpen} classId={id} onClose={() => setSyllabusOpen(false)} />
                 <ClassDeadlineRemindersModal
                   open={deadlineRemindersOpen}
                   classId={id}
@@ -129,6 +145,13 @@ export function TeacherClassViewPage() {
                     onClose={() => setAssessmentTool(null)}
                   />
                 ) : null}
+                <AnnouncementComposeModal
+                  open={announceOpen}
+                  classId={id}
+                  className={data.class.name}
+                  onClose={() => setAnnounceOpen(false)}
+                  onSent={() => void load()}
+                />
               </>
             ) : null}
           </>
@@ -144,12 +167,16 @@ function TeacherClassViewBody({
   onOpenAnalytics,
   onOpenDeadlineReminders,
   onOpenAssessmentTool,
+  onOpenAnnouncements,
+  onOpenSyllabus,
 }: {
   data: TeacherClassViewResponse
   onOpenRoster: () => void
   onOpenAnalytics: () => void
   onOpenDeadlineReminders: () => void
   onOpenAssessmentTool: (tool: AssessmentToolSlug) => void
+  onOpenAnnouncements: () => void
+  onOpenSyllabus: () => void
 }) {
   const cls = data.class
   const links = data.links
@@ -329,6 +356,16 @@ function TeacherClassViewBody({
                 <ActionLink href={links.manage_groups} icon="bi-people">
                   Manage groups
                 </ActionLink>
+                {links.class_notes ? (
+                  <ActionLink href={links.class_notes} icon="bi-journal-bookmark">
+                    Class notes
+                  </ActionLink>
+                ) : null}
+                {links.syllabus || data.features.syllabus ? (
+                  <ActionButton icon="bi-journal-richtext" onClick={onOpenSyllabus}>
+                    Syllabus
+                  </ActionButton>
+                ) : null}
                 {hasAssistants ? (
                   <ActionLink href={links.assistant_approvals} icon="bi-patch-check-fill">
                     Assistant approvals
@@ -344,10 +381,9 @@ function TeacherClassViewBody({
                     3rd grade standards
                   </ActionLink>
                 ) : null}
-                <a href="#announcements" className={actionClass}>
-                  <i className="bi bi-megaphone me-1" aria-hidden />
+                <ActionButton icon="bi-megaphone" onClick={onOpenAnnouncements}>
                   Announcements
-                </a>
+                </ActionButton>
               </div>
             </div>
             <div className="mb-2">
@@ -428,10 +464,14 @@ function TeacherClassViewBody({
             <div className="teacher-class-card-icon">
               <i className="bi bi-megaphone" aria-hidden />
             </div>
-            <div className="teacher-class-card-title-section">
+            <div className="teacher-class-card-title-section flex-grow-1">
               <h5 className="teacher-class-card-title">Announcements</h5>
               <p className="teacher-class-card-subject">Recent updates</p>
             </div>
+            <button type="button" className={actionClass} onClick={onOpenAnnouncements}>
+              <i className="bi bi-plus-lg me-1" aria-hidden />
+              New
+            </button>
           </div>
           <div className="teacher-class-card-body teacher-class-announcements-body-tall">
             {cls.show_google_integration ? (

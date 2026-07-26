@@ -582,9 +582,19 @@ def serialize_announcement_for_panel(announcement):
 
 def build_class_announcement_panel_payload(user, class_obj):
     """Data for the class announcement modal (broadcast options + history)."""
+    return build_announcement_compose_payload(user, class_id=class_obj.id)
+
+
+def build_announcement_compose_payload(user, class_id=None):
+    """Broadcast options (+ optional class history) for the SPA announcement compose modal."""
     broadcast_classes = get_broadcast_classes_for_user(user)
     can_all_students = user.role in ['Director', 'School Administrator']
-    past = get_past_announcements_for_class_page(class_obj.id)
+
+    current_class = None
+    if class_id:
+        current_class_obj = Class.query.get(class_id)
+        if current_class_obj:
+            current_class = {'id': current_class_obj.id, 'name': current_class_obj.name}
 
     broadcast_options = []
     if can_all_students:
@@ -595,7 +605,7 @@ def build_class_announcement_panel_payload(user, class_obj):
         })
 
     for cls in broadcast_classes:
-        is_current = cls.id == class_obj.id
+        is_current = bool(current_class and cls.id == current_class['id'])
         label = cls.name
         if is_current:
             label = f'This class · {cls.name}'
@@ -607,12 +617,22 @@ def build_class_announcement_panel_payload(user, class_obj):
             'is_current': is_current,
         })
 
-    default_broadcast = f'class:{class_obj.id}'
-    if not any(opt['value'] == default_broadcast for opt in broadcast_options):
-        default_broadcast = broadcast_options[0]['value'] if broadcast_options else default_broadcast
+    if current_class:
+        default_broadcast = f"class:{current_class['id']}"
+    elif can_all_students:
+        default_broadcast = 'all_students'
+    elif broadcast_options:
+        default_broadcast = broadcast_options[0]['value']
+    else:
+        default_broadcast = ''
+
+    if default_broadcast and not any(opt['value'] == default_broadcast for opt in broadcast_options):
+        default_broadcast = broadcast_options[0]['value'] if broadcast_options else ''
+
+    past = get_past_announcements_for_class_page(class_id) if class_id else []
 
     return {
-        'current_class': {'id': class_obj.id, 'name': class_obj.name},
+        'current_class': current_class,
         'can_broadcast_all_students': can_all_students,
         'default_broadcast': default_broadcast,
         'broadcast_options': broadcast_options,

@@ -102,6 +102,14 @@
       </div>
       {% endif %}
 
+      {% if phase == 'admin_window' and days_to.finalize is not none and days_to.finalize <= 0 %}
+      <div class="mgmt-syc-alert mgmt-syc-alert--warning">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        Auto-finalize date has passed. Opening this page no longer runs the heavy finalize job
+        (that was timing out the server). Use <strong>Finalize now</strong> when ready, or wait for
+        the nightly closure cron tick.
+      </div>
+      {% endif %}
       {% if is_paused %}
       <div class="mgmt-syc-alert mgmt-syc-alert--info">
         <i class="bi bi-pause-circle-fill" aria-hidden="true"></i>

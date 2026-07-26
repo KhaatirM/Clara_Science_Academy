@@ -89,6 +89,62 @@ def count_assistant_classes_for_student_excluding(student_id, exclude_class_id=N
     return q.count()
 
 
+def is_class_open_for_assistant(class_obj, active_school_year=None):
+    """
+    True when a class may still be used for student-assistant work.
+    Closed / archived classes (inactive or not on the active school year) are excluded.
+    """
+    if not class_obj:
+        return False
+    if not getattr(class_obj, "is_active", False):
+        return False
+    if active_school_year is None:
+        from models import SchoolYear
+
+        active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_school_year:
+        return False
+    return class_obj.school_year_id == active_school_year.id
+
+
+def active_assistant_classes_for_student(student_id, active_school_year=None):
+    """Classes this student assists that are still open (active + current school year)."""
+    from models import Class, SchoolYear, StudentAssistant
+
+    if not student_id:
+        return []
+    if active_school_year is None:
+        active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_school_year:
+        return []
+
+    rows = (
+        StudentAssistant.query.filter_by(student_id=student_id)
+        .join(Class, StudentAssistant.class_id == Class.id)
+        .filter(
+            Class.is_active.is_(True),
+            Class.school_year_id == active_school_year.id,
+        )
+        .all()
+    )
+    classes = [sa.class_info for sa in rows if sa.class_info]
+    classes.sort(key=lambda c: ((c.name or "").lower(), c.id or 0))
+    return classes
+
+
+def student_is_active_assistant_for_class(student_id, class_id, active_school_year=None):
+    """True if student is assigned assistant for this class and the class is still open."""
+    from models import Class, StudentAssistant
+
+    if not student_id or not class_id:
+        return False
+    sa = StudentAssistant.query.filter_by(student_id=student_id, class_id=class_id).first()
+    if not sa:
+        return False
+    class_obj = sa.class_info or Class.query.get(class_id)
+    return is_class_open_for_assistant(class_obj, active_school_year=active_school_year)
+
+
 # --- Assistant-proposed assignments (teacher/admin approval before students see them) ---
 
 ASSISTANT_APPROVAL_PENDING = 'pending'

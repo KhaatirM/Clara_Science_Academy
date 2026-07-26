@@ -77,28 +77,35 @@ export interface ClassManagementLinks {
   conflicts: string
   manage_groups: string
   deadline_reminders: string
+  syllabus?: string
+  class_notes?: string
 }
 
 export function ClassManagementPanel({
   links,
-  features = { grade1_standards: false, grade3_standards: false },
+  features = { grade1_standards: false, grade3_standards: false, syllabus: false },
   canAdminUi,
   onOpenAnalytics,
   onOpenDeadlineReminders,
   onOpenAssessmentTool,
+  onOpenAnnouncements,
+  onOpenSyllabus,
 }: {
   links: Partial<ClassManagementLinks>
-  features?: { grade1_standards: boolean; grade3_standards: boolean }
+  features?: { grade1_standards: boolean; grade3_standards: boolean; syllabus?: boolean }
   canAdminUi: boolean
   onOpenAnalytics?: () => void
   onOpenDeadlineReminders?: () => void
   onOpenAssessmentTool?: (tool: AssessmentToolSlug) => void
+  onOpenAnnouncements?: () => void
+  onOpenSyllabus?: () => void
 }) {
   const analyticsIsModal = links.analytics?.startsWith('modal:')
   const remindersIsModal = links.deadline_reminders?.startsWith('modal:')
   const feedbackIsModal = links.feedback_360?.startsWith('modal:')
   const journalsIsModal = links.reflection_journals?.startsWith('modal:')
   const conflictsIsModal = links.conflicts?.startsWith('modal:')
+  const showSyllabus = Boolean(features.syllabus || links.syllabus) && Boolean(onOpenSyllabus)
 
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -119,6 +126,13 @@ export function ClassManagementPanel({
           <ActionLink href={links.attendance} icon="bi-clipboard-check" label="Attendance" />
           <ActionLink href={links.manage_roster} icon="bi-people" label="Manage Roster" />
           <ActionLink href={links.manage_groups} icon="bi-people-fill" label="Manage Groups" />
+          <ActionLink href={links.class_notes} icon="bi-journal-bookmark" label="Class Notes" />
+          {showSyllabus ? (
+            <ActionButton icon="bi-journal-richtext" label="Syllabus" onClick={onOpenSyllabus!} />
+          ) : null}
+          {onOpenAnnouncements ? (
+            <ActionButton icon="bi-megaphone-fill" label="Announcements" onClick={onOpenAnnouncements} />
+          ) : null}
           {features.grade1_standards && links.grade1_standards ? (
             <ActionLink href={links.grade1_standards} icon="bi-check2-square" label="1st Grade Standards" />
           ) : null}

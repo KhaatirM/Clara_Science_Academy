@@ -38,6 +38,14 @@ export interface ReportCardCategoryCard {
   tone: string
   student_count: number
   path: string
+  under_development?: boolean
+}
+
+export interface ReportCardsTranscriptSection {
+  title: string
+  subtitle: string
+  under_development: boolean
+  items: ReportCardCategoryCard[]
 }
 
 export interface ReportCardsSearchFilters {
@@ -97,6 +105,7 @@ export interface ReportCardsHubResponse {
     school_years_count: number
   }
   categories: ReportCardCategoryCard[]
+  transcripts?: ReportCardsTranscriptSection
   recent_reports: ReportCardItem[]
   urls: {
     generate_form: string
@@ -125,6 +134,8 @@ export interface ReportCardsCategoryStudent {
 }
 
 export interface ReportCardsCategoryResponse {
+  under_development?: boolean
+  message?: string
   category: {
     slug: string
     name: string
@@ -133,20 +144,20 @@ export interface ReportCardsCategoryResponse {
     grade_levels: number[]
     grade_displays: string[]
   }
-  stats: {
+  stats?: {
     total_students: number
     grade_levels: number
     total_reports: number
     students_without_reports: number
   }
-  students: ReportCardsCategoryStudent[]
+  students?: ReportCardsCategoryStudent[]
   urls: {
     hub: string
-    generate_form: string
+    generate_form?: string
     grade1_standards?: string
     grade3_standards?: string
   }
-  warnings: {
+  warnings?: {
     unfinalized_grades: number[]
     banner_messages: Record<string, string>
   }

@@ -245,7 +245,7 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     }
 
 
-def update_quarter_grade(student_id, class_id, school_year_id, quarter, force=False):
+def update_quarter_grade(student_id, class_id, school_year_id, quarter, force=False, commit=True):
     """
     Update or create a quarter grade record.
     Only updates if grade doesn't exist, is outdated (>3 hours), or force=True.
@@ -256,6 +256,8 @@ def update_quarter_grade(student_id, class_id, school_year_id, quarter, force=Fa
         school_year_id: ID of the school year
         quarter: Quarter name ('Q1', 'Q2', 'Q3', 'Q4')
         force: If True, recalculates even if recently updated
+        commit: If True (default), commit after this row. Pass False when batching
+            many updates (e.g. year-end finalize) and commit once at the end.
     
     Returns:
         QuarterGrade object or None
@@ -295,7 +297,10 @@ def update_quarter_grade(student_id, class_id, school_year_id, quarter, force=Fa
         # No grades or student not enrolled properly - delete if exists
         if quarter_grade:
             db.session.delete(quarter_grade)
-            db.session.commit()
+            if commit:
+                db.session.commit()
+            else:
+                db.session.flush()
         return None
     
     # Create or update the record
@@ -313,11 +318,14 @@ def update_quarter_grade(student_id, class_id, school_year_id, quarter, force=Fa
     quarter_grade.assignments_count = grade_data['assignments_count']
     quarter_grade.last_calculated = now
     
-    db.session.commit()
+    if commit:
+        db.session.commit()
+    else:
+        db.session.flush()
     return quarter_grade
 
 
-def update_all_quarter_grades_for_student(student_id, school_year_id, force=False):
+def update_all_quarter_grades_for_student(student_id, school_year_id, force=False, commit=True):
     """
     Update quarter grades for all classes a student is enrolled in.
     
@@ -325,6 +333,7 @@ def update_all_quarter_grades_for_student(student_id, school_year_id, force=Fals
         student_id: ID of the student
         school_year_id: ID of the school year
         force: If True, recalculates even if recently updated
+        commit: If True, one commit after all class/quarter updates for this student.
     """
     # Get all active enrollments
     enrollments = Enrollment.query.filter_by(
@@ -343,8 +352,12 @@ def update_all_quarter_grades_for_student(student_id, school_year_id, force=Fals
                 class_id=enrollment.class_id,
                 school_year_id=school_year_id,
                 quarter=quarter,
-                force=force
+                force=force,
+                commit=False,
             )
+
+    if commit:
+        db.session.commit()
 
 
 def get_quarter_grades_for_report(student_id, school_year_id, class_ids=None):

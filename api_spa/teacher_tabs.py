@@ -35,6 +35,32 @@ def teacher_students_list():
     return _teacher_json(build_teacher_students_payload)
 
 
+@spa_api_blueprint.route("/teacher/students/<int:student_id>/grades")
+@login_required
+@teacher_required
+def teacher_student_grades_report(student_id: int):
+    from teacher_routes.teacher_student_report_spa_helpers import build_teacher_student_grades_report
+
+    payload, error = build_teacher_student_grades_report(student_id)
+    if error or payload is None:
+        status = 403 if error == "Forbidden" else 404 if error == "Student not found" else 400
+        return jsonify({"error": error or "Could not load grades report"}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route("/teacher/students/<int:student_id>/attendance")
+@login_required
+@teacher_required
+def teacher_student_attendance_report(student_id: int):
+    from teacher_routes.teacher_student_report_spa_helpers import build_teacher_student_attendance_report
+
+    payload, error = build_teacher_student_attendance_report(student_id)
+    if error or payload is None:
+        status = 403 if error == "Forbidden" else 404 if error == "Student not found" else 400
+        return jsonify({"error": error or "Could not load attendance report"}), status
+    return jsonify(payload)
+
+
 @spa_api_blueprint.route("/teacher/assignments-grades")
 @login_required
 @teacher_required

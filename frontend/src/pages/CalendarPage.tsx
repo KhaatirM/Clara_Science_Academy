@@ -216,7 +216,7 @@ export function CalendarPage() {
 
   if (booting && !data) {
     return (
-      <ManagementPageShell director={isDirector}>
+      <ManagementPageShell director={isDirector} shellClassName="spa-mgmt-shell--flush">
         <MgmtBootstrapRoot>
         <div className="mgmt-cal mgmt-cal-page container-fluid px-0 px-md-1">
           <div className="mgmt-cal-shell p-5 text-center">Loading calendar…</div>
@@ -228,7 +228,7 @@ export function CalendarPage() {
 
   if ((error && !data) || !data) {
     return (
-      <ManagementPageShell director={isDirector}>
+      <ManagementPageShell director={isDirector} shellClassName="spa-mgmt-shell--flush">
         <MgmtBootstrapRoot>
         <div className="mgmt-cal mgmt-cal-page container-fluid px-0 px-md-1">
           <div className="mgmt-cal-shell p-5">
@@ -241,7 +241,7 @@ export function CalendarPage() {
   }
 
   return (
-    <ManagementPageShell director={isDirector}>
+    <ManagementPageShell director={isDirector} shellClassName="spa-mgmt-shell--flush">
       <MgmtBootstrapRoot>
       <>
       <div className="mgmt-cal mgmt-cal-page mgmt-cal-page--compact container-fluid px-0 px-md-1">

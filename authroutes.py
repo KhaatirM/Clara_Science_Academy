@@ -390,11 +390,18 @@ def dashboard():
         return redirect(url_for('student.student_dashboard'))
 
     if canonical_role_label(current_user.role) == 'Parent':
+        from utils.spa_parent_urls import user_should_use_spa_parent_shell
+
+        if user_should_use_spa_parent_shell():
+            return redirect("/app/parent")
         return redirect(url_for('parent.parent_dashboard'))
 
     if staff_must_choose_dashboard(current_user):
         target = session.get('staff_dashboard_target')
         if target == 'tech' and user_has_tech_route_access(current_user):
+            from utils.spa_tech_urls import user_should_use_spa_tech_shell
+            if user_should_use_spa_tech_shell():
+                return redirect("/app/tech")
             return redirect(url_for('tech.tech_dashboard'))
         if target == 'management' and user_has_management_entry_access(current_user):
             from utils.spa_management_urls import management_home_redirect_target
@@ -411,6 +418,9 @@ def dashboard():
         from utils.spa_management_urls import management_home_redirect_target
         return redirect(management_home_redirect_target())
     elif user_has_tech_route_access(current_user):
+        from utils.spa_tech_urls import user_should_use_spa_tech_shell
+        if user_should_use_spa_tech_shell():
+            return redirect("/app/tech")
         return redirect(url_for('tech.tech_dashboard'))
     else:
         # Permission-based Administration staff (e.g. Other Staff with Administration department)
@@ -425,7 +435,8 @@ def dashboard():
         ]
         try:
             if has_any_permission(current_user, mgmt_perms):
-                return redirect(url_for('management.management_dashboard'))
+                from utils.spa_management_urls import management_home_redirect_target
+                return redirect(management_home_redirect_target())
         except Exception:
             pass
 
@@ -590,6 +601,12 @@ def bug_reports():
     spa_redirect = spa_student_bug_reports_redirect()
     if spa_redirect:
         return spa_redirect
+
+    from utils.spa_tech_urls import spa_tech_bug_reports_redirect
+
+    tech_redirect = spa_tech_bug_reports_redirect()
+    if tech_redirect:
+        return tech_redirect
 
     # Get bug reports based on user role
     if current_user.role in ['Tech', 'IT Support']:

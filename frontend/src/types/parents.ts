@@ -27,11 +27,26 @@ export interface ParentsHubResponse {
   }
 }
 
+export interface ParentProvisionCredential {
+  slot?: number
+  student_id?: number
+  student_name?: string
+  parent_name?: string
+  email?: string
+  username?: string
+  portal_password?: string
+  created_new?: boolean
+  password_reissued?: boolean
+}
+
 export interface ParentProvisionAllResponse {
   success: boolean
   message?: string
   linked?: number
   created?: number
+  reissued?: number
   skipped?: number
   errors?: string[]
+  credentials?: ParentProvisionCredential[]
+  emails_sent?: number
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
+import { openAcademicConcernsModal } from '../api/academicConcerns'
 import { fetchDashboardHome } from '../api/dashboard'
+import { AnnouncementComposeModal } from '../components/announcements/AnnouncementComposeModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import {
   homeActionsForGroup,
@@ -117,6 +119,7 @@ function HomeDashboardBody({
   user: ManagementOutletContext['user']
   isDirector: boolean
 }) {
+  const [announceOpen, setAnnounceOpen] = useState(false)
   const ms = data.monthly_stats
   const ws = data.weekly_stats
   const st = data.stats
@@ -195,9 +198,10 @@ function HomeDashboardBody({
               <InsightChip icon="bi-clock-history" value={0} label="Pending extensions" />
             )}
             {atRisk > 0 ? (
-              <Link
-                to="/management/assignments"
-                className="mgmt-home-insight mgmt-home-insight--alert text-decoration-none"
+              <button
+                type="button"
+                onClick={() => openAcademicConcernsModal()}
+                className="mgmt-home-insight mgmt-home-insight--alert text-decoration-none text-start"
                 role="listitem"
               >
                 <span className="mgmt-home-insight-icon">
@@ -207,7 +211,7 @@ function HomeDashboardBody({
                   <div className="mgmt-home-insight-value">{atRisk}</div>
                   <div className="mgmt-home-insight-label">Academic concerns</div>
                 </div>
-              </Link>
+              </button>
             ) : (
               <InsightChip icon="bi-shield-check" value={0} label="Academic concerns" />
             )}
@@ -283,9 +287,27 @@ function HomeDashboardBody({
             <i className="bi bi-lightning-fill" aria-hidden="true" /> Quick actions
           </h2>
           <div className="mgmt-home-action-groups">
-            <ActionGroup user={user} group="people" label="People" pendingExt={pendingExt} />
-            <ActionGroup user={user} group="academics" label="Academics" pendingExt={pendingExt} />
-            <ActionGroup user={user} group="operations" label="Operations" pendingExt={pendingExt} />
+            <ActionGroup
+              user={user}
+              group="people"
+              label="People"
+              pendingExt={pendingExt}
+              onOpenAnnouncement={() => setAnnounceOpen(true)}
+            />
+            <ActionGroup
+              user={user}
+              group="academics"
+              label="Academics"
+              pendingExt={pendingExt}
+              onOpenAnnouncement={() => setAnnounceOpen(true)}
+            />
+            <ActionGroup
+              user={user}
+              group="operations"
+              label="Operations"
+              pendingExt={pendingExt}
+              onOpenAnnouncement={() => setAnnounceOpen(true)}
+            />
           </div>
         </section>
       </div>
@@ -367,6 +389,8 @@ function HomeDashboardBody({
           </div>
         </section>
       </div>
+
+      <AnnouncementComposeModal open={announceOpen} onClose={() => setAnnounceOpen(false)} />
     </>
   )
 }
@@ -398,11 +422,13 @@ function ActionGroup({
   group,
   label,
   pendingExt,
+  onOpenAnnouncement,
 }: {
   user: ManagementOutletContext['user']
   group: HomeActionGroup
   label: string
   pendingExt: number
+  onOpenAnnouncement?: () => void
 }) {
   const actions = homeActionsForGroup(user, group)
   if (!actions.length) return null
@@ -417,6 +443,7 @@ function ActionGroup({
             action={action}
             highlight={action.id === 'extensions' && pendingExt > 0}
             badge={action.id === 'extensions' && pendingExt > 0 ? pendingExt : undefined}
+            onOpenAnnouncement={onOpenAnnouncement}
           />
         ))}
       </div>
@@ -428,10 +455,12 @@ function HomeActionTile({
   action,
   highlight,
   badge,
+  onOpenAnnouncement,
 }: {
   action: HomeQuickAction
   highlight?: boolean
   badge?: number
+  onOpenAnnouncement?: () => void
 }) {
   const className = `mgmt-home-action${highlight ? ' mgmt-home-action--highlight' : ''}`
   const inner = (
@@ -440,6 +469,14 @@ function HomeActionTile({
       <span>{action.label}</span>
     </>
   )
+
+  if (action.reactTo === 'modal:announcement') {
+    return (
+      <button type="button" className={className} onClick={() => onOpenAnnouncement?.()}>
+        {inner}
+      </button>
+    )
+  }
 
   if (badge) {
     return (

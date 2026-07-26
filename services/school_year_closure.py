@@ -458,7 +458,8 @@ def _enter_phase(closure: SchoolYearClosure, new_phase: str, *,
 
 def advance_closure_if_due(closure: SchoolYearClosure, *,
                            today: Optional[date] = None,
-                           actor_label: str = 'system') -> Optional[str]:
+                           actor_label: str = 'system',
+                           allow_finalize: bool = True) -> Optional[str]:
     """
     Check today's date against milestone dates and transition the closure forward
     if it's overdue. Idempotent: re-running the same day is a no-op once each
@@ -466,6 +467,12 @@ def advance_closure_if_due(closure: SchoolYearClosure, *,
 
     Returns the new phase if a transition happened, else None.
     Skips paused / cancelled / finalized closures.
+
+    ``allow_finalize=False`` advances lockout phases but does **not** run
+    ``finalize_closure`` (report cards + promotions). Use that for dashboard
+    page loads — finalize can take minutes and will trip gunicorn worker
+    timeouts / OOM when run inside a GET request. Cron and explicit
+    "Finalize now" should keep ``allow_finalize=True``.
     """
     if closure.phase in TERMINAL_PHASES or closure.phase == PHASE_PAUSED:
         return None
@@ -490,13 +497,22 @@ def advance_closure_if_due(closure: SchoolYearClosure, *,
 
     # admin_window → finalized at Day 28 (auto-finalize)
     if closure.phase == PHASE_ADMIN_WINDOW and t >= closure.finalize_at:
-        try:
-            finalize_closure(closure, triggered_by='auto', actor=None)
-            transitioned = PHASE_FINALIZED
-        except Exception:
-            current_app.logger.exception(
-                "Auto-finalize failed for closure id=%s; will retry on next tick.", closure.id
+        if not allow_finalize:
+            current_app.logger.info(
+                "Closure id=%s is due for finalize (finalize_at=%s) but allow_finalize=False "
+                "(dashboard/light tick). Leaving phase=%s for cron or manual Finalize now.",
+                closure.id,
+                closure.finalize_at,
+                closure.phase,
             )
+        else:
+            try:
+                finalize_closure(closure, triggered_by='auto', actor=None)
+                transitioned = PHASE_FINALIZED
+            except Exception:
+                current_app.logger.exception(
+                    "Auto-finalize failed for closure id=%s; will retry on next tick.", closure.id
+                )
 
     closure.last_tick_at = _now()
     db.session.commit()
@@ -961,6 +977,10 @@ def finalize_closure(closure: SchoolYearClosure, *, triggered_by: str = 'manual'
         )
         Class.query.filter(Class.id.in_(class_ids)).update(
             {Class.is_active: False}, synchronize_session=False,
+        )
+        from models import StudentAssistant
+        StudentAssistant.query.filter(StudentAssistant.class_id.in_(class_ids)).delete(
+            synchronize_session=False
         )
 
     promo_stats = None

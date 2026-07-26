@@ -9,9 +9,13 @@ from flask_wtf.csrf import generate_csrf
 from decorators import get_user_permissions
 from utils.user_roles import (
     canonical_role_label,
+    staff_must_choose_dashboard,
+    user_can_use_management_spa_shell,
     user_has_management_entry_access,
+    user_has_parent_spa_entry,
     user_has_student_spa_entry,
     user_has_teacher_spa_entry,
+    user_has_tech_spa_entry,
 )
 
 spa_api_blueprint = Blueprint("spa_api", __name__, url_prefix="/api/spa")
@@ -48,9 +52,36 @@ def spa_me():
     perms = sorted(get_user_permissions(current_user))
     role_canonical = canonical_role_label(current_user.role)
 
+    staff_dashboard_target = None
+    try:
+        from flask import session
+
+        if staff_must_choose_dashboard(current_user):
+            raw = session.get("staff_dashboard_target")
+            if raw in ("tech", "management"):
+                staff_dashboard_target = raw
+    except Exception:
+        staff_dashboard_target = None
+
+    from utils.user_theme import get_effective_theme
+
+    flashes = []
+    try:
+        from flask import get_flashed_messages
+
+        for category, message in get_flashed_messages(with_categories=True):
+            text = (message or "").strip()
+            if not text:
+                continue
+            cat = (category or "info").strip().lower() or "info"
+            if cat == "error":
+                cat = "danger"
+            flashes.append({"category": cat, "message": text})
+    except Exception:
+        flashes = []
+
     try:
         from utils.school_timezone import get_school_timezone_sidebar_payload
-        from utils.user_theme import get_effective_theme
 
         tz_payload = get_school_timezone_sidebar_payload()
         school_timezone = {
@@ -63,10 +94,22 @@ def spa_me():
 
         school_timezone = {"iana": DEFAULT_SCHOOL_TIMEZONE, "clock": "", "zone": ""}
 
+    from utils.app_version import app_version_context
+
+    ver = app_version_context()
     return jsonify(
         {
             "authenticated": True,
             "school_timezone": school_timezone,
+            "flashes": flashes,
+            "app_version": {
+                "version": ver["app_version"],
+                "display": ver["app_version_display"],
+                "origin": ver["app_version_origin"],
+                "updates_estimate": ver["app_version_updates_estimate"],
+                "release_label": ver["app_version_release_label"],
+                "product_name": ver["app_version_product_name"],
+            },
             "user": {
                 "id": current_user.id,
                 "username": current_user.username,
@@ -75,8 +118,12 @@ def spa_me():
                 "email": getattr(current_user, "email", None),
                 "permissions": perms,
                 "management_entry": user_has_management_entry_access(current_user),
+                "management_shell": user_can_use_management_spa_shell(current_user),
                 "teacher_entry": user_has_teacher_spa_entry(current_user),
                 "student_entry": user_has_student_spa_entry(current_user),
+                "parent_entry": user_has_parent_spa_entry(current_user),
+                "tech_entry": user_has_tech_spa_entry(current_user),
+                "staff_dashboard_target": staff_dashboard_target,
                 "student_id": getattr(current_user, "student_id", None),
                 "sidebar_title": _sidebar_title(current_user),
                 "csrf_token": generate_csrf(),
@@ -124,3 +171,9 @@ from api_spa import student_classes as _spa_student_classes  # noqa: F401, E402
 from api_spa import student_grades as _spa_student_grades  # noqa: F401, E402
 from api_spa import student_collaborate as _spa_student_collaborate  # noqa: F401, E402
 from api_spa import student_tabs as _spa_student_tabs  # noqa: F401, E402
+from api_spa import student_activities as _spa_student_activities  # noqa: F401, E402
+from api_spa import tech as _spa_tech  # noqa: F401, E402
+from api_spa import academic_concerns as _spa_academic_concerns  # noqa: F401, E402
+from api_spa import class_syllabus as _spa_class_syllabus  # noqa: F401, E402
+from api_spa import class_notes as _spa_class_notes  # noqa: F401, E402
+from api_spa import parent_dashboard as _spa_parent_dashboard  # noqa: F401, E402

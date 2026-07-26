@@ -19,6 +19,7 @@ import AttendanceAnalyticsPage from './pages/AttendanceAnalyticsPage'
 import AttendanceReportsPage from './pages/AttendanceReportsPage'
 import ReportCardsPage from './pages/ReportCardsPage'
 import ReportCardsCategoryPage from './pages/ReportCardsCategoryPage'
+import ReportCardsTranscriptsPage from './pages/ReportCardsTranscriptsPage'
 import ReportCardGeneratePage from './pages/ReportCardGeneratePage'
 import ReportCardDetailPage from './pages/ReportCardDetailPage'
 import ReportCardHistoryPage from './pages/ReportCardHistoryPage'
@@ -36,6 +37,7 @@ import { ClassGradesPage } from './pages/ClassGradesPage'
 import { ClassGroupsPage } from './pages/ClassGroupsPage'
 import { ClassRosterPage } from './pages/ClassRosterPage'
 import { ClassViewPage } from './pages/ClassViewPage'
+import { ClassNotesPage } from './pages/ClassNotesPage'
 import { ClassesPage } from './pages/ClassesPage'
 import { CoreClassSetupPage } from './pages/CoreClassSetupPage'
 import { ExtensionRequestsPage } from './pages/ExtensionRequestsPage'
@@ -73,13 +75,42 @@ import { StudentSchedulePage } from './pages/StudentSchedulePage'
 import { StudentCalendarPage } from './pages/StudentCalendarPage'
 import { StudentJobsPortalPage } from './pages/StudentJobsPortalPage'
 import { StudentSettingsPage } from './pages/StudentSettingsPage'
-import { StudentTakeQuizPage, StudentDiscussionPage } from './pages/StudentActivityEmbedPage'
+import { StudentTakeQuizPage } from './pages/StudentTakeQuizPage'
+import { ParentHomePage } from './pages/ParentHomePage'
+import {
+  ParentAttendancePage,
+  ParentClassesPage,
+  ParentGradesPage,
+  ParentReportCardsPage,
+} from './pages/ParentPortalTabPages'
+import { ParentSettingsPage } from './pages/ParentSettingsPage'
+import {
+  StudentDiscussionPage,
+  StudentDiscussionThreadPage,
+} from './pages/StudentDiscussionPage'
 import TakeClassAttendancePage from './pages/TakeClassAttendancePage'
 import ClassAdminToolPage from './pages/ClassAdminToolPage'
 import { EditAssignmentRedirectPage } from './pages/EditAssignmentRedirectPage'
 import { AssignmentSubmissionsPage } from './pages/AssignmentSubmissionsPage'
 import { TeachersStaffPage } from './pages/TeachersStaffPage'
-import { spaHomePath, isStudentShellUser, isTeacherShellUser } from './config/navTypes'
+import { spaHomePath, isStudentShellUser, isTeacherShellUser, isTechShellUser, isParentShellUser } from './config/navTypes'
+import { TechHomePage } from './pages/TechHomePage'
+import {
+  TechDeviceFormPage,
+  TechDevicesPage,
+  TechSettingsPage,
+} from './pages/TechDevicesSettingsPages'
+import {
+  TechActivityLogPage,
+  TechAuditLogsPage,
+  TechBugReportsPage,
+  TechBugsPage,
+  TechErrorReportsPage,
+  TechLogsPage,
+  TechSystemPage,
+  TechUserDetailPage,
+  TechUserManagementPage,
+} from './pages/TechLogsSystemUsersPages'
 
 function LoadingScreen() {
   return (
@@ -106,13 +137,20 @@ function ErrorScreen({ message }: { message: string }) {
 }
 
 export default function App() {
-  const { user, schoolTimezone, loading, error } = useSession()
+  const { user, schoolTimezone, appVersion, loading, error } = useSession()
 
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
   if (!user) return <LoadingScreen />
 
-  if (!user.management_entry && !user.teacher_entry && !user.student_entry) {
+  if (
+    !user.management_entry &&
+    !user.management_shell &&
+    !user.teacher_entry &&
+    !user.student_entry &&
+    !user.tech_entry &&
+    !user.parent_entry
+  ) {
     return (
       <ErrorScreen message="Your account does not have access to the React app yet." />
     )
@@ -120,19 +158,50 @@ export default function App() {
 
   const studentShell = isStudentShellUser(user)
   const teacherShell = isTeacherShellUser(user)
+  const techShell = isTechShellUser(user)
+  const parentShell = isParentShellUser(user)
   const homePath = spaHomePath(user)
 
   return (
     <BrowserRouter basename="/app">
       <Routes>
-        <Route element={<AppLayout user={user} schoolTimezone={schoolTimezone} />}>
+        <Route element={<AppLayout user={user} schoolTimezone={schoolTimezone} appVersion={appVersion} />}>
           <Route index element={<Navigate to={homePath} replace />} />
-          {studentShell ? (
+          {techShell ? (
+            <>
+              <Route path="/tech" element={<TechHomePage />} />
+              <Route path="/tech/devices" element={<TechDevicesPage />} />
+              <Route path="/tech/devices/new" element={<TechDeviceFormPage />} />
+              <Route path="/tech/devices/:deviceId/edit" element={<TechDeviceFormPage />} />
+              <Route path="/tech/logs" element={<TechLogsPage />} />
+              <Route path="/tech/activity-log" element={<TechActivityLogPage />} />
+              <Route path="/tech/audit-logs" element={<TechAuditLogsPage />} />
+              <Route path="/tech/bugs" element={<TechBugsPage />} />
+              <Route path="/tech/error-reports" element={<TechErrorReportsPage />} />
+              <Route path="/tech/bug-reports" element={<TechBugReportsPage />} />
+              <Route path="/tech/system" element={<TechSystemPage />} />
+              <Route path="/tech/users" element={<TechUserManagementPage />} />
+              <Route path="/tech/users/:userId" element={<TechUserDetailPage />} />
+              <Route path="/tech/settings" element={<TechSettingsPage />} />
+              <Route path="*" element={<Navigate to="/tech" replace />} />
+            </>
+          ) : parentShell ? (
+            <>
+              <Route path="/parent" element={<ParentHomePage />} />
+              <Route path="/parent/grades" element={<ParentGradesPage />} />
+              <Route path="/parent/attendance" element={<ParentAttendancePage />} />
+              <Route path="/parent/classes" element={<ParentClassesPage />} />
+              <Route path="/parent/report-cards" element={<ParentReportCardsPage />} />
+              <Route path="/parent/settings" element={<ParentSettingsPage />} />
+              <Route path="*" element={<Navigate to="/parent" replace />} />
+            </>
+          ) : studentShell ? (
             <>
               <Route path="/student" element={<StudentHomePage />} />
               <Route path="/student/assignments" element={<StudentAssignmentsPage />} />
               <Route path="/student/classes" element={<StudentClassesPage />} />
               <Route path="/student/classes/:classId" element={<StudentClassViewPage />} />
+              <Route path="/student/classes/:classId/notes" element={<ClassNotesPage />} />
               <Route path="/student/grades" element={<StudentGradesPage />} />
               <Route path="/student/collaborate" element={<StudentCollaboratePage />} />
               <Route path="/student/submissions" element={<Navigate to="/student/collaborate" replace />} />
@@ -143,6 +212,10 @@ export default function App() {
               <Route path="/student/settings/bug-reports" element={<StudentSettingsPage />} />
               <Route path="/student/take-quiz/:assignmentId" element={<StudentTakeQuizPage />} />
               <Route path="/student/discussion/:assignmentId" element={<StudentDiscussionPage />} />
+              <Route
+                path="/student/discussion/:assignmentId/thread/:threadId"
+                element={<StudentDiscussionThreadPage />}
+              />
               <Route path="*" element={<Navigate to="/student" replace />} />
             </>
           ) : teacherShell ? (
@@ -150,6 +223,7 @@ export default function App() {
               <Route path="/teacher" element={<TeacherHomePage />} />
               <Route path="/teacher/classes" element={<TeacherClassesPage />} />
               <Route path="/teacher/classes/:classId" element={<TeacherClassViewPage />} />
+              <Route path="/teacher/classes/:classId/notes" element={<ClassNotesPage />} />
               <Route path="/teacher/classes/:classId/groups" element={<ClassGroupsPage />} />
               <Route
                 path="/teacher/classes/:classId/assistant-approvals"
@@ -245,6 +319,7 @@ export default function App() {
             <Route path=":classId/roster" element={<ClassRosterPage />} />
             <Route path=":classId/groups" element={<ClassGroupsPage />} />
             <Route path=":classId/grades" element={<ClassGradesPage />} />
+            <Route path=":classId/notes" element={<ClassNotesPage />} />
             <Route path=":classId/tools/:tool" element={<ClassAdminToolPage />} />
             <Route path=":classId" element={<ClassViewPage />} />
           </Route>
@@ -268,6 +343,7 @@ export default function App() {
             <Route path="generate/:studentId" element={<ReportCardGeneratePage />} />
             <Route path="student/:studentId" element={<ReportCardHistoryPage />} />
             <Route path="category/:category" element={<ReportCardsCategoryPage />} />
+            <Route path="transcripts" element={<ReportCardsTranscriptsPage />} />
             <Route path="standards/:grade" element={<GradeStandardsHubPage />} />
             <Route path="standards/:grade/:classId" element={<GradeStandardsEditorPage />} />
             <Route path=":reportCardId" element={<ReportCardDetailPage />} />

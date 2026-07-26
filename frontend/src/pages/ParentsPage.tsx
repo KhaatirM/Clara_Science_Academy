@@ -3,7 +3,7 @@ import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { fetchParentsHub, provisionAllParentLogins } from '../api/parents'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
-import type { ParentAccountItem, ParentsHubStats } from '../types/parents'
+import type { ParentAccountItem, ParentProvisionCredential, ParentsHubStats } from '../types/parents'
 
 function StatCard({
   icon,
@@ -145,6 +145,7 @@ export function ParentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [provisioning, setProvisioning] = useState(false)
+  const [newCredentials, setNewCredentials] = useState<ParentProvisionCredential[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -168,13 +169,16 @@ export function ParentsPage() {
   const handleProvisionAll = async () => {
     if (
       !window.confirm(
-        'Create parent accounts for all students with parent emails on file? Existing accounts will be linked where possible.',
+        'Create or refresh parent accounts for all students with parent emails on file?\n\n' +
+          'New accounts get temporary passwords. Existing accounts that have not changed their password yet will get a new temporary password so you can share it again.\n\n' +
+          'Each parent is emailed only their own login. School Administrators / Directors also get a copy (when mail is configured). Credentials also appear on this page.',
       )
     ) {
       return
     }
     setProvisioning(true)
     setActionMessage(null)
+    setNewCredentials([])
     try {
       const result = await provisionAllParentLogins()
       let msg = result.message || 'Provisioning complete.'
@@ -182,6 +186,7 @@ export function ParentsPage() {
         msg += ` Warnings: ${result.errors.join('; ')}`
       }
       setActionMessage(msg)
+      setNewCredentials(result.credentials || [])
       void load()
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : 'Provisioning failed')
@@ -238,6 +243,51 @@ export function ParentsPage() {
         </div>
       ) : null}
 
+      {newCredentials.length ? (
+        <section className="mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/80 shadow-sm">
+          <div className="border-b border-amber-200 px-5 py-3">
+            <h2 className="mb-0 flex items-center gap-2 text-base font-bold text-amber-950">
+              <i className="bi bi-key-fill" aria-hidden />
+              Temporary parent logins — copy before leaving this page
+            </h2>
+            <p className="mb-0 mt-1 text-sm text-amber-900/80">
+              Each parent was emailed only their own login (when mail is configured). This list is a
+              backup copy for staff — passwords are not shown again after you leave.
+            </p>
+          </div>
+          <div className="overflow-x-auto bg-white/70">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-amber-100 bg-amber-50/50 text-left text-xs font-bold uppercase tracking-wide text-amber-900/70">
+                  <th className="px-5 py-3">Parent</th>
+                  <th className="px-5 py-3">Child</th>
+                  <th className="px-5 py-3">Email</th>
+                  <th className="px-5 py-3">Username</th>
+                  <th className="px-5 py-3">Temporary password</th>
+                  <th className="px-5 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {newCredentials.map((row, idx) => (
+                  <tr key={`${row.username}-${idx}`} className="border-b border-slate-100">
+                    <td className="px-5 py-3 font-semibold text-hub-text">{row.parent_name || '—'}</td>
+                    <td className="px-5 py-3 text-hub-muted">{row.student_name || '—'}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-hub-text">{row.email || '—'}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-hub-text">{row.username || '—'}</td>
+                    <td className="px-5 py-3 font-mono text-xs font-bold text-teal-900">
+                      {row.portal_password || '—'}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-hub-muted">
+                      {row.created_new ? 'New account' : row.password_reissued ? 'Password re-issued' : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       {error ? (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
@@ -264,7 +314,7 @@ export function ParentsPage() {
         <WorkflowStep
           num={2}
           title="Provision logins"
-          body="Create accounts from a student profile or use bulk provision above."
+          body="Create accounts from a student profile or use bulk provision above. Temporary usernames/passwords appear on this page and are emailed to school admins."
         />
         <WorkflowStep
           num={3}

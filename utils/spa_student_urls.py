@@ -91,3 +91,45 @@ def spa_student_settings_redirect():
 
 def spa_student_bug_reports_redirect():
     return _spa_student_get_redirect("/app/student/settings/bug-reports")
+
+
+def spa_student_take_quiz_redirect(assignment_id: int):
+    from flask import redirect, request
+
+    if not user_should_use_spa_student_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    qs = request.query_string.decode("utf-8") if request.query_string else ""
+    path = f"/app/student/take-quiz/{int(assignment_id)}"
+    if qs:
+        path = f"{path}?{qs}"
+    return redirect(path)
+
+
+def spa_student_discussion_redirect(assignment_id: int):
+    from flask import redirect, request
+
+    if not user_should_use_spa_student_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    qs = request.query_string.decode("utf-8") if request.query_string else ""
+    path = f"/app/student/discussion/{int(assignment_id)}"
+    if qs:
+        path = f"{path}?{qs}"
+    return redirect(path)
+
+
+def spa_student_discussion_thread_redirect(assignment_id: int, thread_id: int):
+    from flask import redirect, request
+
+    if not user_should_use_spa_student_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    qs = request.query_string.decode("utf-8") if request.query_string else ""
+    path = f"/app/student/discussion/{int(assignment_id)}/thread/{int(thread_id)}"
+    if qs:
+        path = f"{path}?{qs}"
+    return redirect(path)

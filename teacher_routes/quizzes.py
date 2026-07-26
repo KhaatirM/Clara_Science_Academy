@@ -250,6 +250,12 @@ def create_quiz_assignment():
     """Create or edit a quiz assignment"""
     from management_routes.assignment_create_json import create_form_err, create_form_ok, create_form_wants_json
     from utils.spa_assignment_create_urls import assignment_create_hub_redirect, assignment_create_success_redirect
+    from utils.spa_teacher_urls import spa_teacher_create_quiz_redirect
+
+    if request.method == 'GET':
+        spa_redirect = spa_teacher_create_quiz_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
 
     if request.method == 'POST':
         save_action = quiz_authoring_save_action(request.form)
@@ -715,8 +721,14 @@ def create_discussion_assignment():
     from management_routes.assignment_create_json import create_form_err, create_form_ok
     from teacher_routes.assignment_utils import calculate_assignment_status, parse_discussion_description
     from utils.spa_assignment_create_urls import assignment_create_success_redirect
+    from utils.spa_teacher_urls import spa_teacher_create_discussion_redirect
     from .utils import get_teacher_or_admin, is_authorized_for_class
     from datetime import timezone
+
+    if request.method == 'GET':
+        spa_redirect = spa_teacher_create_discussion_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
 
     edit_id = request.args.get('edit', type=int)
     assignment = None

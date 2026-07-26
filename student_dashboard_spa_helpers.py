@@ -9,7 +9,10 @@ from typing import Any
 from flask_login import current_user
 from sqlalchemy.orm import joinedload
 
-from management_routes.student_assistant_utils import assignment_student_visibility_filter
+from management_routes.student_assistant_utils import (
+    active_assistant_classes_for_student,
+    assignment_student_visibility_filter,
+)
 from models import (
     Announcement,
     Assignment,
@@ -23,7 +26,6 @@ from models import (
     Notification,
     SchoolYear,
     Student,
-    StudentAssistant,
     StudentGoal,
 )
 
@@ -304,11 +306,9 @@ def build_student_home_payload(student_id: int | None = None) -> tuple[dict[str,
         announcements_q = announcements_q.filter(Announcement.target_group.in_(["all_students", "all"]))
     announcements = announcements_q.order_by(Announcement.timestamp.desc()).limit(100).all()
 
-    assistant_for_classes = [
-        sa.class_info
-        for sa in StudentAssistant.query.filter_by(student_id=student.id).all()
-        if sa.class_info
-    ]
+    assistant_for_classes = active_assistant_classes_for_student(
+        student.id, active_school_year=current_school_year
+    )
 
     goals_payload = []
     for c in classes[:5]:
@@ -408,8 +408,13 @@ def build_student_home_payload(student_id: int | None = None) -> tuple[dict[str,
             "notifications": [
                 {
                     "id": n.id,
+                    "type": n.type,
                     "title": n.title,
-                    "message": n.message,
+                    "message": n.message or "",
+                    "preview": (
+                        ((n.message or "")[:120] + ("…" if n.message and len(n.message) > 120 else ""))
+                    ),
+                    "is_long": bool(n.message and len(n.message) > 120),
                     "timestamp": _iso(n.timestamp),
                     "timestamp_display": (
                         n.timestamp.strftime("%b %d, %I:%M %p") if n.timestamp else "Recently"

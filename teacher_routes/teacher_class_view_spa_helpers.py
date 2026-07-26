@@ -40,6 +40,7 @@ def _teacher_class_view_links(class_id: int, features: dict[str, bool]) -> dict[
         "add_assignment": f"/app/teacher/assignments/create?class_id={class_id}",
         "take_attendance": f"/app/teacher/attendance/take/{class_id}",
         "manage_groups": f"/app/teacher/classes/{class_id}/groups",
+        "class_notes": f"/app/teacher/classes/{class_id}/notes",
         "assignments_and_grades": f"/app/teacher/assignments-and-grades/{class_id}",
         "group_assignments": f"/app/teacher/assignments-and-grades/{class_id}?view=group",
         "deadline_reminders": "spa:deadline_reminders",
@@ -50,6 +51,8 @@ def _teacher_class_view_links(class_id: int, features: dict[str, bool]) -> dict[
         "assistant_approvals": f"/app/teacher/classes/{class_id}/assistant-approvals",
         "announcements_legacy": "#announcements",
     }
+    if features.get("syllabus"):
+        links["syllabus"] = "modal:syllabus"
     if features.get("grade1_standards"):
         links["grade1_standards"] = f"/app/teacher/classes/{class_id}/standards/grade1"
     if features.get("grade3_standards"):

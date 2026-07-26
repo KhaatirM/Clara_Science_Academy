@@ -14,6 +14,7 @@ from shared_communications import (
     get_user_channels, get_direct_messages, get_user_announcements,
     ensure_class_channel_exists,
     build_class_announcement_panel_payload,
+    build_announcement_compose_payload,
     serialize_announcement_for_panel,
 )
 from communications_helpers import get_user_full_name
@@ -371,6 +372,35 @@ def class_announcement_panel():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@api_bp.route('/communications/api/announcement-compose')
+@login_required
+def announcement_compose_panel():
+    """Broadcast options for home/class announcement compose (class_id optional)."""
+    try:
+        if current_user.role not in ['Director', 'School Administrator'] and not user_primary_role_is_teaching_staff(current_user):
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+        class_id = request.args.get('class_id', type=int)
+        if class_id:
+            class_obj = Class.query.get(class_id)
+            if not class_obj:
+                return jsonify({'success': False, 'message': 'Class not found'}), 404
+            if current_user.role not in ['Director', 'School Administrator']:
+                from teacher_routes.utils import is_authorized_for_class
+                if not is_authorized_for_class(class_obj):
+                    return jsonify({'success': False, 'message': 'Access denied'}), 403
+
+        payload = build_announcement_compose_payload(current_user, class_id=class_id)
+        if not payload.get('broadcast_options'):
+            return jsonify({'success': False, 'message': 'No classes available to announce to.'}), 400
+        return jsonify({'success': True, **payload})
+    except HTTPException:
+        raise
+    except Exception as e:
+        current_app.logger.error(f"Error loading announcement compose options: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @api_bp.route('/communications/create-announcement', methods=['POST'])
 @login_required
 def create_announcement():
@@ -429,8 +459,8 @@ def create_announcement():
                         user_id=student.user.id,
                         type='announcement',
                         title=title,
-                        message=message_text[:100],
-                        link='/communications'
+                        message=message_text,
+                        link='/app/student'
                     )
                     db.session.add(notification)
         elif target_group == 'class' and class_id:
@@ -442,8 +472,8 @@ def create_announcement():
                         user_id=enrollment.student.user.id,
                         type='announcement',
                         title=title,
-                        message=message_text[:100],
-                        link='/communications'
+                        message=message_text,
+                        link='/app/student'
                     )
                     db.session.add(notification)
             if class_obj:

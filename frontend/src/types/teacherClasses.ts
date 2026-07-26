@@ -1,6 +1,7 @@
 export interface TeacherClassFeatures {
   grade1_standards: boolean
   grade3_standards: boolean
+  syllabus?: boolean
 }
 
 export interface TeacherClassLinks {

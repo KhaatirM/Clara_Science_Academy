@@ -87,3 +87,51 @@ def spa_teacher_extension_requests_redirect():
 
 def spa_teacher_redo_dashboard_redirect():
     return _spa_teacher_get_redirect("/app/teacher/redo")
+
+
+def spa_teacher_create_quiz_redirect():
+    from flask import redirect, request
+
+    if not user_should_use_spa_teacher_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    path = "/app/teacher/assignments/create/quiz"
+    params = []
+    class_id = request.args.get("class_id", "").strip()
+    edit_id = request.args.get("edit", "").strip()
+    if class_id.isdigit():
+        params.append(f"class_id={class_id}")
+    if edit_id.isdigit():
+        params.append(f"edit={edit_id}")
+    if params:
+        path = f"{path}?{'&'.join(params)}"
+    return redirect(path)
+
+
+def spa_teacher_create_discussion_redirect():
+    from flask import redirect, request
+
+    if not user_should_use_spa_teacher_shell():
+        return None
+    if request.method != "GET" or request.args.get("legacy") == "1":
+        return None
+    path = "/app/teacher/assignments/create/discussion"
+    params = []
+    class_id = request.args.get("class_id", "").strip()
+    edit_id = request.args.get("edit", "").strip()
+    if class_id.isdigit():
+        params.append(f"class_id={class_id}")
+    if edit_id.isdigit():
+        params.append(f"edit={edit_id}")
+    if params:
+        path = f"{path}?{'&'.join(params)}"
+    return redirect(path)
+
+
+def spa_teacher_student_grades_redirect(student_id: int):
+    return _spa_teacher_get_redirect(f"/app/teacher/students/{int(student_id)}/grades")
+
+
+def spa_teacher_student_attendance_redirect(student_id: int):
+    return _spa_teacher_get_redirect(f"/app/teacher/students/{int(student_id)}/attendance")

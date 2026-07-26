@@ -2519,6 +2519,42 @@ def edit_student(student_id):
             else:
                 response["message"] = "Student updated. A new login was created — see the credential summary."
 
+        if parent_creds:
+            try:
+                from services.email_service import notify_parent_login_credentials
+
+                mail_stats = notify_parent_login_credentials(
+                    parent_creds,
+                    context_note=f"Created/re-issued while saving student {student.first_name} {student.last_name}.",
+                )
+                emails_sent = mail_stats.get("admins_emailed", 0)
+                parents_emailed = mail_stats.get("parents_emailed", 0)
+            except Exception as e:
+                current_app.logger.warning("Parent login credential emails failed: %s", e)
+                emails_sent = 0
+                parents_emailed = 0
+
+            from utils.credential_modal import parent_credentials_modal_payload
+
+            parent_modal = parent_credentials_modal_payload(parent_creds)
+            if response.get("credential_modal"):
+                # Keep student modal primary; append parent fields.
+                response["credential_modal"].setdefault("fields", []).extend(parent_modal.get("fields") or [])
+                response["credential_modal"].setdefault("notes", []).extend(
+                    [
+                        "Parent portal logins were also created or re-issued — see the parent username/password fields above.",
+                    ]
+                )
+            else:
+                response["credential_modal"] = parent_modal
+            response["parent_credentials"] = parent_creds
+            extra = f" Parent portal: {len(parent_creds)} login(s) ready."
+            if parents_emailed:
+                extra += f" Emailed {parents_emailed} parent(s) their own login."
+            if emails_sent:
+                extra += f" Emailed {emails_sent} school admin recipient(s)."
+            response["message"] = (response.get("message") or "Student updated successfully.") + extra
+
         return jsonify(response)
     except Exception as e:
         db.session.rollback()
@@ -3651,6 +3687,7 @@ def view_student_details_data(student_id):
         all_grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student.id,
             Assignment.class_id.in_(year_class_ids),
+            Assignment.school_year_id == active_school_year.id,
             Assignment.status != 'Voided',
         ).filter(
             db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
@@ -3673,6 +3710,7 @@ def view_student_details_data(student_id):
         if student_class_ids:
             group_assignments = GroupAssignment.query.filter(
                 GroupAssignment.class_id.in_(student_class_ids),
+                GroupAssignment.school_year_id == active_school_year.id,
                 GroupAssignment.status != 'Voided',
                 GroupAssignment.due_date.isnot(None)
             ).all()

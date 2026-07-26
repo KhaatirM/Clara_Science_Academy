@@ -207,6 +207,14 @@ export function ClosureDashboardPage() {
               </div>
             ) : null}
 
+            {phase === 'admin_window' && data.finalize_due ? (
+              <div className="mgmt-syc-alert mgmt-syc-alert--warning">
+                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                Auto-finalize date has passed. Opening this page no longer runs the heavy finalize
+                job (that was timing out the server). Use <strong>Finalize now</strong> when ready,
+                or wait for the nightly closure cron tick.
+              </div>
+            ) : null}
             {isPaused ? (
               <div className="mgmt-syc-alert mgmt-syc-alert--info">
                 <i className="bi bi-pause-circle-fill" aria-hidden="true" />

@@ -40,6 +40,7 @@ from management_routes.student_assistant_utils import (
     assignment_student_visibility_filter,
     group_assignment_student_visibility_filter,
     assignment_visible_to_students,
+    active_assistant_classes_for_student,
 )
 from utils.gpa_period_visibility import period_gpa_visibility_state
 
@@ -869,7 +870,7 @@ def student_dashboard():
     )
 
     # Classes where this student is the assigned assistant (take attendance, enter grades)
-    assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
+    assistant_for_classes = active_assistant_classes_for_student(student.id)
 
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'home', 'home',
@@ -1366,7 +1367,7 @@ def student_classes():
             grades[c.name] = avg_grade
             all_grades.append(avg_grade)
     
-    assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
+    assistant_for_classes = active_assistant_classes_for_student(student.id)
     class_groups_by_class_id = get_student_class_groups_by_class_id(student.id, [c.id for c in classes])
     return render_template('students/role_student_dashboard.html',
                           **create_template_context(student, 'classes', 'classes',
@@ -2331,7 +2332,7 @@ def view_class(class_id):
     # Template lookup: Jinja {% set %} inside nested loops does not update outer scope — use a dict
     class_assignment_status_by_id = {a.id: st for a, _s, st in assignments_with_status}
     
-    assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
+    assistant_for_classes = active_assistant_classes_for_student(student.id)
     is_assistant_for_this_class = any(c.id == class_id for c in assistant_for_classes)
     class_student_group = get_student_class_group(student.id, class_id)
     
@@ -2500,6 +2501,12 @@ def get_class_assignments_api(class_id):
 @student_required
 def take_quiz(assignment_id):
     """Take a quiz assignment"""
+    from utils.spa_student_urls import spa_student_take_quiz_redirect
+
+    spa_redirect = spa_student_take_quiz_redirect(assignment_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
     if not assignment_visible_to_students(assignment):
@@ -3421,6 +3428,12 @@ def request_redo():
 @student_required
 def view_discussion(assignment_id):
     """View a discussion assignment"""
+    from utils.spa_student_urls import spa_student_discussion_redirect
+
+    spa_redirect = spa_student_discussion_redirect(assignment_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
     if not assignment_visible_to_students(assignment):
@@ -3592,7 +3605,13 @@ def view_discussion_thread(thread_id):
     student = Student.query.get_or_404(current_user.student_id)
     thread = DiscussionThread.query.get_or_404(thread_id)
     assignment = thread.assignment
-    
+
+    from utils.spa_student_urls import spa_student_discussion_thread_redirect
+
+    spa_redirect = spa_student_discussion_thread_redirect(assignment.id, thread_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     # Check if student is enrolled
     enrollment = Enrollment.query.filter_by(
         student_id=student.id,

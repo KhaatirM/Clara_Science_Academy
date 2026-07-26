@@ -125,7 +125,7 @@ def create_closure_from_body(body: dict[str, Any], actor: User) -> dict[str, Any
         actor=actor,
         notes=notes,
     )
-    syc.advance_closure_if_due(closure, actor_label="manual_create")
+    syc.advance_closure_if_due(closure, actor_label="manual_create", allow_finalize=False)
 
     message = (
         f"School-year closure scheduled for {sy.name}. Day 0 = "
@@ -153,7 +153,10 @@ def query_closure_dashboard(closure_id: int) -> dict[str, Any]:
 
     if closure.phase not in syc.TERMINAL_PHASES and closure.phase != syc.PHASE_PAUSED:
         try:
-            syc.advance_closure_if_due(closure, actor_label="dashboard_view")
+            # Light tick only — never auto-finalize inside a dashboard GET (gunicorn timeout).
+            syc.advance_closure_if_due(
+                closure, actor_label="dashboard_view", allow_finalize=False
+            )
         except Exception:
             current_app.logger.exception("Dashboard tick for closure %s failed", closure_id)
 
@@ -232,6 +235,11 @@ def query_closure_dashboard(closure_id: int) -> dict[str, Any]:
         },
         "today": _date_str(today),
         "days_to": days_to,
+        "finalize_due": (
+            closure.phase == syc.PHASE_ADMIN_WINDOW
+            and closure.finalize_at is not None
+            and today >= closure.finalize_at
+        ),
         "extensions": [_serialize_extension(e) for e in extensions],
         "events": [_serialize_event(e) for e in events],
         "checklist": checklist,

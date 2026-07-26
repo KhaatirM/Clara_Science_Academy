@@ -160,12 +160,39 @@ def provision_parent_login(student_id: int):
         results = sync_student_parent_portal(student)
         db.session.commit()
 
+        emails_sent = 0
+        parents_emailed = 0
         if results:
-            msg = f"Parent portal ready — {len(results)} new account(s) created."
+            try:
+                from services.email_service import notify_parent_login_credentials
+
+                mail_stats = notify_parent_login_credentials(
+                    results,
+                    context_note=f"Provisioned from student record (#{student.id}).",
+                )
+                emails_sent = mail_stats.get("admins_emailed", 0)
+                parents_emailed = mail_stats.get("parents_emailed", 0)
+            except Exception as e:
+                current_app.logger.warning("Parent login credential emails failed: %s", e)
+
+        if results:
+            msg = f"Parent portal ready — {len(results)} login(s) with temporary passwords."
+            if parents_emailed:
+                msg += f" Emailed {parents_emailed} parent(s) their own login."
+            if emails_sent:
+                msg += f" Emailed {emails_sent} school admin recipient(s)."
         else:
-            msg = "Parent portal links synced with parent info on file."
+            msg = "Parent portal links synced with parent info on file (no new temporary passwords)."
         if want_json:
-            return jsonify({"success": True, "message": msg, "results": results})
+            return jsonify(
+                {
+                    "success": True,
+                    "message": msg,
+                    "results": results,
+                    "emails_sent": emails_sent,
+                    "parents_emailed": parents_emailed,
+                }
+            )
         flash(msg, "success")
     except ValueError as e:
         db.session.rollback()
@@ -192,9 +219,12 @@ def _run_bulk_parent_provision() -> dict:
     ).all()
 
     created = 0
+    reissued = 0
     linked = 0
     skipped = 0
     errors: list[str] = []
+    credentials: list[dict] = []
+    seen_usernames: set[str] = set()
 
     for student in students:
         try:
@@ -206,18 +236,45 @@ def _run_bulk_parent_provision() -> dict:
             rows = sync_student_parent_portal(student)
             after = ParentStudentLink.query.filter_by(student_id=student.id).count()
             created += sum(1 for r in rows if r.get("created_new"))
+            reissued += sum(1 for r in rows if r.get("password_reissued") and not r.get("created_new"))
             linked += max(0, after - before)
+            for row in rows:
+                uname = (row.get("username") or "").lower()
+                if not row.get("portal_password") or not uname or uname in seen_usernames:
+                    continue
+                seen_usernames.add(uname)
+                credentials.append(row)
         except ValueError as e:
             errors.append(f"{student.first_name} {student.last_name}: {e}")
         except Exception:
             errors.append(f"{student.first_name} {student.last_name}: unexpected error")
 
     db.session.commit()
+
+    emails_sent = 0
+    parents_emailed = 0
+    if credentials:
+        try:
+            from services.email_service import notify_parent_login_credentials
+
+            mail_stats = notify_parent_login_credentials(
+                credentials,
+                context_note="Bulk provision from Management → Family Portal.",
+            )
+            emails_sent = mail_stats.get("admins_emailed", 0)
+            parents_emailed = mail_stats.get("parents_emailed", 0)
+        except Exception as e:
+            current_app.logger.warning("Parent login credential emails failed: %s", e)
+
     return {
         "linked": linked,
         "created": created,
+        "reissued": reissued,
         "skipped": skipped,
         "errors": errors,
+        "credentials": credentials,
+        "emails_sent": emails_sent,
+        "parents_emailed": parents_emailed,
     }
 
 
@@ -238,12 +295,27 @@ def provision_all_parent_logins():
 
     linked = result["linked"]
     created = result["created"]
+    reissued = result.get("reissued", 0)
     skipped = result["skipped"]
     errors = result["errors"]
+    credentials = result.get("credentials") or []
+    emails_sent = result.get("emails_sent") or 0
+    parents_emailed = result.get("parents_emailed") or 0
     msg = (
         f"Parent provisioning complete: {linked} link(s), {created} new account(s), "
-        f"{skipped} student(s) skipped."
+        f"{reissued} temporary password(s) re-issued, {skipped} student(s) skipped."
     )
+    if credentials:
+        msg += f" {len(credentials)} login(s) ready."
+    if parents_emailed:
+        msg += f" Emailed {parents_emailed} parent(s) their own login."
+    elif credentials:
+        msg += " Could not email parents (check mail config or parent emails on file)."
+    if emails_sent:
+        msg += f" Emailed {emails_sent} school admin recipient(s)."
+    elif credentials:
+        msg += " Could not email school admins (check mail config or admin emails on file)."
+
     if _parents_wants_json():
         return jsonify(
             {
@@ -251,8 +323,25 @@ def provision_all_parent_logins():
                 "message": msg,
                 "linked": linked,
                 "created": created,
+                "reissued": reissued,
                 "skipped": skipped,
                 "errors": errors[:5],
+                "credentials": [
+                    {
+                        "slot": r.get("slot"),
+                        "student_id": r.get("student_id"),
+                        "student_name": r.get("student_name"),
+                        "parent_name": r.get("parent_name"),
+                        "email": r.get("email"),
+                        "username": r.get("username"),
+                        "portal_password": r.get("portal_password"),
+                        "created_new": bool(r.get("created_new")),
+                        "password_reissued": bool(r.get("password_reissued")),
+                    }
+                    for r in credentials
+                ],
+                "emails_sent": emails_sent,
+                "parents_emailed": parents_emailed,
             }
         )
 

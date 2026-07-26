@@ -386,6 +386,7 @@ def _category_cards(category_counts: dict[str, int]) -> list[dict[str, Any]]:
             "icon": "bi-pencil-square",
             "tone": "emerald",
             "student_count": category_counts.get("elementary", 0),
+            "under_development": False,
         },
         {
             "slug": "6-8",
@@ -395,20 +396,55 @@ def _category_cards(category_counts: dict[str, int]) -> list[dict[str, Any]]:
             "icon": "bi-mortarboard-fill",
             "tone": "amber",
             "student_count": category_counts.get("6-8", 0),
+            "under_development": False,
         },
         {
             "slug": "9-12",
             "title": "High school",
             "range_label": "9th – 12th grade",
-            "description": "Credit-based courses, GPA, and graduation requirements.",
+            "description": (
+                "High school uses transcripts instead of quarterly report cards. "
+                "This category is under development."
+            ),
             "icon": "bi-building",
             "tone": "sky",
             "student_count": category_counts.get("9-12", 0),
+            "under_development": True,
         },
     ]
     for card in cards:
         card["path"] = f"/management/report-cards/category/{card['slug']}"
     return cards
+
+
+def _transcript_section(category_counts: dict[str, int]) -> dict[str, Any]:
+    """K–8 transcripts (consolidation of yearly report-card finals). Under development."""
+    k8_count = category_counts.get("elementary", 0) + category_counts.get("6-8", 0)
+    return {
+        "title": "Transcripts",
+        "subtitle": (
+            "For students in middle school and below who have been with Clara Science Academy. "
+            "A transcript consolidates each school year’s final grades from their report cards."
+        ),
+        "under_development": True,
+        "items": [
+            {
+                "slug": "transcripts-k8",
+                "title": "K–8 student transcripts",
+                "range_label": "Kindergarten – 8th grade",
+                "description": (
+                    "One longitudinal record per student: final grade by subject for each year "
+                    "they’ve been enrolled. High school transcripts will live with the high school "
+                    "band when that workflow ships."
+                ),
+                "icon": "bi-file-earmark-text-fill",
+                "tone": "violet",
+                "student_count": k8_count,
+                "under_development": True,
+                "path": "/management/report-cards/transcripts",
+            }
+        ],
+    }
 
 
 def query_report_cards_hub() -> dict[str, Any]:
@@ -442,6 +478,7 @@ def query_report_cards_hub() -> dict[str, Any]:
             "school_years_count": SchoolYear.query.count(),
         },
         "categories": _category_cards(category_counts),
+        "transcripts": _transcript_section(category_counts),
         "recent_reports": [_serialize_report_card(rc) for rc in recent_cards],
         "urls": {
             "generate_form": "/management/report-cards/generate",
@@ -458,6 +495,25 @@ def query_report_cards_category(category_slug: str) -> dict[str, Any] | None:
     category = _resolve_report_card_category(category_slug)
     if category not in REPORT_CARD_CATEGORIES:
         return None
+    if category == "9-12":
+        return {
+            "under_development": True,
+            "category": {
+                "slug": "9-12",
+                "name": "High School (9th–12th)",
+                "short_name": "High school",
+                "icon": "building",
+                "grade_levels": REPORT_CARD_CATEGORIES["9-12"]["grades"],
+                "grade_displays": [
+                    _grade_display(g) for g in REPORT_CARD_CATEGORIES["9-12"]["grades"]
+                ],
+            },
+            "message": (
+                "High school students receive transcripts rather than quarterly report cards. "
+                "This area is under development."
+            ),
+            "urls": {"hub": "/management/report-cards"},
+        }
 
     category_info = REPORT_CARD_CATEGORIES[category]
     students = (

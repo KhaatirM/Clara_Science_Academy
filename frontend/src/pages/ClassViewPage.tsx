@@ -2,14 +2,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router-dom'
 import type { AssessmentToolSlug } from '../api/classTools'
 import { fetchClassDetail } from '../api/classes'
+import { AnnouncementComposeModal } from '../components/announcements/AnnouncementComposeModal'
 import { ClassAnalyticsModal } from '../components/classes/ClassAnalyticsModal'
 import { ClassAssessmentToolModal } from '../components/classes/ClassAssessmentToolModal'
 import { ClassDeadlineRemindersModal } from '../components/classes/ClassDeadlineRemindersModal'
 import { ClassManagementPanel } from '../components/classes/ClassManagementPanel'
+import { ClassSyllabusModal } from '../components/classes/ClassSyllabusModal'
 import { ClassSubpageShell } from '../components/classes/ClassSubpageShell'
 import { ClassWorkflowNav } from '../components/classes/ClassWorkflowNav'
 import type { ManagementOutletContext } from '../types/layout'
-import type { ClassDetailResponse, ClassManagementLinks, StudentBrief } from '../types/classDetail'
+import type {
+  ClassAnnouncementBrief,
+  ClassDetailResponse,
+  ClassManagementLinks,
+  StudentBrief,
+} from '../types/classDetail'
 
 function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -70,6 +77,8 @@ export function ClassViewPage() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [deadlineRemindersOpen, setDeadlineRemindersOpen] = useState(false)
   const [assessmentTool, setAssessmentTool] = useState<AssessmentToolSlug | null>(null)
+  const [announceOpen, setAnnounceOpen] = useState(false)
+  const [syllabusOpen, setSyllabusOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -105,7 +114,7 @@ export function ClassViewPage() {
   const pendingAssistantCount = data?.pending_assistant_count ?? 0
   const studentAssistantCount = data?.student_assistant_count ?? 0
   const hasStudentAssistants = studentAssistantCount > 0
-  const features = data?.features ?? { grade1_standards: false, grade3_standards: false }
+  const features = data?.features ?? { grade1_standards: false, grade3_standards: false, syllabus: false }
   const links: Partial<ClassManagementLinks> = data?.links ?? {}
 
   const cls = data?.class
@@ -220,10 +229,67 @@ export function ClassViewPage() {
               onOpenAnalytics={() => setAnalyticsOpen(true)}
               onOpenDeadlineReminders={() => setDeadlineRemindersOpen(true)}
               onOpenAssessmentTool={(tool) => setAssessmentTool(tool)}
+              onOpenAnnouncements={() => setAnnounceOpen(true)}
+              onOpenSyllabus={() => setSyllabusOpen(true)}
             />
           </div>
 
+          <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-100 bg-gradient-to-r from-teal-100/80 to-teal-50/50 px-5 py-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100 text-lg text-teal-800">
+                  <i className="bi bi-megaphone-fill" aria-hidden />
+                </span>
+                <div>
+                  <h2 className="text-base font-bold text-hub-text">Announcements</h2>
+                  <p className="text-sm text-hub-muted">Recent class and school-wide messages</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnnounceOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+              >
+                <i className="bi bi-plus-lg" aria-hidden />
+                New announcement
+              </button>
+            </div>
+            <div className="max-h-[22rem] space-y-2 overflow-y-auto p-4">
+              {(data.announcements || []).length ? (
+                (data.announcements as ClassAnnouncementBrief[]).map((ann) => (
+                  <article
+                    key={ann.id}
+                    className={`rounded-xl border px-3 py-3 ${
+                      ann.is_important
+                        ? 'border-amber-200 bg-amber-50'
+                        : 'border-slate-100 bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3 className="mb-0 text-sm font-bold text-hub-text">{ann.title}</h3>
+                      <small className="text-hub-muted">{ann.timestamp_display}</small>
+                    </div>
+                    <p className="mb-2 mt-1 text-sm text-hub-muted">{ann.message_preview}</p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-slate-700">
+                        {ann.target_label}
+                      </span>
+                      {ann.sender_name ? (
+                        <span className="text-hub-muted">{ann.sender_name}</span>
+                      ) : null}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="mb-0 py-8 text-center text-sm text-hub-muted">
+                  No announcements yet. Use Quick Actions or New announcement to send one.
+                </p>
+              )}
+            </div>
+          </section>
+
           <ClassAnalyticsModal open={analyticsOpen} classId={id} onClose={() => setAnalyticsOpen(false)} />
+          <ClassSyllabusModal open={syllabusOpen} classId={id} onClose={() => setSyllabusOpen(false)} />
           <ClassDeadlineRemindersModal
             open={deadlineRemindersOpen}
             classId={id}
@@ -237,6 +303,13 @@ export function ClassViewPage() {
               onClose={() => setAssessmentTool(null)}
             />
           ) : null}
+          <AnnouncementComposeModal
+            open={announceOpen}
+            classId={id}
+            className={cls.name}
+            onClose={() => setAnnounceOpen(false)}
+            onSent={() => void load()}
+          />
         </>
       ) : null}
     </ClassSubpageShell>

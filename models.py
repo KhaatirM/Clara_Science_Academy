@@ -558,6 +558,23 @@ class Class(db.Model):
                                         backref='substitute_classes',
                                         lazy='dynamic')
 
+    syllabus = db.relationship(
+        'ClassSyllabus',
+        back_populates='class_info',
+        uselist=False,
+        cascade='all, delete-orphan',
+    )
+    notes_folders = db.relationship(
+        'ClassNotesFolder',
+        back_populates='class_info',
+        cascade='all, delete-orphan',
+    )
+    notes_items = db.relationship(
+        'ClassNotesItem',
+        back_populates='class_info',
+        cascade='all, delete-orphan',
+    )
+
     def get_grade_levels(self):
         """Return grade levels as a list of integers"""
         # Handle case where column might not exist yet
@@ -3230,4 +3247,83 @@ class SchoolYearClosureEvent(db.Model):
 
     def __repr__(self):
         return f"SchoolYearClosureEvent({self.event_type}, closure={self.closure_id})"
+
+
+class ClassSyllabus(db.Model):
+    """Uploaded class syllabus with extracted on-page outline."""
+
+    __tablename__ = 'class_syllabus'
+
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False, unique=True, index=True)
+    original_filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False)
+    relative_path = db.Column(db.String(500), nullable=False)  # e.g. syllabi/class_12_....pdf
+    content_type = db.Column(db.String(120), nullable=True)
+    file_size = db.Column(db.Integer, nullable=True)
+    outline_json = db.Column(db.Text, nullable=True)  # JSON: {sections:[{title,level,blocks:[{type,text}]}]}
+    plain_text = db.Column(db.Text, nullable=True)
+    uploaded_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    class_info = db.relationship('Class', back_populates='syllabus')
+    uploaded_by = db.relationship('User', foreign_keys=[uploaded_by_user_id])
+
+    def __repr__(self):
+        return f"ClassSyllabus(class_id={self.class_id}, file={self.original_filename})"
+
+
+class ClassNotesFolder(db.Model):
+    """Teacher-created unit/folder inside class notes."""
+
+    __tablename__ = 'class_notes_folder'
+
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    class_info = db.relationship('Class', back_populates='notes_folders')
+    created_by = db.relationship('User', foreign_keys=[created_by_user_id])
+    items = db.relationship(
+        'ClassNotesItem',
+        back_populates='folder',
+        cascade='all, delete-orphan',
+    )
+
+    def __repr__(self):
+        return f"ClassNotesFolder(id={self.id}, class_id={self.class_id}, name={self.name!r})"
+
+
+class ClassNotesItem(db.Model):
+    """A file in class notes (root-level or inside a folder/unit)."""
+
+    __tablename__ = 'class_notes_item'
+
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False, index=True)
+    folder_id = db.Column(db.Integer, db.ForeignKey('class_notes_folder.id'), nullable=True, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False)
+    relative_path = db.Column(db.String(500), nullable=False)
+    content_type = db.Column(db.String(120), nullable=True)
+    file_size = db.Column(db.Integer, nullable=True)
+    media_kind = db.Column(db.String(32), nullable=False, default='document')  # document|image|video|other
+    duration_seconds = db.Column(db.Float, nullable=True)  # videos only
+    uploaded_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    class_info = db.relationship('Class', back_populates='notes_items')
+    folder = db.relationship('ClassNotesFolder', back_populates='items')
+    uploaded_by = db.relationship('User', foreign_keys=[uploaded_by_user_id])
+
+    def __repr__(self):
+        return f"ClassNotesItem(id={self.id}, class_id={self.class_id}, file={self.original_filename})"
 

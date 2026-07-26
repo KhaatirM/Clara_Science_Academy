@@ -2,8 +2,10 @@ import { NavLink, useLocation } from 'react-router-dom'
 
 import { getSidebarNav } from '../../config/appNav'
 import {
+  isParentShellUser,
   isStudentShellUser,
   isTeacherShellUser,
+  isTechShellUser,
   navItemHref,
   navItemLabel,
   type NavItem,
@@ -43,7 +45,9 @@ function NavRow({
         end={
           item.reactTo === '/management' ||
           item.reactTo === '/teacher' ||
-          item.reactTo === '/student'
+          item.reactTo === '/student' ||
+          item.reactTo === '/parent' ||
+          item.reactTo === '/tech'
         }
         title={collapsed ? label : undefined}
         className={({ isActive }) =>
@@ -101,7 +105,9 @@ export function Sidebar({ user, schoolTimezone }: SidebarProps) {
   const items = getSidebarNav(user)
   const teacherShell = isTeacherShellUser(user)
   const studentShell = isStudentShellUser(user)
-  const showUsername = !teacherShell && !studentShell
+  const parentShell = isParentShellUser(user)
+  const techShell = isTechShellUser(user)
+  const showUsername = !teacherShell && !studentShell && !parentShell && !techShell
 
   return (
     <>
@@ -147,7 +153,9 @@ export function Sidebar({ user, schoolTimezone }: SidebarProps) {
               collapsed={collapsed}
               isReactActive={Boolean(
                 item.reactTo &&
-                  (item.reactTo === '/teacher' || item.reactTo === '/student'
+                  (item.reactTo === '/teacher' ||
+                  item.reactTo === '/student' ||
+                  item.reactTo === '/tech'
                     ? location.pathname === item.reactTo || location.pathname === `${item.reactTo}/`
                     : location.pathname === item.reactTo ||
                       location.pathname.startsWith(`${item.reactTo}/`)),
@@ -157,6 +165,19 @@ export function Sidebar({ user, schoolTimezone }: SidebarProps) {
         </nav>
 
         <div className={`spa-sidebar-footer shrink-0 ${collapsed ? 'p-2' : 'p-3'}`}>
+          {user.tech_entry && user.management_entry ? (
+            <a
+              href="/switch-staff-dashboard"
+              title={collapsed ? 'Switch dashboard' : undefined}
+              className={[
+                'mb-2 flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 font-semibold text-white transition hover:bg-white/20',
+                collapsed ? 'px-2 py-2.5 text-base' : 'w-full px-3 py-2.5 text-sm',
+              ].join(' ')}
+            >
+              <i className="bi bi-arrow-left-right" aria-hidden />
+              {!collapsed ? <span>Switch dashboard</span> : null}
+            </a>
+          ) : null}
           <a
             href="/logout"
             title={collapsed ? 'Logout' : undefined}

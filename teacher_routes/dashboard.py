@@ -1914,10 +1914,11 @@ def view_student_details_data(student_id):
         missing_assignments_by_class = {}
         class_gpa_breakdown = {}
 
-        # Get all non-voided grades for the student (only from teacher's classes)
+        # Get all non-voided grades for the student (only from teacher's active-year classes)
         all_grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student.id,
             Assignment.class_id.in_(teacher_class_ids),
+            Assignment.school_year_id == active_school_year.id,
             Assignment.status != 'Voided',
             db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
         ).all()
@@ -1935,9 +1936,10 @@ def view_student_details_data(student_id):
             build_missing_assignments_from_grades(student, all_grades)
         )
 
-        # Add group assignments for this student's classes (teacher's classes only)
+        # Add group assignments for this student's classes (teacher's active-year classes only)
         group_assignments = GroupAssignment.query.filter(
             GroupAssignment.class_id.in_(teacher_class_ids),
+            GroupAssignment.school_year_id == active_school_year.id,
             GroupAssignment.status != 'Voided',
             GroupAssignment.due_date.isnot(None)
         ).all()
@@ -2141,6 +2143,12 @@ def view_student_details_data(student_id):
 @teacher_required
 def student_grades_report(student_id):
     """View printable student grades report."""
+    from utils.spa_teacher_urls import spa_teacher_student_grades_redirect
+
+    spa_redirect = spa_teacher_student_grades_redirect(student_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     from models import GroupAssignment, GroupGrade, AcademicPeriod, QuarterGrade
     from utils.quarter_grade_calculator import get_quarter_grades_for_report
     
@@ -2312,6 +2320,12 @@ def student_grades_report_pdf(student_id):
 @teacher_required
 def student_attendance_report(student_id):
     """View printable student attendance report."""
+    from utils.spa_teacher_urls import spa_teacher_student_attendance_redirect
+
+    spa_redirect = spa_teacher_student_attendance_redirect(student_id)
+    if spa_redirect is not None:
+        return spa_redirect
+
     from dateutil.relativedelta import relativedelta
     
     student = Student.query.get_or_404(student_id)

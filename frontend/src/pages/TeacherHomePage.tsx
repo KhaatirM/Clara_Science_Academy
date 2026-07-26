@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { fetchTeacherDashboardHome } from '../api/teacherDashboard'
+import { AnnouncementComposeModal } from '../components/announcements/AnnouncementComposeModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 import type { TeacherDashboardFeedItem, TeacherDashboardHomeResponse } from '../types/teacherDashboard'
@@ -48,6 +49,7 @@ const QUICK_ACTIONS = [
   { to: '/teacher/assignments-and-grades', icon: 'bi-journal-check', label: 'Assignments & Grades' },
   { to: '/teacher/attendance', icon: 'bi-calendar-check-fill', label: 'Attendance' },
   { to: '/teacher/students', icon: 'bi-people-fill', label: 'Students' },
+  { to: 'modal:announcement', icon: 'bi-megaphone-fill', label: 'Announcement' },
 ] as const
 
 export function TeacherHomePage() {
@@ -87,6 +89,7 @@ function TeacherHomeBody({
   data: TeacherDashboardHomeResponse
   username: string
 }) {
+  const [announceOpen, setAnnounceOpen] = useState(false)
   const st = data.stats
   const ms = data.monthly_stats
   const ws = data.weekly_stats
@@ -202,12 +205,24 @@ function TeacherHomeBody({
             <i className="bi bi-lightning-charge-fill" aria-hidden /> Quick actions
           </h2>
           <div className="mgmt-home-action-grid mgmt-home-action-grid--teacher">
-            {QUICK_ACTIONS.map((action) => (
-              <Link key={action.to} to={action.to} className="mgmt-home-action">
-                <i className={`bi ${action.icon}`} aria-hidden />
-                <span>{action.label}</span>
-              </Link>
-            ))}
+            {QUICK_ACTIONS.map((action) =>
+              action.to === 'modal:announcement' ? (
+                <button
+                  key={action.to}
+                  type="button"
+                  className="mgmt-home-action"
+                  onClick={() => setAnnounceOpen(true)}
+                >
+                  <i className={`bi ${action.icon}`} aria-hidden />
+                  <span>{action.label}</span>
+                </button>
+              ) : (
+                <Link key={action.to} to={action.to} className="mgmt-home-action">
+                  <i className={`bi ${action.icon}`} aria-hidden />
+                  <span>{action.label}</span>
+                </Link>
+              ),
+            )}
           </div>
         </section>
       </div>
@@ -231,6 +246,8 @@ function TeacherHomeBody({
           mode="activity"
         />
       </div>
+
+      <AnnouncementComposeModal open={announceOpen} onClose={() => setAnnounceOpen(false)} />
     </>
   )
 }

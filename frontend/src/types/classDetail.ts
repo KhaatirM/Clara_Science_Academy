@@ -45,6 +45,8 @@ export interface ClassManagementLinks {
   assignments_and_grades: string
   manage_groups: string
   deadline_reminders: string
+  syllabus?: string
+  class_notes?: string
   class_assignments?: string
   take_attendance?: string
 }
@@ -69,9 +71,22 @@ export interface ClassDetailResponse {
   }
   pending_assistant_count: number
   student_assistant_count: number
-  features: { grade1_standards: boolean; grade3_standards: boolean }
+  features: { grade1_standards: boolean; grade3_standards: boolean; syllabus?: boolean }
   links: ClassManagementLinks
   meta: ClassMeta
+  announcements?: ClassAnnouncementBrief[]
+}
+
+export interface ClassAnnouncementBrief {
+  id: number
+  title: string
+  message: string
+  message_preview: string
+  timestamp: string | null
+  timestamp_display: string
+  target_label: string
+  is_important: boolean
+  sender_name: string
 }
 
 export interface TeacherOption {

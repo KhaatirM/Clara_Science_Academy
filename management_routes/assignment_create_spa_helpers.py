@@ -159,25 +159,73 @@ def query_discussion_assignment_form(
     class_id: int | None = None,
     *,
     scope: CreateScope = "management",
+    edit_id: int | None = None,
 ) -> dict[str, Any]:
+    from models import Assignment
+    from teacher_routes.assignment_utils import parse_discussion_description
+
+    assignment = None
+    if edit_id:
+        assignment = Assignment.query.get(edit_id)
+        if not assignment or assignment.assignment_type != "discussion":
+            raise ValueError("Discussion assignment not found")
+        class_id = class_id or assignment.class_id
+
     class_obj = Class.query.get(class_id) if class_id else None
     urls = _back_urls(class_id, scope)
 
     if scope == "teacher":
         post_url = url_for("teacher.create_discussion_assignment")
+        if edit_id:
+            post_url = f"{post_url}?edit={edit_id}"
     else:
         post_url = url_for("management.create_discussion_assignment")
+        if edit_id:
+            post_url = f"{post_url}?edit={edit_id}"
+
+    defaults = {
+        "min_initial_posts": 1,
+        "min_replies": 2,
+        "total_points": 100,
+    }
+    edit: dict[str, Any] | None = None
+    if assignment:
+        prompt, instructions, rubric, min_initial_posts, min_replies = parse_discussion_description(
+            assignment.description or ""
+        )
+        defaults = {
+            "min_initial_posts": min_initial_posts or 1,
+            "min_replies": min_replies or 2,
+            "total_points": int(assignment.total_points or 100),
+        }
+        edit = {
+            "id": assignment.id,
+            "title": assignment.title or "",
+            "class_id": assignment.class_id,
+            "discussion_prompt": prompt or "",
+            "description": instructions or "",
+            "min_initial_posts": min_initial_posts or 1,
+            "min_replies": min_replies or 2,
+            "require_peer_response": bool(getattr(assignment, "require_peer_response", True)),
+            "allow_student_threads": bool(getattr(assignment, "allow_student_threads", True)),
+            "allow_student_edit_posts": bool(getattr(assignment, "allow_student_edit_posts", False)),
+            "total_points": float(assignment.total_points or 100),
+            "quarter": str(assignment.quarter or get_current_quarter()),
+            "assignment_context": getattr(assignment, "assignment_context", None) or "homework",
+            "due_date": _dt_local(assignment.due_date),
+            "open_date": _dt_local(getattr(assignment, "open_date", None)),
+            "close_date": _dt_local(getattr(assignment, "close_date", None)),
+            "use_rubric": bool(rubric),
+            "rubric_criteria": rubric or "",
+        }
 
     return {
         "current_quarter": get_current_quarter(),
         "classes": _classes_payload(scope),
         "preselected_class": _class_brief(class_obj),
         "post_url": post_url,
-        "defaults": {
-            "min_initial_posts": 1,
-            "min_replies": 2,
-            "total_points": 100,
-        },
+        "defaults": defaults,
+        "edit": edit,
         **urls,
     }
 
@@ -186,7 +234,18 @@ def query_quiz_assignment_form(
     class_id: int | None = None,
     *,
     scope: CreateScope = "management",
+    edit_id: int | None = None,
 ) -> dict[str, Any]:
+    from management_routes.assignments import _build_quiz_data_for_edit
+    from models import Assignment
+
+    assignment = None
+    if edit_id:
+        assignment = Assignment.query.get(edit_id)
+        if not assignment or assignment.assignment_type != "quiz":
+            raise ValueError("Quiz assignment not found")
+        class_id = class_id or assignment.class_id
+
     class_obj = Class.query.get(class_id) if class_id else None
     urls = _back_urls(class_id, scope)
 
@@ -198,6 +257,40 @@ def query_quiz_assignment_form(
         post_url = url_for("management.create_quiz_assignment")
         question_banks_url = url_for("management.assignments.question_banks_json")
         save_to_bank_url = url_for("management.assignments.save_to_bank")
+
+    edit: dict[str, Any] | None = None
+    if assignment:
+        quiz_data = _build_quiz_data_for_edit(assignment)
+        edit = {
+            "id": assignment.id,
+            "title": assignment.title or "",
+            "class_id": assignment.class_id,
+            "description": assignment.description or "",
+            "due_date": _dt_local(assignment.due_date),
+            "quarter": str(assignment.quarter or get_current_quarter()),
+            "assignment_context": getattr(assignment, "assignment_context", None) or "homework",
+            "assignment_category": getattr(assignment, "assignment_category", None) or "Quizzes",
+            "category_weight": float(getattr(assignment, "category_weight", 0) or 0),
+            "allow_extra_credit": bool(getattr(assignment, "allow_extra_credit", False)),
+            "max_extra_credit_points": float(getattr(assignment, "max_extra_credit_points", 0) or 0),
+            "open_date": _dt_local(getattr(assignment, "open_date", None)),
+            "close_date": _dt_local(getattr(assignment, "close_date", None)),
+            "time_limit": (
+                str(int(assignment.time_limit_minutes))
+                if getattr(assignment, "time_limit_minutes", None)
+                else ""
+            ),
+            "attempts": str(int(getattr(assignment, "max_attempts", None) or 1)),
+            "shuffle_questions": bool(getattr(assignment, "shuffle_questions", False)),
+            "show_correct_answers": bool(getattr(assignment, "show_correct_answers", True)),
+            "link_google_form": bool(getattr(assignment, "google_form_linked", False)),
+            "google_form_url": getattr(assignment, "google_form_url", None) or "",
+            "allow_save_and_continue": bool(getattr(assignment, "allow_save_and_continue", True)),
+            "max_save_attempts": str(int(getattr(assignment, "max_save_attempts", None) or 10)),
+            "save_timeout_minutes": str(int(getattr(assignment, "save_timeout_minutes", None) or 30)),
+            "blocks": quiz_data.get("blocks") or [],
+            "is_draft": bool(getattr(assignment, "quiz_authoring_is_draft", False)),
+        }
 
     return {
         "current_quarter": get_current_quarter(),
@@ -212,5 +305,16 @@ def query_quiz_assignment_form(
             {"value": "short_answer", "label": "Short answer"},
             {"value": "essay", "label": "Long essay"},
         ],
+        "edit": edit,
         **urls,
     }
+
+
+def _dt_local(value: Any) -> str:
+    if not value:
+        return ""
+    try:
+        return value.strftime("%Y-%m-%dT%H:%M")
+    except Exception:
+        return ""
+

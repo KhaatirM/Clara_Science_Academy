@@ -31,6 +31,13 @@
   justify-content: space-between;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse 70% 120% at 0% 0%, color-mix(in srgb, var(--mgmt-stu-accent) 18%, transparent), transparent 55%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
+  border: 1px solid color-mix(in srgb, var(--mgmt-stu-accent) 18%, rgba(148, 163, 184, 0.35));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 .mgmt-stu-eyebrow {
   font-size: 0.72rem;
@@ -107,19 +114,38 @@
   background: linear-gradient(135deg, var(--mgmt-stu-accent), var(--mgmt-stu-accent-deep));
   border: 1px solid transparent;
   box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+  padding: 0.55rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 .mgmt-stu-btn--primary:hover {
   color: #fff;
   filter: brightness(1.05);
 }
 
-/* Scoped Bootstrap Reboot sets button { border-radius: 0 } — restore pill buttons */
+/* Scoped Bootstrap Reboot sets button { border-radius: 0 } and link colors — restore pills */
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn,
 .legacy-mgmt-bootstrap .mgmt-stu button.mgmt-stu-btn {
   border-radius: 999px;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
   font-family: inherit;
+  text-decoration: none !important;
+}
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn--primary,
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn--primary:hover,
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn--primary:focus,
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn--primary:visited {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--mgmt-stu-accent), var(--mgmt-stu-accent-deep)) !important;
+  border: 1px solid transparent !important;
+  text-decoration: none !important;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--mgmt-stu-accent) 35%, transparent);
+}
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn--ghost,
+.legacy-mgmt-bootstrap .mgmt-stu a.mgmt-stu-btn--ghost:hover {
+  text-decoration: none !important;
 }
 
 .mgmt-stu-insights {
@@ -462,44 +488,114 @@ STUDENTS TAB STYLES ==================== */
     }
 
 .mgmt-stu-content .students-table-header {
-        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
-        padding: 1.25rem 1.5rem;
+        background:
+          radial-gradient(ellipse 80% 120% at 100% 0%, rgba(255, 255, 255, 0.22), transparent 55%),
+          linear-gradient(135deg, var(--mgmt-stu-accent-deep, #0f766e) 0%, var(--mgmt-stu-accent, #0d9488) 55%, #14b8a6 100%);
+        padding: 1.35rem 1.5rem 1.25rem;
+        display: block;
+        text-align: left;
+    }
+
+.mgmt-stu-content .students-table-header-main {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
         flex-wrap: wrap;
-        gap: 1rem;
-        text-align: center;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1.25rem;
+    }
+
+.mgmt-stu-content .students-table-header-copy {
+        min-width: min(100%, 18rem);
+        flex: 1;
+    }
+
+.mgmt-stu-content .students-table-header-eyebrow {
+        margin: 0 0 0.25rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.72);
     }
 
 .mgmt-stu-content .students-table-header h5 {
         margin: 0;
         color: white;
+        font-weight: 800;
+        font-size: 1.35rem;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+.mgmt-stu-content .students-table-header-hint {
+        margin-top: 0.45rem;
+        max-width: 36rem;
+        font-size: 0.84rem;
+        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.88);
+    }
+
+.mgmt-stu-content .students-table-header-hint strong {
+        color: #fff;
         font-weight: 700;
+    }
+
+.mgmt-stu-content .students-table-header-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-top: 0.75rem;
+    }
+
+.mgmt-stu-content .students-table-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.28rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+.mgmt-stu-content .students-table-badge--page {
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--mgmt-stu-accent-deep, #0f766e);
+    }
+
+.mgmt-stu-content .students-table-badge--match {
+        background: rgba(15, 23, 42, 0.22);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.28);
     }
 
 .mgmt-stu-content .students-table-view-toggle {
         display: flex;
-        gap: 0.5rem;
-        justify-content: center;
+        gap: 0.45rem;
+        justify-content: flex-end;
         flex-wrap: wrap;
+        padding: 0.35rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.18);
     }
 
 .mgmt-stu-content .btn-students-view {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        border: 2px solid white;
-        padding: 0.375rem 1rem;
-        border-radius: 8px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.92);
+        border: 1px solid transparent;
+        padding: 0.4rem 0.95rem;
+        border-radius: 999px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
     }
 
     .btn-students-view:hover,
 .mgmt-stu-content .btn-students-view.active {
         background: white;
-        color: #0d9488;
+        color: var(--mgmt-stu-accent-deep, #0d9488);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
     }
 
 .mgmt-stu-content .students-table-body {
@@ -756,9 +852,21 @@ STUDENTS TAB STYLES ==================== */
         }
         
 .mgmt-stu-content .students-table-header {
+            text-align: left;
+        }
+
+.mgmt-stu-content .students-table-header-main {
             flex-direction: column;
-            align-items: center;
-            text-align: center;
+            align-items: stretch;
+        }
+
+.mgmt-stu-content .students-table-view-toggle {
+            justify-content: stretch;
+        }
+
+.mgmt-stu-content .students-table-view-toggle .btn-students-view {
+            flex: 1;
+            justify-content: center;
         }
     }
 

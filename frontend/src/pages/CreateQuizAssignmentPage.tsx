@@ -28,6 +28,8 @@ export function CreateQuizAssignmentPage() {
   const [searchParams] = useSearchParams()
   const classIdParam = searchParams.get('class_id')
   const classId = classIdParam && /^\d+$/.test(classIdParam) ? Number(classIdParam) : null
+  const editParam = searchParams.get('edit')
+  const editId = editParam && /^\d+$/.test(editParam) ? Number(editParam) : null
 
   const [meta, setMeta] = useState<QuizAssignmentFormMeta | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,23 +62,81 @@ export function CreateQuizAssignmentPage() {
   const [blocks, setBlocks] = useState<QuizBlock[]>([
     { kind: 'question', question: createEmptyQuestion('1') },
   ])
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchQuizAssignmentForm(classId, scope)
+      const data = await fetchQuizAssignmentForm(classId, scope, editId)
       setMeta(data)
       setQuarter(data.current_quarter || '1')
       if (data.preselected_class) {
         setSelectedClassId(data.preselected_class.id)
+      }
+      if (data.edit) {
+        const e = data.edit
+        setEditingId(e.id)
+        setTitle(e.title)
+        setSelectedClassId(e.class_id)
+        setDescription(e.description || '')
+        setDueDate(e.due_date || '')
+        setQuarter(e.quarter || data.current_quarter || '1')
+        setAssignmentContext(e.assignment_context || 'homework')
+        setCategory(e.assignment_category || 'Quizzes')
+        setCategoryWeight(String(e.category_weight ?? 0))
+        setAllowExtraCredit(Boolean(e.allow_extra_credit))
+        setMaxExtraCredit(String(e.max_extra_credit_points ?? 0))
+        setOpenDate(e.open_date || '')
+        setCloseDate(e.close_date || '')
+        setTimeLimit(e.time_limit || '')
+        setAttempts(e.attempts || '1')
+        setShuffleQuestions(Boolean(e.shuffle_questions))
+        setShowCorrectAnswers(Boolean(e.show_correct_answers))
+        setLinkGoogleForm(Boolean(e.link_google_form))
+        setGoogleFormUrl(e.google_form_url || '')
+        setAllowSaveAndContinue(Boolean(e.allow_save_and_continue))
+        setMaxSaveAttempts(e.max_save_attempts || '10')
+        setSaveTimeoutMinutes(e.save_timeout_minutes || '30')
+        if (e.blocks?.length) {
+          setBlocks(
+            e.blocks.map((block, index) => {
+              if (block.type === 'section') {
+                return { kind: 'section' as const, id: `sec_${index}`, title: block.title || 'New Section' }
+              }
+              const q = createEmptyQuestion(`q_${index}`)
+              q.questionText = block.question_text || ''
+              const allowed: Array<typeof q.questionType> = [
+                'multiple_choice',
+                'true_false',
+                'short_answer',
+                'essay',
+              ]
+              q.questionType = allowed.includes(block.question_type as typeof q.questionType)
+                ? (block.question_type as typeof q.questionType)
+                : 'multiple_choice'
+              q.points = String(block.points ?? 1)
+              if (q.questionType === 'multiple_choice' && block.options?.length) {
+                const opts = block.options.map((o) => o.option_text)
+                while (opts.length < 4) opts.push('')
+                q.options = opts.slice(0, 8)
+                const correctIdx = block.options.findIndex((o) => o.is_correct)
+                q.correctIndex = String(correctIdx >= 0 ? correctIdx : 0)
+              } else if (q.questionType === 'true_false' && block.options?.length) {
+                const trueOpt = block.options.find((o) => o.option_text.toLowerCase() === 'true')
+                q.correctTrueFalse = trueOpt?.is_correct ? 'true' : 'false'
+              }
+              return { kind: 'question' as const, question: q }
+            }),
+          )
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load form')
     } finally {
       setLoading(false)
     }
-  }, [classId, scope])
+  }, [classId, scope, editId])
 
   useEffect(() => {
     void load()
@@ -94,6 +154,7 @@ export function CreateQuizAssignmentPage() {
     saveActionRef.current = saveAction
     try {
       const form = new FormData()
+      if (editingId) form.append('assignment_id', String(editingId))
       form.append('quiz_save_action', saveAction)
       form.append('title', title.trim())
       form.append('class_id', String(selectedClassId))
@@ -148,8 +209,12 @@ export function CreateQuizAssignmentPage() {
   return (
     <div className="mx-auto max-w-[1280px] px-1 pb-10">
       <AssignmentCreateHeader
-        title="Create Quiz Assignment"
-        subtitle="Build auto-graded quizzes with multiple question types"
+        title={editingId ? 'Edit Quiz Assignment' : 'Create Quiz Assignment'}
+        subtitle={
+          editingId
+            ? 'Update quiz settings and questions'
+            : 'Build auto-graded quizzes with multiple question types'
+        }
         icon="bi-ui-checks-grid"
         backTo={backTo}
         backLabel="Back to types"

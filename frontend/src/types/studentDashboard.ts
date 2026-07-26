@@ -69,8 +69,11 @@ export interface StudentAssignmentCard {
 
 export interface StudentNotification {
   id: number
+  type?: string
   title: string
   message: string
+  preview?: string
+  is_long?: boolean
   timestamp: string | null
   timestamp_display: string
 }

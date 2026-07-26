@@ -176,7 +176,7 @@ export default function ReportCardsCategoryPage() {
   }, [load])
 
   const visibleStudents = useMemo(() => {
-    if (!data) return []
+    if (!data?.students) return []
     const q = search.trim().toLowerCase()
     let result = data.students.filter((student) => {
       if (gradeFilter !== null && student.grade_level !== gradeFilter) return false
@@ -213,6 +213,43 @@ export default function ReportCardsCategoryPage() {
     )
   }
 
+  if (data.under_development) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <span className="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            Under development
+          </span>
+          <h1 className="mt-4 text-2xl font-extrabold text-hub-text">{data.category.name}</h1>
+          <p className="mt-3 text-sm text-hub-muted">
+            {data.message ||
+              'This report card category is not available yet.'}
+          </p>
+          <Link
+            to={data.urls.hub || '/management/report-cards'}
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800"
+          >
+            <i className="bi bi-arrow-left" aria-hidden />
+            Back to report cards
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data.stats || !data.students || !data.warnings) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <p className="text-rose-700">Category roster is incomplete.</p>
+        <Link to="/management/report-cards" className="mt-4 inline-block text-violet-700 underline">
+          Back to report cards
+        </Link>
+      </div>
+    )
+  }
+
+  const { stats, students, warnings } = data
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-1 pb-10 pt-2">
       {reportSaved ? (
@@ -222,12 +259,12 @@ export default function ReportCardsCategoryPage() {
         </div>
       ) : null}
 
-      {(data.warnings.unfinalized_grades.length > 0) && (
+      {warnings.unfinalized_grades.length > 0 ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Some grade-level standards may still be unfinalized (grades{' '}
-          {data.warnings.unfinalized_grades.join(', ')}). Review before generating official cards.
+          {warnings.unfinalized_grades.join(', ')}). Review before generating official cards.
         </div>
-      )}
+      ) : null}
 
       <header className="rounded-3xl border border-white/80 bg-gradient-to-br from-violet-900 via-violet-800 to-indigo-900 p-6 text-white shadow-lg md:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -296,7 +333,7 @@ export default function ReportCardsCategoryPage() {
         </div>
       ) : null}
 
-      {data.students.length ? (
+      {students.length ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
             <i className="bi bi-funnel-fill text-violet-700" aria-hidden />
@@ -401,10 +438,10 @@ export default function ReportCardsCategoryPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { value: data.stats.total_students, label: 'Students' },
-          { value: data.stats.grade_levels, label: 'Grade levels' },
-          { value: data.stats.total_reports, label: 'Report cards on file' },
-          { value: data.stats.students_without_reports, label: 'Students without a card' },
+          { value: stats.total_students, label: 'Students' },
+          { value: stats.grade_levels, label: 'Grade levels' },
+          { value: stats.total_reports, label: 'Report cards on file' },
+          { value: stats.students_without_reports, label: 'Students without a card' },
         ].map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-white/90 bg-white/95 p-4 shadow-sm">
             <div className="text-2xl font-extrabold text-hub-text">{stat.value}</div>
@@ -413,7 +450,7 @@ export default function ReportCardsCategoryPage() {
         ))}
       </div>
 
-      {data.students.length ? (
+      {students.length ? (
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-hub-text">
@@ -421,7 +458,7 @@ export default function ReportCardsCategoryPage() {
               Roster
             </h2>
             <span className="text-sm text-hub-muted">
-              Showing <strong>{visibleStudents.length}</strong> of <strong>{data.stats.total_students}</strong>{' '}
+              Showing <strong>{visibleStudents.length}</strong> of <strong>{stats.total_students}</strong>{' '}
               students
             </span>
           </div>

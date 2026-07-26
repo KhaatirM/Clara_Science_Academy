@@ -47,6 +47,8 @@ export interface TeacherClassViewLinks {
   add_assignment: string
   take_attendance: string
   manage_groups: string
+  syllabus?: string
+  class_notes?: string
   assignments_and_grades: string
   group_assignments: string
   deadline_reminders: string

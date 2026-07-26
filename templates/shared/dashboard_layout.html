@@ -272,15 +272,10 @@
             </div>
             {% endif %}
 
-            <!-- Flash Messages -->
+            <!-- Flash messages → corner toasts (see app_feedback.js) -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show m-2 m-md-3" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
+                <script type="application/json" id="clara-flash-messages">{{ messages | tojson }}</script>
                 {% endif %}
             {% endwith %}
             {% block dashboard_content %}{% endblock %}
@@ -288,6 +283,22 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app_feedback.js') }}"></script>
+    <script>
+        (function () {
+            var el = document.getElementById('clara-flash-messages');
+            if (!el || typeof window.showAppToast !== 'function') return;
+            try {
+                var rows = JSON.parse(el.textContent || '[]');
+                if (!Array.isArray(rows)) return;
+                rows.forEach(function (row) {
+                    var category = (row && row[0]) || 'info';
+                    var message = (row && row[1]) || '';
+                    if (message) window.showAppToast(message, category);
+                });
+            } catch (e) { /* ignore */ }
+            el.remove();
+        })();
+    </script>
     <script>
         /** Match CSS: drawer only on narrow phones (≤575.98px). Scaled laptops stay on fixed rail. */
         function sidebarIsDrawerMode() {

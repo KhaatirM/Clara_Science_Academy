@@ -25,15 +25,15 @@ def react_spa_enabled() -> bool:
 
 
 def user_should_use_spa_management_shell() -> bool:
-    """Directors/admins use the React shell; permission-only staff stay on legacy pages."""
+    """Directors/admins and permission-only Administration staff use the React shell."""
     if not react_spa_enabled():
         return False
     try:
         from flask_login import current_user
-        from utils.user_roles import user_has_management_entry_access
+        from utils.user_roles import user_can_use_management_spa_shell
 
         return bool(
-            current_user.is_authenticated and user_has_management_entry_access(current_user)
+            current_user.is_authenticated and user_can_use_management_spa_shell(current_user)
         )
     except Exception:
         return False
@@ -89,36 +89,44 @@ def spa_add_assignment_redirect():
 
 
 def spa_create_discussion_redirect():
-    """Redirect legacy discussion create GET to the React SPA."""
+    """Redirect legacy discussion create/edit GET to the React SPA."""
     from flask import redirect, request
 
     if not user_should_use_spa_management_shell():
         return None
     if request.method != "GET" or request.args.get("legacy") == "1":
         return None
-    if request.args.get("edit"):
-        return None
     path = "/app/management/assignments/create/discussion"
+    params = []
     class_id = request.args.get("class_id", "").strip()
+    edit_id = request.args.get("edit", "").strip()
     if class_id.isdigit():
-        path = f"{path}?class_id={class_id}"
+        params.append(f"class_id={class_id}")
+    if edit_id.isdigit():
+        params.append(f"edit={edit_id}")
+    if params:
+        path = f"{path}?{'&'.join(params)}"
     return redirect(path)
 
 
 def spa_create_quiz_redirect():
-    """Redirect legacy quiz create GET to the React SPA (new quizzes only)."""
+    """Redirect legacy quiz create/edit GET to the React SPA."""
     from flask import redirect, request
 
     if not user_should_use_spa_management_shell():
         return None
     if request.method != "GET" or request.args.get("legacy") == "1":
         return None
-    if request.args.get("edit"):
-        return None
     path = "/app/management/assignments/create/quiz"
+    params = []
     class_id = request.args.get("class_id", "").strip()
+    edit_id = request.args.get("edit", "").strip()
     if class_id.isdigit():
-        path = f"{path}?class_id={class_id}"
+        params.append(f"class_id={class_id}")
+    if edit_id.isdigit():
+        params.append(f"edit={edit_id}")
+    if params:
+        path = f"{path}?{'&'.join(params)}"
     return redirect(path)
 
 

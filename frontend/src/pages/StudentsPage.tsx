@@ -320,7 +320,7 @@ export function StudentsPage() {
 
   if (loading && items.length === 0 && !error) {
     return (
-      <ManagementPageShell director={isDirector}>
+      <ManagementPageShell director={isDirector} shellClassName="spa-mgmt-shell--flush">
         <MgmtBootstrapRoot>
         <div className="mgmt-stu container-fluid px-0 px-md-1">
           <div className={shellClass}>
@@ -333,7 +333,7 @@ export function StudentsPage() {
   }
 
   return (
-    <ManagementPageShell director={isDirector}>
+    <ManagementPageShell director={isDirector} shellClassName="spa-mgmt-shell--flush">
       <MgmtBootstrapRoot>
       <div className="mgmt-stu container-fluid px-0 px-md-1">
         <div className={shellClass}>
@@ -358,7 +358,7 @@ export function StudentsPage() {
               )}
               {canAdminUi ? (
                 <Link to="/management/students/new" className="mgmt-stu-btn mgmt-stu-btn--primary">
-                  <i className="bi bi-plus-circle" aria-hidden="true" /> Add student
+                  <i className="bi bi-plus-lg" aria-hidden="true" /> Add student
                 </Link>
               ) : null}
               <button
@@ -639,40 +639,47 @@ export function StudentsPage() {
             ) : null}
 
             <div className="students-table-card">
-              {pagination.pages > 1 ? (
-                <p className="text-muted small px-3 pt-3 mb-0">
-                  <i className="bi bi-info-circle me-1" aria-hidden="true" />
-                  List and card views show <strong>{pagination.per_page}</strong> students per page.
-                  Grouped-by-grade uses only the current page.
-                </p>
-              ) : null}
-
               <div className="students-table-header">
-                <h5 className="mb-0">
-                  <i className="bi bi-table me-2" aria-hidden="true" />
-                  Student Records
-                  <span className="badge bg-primary ms-2">{stats.on_page} on this page</span>
-                  <span className="badge bg-secondary ms-1">{stats.total} matching</span>
-                </h5>
-                <div className="students-table-view-toggle">
-                  <ViewToggleButton
-                    active={recordsView === 'table'}
-                    icon="bi-table"
-                    label="Table"
-                    onClick={() => setRecordsView('table')}
-                  />
-                  <ViewToggleButton
-                    active={recordsView === 'cards'}
-                    icon="bi-grid-3x3-gap-fill"
-                    label="Cards"
-                    onClick={() => setRecordsView('cards')}
-                  />
-                  <ViewToggleButton
-                    active={recordsView === 'grouped'}
-                    icon="bi-grid"
-                    label="By Grade"
-                    onClick={() => setRecordsView('grouped')}
-                  />
+                <div className="students-table-header-main">
+                  <div className="students-table-header-copy">
+                    <p className="students-table-header-eyebrow">Roster</p>
+                    <h5 className="mb-0">
+                      <i className="bi bi-people-fill" aria-hidden="true" />
+                      Student Records
+                    </h5>
+                    <p className="students-table-header-hint mb-0">
+                      List and card views show <strong>{pagination.per_page}</strong> students per
+                      page. Grouped-by-grade uses only the current page.
+                    </p>
+                    <div className="students-table-header-badges">
+                      <span className="students-table-badge students-table-badge--page">
+                        {stats.on_page} on this page
+                      </span>
+                      <span className="students-table-badge students-table-badge--match">
+                        {stats.total} matching
+                      </span>
+                    </div>
+                  </div>
+                  <div className="students-table-view-toggle" role="group" aria-label="Records view">
+                    <ViewToggleButton
+                      active={recordsView === 'table'}
+                      icon="bi-table"
+                      label="Table"
+                      onClick={() => setRecordsView('table')}
+                    />
+                    <ViewToggleButton
+                      active={recordsView === 'cards'}
+                      icon="bi-grid-3x3-gap-fill"
+                      label="Cards"
+                      onClick={() => setRecordsView('cards')}
+                    />
+                    <ViewToggleButton
+                      active={recordsView === 'grouped'}
+                      icon="bi-grid"
+                      label="By Grade"
+                      onClick={() => setRecordsView('grouped')}
+                    />
+                  </div>
                 </div>
               </div>
 

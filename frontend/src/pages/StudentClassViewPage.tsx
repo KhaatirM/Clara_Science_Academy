@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchStudentClassDetail } from '../api/studentClasses'
+import { ClassSyllabusModal } from '../components/classes/ClassSyllabusModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type {
   StudentClassDetailAnnouncement,
@@ -51,6 +52,7 @@ export function StudentClassViewPage() {
   const [data, setData] = useState<StudentClassDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [syllabusOpen, setSyllabusOpen] = useState(false)
 
   useEffect(() => {
     if (!classId) {
@@ -75,7 +77,20 @@ export function StudentClassViewPage() {
           ) : error && !data ? (
             <div className="alert alert-danger m-3">{error}</div>
           ) : data ? (
-            <StudentClassViewBody data={data} onNavigate={navigate} />
+            <>
+              <StudentClassViewBody
+                data={data}
+                onNavigate={navigate}
+                onOpenSyllabus={() => setSyllabusOpen(true)}
+              />
+              {data.links.syllabus ? (
+                <ClassSyllabusModal
+                  open={syllabusOpen}
+                  classId={data.class.id}
+                  onClose={() => setSyllabusOpen(false)}
+                />
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
@@ -86,9 +101,11 @@ export function StudentClassViewPage() {
 function StudentClassViewBody({
   data,
   onNavigate,
+  onOpenSyllabus,
 }: {
   data: StudentClassDetailResponse
   onNavigate: (to: string) => void
+  onOpenSyllabus: () => void
 }) {
   const { class: cls, teacher, stats, group, roster, announcements, assignments, links } = data
 
@@ -134,6 +151,25 @@ function StudentClassViewBody({
               <i className="bi bi-journal-text me-1" aria-hidden />
               Assignments
             </Link>
+            {links.class_notes ? (
+              <Link
+                to={links.class_notes.replace(/^\/app/, '')}
+                className="inline-flex items-center rounded-full border border-white/30 bg-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/25"
+              >
+                <i className="bi bi-journal-bookmark me-1" aria-hidden />
+                Class notes
+              </Link>
+            ) : null}
+            {links.syllabus ? (
+              <button
+                type="button"
+                onClick={onOpenSyllabus}
+                className="inline-flex items-center rounded-full border border-white/30 bg-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/25"
+              >
+                <i className="bi bi-journal-richtext me-1" aria-hidden />
+                Syllabus
+              </button>
+            ) : null}
             <Link
               to="/student/classes"
               className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-bold text-teal-900 hover:bg-teal-50"

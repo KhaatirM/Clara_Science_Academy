@@ -8,6 +8,7 @@ from typing import Any
 from flask_login import current_user
 from sqlalchemy.orm import joinedload
 
+from management_routes.student_assistant_utils import active_assistant_classes_for_student
 from models import (
     Assignment,
     Class,
@@ -17,7 +18,6 @@ from models import (
     GroupGrade,
     SchoolYear,
     Student,
-    StudentAssistant,
 )
 
 
@@ -187,11 +187,9 @@ def build_student_classes_payload() -> tuple[dict[str, Any] | None, str | None]:
     except Exception:
         pass
 
-    assistant_objs = [
-        sa.class_info
-        for sa in StudentAssistant.query.filter_by(student_id=student.id).all()
-        if sa.class_info
-    ]
+    assistant_objs = active_assistant_classes_for_student(
+        student.id, active_school_year=current_school_year
+    )
     assistant_ids = {c.id for c in assistant_objs}
 
     class_groups = get_student_class_groups_by_class_id(student.id, [c.id for c in classes])

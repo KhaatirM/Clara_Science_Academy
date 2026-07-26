@@ -23,7 +23,7 @@ ACADEMIC_CONCERN_GPA_THRESHOLD = 2.0
 # request fans out into 1k+ queries. 5 min is short enough that fresh grades show up
 # quickly; callers that mutate grades can use invalidate_at_risk_alerts_cache(user_id).
 _ALERTS_CACHE_TTL_SECONDS = 300
-_ALERTS_CACHE_VERSION = 4  # bump when alert payload shape / scope changes
+_ALERTS_CACHE_VERSION = 5  # bump when alert payload shape / scope changes
 _alerts_cache_lock = threading.Lock()
 _alerts_cache = {}  # (user_id, version) -> (expires_at_epoch, payload_tuple)
 
@@ -74,8 +74,8 @@ def _percentage_from_grade_data(grade_data, assignment_total_points):
     return score_val, score_val
 
 
-def _grades_for_gpa(student_id, class_ids=None):
-    """Non-voided grades used for GPA (optionally limited to class_ids)."""
+def _grades_for_gpa(student_id, class_ids=None, school_year_id=None):
+    """Non-voided grades used for GPA (optionally limited to class_ids / school year)."""
     from models import Grade, Assignment
 
     q = (
@@ -88,13 +88,15 @@ def _grades_for_gpa(student_id, class_ids=None):
     )
     if class_ids is not None:
         q = q.filter(Assignment.class_id.in_(class_ids))
+    if school_year_id is not None:
+        q = q.filter(Assignment.school_year_id == school_year_id)
     return q.all()
 
 
-def _compute_scoped_gpa(student_id, class_ids=None):
+def _compute_scoped_gpa(student_id, class_ids=None, school_year_id=None):
     from gpa_scheduler import calculate_student_gpa
 
-    grades = _grades_for_gpa(student_id, class_ids)
+    grades = _grades_for_gpa(student_id, class_ids, school_year_id=school_year_id)
     if not grades:
         return None
     return calculate_student_gpa(grades)
@@ -153,10 +155,11 @@ def _counts_as_not_submitted(student_id, assignment_id, grade, percentage, is_pa
 FAILING_MAX_PERCENT = 69
 
 
-def _count_assignment_issues(student_id, class_ids):
+def _count_assignment_issues(student_id, class_ids, school_year_id=None):
     """
     Count failing / overdue / not-submitted assignments in scope for summary chips.
     Returns (failing_count, overdue_count, not_submitted_count, classes_with_issues set).
+    Only the active school year is considered when school_year_id is set.
     """
     from models import (
         db,
@@ -191,6 +194,8 @@ def _count_assignment_issues(student_id, class_ids):
     )
     if class_ids is not None:
         grade_q = grade_q.filter(Assignment.class_id.in_(class_ids))
+    if school_year_id is not None:
+        grade_q = grade_q.filter(Assignment.school_year_id == school_year_id)
 
     from utils.academic_concern_assignments import (
         PASSING_MIN_PERCENT,
@@ -234,10 +239,13 @@ def _count_assignment_issues(student_id, class_ids):
                 not_submitted += 1
 
     if class_ids:
-        ga_list = GroupAssignment.query.filter(
+        ga_q = GroupAssignment.query.filter(
             GroupAssignment.class_id.in_(class_ids),
             GroupAssignment.status != 'Voided',
-        ).all()
+        )
+        if school_year_id is not None:
+            ga_q = ga_q.filter(GroupAssignment.school_year_id == school_year_id)
+        ga_list = ga_q.all()
     else:
         ga_list = []
 
@@ -317,6 +325,8 @@ def _count_assignment_issues(student_id, class_ids):
     )
     if class_ids is not None:
         assign_q = assign_q.filter(Assignment.class_id.in_(class_ids))
+    if school_year_id is not None:
+        assign_q = assign_q.filter(Assignment.school_year_id == school_year_id)
     for assignment in assign_q.all():
         enrolled = Enrollment.query.filter_by(
             student_id=student_id,
@@ -343,7 +353,7 @@ def _count_assignment_issues(student_id, class_ids):
     return failing, overdue, not_submitted, classes_with_issues
 
 
-def get_at_risk_alerts_for_user():
+def get_at_risk_alerts_for_user(force_scope=None):
     """
     Students with GPA below ACADEMIC_CONCERN_GPA_THRESHOLD (scoped by role).
 
@@ -352,6 +362,8 @@ def get_at_risk_alerts_for_user():
     Each concern dict is one row per student (not per assignment).
 
     Cached per-user for _ALERTS_CACHE_TTL_SECONDS to keep page renders fast.
+
+    force_scope: None (auto), 'management' (school-wide), or 'teacher' (assigned classes).
     """
     from flask_login import current_user
     from models import db
@@ -387,12 +399,24 @@ def get_at_risk_alerts_for_user():
     if not (is_teacher or is_admin_user):
         return empty
 
+    if force_scope == 'management':
+        if not is_admin_user:
+            return empty
+        use_admin_scope = True
+    elif force_scope == 'teacher':
+        if not is_teacher and not is_admin_user:
+            return empty
+        use_admin_scope = False
+    else:
+        use_admin_scope = is_admin_user
+
     # Per-user short TTL cache: the underlying queries are heavy and this runs on
     # every authenticated page render via inject_at_risk_alerts (context processor).
     cache_key = (
         getattr(current_user, 'id', None),
         _ALERTS_CACHE_VERSION,
         active_school_year.id,
+        'mgmt' if use_admin_scope else 'teacher',
     )
     if cache_key[0] is not None:
         now_ts = time.time()
@@ -402,7 +426,7 @@ def get_at_risk_alerts_for_user():
                 return entry[1]
 
     try:
-        if is_admin_user:
+        if use_admin_scope:
             student_ids = active_roster_student_ids(require_active_enrollment=True)
             student_ids = student_ids_enrolled_in_school_year(
                 active_school_year.id,
@@ -418,6 +442,9 @@ def get_at_risk_alerts_for_user():
                 class_ids = teacher_class_ids_active_school_year(teacher.id)
             else:
                 class_ids = []
+            if not class_ids and is_admin_user and force_scope == 'teacher':
+                # Dual-role admin on teacher shell with no teaching assignments: empty.
+                return empty
             if class_ids:
                 from models import Enrollment
 
@@ -448,12 +475,14 @@ def get_at_risk_alerts_for_user():
             if not student:
                 continue
 
-            gpa = _compute_scoped_gpa(sid, gpa_class_ids)
+            gpa = _compute_scoped_gpa(
+                sid, gpa_class_ids, school_year_id=active_school_year.id
+            )
             if gpa is None or gpa >= ACADEMIC_CONCERN_GPA_THRESHOLD:
                 continue
 
             fail_n, od_n, ns_n, classes_set = _count_assignment_issues(
-                sid, gpa_class_ids
+                sid, gpa_class_ids, school_year_id=active_school_year.id
             )
             total_failing += fail_n
             total_overdue += od_n

@@ -68,6 +68,7 @@ export interface ClosureDashboardResponse {
     teacher_lockout: number
     finalize: number
   }
+  finalize_due?: boolean
   extensions: ClosureExtension[]
   events: ClosureAuditEvent[]
   checklist: {

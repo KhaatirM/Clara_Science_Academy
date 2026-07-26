@@ -1,4 +1,4 @@
-/** Per-route legacy CSS for management pages that still use mgmt-* / Bootstrap markup. */
+/** Per-route legacy CSS for pages that still use mgmt-* / Bootstrap markup. */
 export const BOOTSTRAP_LEGACY_CSS =
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
 
@@ -9,7 +9,7 @@ export const SHARED_CALENDAR_CSS = '/static/css/shared_calendar.css?v=2'
 export const CALENDAR_LEGACY_CSS = '/static/css/management_admin_calendar.css?v=11'
 export const CLOSURE_LEGACY_CSS = '/static/css/management_admin_school_year_closure.css?v=3'
 export const SCHOOL_YEARS_LEGACY_CSS = '/static/css/management_admin_school_years.css?v=2'
-export const STUDENTS_LEGACY_CSS = '/static/css/management_admin_students.css?v=7'
+export const STUDENTS_LEGACY_CSS = '/static/css/management_admin_students.css?v=8'
 export const HOME_LEGACY_CSS = '/static/css/management_admin_home.css?v=11'
 export const COMPONENTS_LEGACY_CSS = '/static/css/components.css?v=1'
 export const ASSISTANT_APPROVAL_LEGACY_CSS = '/static/css/assistant_approval.css?v=1'
@@ -20,16 +20,31 @@ export const BOOTSTRAP_MGMT_PATH =
 
 type StyleRule = { test: RegExp; sheets: string[] }
 
+/**
+ * Home dashboards + teacher/student shells still use `mgmt-home` classes from
+ * management_admin_home.css. Keep that sheet until those pages are restyled.
+ */
 const PAGE_STYLE_RULES: StyleRule[] = [
   { test: /^\/management\/?$/, sheets: [HOME_LEGACY_CSS] },
   { test: /^\/teacher\/?$/, sheets: [HOME_LEGACY_CSS] },
   { test: /^\/student\/?$/, sheets: [HOME_LEGACY_CSS] },
   { test: /^\/student\/assignments(?:\/|$)/, sheets: [HOME_LEGACY_CSS] },
-  { test: /^\/student\/(calendar|schedule|settings|jobs|classes|grades|collaborate)(?:\/|$)/, sheets: [HOME_LEGACY_CSS] },
+  {
+    test: /^\/student\/(calendar|schedule|settings|jobs|classes|grades|collaborate)(?:\/|$)/,
+    sheets: [HOME_LEGACY_CSS],
+  },
   { test: /^\/student\/calendar\/?$/, sheets: [SHARED_CALENDAR_CSS, HOME_LEGACY_CSS] },
-  { test: /^\/teacher\/(classes|students|assignments-and-grades|attendance|schedule|settings)(?:\/|$)/, sheets: [HOME_LEGACY_CSS] },
-  { test: /^\/teacher\/classes\/\d+\/?$/, sheets: [HOME_LEGACY_CSS, COMPONENTS_LEGACY_CSS, ASSISTANT_APPROVAL_LEGACY_CSS] },
+  {
+    test: /^\/teacher\/(classes|students|assignments-and-grades|attendance|schedule|settings)(?:\/|$)/,
+    sheets: [HOME_LEGACY_CSS],
+  },
+  {
+    test: /^\/teacher\/classes\/\d+\/?$/,
+    sheets: [HOME_LEGACY_CSS, COMPONENTS_LEGACY_CSS, ASSISTANT_APPROVAL_LEGACY_CSS],
+  },
   { test: /^\/teacher\/calendar\/?$/, sheets: [SHARED_CALENDAR_CSS, HOME_LEGACY_CSS] },
+  { test: /^\/parent(?:\/|$)/, sheets: [HOME_LEGACY_CSS] },
+  { test: /^\/tech(?:\/|$)/, sheets: [HOME_LEGACY_CSS] },
   { test: /^\/management\/students\/?$/, sheets: [STUDENTS_LEGACY_CSS] },
   { test: /^\/management\/students\/new\/?$/, sheets: [STUDENTS_LEGACY_CSS] },
   { test: /^\/management\/calendar\/?$/, sheets: [SHARED_CALENDAR_CSS, CALENDAR_LEGACY_CSS] },

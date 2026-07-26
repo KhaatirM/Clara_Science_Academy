@@ -9,7 +9,11 @@ from typing import Any
 from flask_login import current_user
 from sqlalchemy.orm import joinedload
 
-from management_routes.student_assistant_utils import assignment_student_visibility_filter
+from management_routes.student_assistant_utils import (
+    assignment_student_visibility_filter,
+    student_is_active_assistant_for_class,
+)
+from management_routes.class_syllabus_spa_helpers import class_supports_syllabus
 from models import (
     Announcement,
     Assignment,
@@ -17,7 +21,6 @@ from models import (
     Enrollment,
     Grade,
     Student,
-    StudentAssistant,
     Submission,
     TeacherStaff,
 )
@@ -193,12 +196,7 @@ def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | 
         for a in announcements
     ]
 
-    assistant_ids = {
-        sa.class_id
-        for sa in StudentAssistant.query.filter_by(student_id=student.id).all()
-        if sa.class_id
-    }
-    is_assistant = class_id in assistant_ids
+    is_assistant = student_is_active_assistant_for_class(student.id, class_id)
 
     group = get_student_class_group(student.id, class_id)
     group_payload = None
@@ -268,7 +266,13 @@ def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | 
         "links": {
             "back": "/app/student/classes",
             "assignments": f"/app/student/assignments?class_id={class_id}",
+            "class_notes": f"/app/student/classes/{class_id}/notes",
             "assistant": f"/assistant/class/{class_id}" if is_assistant else None,
+            **(
+                {"syllabus": "modal:syllabus"}
+                if class_supports_syllabus(class_obj)
+                else {}
+            ),
         },
         "server_now": datetime.now().isoformat(),
     }, None, 200

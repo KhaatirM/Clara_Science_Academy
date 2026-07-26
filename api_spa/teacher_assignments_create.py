@@ -72,14 +72,16 @@ def teacher_pdf_assignment_form_meta():
 @teacher_required
 def teacher_discussion_assignment_form_meta():
     class_id = request.args.get("class_id", type=int)
+    edit_id = request.args.get("edit", type=int)
     if class_id and not _authorized_class_or_404(class_id):
         return jsonify({"error": "Forbidden"}), 403
-    return jsonify(
-        {
-            **query_discussion_assignment_form(class_id, scope="teacher"),
-            "meta": _teacher_create_meta(),
-        }
-    )
+    try:
+        payload = query_discussion_assignment_form(class_id, scope="teacher", edit_id=edit_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    if edit_id and payload.get("edit") and not _authorized_class_or_404(payload["edit"]["class_id"]):
+        return jsonify({"error": "Forbidden"}), 403
+    return jsonify({**payload, "meta": _teacher_create_meta()})
 
 
 @spa_api_blueprint.route("/teacher/assignments/create/quiz")
@@ -87,14 +89,16 @@ def teacher_discussion_assignment_form_meta():
 @teacher_required
 def teacher_quiz_assignment_form_meta():
     class_id = request.args.get("class_id", type=int)
+    edit_id = request.args.get("edit", type=int)
     if class_id and not _authorized_class_or_404(class_id):
         return jsonify({"error": "Forbidden"}), 403
-    return jsonify(
-        {
-            **query_quiz_assignment_form(class_id, scope="teacher"),
-            "meta": _teacher_create_meta(),
-        }
-    )
+    try:
+        payload = query_quiz_assignment_form(class_id, scope="teacher", edit_id=edit_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    if edit_id and payload.get("edit") and not _authorized_class_or_404(payload["edit"]["class_id"]):
+        return jsonify({"error": "Forbidden"}), 403
+    return jsonify({**payload, "meta": _teacher_create_meta()})
 
 
 @spa_api_blueprint.route("/teacher/assignments/create/group")

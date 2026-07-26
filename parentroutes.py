@@ -71,6 +71,12 @@ def _template_context(section: str, tab: str, **extra):
 @login_required
 @parent_required
 def parent_dashboard():
+    from utils.spa_parent_urls import spa_parent_dashboard_redirect
+
+    redir = spa_parent_dashboard_redirect()
+    if redir:
+        return redir
+
     children = get_linked_students(current_user.id)
     if not children:
         return render_template(
@@ -112,6 +118,12 @@ def select_child(student_id: int):
 @login_required
 @parent_required
 def child_grades(student_id: int):
+    from utils.spa_parent_urls import spa_parent_grades_redirect
+
+    redir = spa_parent_grades_redirect(student_id)
+    if redir:
+        session["parent_active_student_id"] = student_id
+        return redir
     child = _require_child_access(student_id)
     session["parent_active_student_id"] = student_id
     summary = build_child_academic_summary(student_id)
@@ -125,6 +137,12 @@ def child_grades(student_id: int):
 @login_required
 @parent_required
 def child_attendance(student_id: int):
+    from utils.spa_parent_urls import spa_parent_attendance_redirect
+
+    redir = spa_parent_attendance_redirect(student_id)
+    if redir:
+        session["parent_active_student_id"] = student_id
+        return redir
     child = _require_child_access(student_id)
     session["parent_active_student_id"] = student_id
     summary = build_child_academic_summary(student_id)
@@ -138,6 +156,12 @@ def child_attendance(student_id: int):
 @login_required
 @parent_required
 def child_classes(student_id: int):
+    from utils.spa_parent_urls import spa_parent_classes_redirect
+
+    redir = spa_parent_classes_redirect(student_id)
+    if redir:
+        session["parent_active_student_id"] = student_id
+        return redir
     child = _require_child_access(student_id)
     session["parent_active_student_id"] = student_id
     summary = build_child_academic_summary(student_id)
@@ -151,6 +175,12 @@ def child_classes(student_id: int):
 @login_required
 @parent_required
 def child_report_cards(student_id: int):
+    from utils.spa_parent_urls import spa_parent_report_cards_redirect
+
+    redir = spa_parent_report_cards_redirect(student_id)
+    if redir:
+        session["parent_active_student_id"] = student_id
+        return redir
     child = _require_child_access(student_id)
     session["parent_active_student_id"] = student_id
     report_cards = get_parent_visible_report_cards(student_id)
@@ -190,6 +220,11 @@ def parent_report_card_pdf(report_card_id: int):
 @login_required
 @parent_required
 def parent_settings():
+    from utils.spa_parent_urls import spa_parent_settings_redirect
+
+    redir = spa_parent_settings_redirect()
+    if redir:
+        return redir
     return render_template(
         "parents/role_parent_dashboard.html",
         **_template_context("settings", "settings"),

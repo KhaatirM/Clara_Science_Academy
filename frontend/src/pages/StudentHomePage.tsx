@@ -21,6 +21,11 @@ export function StudentHomePage() {
   const [message, setMessage] = useState<string | null>(null)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<StudentAnnouncement | null>(null)
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<{
+    title: string
+    message: string
+    meta?: string
+  } | null>(null)
   const [goalDrafts, setGoalDrafts] = useState<Record<number, string>>({})
   const [goalBusy, setGoalBusy] = useState<number | null>(null)
 
@@ -100,6 +105,7 @@ export function StudentHomePage() {
               onDeleteGoal={(row) => void onDeleteGoal(row)}
               onOpenAnnouncement={setSelectedAnnouncement}
               onOpenAllAnnouncements={() => setShowAllAnnouncements(true)}
+              onOpenNotificationDetail={setSelectedNotification}
             />
           ) : null}
         </div>
@@ -109,6 +115,14 @@ export function StudentHomePage() {
         <AnnouncementModal
           announcement={selectedAnnouncement}
           onClose={() => setSelectedAnnouncement(null)}
+        />
+      ) : null}
+      {selectedNotification ? (
+        <NotificationDetailModal
+          title={selectedNotification.title}
+          message={selectedNotification.message}
+          meta={selectedNotification.meta}
+          onClose={() => setSelectedNotification(null)}
         />
       ) : null}
       {showAllAnnouncements && data ? (
@@ -137,6 +151,7 @@ function StudentHomeBody({
   onDeleteGoal,
   onOpenAnnouncement,
   onOpenAllAnnouncements,
+  onOpenNotificationDetail,
 }: {
   data: StudentDashboardHomeResponse
   username: string
@@ -149,6 +164,11 @@ function StudentHomeBody({
   onDeleteGoal: (row: StudentGoalRow) => void
   onOpenAnnouncement: (a: StudentAnnouncement) => void
   onOpenAllAnnouncements: () => void
+  onOpenNotificationDetail: (detail: {
+    title: string
+    message: string
+    meta?: string
+  }) => void
 }) {
   const st = data.stats
   const firstName = data.profile.first_name || username
@@ -310,34 +330,52 @@ function StudentHomeBody({
               </div>
               <div className="max-h-[22rem] space-y-2 overflow-y-auto p-4">
                 {previewAnnouncements.length ? (
-                  previewAnnouncements.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => onOpenAnnouncement(a)}
-                      className={`w-full rounded-xl border px-3 py-3 text-left ${
-                        a.is_important
-                          ? 'border-amber-200 bg-amber-50'
-                          : 'border-slate-100 bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-bold text-hub-text">{a.title}</h3>
-                        <small className="shrink-0 text-hub-muted">{a.timestamp_display}</small>
-                      </div>
-                      <p className="mb-2 mt-1 text-sm text-hub-muted">{a.preview}</p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700">
-                          {a.audience_label}
-                        </span>
-                        {a.is_important ? (
-                          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">
-                            Important
+                  previewAnnouncements.map((a) => {
+                    const isLong = (a.message || '').length > 120
+                    return (
+                      <div
+                        key={a.id}
+                        className={`w-full rounded-xl border px-3 py-3 text-left ${
+                          a.is_important
+                            ? 'border-amber-200 bg-amber-50'
+                            : 'border-slate-100 bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-sm font-bold text-hub-text">{a.title}</h3>
+                          <small className="shrink-0 text-hub-muted">{a.timestamp_display}</small>
+                        </div>
+                        <p className="mb-2 mt-1 text-sm text-hub-muted">{a.preview}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700">
+                            {a.audience_label}
                           </span>
-                        ) : null}
+                          {a.is_important ? (
+                            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">
+                              Important
+                            </span>
+                          ) : null}
+                          {isLong ? (
+                            <button
+                              type="button"
+                              onClick={() => onOpenAnnouncement(a)}
+                              className="text-xs font-semibold text-teal-700 hover:underline"
+                            >
+                              View more
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onOpenAnnouncement(a)}
+                              className="text-xs font-semibold text-teal-700 hover:underline"
+                            >
+                              View
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </button>
-                  ))
+                    )
+                  })
                 ) : (
                   <p className="mb-0 py-6 text-center text-sm text-hub-muted">No announcements yet.</p>
                 )}
@@ -497,13 +535,34 @@ function StudentHomeBody({
               </div>
               <div className="space-y-3 p-4">
                 {data.notifications.length ? (
-                  data.notifications.map((n) => (
-                    <div key={n.id} className="border-l-2 border-teal-400 pl-3">
-                      <div className="text-sm font-semibold text-hub-text">{n.title}</div>
-                      <p className="mb-1 text-sm text-hub-muted">{n.message}</p>
-                      <small className="text-hub-muted">{n.timestamp_display}</small>
-                    </div>
-                  ))
+                  data.notifications.map((n) => {
+                    const preview = n.preview || n.message
+                    const isLong = Boolean(n.is_long || (n.message && n.message.length > 120))
+                    return (
+                      <div key={n.id} className="border-l-2 border-teal-400 pl-3">
+                        <div className="text-sm font-semibold text-hub-text">{n.title}</div>
+                        <p className="mb-1 text-sm text-hub-muted">{preview}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <small className="text-hub-muted">{n.timestamp_display}</small>
+                          {isLong ? (
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-teal-700 hover:underline"
+                              onClick={() =>
+                                onOpenNotificationDetail({
+                                  title: n.title,
+                                  message: n.message,
+                                  meta: n.timestamp_display,
+                                })
+                              }
+                            >
+                              View more
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    )
+                  })
                 ) : data.past_due_assignments.length ? (
                   data.past_due_assignments.map((a) => (
                     <a key={a.id} href={a.url} className="block border-l-2 border-red-400 pl-3">
@@ -567,6 +626,41 @@ function AnnouncementModal({
         </div>
         <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-5 py-4 text-sm text-hub-text">
           {announcement.message}
+        </div>
+        <div className="border-t border-slate-100 px-5 py-3 text-right">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NotificationDetailModal({
+  title,
+  message,
+  meta,
+  onClose,
+}: {
+  title: string
+  message: string
+  meta?: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-slate-900/50 p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" role="dialog">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h2 className="text-lg font-bold text-hub-text">{title}</h2>
+          {meta ? <p className="text-sm text-hub-muted">{meta}</p> : null}
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-5 py-4 text-sm text-hub-text">
+          {message}
         </div>
         <div className="border-t border-slate-100 px-5 py-3 text-right">
           <button
@@ -672,6 +766,9 @@ function AllAnnouncementsModal({
                   <small className="text-hub-muted">{a.timestamp_display}</small>
                 </div>
                 <p className="mb-0 mt-1 text-sm text-hub-muted">{a.preview}</p>
+                {(a.message || '').length > 120 ? (
+                  <span className="mt-1 inline-block text-xs font-semibold text-teal-700">View more</span>
+                ) : null}
               </button>
             ))
           ) : (

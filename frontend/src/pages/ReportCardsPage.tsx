@@ -57,7 +57,9 @@ function QuickActionsPanel({ hub }: { hub: ReportCardsHubResponse }) {
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">Report cards</p>
           <div className="grid gap-2 sm:grid-cols-2">
             <QuickActionLink to={hub.urls.generate_form} icon="bi-plus-circle-fill" label="Generate new" primary />
-            {hub.categories.map((category) => (
+            {hub.categories
+              .filter((category) => !category.under_development)
+              .map((category) => (
               <QuickActionLink
                 key={category.slug}
                 to={category.path}
@@ -112,7 +114,7 @@ function StatCard({
 
       className={[
 
-        'flex items-start gap-3 rounded-2xl border p-4 shadow-sm',
+        'flex h-full w-full items-start gap-3 rounded-2xl border p-4 shadow-sm',
 
         featured
 
@@ -191,37 +193,30 @@ function PublishStatus({ report }: { report: ReportCardItem }) {
 
 
 function CategoryCard({ category }: { category: ReportCardCategoryCard }) {
-
   const toneClasses: Record<string, string> = {
-
     emerald: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white',
-
     amber: 'border-amber-200 bg-gradient-to-br from-amber-50 to-white',
-
     sky: 'border-sky-200 bg-gradient-to-br from-sky-50 to-white',
-
+    violet: 'border-violet-200 bg-gradient-to-br from-violet-50 to-white',
   }
-
-
+  const underDev = Boolean(category.under_development)
 
   return (
-
     <article
-
       className={[
-
-        'flex h-full flex-col rounded-2xl border p-5 shadow-sm',
-
+        'relative flex h-full flex-col rounded-2xl border p-5 shadow-sm',
+        underDev ? 'opacity-95' : '',
         toneClasses[category.tone] || toneClasses.emerald,
-
       ].join(' ')}
-
     >
+      {underDev ? (
+        <span className="absolute right-4 top-4 rounded-full bg-slate-900/90 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-white">
+          Under development
+        </span>
+      ) : null}
 
       <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/80 text-xl text-violet-700 shadow-sm">
-
         <i className={`bi ${category.icon}`} aria-hidden />
-
       </div>
 
       <h3 className="text-lg font-bold text-hub-text">{category.title}</h3>
@@ -229,31 +224,30 @@ function CategoryCard({ category }: { category: ReportCardCategoryCard }) {
       <p className="text-sm font-medium text-hub-muted">{category.range_label}</p>
 
       <p className="mt-2 text-sm text-hub-muted">
-
         {category.student_count} student{category.student_count === 1 ? '' : 's'} enrolled
-
       </p>
 
       <p className="mt-2 flex-1 text-sm text-hub-muted">{category.description}</p>
 
-      <Link
-
-        to={category.path}
-
-        className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-violet-800 hover:text-violet-950"
-
-      >
-
-        Open {category.title.toLowerCase()}
-
-        <i className="bi bi-arrow-right-short text-lg" aria-hidden />
-
-      </Link>
-
+      {underDev ? (
+        <Link
+          to={category.path}
+          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-slate-600 hover:text-slate-900"
+        >
+          <i className="bi bi-hourglass-split" aria-hidden />
+          Coming soon — view status
+        </Link>
+      ) : (
+        <Link
+          to={category.path}
+          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-violet-800 hover:text-violet-950"
+        >
+          Open {category.title.toLowerCase()}
+          <i className="bi bi-arrow-right-short text-lg" aria-hidden />
+        </Link>
+      )}
     </article>
-
   )
-
 }
 
 
@@ -584,28 +578,28 @@ export default function ReportCardsPage() {
 
         <>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="list">
-
-            <StatCard icon="bi-people-fill" value={hub.stats.total_students} label="Total students" featured />
-
-            <StatCard icon="bi-file-earmark-check-fill" value={hub.stats.total_reports} label="Report cards generated" />
-
+          <div
+            className="mx-auto flex max-w-5xl flex-wrap justify-center gap-3"
+            role="list"
+          >
+            <div className="min-w-[240px] flex-1 basis-[240px] sm:max-w-[300px]">
+              <StatCard icon="bi-people-fill" value={hub.stats.total_students} label="Total students" featured />
+            </div>
+            <div className="min-w-[240px] flex-1 basis-[240px] sm:max-w-[300px]">
+              <StatCard icon="bi-file-earmark-check-fill" value={hub.stats.total_reports} label="Report cards generated" />
+            </div>
             {isDirector && hub.stats.pending_parent_approval > 0 ? (
-
-              <StatCard
-
-                icon="bi-hourglass-split"
-
-                value={hub.stats.pending_parent_approval}
-
-                label="Awaiting parent release"
-
-              />
-
+              <div className="min-w-[240px] flex-1 basis-[240px] sm:max-w-[300px]">
+                <StatCard
+                  icon="bi-hourglass-split"
+                  value={hub.stats.pending_parent_approval}
+                  label="Awaiting parent release"
+                />
+              </div>
             ) : null}
-
-            <StatCard icon="bi-calendar-range" value={hub.stats.school_years_count} label="School years" />
-
+            <div className="min-w-[240px] flex-1 basis-[240px] sm:max-w-[300px]">
+              <StatCard icon="bi-calendar-range" value={hub.stats.school_years_count} label="School years" />
+            </div>
           </div>
 
 
@@ -631,18 +625,35 @@ export default function ReportCardsPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
-
               {hub.categories.map((category) => (
-
                 <CategoryCard key={category.slug} category={category} />
-
               ))}
-
             </div>
-
           </section>
 
-
+          {hub.transcripts ? (
+            <section className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-hub-text">
+                    <i className="bi bi-file-earmark-text-fill mr-2 text-violet-700" aria-hidden />
+                    {hub.transcripts.title}
+                  </h2>
+                  <p className="mt-1 max-w-3xl text-sm text-hub-muted">{hub.transcripts.subtitle}</p>
+                </div>
+                {hub.transcripts.under_development ? (
+                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+                    Under development
+                  </span>
+                ) : null}
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {hub.transcripts.items.map((item) => (
+                  <CategoryCard key={item.slug} category={item} />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
 

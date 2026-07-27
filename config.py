@@ -136,6 +136,11 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
 
+    # SPA is off unless REACT_SPA_ENABLED=true (set in render.yaml). static/spa/ is
+    # gitignored and must be produced by the deploy buildCommand (npm run build).
+    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'false').lower() in (
+        'true', '1', 'yes', 'on',
+    )
 
 class DevelopmentConfig(Config):
     """Development configuration."""

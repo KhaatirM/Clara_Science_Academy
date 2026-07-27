@@ -5,6 +5,14 @@ services:
     plan: free
     buildCommand: |
       pip install -r requirements.txt
+      # React SPA is gitignored (static/spa/); build it on every deploy.
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+      export NVM_DIR="$HOME/.nvm"
+      . "$NVM_DIR/nvm.sh"
+      nvm install 20
+      nvm use 20
+      cd frontend && npm ci && npm run build && cd ..
+      test -f static/spa/index.html
     releaseCommand: python scripts/startup.py --migrate-only
     # 1 worker + 4 gthread threads = 4 concurrent requests within one process.
     # Keeps memory low for Render's 512MB free plan; upgrade to `--workers 2 --threads 4`
@@ -16,6 +24,9 @@ services:
         value: production
       - key: PYTHON_VERSION
         value: 3.11.0
+      # Without this, login and soft redirects stay on legacy Jinja (ProductionConfig default is off).
+      - key: REACT_SPA_ENABLED
+        value: "true"
     healthCheckPath: /home
     # PERSISTENT DISK (required for assignment PDFs to survive deploys)
     # Render's filesystem is ephemeral - uploads are wiped on every deploy. Without a disk, assignment

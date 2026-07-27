@@ -66,7 +66,7 @@ export default function PendingApprovalNotifier({ enabled }: { enabled: boolean 
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex max-w-xs items-center gap-3 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 text-left shadow-lg transition hover:shadow-xl"
+        className="fixed bottom-[4.75rem] right-4 z-40 flex max-w-xs items-center gap-3 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 text-left shadow-lg transition hover:shadow-xl"
         aria-label={`${total} report card${total === 1 ? '' : 's'} pending approval. Open queue.`}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">

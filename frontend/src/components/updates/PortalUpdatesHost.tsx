@@ -30,7 +30,7 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   },
   {
     title: 'Corner toasts',
-    body: 'Login and flash feedback appear as fading bottom-right notifications.',
+    body: 'Login and flash feedback appear as fading notifications above the version badge (bottom-right).',
   },
 ]
 
@@ -57,7 +57,7 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
     <>
       <button
         type="button"
-        className="fixed bottom-4 left-4 z-[1080] inline-flex items-center gap-2 rounded-full border border-teal-700/20 bg-teal-800 px-3.5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-900/25 transition hover:bg-teal-700"
+        className="spa-version-badge fixed bottom-4 right-4 z-[1080] inline-flex items-center gap-2 rounded-full border border-teal-700/20 bg-teal-800 px-3.5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-900/25 transition hover:bg-teal-700"
         aria-label={`Portal version ${display}`}
         onClick={() => setVersionOpen(true)}
       >

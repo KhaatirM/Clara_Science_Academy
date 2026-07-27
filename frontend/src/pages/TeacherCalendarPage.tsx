@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchTeacherCalendar } from '../api/teacherTabs'
+import { CalendarLegend } from '../components/calendar/CalendarLegend'
 import { TeacherTabShell } from '../components/teacher/TeacherTabShell'
 import type { TeacherCalendarResponse } from '../types/teacherTabs'
 import { calendarEventClass } from '../utils/calendarEventColors'
@@ -125,6 +126,8 @@ export function TeacherCalendarPage() {
               )),
             )}
           </div>
+
+          <CalendarLegend className="mt-4" />
         </div>
       ) : null}
     </TeacherTabShell>

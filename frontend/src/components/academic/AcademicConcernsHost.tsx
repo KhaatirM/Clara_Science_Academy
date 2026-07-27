@@ -159,7 +159,7 @@ export function AcademicConcernsHost({ scope }: Props) {
   return (
     <>
       {toastVisible && alerts.length > 0 && !modalOpen ? (
-        <div className="pointer-events-none fixed bottom-4 right-4 z-[1055] w-[min(22rem,calc(100vw-2rem))]">
+        <div className="pointer-events-none fixed bottom-[4.75rem] right-4 z-[1055] w-[min(22rem,calc(100vw-2rem))]">
           <div
             className="pointer-events-auto overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
             role="alert"

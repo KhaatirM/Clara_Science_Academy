@@ -9,6 +9,7 @@ import {
   deleteTeacherWorkDay,
   fetchCalendarPage,
 } from '../api/calendar'
+import { CalendarLegend } from '../components/calendar/CalendarLegend'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
@@ -22,21 +23,6 @@ import {
 import { formatDateLong, formatDateShort } from '../utils/formatDate'
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
-
-const LEGEND_ITEMS: { type: string; label: string }[] = [
-  { type: 'quarter_start', label: 'Quarter Start' },
-  { type: 'quarter_end', label: 'Quarter End' },
-  { type: 'semester_start', label: 'Semester Start' },
-  { type: 'semester_end', label: 'Semester End' },
-  { type: 'school_year_start', label: 'School Year Begins' },
-  { type: 'school_year_end', label: 'School Year Ends' },
-  { type: 'teacher_work_day', label: 'Teacher Work Day' },
-  { type: 'school_break_start', label: 'School Break Start' },
-  { type: 'school_break_end', label: 'School Break End' },
-  { type: 'holiday', label: 'Holiday' },
-  { type: 'professional_development', label: 'Professional Development' },
-  { type: 'other_event', label: 'Other Events' },
-]
 
 export function CalendarPage() {
   const { user } = useOutletContext<ManagementOutletContext>()
@@ -540,21 +526,7 @@ export function CalendarPage() {
 
             <div className="row mt-3">
               <div className="col-12">
-                <div className="mgmt-cal-legend" aria-label="Calendar legend">
-                  <div className="mgmt-cal-legend-head">
-                    <span className="mgmt-cal-legend-title">
-                      <i className="bi bi-palette-fill" aria-hidden="true" /> Calendar legend
-                    </span>
-                  </div>
-                  <ul className="mgmt-cal-legend-list">
-                    {LEGEND_ITEMS.map((item) => (
-                      <li key={item.type} className="mgmt-cal-legend-item">
-                        <span className={`calendar-legend-item event-${item.type}`} aria-hidden="true" />
-                        <span>{item.label}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <CalendarLegend managementLayout />
               </div>
             </div>
           </div>

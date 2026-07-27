@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated June 12, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated July 26, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,55 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – June 12, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 26, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>June 12</strong> (<strong>{{ app_version_display }}</strong>) polishes the <strong>Family Portal</strong> and sidebar for all themes, fixes <strong>staff roster</strong> access for administrators with multiple roles, tightens <strong>Google Workspace</strong> staff provisioning, and ships a round of <strong>security hardening</strong> behind the scenes.</p>
+                        <p class="updates-intro-text mb-0"><strong>July 26</strong> (<strong>{{ app_version_display }}</strong>) advances the <strong>React SPA</strong> across management, teacher, student, parent, and tech portals: soft redirects for deep links, quiz/discussion editing in the SPA, permission-only staff on the management shell, native teacher student reports, corner toasts, and report-card hub placeholders for high school and K–8 transcripts.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- July 26, 2026 - SPA migration wave -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-lightning-charge-fill me-2"></i>React SPA Portals &amp; Report Cards – July 26, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Portal shells on React:</strong> Management, teacher, student, parent, and tech dashboards continue under <code>/app/…</code> with soft redirects from legacy URLs.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student quiz &amp; discussion deep links:</strong> Opening take-quiz or discussion from bookmarks now lands in the SPA (use <code>?legacy=1</code> for the old pages).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz &amp; discussion editing:</strong> Create/edit flows with <code>?edit=</code> open the SPA authoring forms for both management and teachers.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Permission-only Administration staff:</strong> Staff with management permissions (not only Director / School Administrator) can use the React management shell; nav stays filtered by permission.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher student grades &amp; attendance reports:</strong> Native SPA report pages replace iframe wrappers; printable and PDF links remain available.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report cards hub:</strong> High school (9–12) is marked under development (transcripts, not quarterly cards). New <strong>Transcripts</strong> section for K–8 is also under development.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Corner toasts:</strong> Login and flash feedback appear as fading corner notifications (bottom-right). Academic concerns keep their persistent bottom-right alert.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Parent portal logins &amp; year-end closure:</strong> Guardians can receive their own welcome credentials; overdue school-year finalize no longer auto-runs on every dashboard open (avoids worker timeouts).
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Staff and families spend more time in the modern SPA. Deep links and edits no longer drop into leftover Jinja pages. Report-card workstreams are clearer for elementary/middle vs high school.</p>
+                        </div>
+                    </div>
+
                     <!-- June 12, 2026 - Family Portal polish, sidebar themes, staff/Google, security -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-stars me-2"></i>Family Portal, Sidebar &amp; Staff Tools – June 12, 2026</h6>
@@ -1764,11 +1806,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJun10_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul26_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJun10_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownJul26_2026_v1', 'true');
         }, 500);
     }
 });

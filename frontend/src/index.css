@@ -1,0 +1,249 @@
+@import 'tailwindcss';
+
+@import './styles/spa-themes.css';
+
+/* Design tokens aligned with static/css/hub_themes.css */
+@theme {
+  --color-hub-text: var(--hub-text);
+  --color-hub-muted: var(--hub-muted);
+  --color-hub-accent: var(--hub-schedule-accent);
+  --color-hub-accent-deep: var(--hub-schedule-accent-deep);
+  --color-hub-accent-soft: var(--hub-schedule-accent-soft);
+  --color-hub-surface: var(--hub-surface);
+  --color-hub-border: var(--hub-border);
+  --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--hub-text, #0f172a);
+  background: var(--hub-schedule-bg, linear-gradient(165deg, #eef2ff 0%, #e8e4f8 45%, #e0e7ff 100%));
+}
+
+/* Legacy management pages (school years, closure) — match Jinja dashboard_content */
+html.spa-legacy-mgmt-shell,
+body.spa-legacy-mgmt-shell {
+  min-height: auto;
+}
+
+.spa-legacy-mgmt-shell .mgmt-sy,
+.spa-legacy-mgmt-shell .mgmt-syc,
+.spa-legacy-mgmt-shell .mgmt-cal {
+  min-height: 100%;
+  padding-block: 0;
+}
+
+.legacy-mgmt-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  pointer-events: none;
+}
+
+/*
+ * Scoped Bootstrap Reboot paints body background on .legacy-mgmt-bootstrap.
+ * That creates a white “frame” around themed page shells (students/calendar).
+ */
+.legacy-mgmt-bootstrap {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Corner app toasts (login / flash feedback) — fade in, then host removes after timer */
+@keyframes spa-app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) translateX(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.spa-app-toast {
+  animation: spa-app-toast-in 220ms ease-out;
+}
+
+.legacy-mgmt-portal > * {
+  pointer-events: auto;
+}
+
+/* Full-viewport modal stack — backdrop + outside click to close */
+.legacy-mgmt-portal .legacy-modal-stack {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .mgmt-cal-modal-dialog,
+.legacy-mgmt-portal .legacy-modal-stack .modal.show.d-block {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2;
+  width: 100% !important;
+  height: 100% !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Scrollable modals: body scrolls inside dialog; outer shell does not steal wheel events */
+.legacy-mgmt-portal .legacy-modal-stack .modal.show.d-block:has(.modal-dialog-scrollable) {
+  overflow: hidden;
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable {
+  max-height: calc(100vh - 2rem);
+  margin: 0 auto;
+  height: auto;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-content {
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-content > .modal-header {
+  flex-shrink: 0;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legacy-mgmt-portal .legacy-modal-stack .modal-dialog-scrollable .modal-footer {
+  flex-shrink: 0;
+}
+
+@keyframes quiz-btn-wiggle {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-1.5px) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(1.5px) rotate(4deg);
+  }
+}
+
+@keyframes quiz-btn-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@theme {
+  --animate-quiz-btn-wiggle: quiz-btn-wiggle 360ms ease-in-out;
+  --animate-quiz-btn-bob: quiz-btn-bob 420ms ease-in-out;
+}
+
+/* Quiz authoring action buttons */
+.quiz-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 160ms ease;
+}
+
+.quiz-action-btn i {
+  display: inline-block;
+  transition: transform 180ms ease;
+}
+
+.quiz-action-btn--remove {
+  border-color: #fecaca;
+  background: #fff;
+  color: #dc2626;
+}
+
+.quiz-action-btn--remove:hover {
+  border-color: #f87171;
+  background: #fef2f2;
+  color: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.18);
+  transform: translateY(-1px);
+}
+
+.quiz-action-btn--remove:hover i {
+  animation: quiz-btn-wiggle 360ms ease-in-out;
+}
+
+.quiz-action-btn--remove:active {
+  transform: translateY(0) scale(0.94);
+  box-shadow: none;
+  background: #fee2e2;
+}
+
+.quiz-action-btn--bank {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.quiz-action-btn--bank:hover {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.22);
+  transform: translateY(-1px);
+}
+
+.quiz-action-btn--bank:hover i {
+  animation: quiz-btn-bob 420ms ease-in-out;
+}
+
+.quiz-action-btn--bank:active {
+  transform: translateY(0) scale(0.94);
+  box-shadow: none;
+  background: #fde68a;
+}

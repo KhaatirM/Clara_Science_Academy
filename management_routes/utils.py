@@ -347,35 +347,19 @@ def calculate_student_gpa(student_id):
         print(f"Error calculating GPA for student {student_id}: {e}")
         return 0.0
 
-def add_academic_periods_for_year(school_year_id):
+
+def build_default_academic_period_ranges(sy_start, sy_end):
     """
-    Create default Q1–Q4 academic periods for a school year.
+    Return (name, period_type, start_date, end_date) for Q1–Q4 and S1–S2.
 
-    Divides the span from ``start_date`` to ``end_date`` into four roughly
-    equal quarters. Each quarter starts the day after the previous quarter
-    ends, except Q1 which begins on ``start_date``. Q4 always ends exactly
-    on ``end_date`` (so any rounding remainder lands in Q4).
-
-    Works for ANY start/end month — previously this assumed ``start_date.month``
-    was ≤ 3 (which crashed for August/September starts on Q2's invalid month).
+    Quarters split the school year into four spans; semesters span Q1+Q2 and Q3+Q4.
     """
-    from datetime import date, timedelta
-    from models import AcademicPeriod, SchoolYear, db
-
-    school_year = SchoolYear.query.get(school_year_id)
-    if not school_year or not school_year.start_date or not school_year.end_date:
-        return
-
-    sy_start = school_year.start_date
-    sy_end = school_year.end_date
+    from datetime import timedelta
 
     total_days = (sy_end - sy_start).days
     if total_days < 4:
-        # Year span too short to chop into four — give up and let the admin
-        # add periods by hand from Settings.
-        return
+        return []
 
-    # Quarter length is total_days // 4, with the remainder absorbed by Q4.
     quarter_len = total_days // 4
 
     q1_start = sy_start
@@ -388,27 +372,123 @@ def add_academic_periods_for_year(school_year_id):
     q3_end = q3_start + timedelta(days=quarter_len - 1)
 
     q4_start = q3_end + timedelta(days=1)
-    q4_end = sy_end  # absorb the rounding remainder
+    q4_end = sy_end
 
-    quarters = [
-        ('Q1', q1_start, q1_end),
-        ('Q2', q2_start, q2_end),
-        ('Q3', q3_start, q3_end),
-        ('Q4', q4_start, q4_end),
+    return [
+        ('Q1', 'quarter', q1_start, q1_end),
+        ('Q2', 'quarter', q2_start, q2_end),
+        ('Q3', 'quarter', q3_start, q3_end),
+        ('Q4', 'quarter', q4_start, q4_end),
+        ('S1', 'semester', q1_start, q2_end),
+        ('S2', 'semester', q3_start, q4_end),
     ]
 
-    for name, start_date, end_date in quarters:
-        period = AcademicPeriod(
-            school_year_id=school_year_id,
-            name=name,
-            period_type='quarter',
-            start_date=start_date,
-            end_date=end_date,
-            is_active=True,
+
+def sync_semesters_from_quarters(school_year_id: int) -> None:
+    """Keep S1/S2 aligned with quarter boundaries when quarters are edited manually."""
+    from models import AcademicPeriod, db
+
+    periods = {
+        p.name: p
+        for p in AcademicPeriod.query.filter_by(school_year_id=school_year_id, is_active=True).all()
+    }
+    q1, q2, q3, q4 = periods.get('Q1'), periods.get('Q2'), periods.get('Q3'), periods.get('Q4')
+
+    def upsert(name: str, start, end) -> None:
+        if not start or not end:
+            return
+        existing = periods.get(name)
+        if existing:
+            existing.start_date = start
+            existing.end_date = end
+            return
+        db.session.add(
+            AcademicPeriod(
+                school_year_id=school_year_id,
+                name=name,
+                period_type='semester',
+                start_date=start,
+                end_date=end,
+                is_active=True,
+            )
         )
-        db.session.add(period)
 
-    db.session.commit()
+    if q1 and q2:
+        upsert('S1', q1.start_date, q2.end_date)
+    if q3 and q4:
+        upsert('S2', q3.start_date, q4.end_date)
 
 
+def sync_academic_periods_for_school_year(school_year_id: int, *, commit: bool = True) -> int:
+    """
+    Create or update Q1–Q4 and S1–S2 from the school year's start/end dates.
+
+    Returns the number of periods touched. Calendar views read these periods
+    automatically for the active school year.
+    """
+    from models import AcademicPeriod, SchoolYear, db
+
+    school_year = SchoolYear.query.get(school_year_id)
+    if not school_year or not school_year.start_date or not school_year.end_date:
+        return 0
+
+    ranges = build_default_academic_period_ranges(school_year.start_date, school_year.end_date)
+    if not ranges:
+        return 0
+
+    existing = {
+        p.name: p
+        for p in AcademicPeriod.query.filter_by(school_year_id=school_year_id).all()
+    }
+    touched = 0
+    for name, period_type, start_date, end_date in ranges:
+        period = existing.get(name)
+        if period:
+            period.period_type = period_type
+            period.start_date = start_date
+            period.end_date = end_date
+            period.is_active = True
+        else:
+            db.session.add(
+                AcademicPeriod(
+                    school_year_id=school_year_id,
+                    name=name,
+                    period_type=period_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                    is_active=True,
+                )
+            )
+        touched += 1
+
+    if commit:
+        db.session.commit()
+    return touched
+
+
+def backfill_missing_semesters(school_year_id: int, *, commit: bool = True) -> bool:
+    """Add S1/S2 when a year only has quarters (legacy data or partial generate)."""
+    from models import AcademicPeriod, db
+
+    has_semester = (
+        AcademicPeriod.query.filter_by(school_year_id=school_year_id, period_type='semester')
+        .first()
+    )
+    if has_semester:
+        return False
+    sync_semesters_from_quarters(school_year_id)
+    if commit:
+        db.session.commit()
+    return True
+
+
+def add_academic_periods_for_year(school_year_id):
+    """
+    Create default Q1–Q4 and S1–S2 academic periods for a school year.
+
+    Divides the span from ``start_date`` to ``end_date`` into four roughly
+    equal quarters. Semesters span the first and second halves (Q1+Q2, Q3+Q4).
+    """
+    sync_academic_periods_for_school_year(school_year_id, commit=False)
+    backfill_missing_semesters(school_year_id, commit=True)
 

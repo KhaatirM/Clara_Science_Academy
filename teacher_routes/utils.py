@@ -106,6 +106,15 @@ def is_admin():
     return current_user.role in ['Director', 'School Administrator']
 
 
+def user_can_create_class_group_content(class_obj) -> bool:
+    """Management users or teachers authorized for the class may create group assignments."""
+    from utils.user_roles import user_has_management_entry_access
+
+    if user_has_management_entry_access(current_user):
+        return True
+    return is_authorized_for_class(class_obj)
+
+
 def get_teacher_accessible_classes(teacher):
     """Return classes where the teacher is primary, additional, or substitute."""
     if not teacher:

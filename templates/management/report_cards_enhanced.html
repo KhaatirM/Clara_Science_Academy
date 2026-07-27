@@ -1,9 +1,0 @@
-{% extends "shared/dashboard_layout.html" %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/management_admin_report_cards.css') }}">
-{% endblock %}
-
-{% block dashboard_content %}
-{% include 'management/_management_report_cards.html' %}
-{% endblock %}

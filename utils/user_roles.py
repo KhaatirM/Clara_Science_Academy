@@ -104,10 +104,96 @@ def user_has_tech_route_access(user) -> bool:
     return bool(r & _TECH_ROUTE_ROLES)
 
 
+def user_has_tech_spa_entry(user) -> bool:
+    """
+    Tech / IT Support accounts that use the tech sidebar (not Director-alone).
+
+    Dual-role Tech+Admin still get tech_entry=True; shell choice is driven by
+    session staff_dashboard_target on the SPA side.
+    """
+    if not user:
+        return False
+    return bool(all_role_strings(user) & _TECH_PICK_ROLES)
+
+
+def user_has_teacher_spa_entry(user) -> bool:
+    """
+    Teaching staff who use the teacher sidebar (not Director / School Administrator).
+
+    Matches templates/shared/dashboard_layout.html teacher tab branch.
+    """
+    if not user or user_has_management_entry_access(user):
+        return False
+    role = canonical_role_label(getattr(user, "role", None))
+    if role in ("Director", "School Administrator"):
+        return False
+    if user_primary_role_is_teaching_staff(user):
+        return True
+    raw = str(getattr(user, "role", "") or "")
+    if "Teacher" in raw:
+        return True
+    if role in ("Substitute", "Counselor", "School Counselor", "Substitute Teacher"):
+        return True
+    return False
+
+
+def user_has_student_spa_entry(user) -> bool:
+    """Student accounts with a linked Student profile (SPA student shell)."""
+    if not user:
+        return False
+    if canonical_role_label(getattr(user, "role", None)) != "Student":
+        return False
+    return bool(getattr(user, "student_id", None))
+
+
+def user_has_parent_spa_entry(user) -> bool:
+    """Parent / guardian accounts for the Family Portal SPA shell."""
+    if not user:
+        return False
+    return canonical_role_label(getattr(user, "role", None)) == "Parent"
+
+
 def user_has_management_entry_access(user) -> bool:
     """School Administrator or Director in primary or secondary roles."""
     r = all_role_strings(user)
     return bool(r & _MGMT_ROLES)
+
+
+# Permissions that unlock the management SPA for Administration-department staff.
+_MGMT_SPA_SHELL_PERMS = (
+    "students:view",
+    "students:edit",
+    "teachers_staff:manage",
+    "classes:manage",
+    "assignments_grades:manage",
+    "attendance:manage",
+    "report_cards:view",
+    "report_cards:generate",
+    "billing:manage",
+)
+
+
+def user_has_permission_management_spa_access(user) -> bool:
+    """Permission-only Administration staff who should use the React management shell."""
+    if not user or user_has_management_entry_access(user):
+        return False
+    try:
+        profile = getattr(user, "teacher_staff_profile", None)
+        dept = (getattr(profile, "department", None) or "").strip() if profile else ""
+        if "Administration" not in dept:
+            return False
+        from decorators import has_any_permission
+
+        return bool(has_any_permission(user, list(_MGMT_SPA_SHELL_PERMS)))
+    except Exception:
+        return False
+
+
+def user_can_use_management_spa_shell(user) -> bool:
+    """Director/admin role entry or permission-only Administration staff."""
+    return user_has_management_entry_access(user) or user_has_permission_management_spa_access(
+        user
+    )
 
 
 def staff_must_choose_dashboard(user) -> bool:

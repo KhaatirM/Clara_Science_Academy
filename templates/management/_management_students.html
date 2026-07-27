@@ -973,3 +973,15 @@
     </div>
   </div>
 </div>
+
+{% if request.args.get('legacy') == '1' %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var id = sessionStorage.getItem('clara_open_student_edit');
+  if (id && typeof editStudent === 'function') {
+    sessionStorage.removeItem('clara_open_student_edit');
+    editStudent(parseInt(id, 10));
+  }
+});
+</script>
+{% endif %}

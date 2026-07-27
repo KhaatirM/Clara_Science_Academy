@@ -1,101 +1,23 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/discussion.css') }}">
-<style>
-    .thread-header-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-    }
-    
-    .thread-content {
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 10px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .post-card {
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        transition: all 0.3s ease;
-    }
-    
-    .post-card:hover {
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .post-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    .post-author-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-    
-    .author-avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
-    
-    .post-content {
-        color: #495057;
-        line-height: 1.8;
-        white-space: pre-wrap;
-    }
-    
-    .reply-form {
-        background: #f8f9fa;
-        border: 2px dashed #dee2e6;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-top: 2rem;
-    }
-    
-    .teacher-badge {
-        background: #ffc107;
-        color: #000;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/discussion.css') }}?v=3">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-3 px-md-4 px-lg-5">
+{% set disc_back = url_for('student.view_discussion', assignment_id=assignment.id) %}
+{% if request.args.get('embed') == '1' %}
+  {% set disc_back = disc_back + ('&' if '?' in disc_back else '?') + 'embed=1' %}
+{% endif %}
+<div class="disc-page container-fluid px-2 px-md-4">
     <!-- Thread Header -->
     <div class="thread-header-section">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
-                <a href="{{ url_for('student.view_discussion', assignment_id=assignment.id) }}" class="btn btn-light btn-sm mb-3">
+                <a href="{{ disc_back }}" class="btn btn-light btn-sm mb-3 disc-btn disc-btn--muted" style="background:#fff!important;">
                     <i class="bi bi-arrow-left me-2"></i>Back to Discussion
                 </a>
-                <h2 class="mb-2">
+                <h2 class="mb-2" style="font-size:clamp(1.2rem,2.2vw,1.55rem);font-weight:700;">
                     {{ thread.title }}
                     {% if thread.is_pinned %}
                         <i class="bi bi-pin-fill ms-2" title="Pinned"></i>
@@ -119,14 +41,14 @@
                     {{ thread.student.first_name[0] }}{{ thread.student.last_name[0] }}
                 </div>
                 <div>
-                    <h6 class="mb-0">{{ thread.student.first_name }} {{ thread.student.last_name }}</h6>
+                    <h6 class="mb-0 fw-bold" style="color:#134e4a;">{{ thread.student.first_name }} {{ thread.student.last_name }}</h6>
                     <small class="text-muted">
                         <i class="bi bi-clock me-1"></i>{{ thread.created_at.strftime('%B %d, %Y at %I:%M %p') }}
                     </small>
                 </div>
             </div>
             {% if allow_student_edit_posts and thread.student_id == student.id and assignment.status == 'Active' %}
-            <a href="{{ url_for('student.edit_discussion_thread', thread_id=thread.id) }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ url_for('student.edit_discussion_thread', thread_id=thread.id) }}" class="btn btn-sm btn-outline-teal">
                 <i class="bi bi-pencil me-1"></i>Edit
             </a>
             {% endif %}
@@ -142,7 +64,7 @@
                 <div class="attachment-item">
                     {% if att.attachment_mime_type and att.attachment_mime_type.startswith('image/') %}
                     <a href="{{ url_for('student.download_discussion_attachment', attachment_id=att.id) }}" target="_blank" rel="noopener" class="d-inline-block me-2">
-                        <img src="{{ url_for('student.download_discussion_attachment', attachment_id=att.id, inline=1) }}" alt="{{ att.attachment_original_filename }}" 
+                        <img src="{{ url_for('student.download_discussion_attachment', attachment_id=att.id, inline=1) }}" alt="{{ att.attachment_original_filename }}"
                              class="rounded" style="max-height: 120px; max-width: 200px; object-fit: contain;">
                     </a>
                     {% else %}
@@ -158,12 +80,14 @@
     </div>
 
     <!-- Replies Section -->
-    <div class="mb-4">
-        <h4 class="mb-3">
-            <i class="bi bi-chat-dots me-2"></i>Replies
-            <span class="badge bg-primary ms-2">{{ posts|length }}</span>
-        </h4>
-        
+    <div class="disc-threads-card mb-3">
+        <div class="disc-threads-card__head">
+            <h4 class="mb-0">
+                <i class="bi bi-chat-dots me-2"></i>Replies
+                <span class="disc-count-badge">{{ posts|length }}</span>
+            </h4>
+        </div>
+        <div class="disc-threads-card__body">
         {% if posts %}
             {% for post in posts %}
             <div class="post-card">
@@ -173,7 +97,7 @@
                             {{ post.student.first_name[0] }}{{ post.student.last_name[0] }}
                         </div>
                         <div>
-                            <h6 class="mb-0">
+                            <h6 class="mb-0 fw-bold" style="color:#134e4a;">
                                 {{ post.student.first_name }} {{ post.student.last_name }}
                                 {% if post.is_teacher_post %}
                                     <span class="teacher-badge ms-2">
@@ -187,7 +111,7 @@
                         </div>
                     </div>
                     {% if allow_student_edit_posts and post.student_id == student.id and not post.is_teacher_post and assignment.status == 'Active' %}
-                    <a href="{{ url_for('student.edit_discussion_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">
+                    <a href="{{ url_for('student.edit_discussion_post', post_id=post.id) }}" class="btn btn-sm btn-outline-teal">
                         <i class="bi bi-pencil me-1"></i>Edit
                     </a>
                     {% endif %}
@@ -203,7 +127,7 @@
                         <div class="attachment-item">
                             {% if att.attachment_mime_type and att.attachment_mime_type.startswith('image/') %}
                             <a href="{{ url_for('student.download_discussion_attachment', attachment_id=att.id) }}" target="_blank" rel="noopener" class="d-inline-block me-2">
-                                <img src="{{ url_for('student.download_discussion_attachment', attachment_id=att.id, inline=1) }}" alt="{{ att.attachment_original_filename }}" 
+                                <img src="{{ url_for('student.download_discussion_attachment', attachment_id=att.id, inline=1) }}" alt="{{ att.attachment_original_filename }}"
                                      class="rounded" style="max-height: 120px; max-width: 200px; object-fit: contain;">
                             </a>
                             {% else %}
@@ -219,17 +143,18 @@
             </div>
             {% endfor %}
         {% else %}
-            <div class="text-center py-4">
-                <i class="bi bi-chat-dots display-4 text-muted mb-3"></i>
-                <p class="text-muted">No replies yet. Be the first to respond!</p>
+            <div class="disc-empty text-center py-4">
+                <i class="bi bi-chat-dots disc-empty__icon"></i>
+                <p class="text-muted mb-0">No replies yet. Be the first to respond!</p>
             </div>
         {% endif %}
+        </div>
     </div>
 
     <!-- Reply Form -->
     {% if not thread.is_locked and assignment.status == 'Active' %}
     <div class="reply-form">
-        <h5 class="mb-3">
+        <h5 class="mb-3 fw-bold" style="color:#134e4a;">
             <i class="bi bi-reply me-2"></i>Post a Reply
         </h5>
         <form method="POST" action="{{ url_for('student.reply_to_discussion_thread', thread_id=thread.id) }}" id="replyForm" enctype="multipart/form-data">
@@ -258,13 +183,13 @@
                     </select>
                 </div>
                 <div class="discussion-editor-text-area" id="replyTextArea">
-                    <textarea class="form-control" id="reply_content" name="reply_content" rows="6" 
+                    <textarea class="form-control" id="reply_content" name="reply_content" rows="6"
                               placeholder="Share your thoughts, ask questions, or respond to others..." required></textarea>
                 </div>
                 <div class="discussion-editor-code-area" id="replyCodeArea">
                     <div class="code-editor-wrapper">
                         <pre class="line-numbers-display" id="replyLineNumbers">1</pre>
-                        <textarea class="form-control code-textarea" id="reply_code_content" rows="8" 
+                        <textarea class="form-control code-textarea" id="reply_code_content" rows="8"
                                   placeholder="Paste or type your code here..."></textarea>
                     </div>
                 </div>
@@ -274,12 +199,12 @@
                 <label for="reply_attachments" class="form-label fw-semibold">
                     <i class="bi bi-paperclip me-1"></i>Attachments
                 </label>
-                <input type="file" class="form-control" id="reply_attachments" name="attachments" 
+                <input type="file" class="form-control" id="reply_attachments" name="attachments"
                        multiple accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.md">
                 <div class="form-text">Upload images or documents. Multiple files allowed.</div>
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-send me-2"></i>Post Reply
+            <button type="submit" class="btn disc-btn disc-btn--submit">
+                <i class="bi bi-send me-1"></i>Post Reply
             </button>
         </form>
     </div>

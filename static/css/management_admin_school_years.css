@@ -617,3 +617,61 @@ body:has(.mgmt-sy) {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
+
+/*
+ * Scoped Bootstrap reboot overrides — restore hero buttons & icons in SPA shell.
+ */
+.legacy-mgmt-bootstrap .mgmt-sy a.mgmt-sy-btn,
+.legacy-mgmt-bootstrap .mgmt-sy button.mgmt-sy-btn {
+  text-decoration: none !important;
+  border-radius: 12px !important;
+  line-height: 1 !important;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.legacy-mgmt-bootstrap .mgmt-sy a.mgmt-sy-btn--ghost,
+.legacy-mgmt-bootstrap .mgmt-sy button.mgmt-sy-btn--ghost {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-sy a.mgmt-sy-btn--ghost:hover,
+.legacy-mgmt-bootstrap .mgmt-sy button.mgmt-sy-btn--ghost:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-sy a.mgmt-sy-btn--primary,
+.legacy-mgmt-bootstrap .mgmt-sy button.mgmt-sy-btn--primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--sy-accent), var(--sy-accent-2)) !important;
+  border: none !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-sy a.mgmt-sy-btn--success,
+.legacy-mgmt-bootstrap .mgmt-sy button.mgmt-sy-btn--success {
+  color: #fff !important;
+  background: linear-gradient(135deg, #2bd498, #1ba075) !important;
+  border: none !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-sy a.mgmt-sy-btn--danger,
+.legacy-mgmt-bootstrap .mgmt-sy button.mgmt-sy-btn--danger {
+  color: var(--sy-danger) !important;
+  background: rgba(239, 79, 108, 0.12) !important;
+  border: 1px solid rgba(239, 79, 108, 0.40) !important;
+}
+
+.legacy-mgmt-bootstrap .mgmt-sy .mgmt-sy-hero .bi,
+.legacy-mgmt-bootstrap .mgmt-sy .mgmt-sy-title .bi,
+.legacy-mgmt-bootstrap .mgmt-sy .mgmt-sy-subtitle .bi {
+  font-style: normal;
+  font-family: bootstrap-icons !important;
+  font-size: inherit;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: -0.125em;
+}

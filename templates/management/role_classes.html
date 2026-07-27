@@ -137,6 +137,7 @@
                             </div>
                         </div>
                         
+                        {% if class.show_google_integration|default(true) %}
                         <div class="class-info-item">
                             <div class="class-info-icon icon-subject">
                                 <i class="bi bi-envelope-at"></i>
@@ -171,6 +172,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                     
                     <!-- Action Buttons -->
@@ -196,6 +198,7 @@
                             {% endif %}
                             
                             <!-- Google Classroom Actions for Admins -->
+                            {% if class.show_google_integration|default(true) %}
                             {% if class.google_classroom_id %}
                                 <div class="d-flex gap-2 class-action-buttons">
                                     <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
@@ -223,6 +226,7 @@
                                     </a>
                                 </div>
                             {% endif %}
+                            {% endif %}
                         {% elif not has_mgmt_role_access and (current_user.teacher_staff_id or ('teacher' in ((current_user.role or '')|lower))) %}
                             <div class="d-flex gap-2 mb-2 class-action-buttons">
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="action-btn btn-view flex-fill">
@@ -247,6 +251,7 @@
                             {% endif %}
                             
                             <!-- Google Classroom Actions -->
+                            {% if class.show_google_integration|default(true) %}
                             {% if class.google_classroom_id %}
                                 <div class="d-flex gap-2 class-action-buttons">
                                     <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
@@ -273,6 +278,7 @@
                                         <i class="bi bi-plus-circle-fill action-btn-icon"></i><span class="action-btn-text">Create New</span>
                                     </a>
                                 </div>
+                            {% endif %}
                             {% endif %}
                         {% endif %}
                         

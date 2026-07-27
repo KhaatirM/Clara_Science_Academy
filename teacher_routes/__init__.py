@@ -120,11 +120,24 @@ def bulk_review_extension_requests():
     from .assignments import bulk_review_extension_requests as bulk_review_extension_requests_func
     return bulk_review_extension_requests_func()
 
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/delete', methods=['POST'], endpoint='delete_group_assignment')
+@login_required
+@teacher_required
+def delete_group_assignment_route(assignment_id):
+    """Delete group assignment - delegates to management handler with teacher auth."""
+    from management_routes.assignments import admin_delete_group_assignment
+    return admin_delete_group_assignment(assignment_id)
+
 @teacher_blueprint.route('/redo-dashboard', endpoint='redo_dashboard')
 @login_required
 @teacher_required
 def teacher_redo_dashboard():
     """Redo dashboard route for teachers - delegates to management dashboard function"""
+    from utils.spa_teacher_urls import spa_teacher_redo_dashboard_redirect
+
+    spa_redirect = spa_teacher_redo_dashboard_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
     from management_routes.dashboard import redo_dashboard as redo_dashboard_func
     return redo_dashboard_func()
 

@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 
-from flask import url_for
 from sqlalchemy import or_
 
 from extensions import db
@@ -108,10 +107,7 @@ def notify_tech_users_of_failed_logins(
     if user_agent:
         message += f'\nUser agent: {user_agent[:300]}'
 
-    try:
-        link = url_for('tech.activity_log', action=_ACTION_SIGNIN_REJECTED)
-    except Exception:
-        link = f'/tech/activity-log?action={_ACTION_SIGNIN_REJECTED}'
+    link = f'/app/tech/logs?tab=activity&action={_ACTION_SIGNIN_REJECTED}'
 
     create_notifications_for_users(
         tech_ids,

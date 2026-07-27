@@ -1,0 +1,110 @@
+import type { NavItem } from './navTypes'
+
+export type { NavItem } from './navTypes'
+export {
+  hasManagementNavAccess as hasNavAccess,
+  isManagementShellUser,
+  isTeacherShellUser,
+  navItemHref,
+  navItemLabel,
+  spaHomePath,
+} from './navTypes'
+
+/** Mirrors templates/shared/dashboard_layout.html management tabs. */
+export const MANAGEMENT_NAV: NavItem[] = [
+  {
+    id: 'home',
+    label: 'Home',
+    icon: 'bi-grid-1x2-fill',
+    reactTo: '/management',
+    legacyHref: '/management/dashboard',
+  },
+  {
+    id: 'students',
+    label: 'Students',
+    icon: 'bi-people-fill',
+    reactTo: '/management/students',
+    legacyHref: '/management/students',
+    perm: ['students:view', 'students:edit'],
+  },
+  {
+    id: 'parents',
+    label: 'Family Portal',
+    icon: 'bi-people-fill',
+    reactTo: '/management/parents',
+    legacyHref: '/management/parents',
+    perm: ['students:view', 'students:edit'],
+  },
+  {
+    id: 'teachers',
+    label: 'Teachers & Staff',
+    adminStaffLabel: 'Staff',
+    icon: 'bi-person-badge-fill',
+    reactTo: '/management/teachers',
+    legacyHref: '/management/teachers',
+    perm: 'teachers_staff:manage',
+  },
+  {
+    id: 'classes',
+    label: 'Classes',
+    icon: 'bi-house-door-fill',
+    reactTo: '/management/classes',
+    legacyHref: '/management/classes',
+    perm: 'classes:manage',
+  },
+  {
+    id: 'assignments',
+    label: 'Assignments & Grades',
+    icon: 'bi-journal-check',
+    reactTo: '/management/assignments',
+    legacyHref: '/management/assignments-and-grades',
+    perm: 'assignments_grades:manage',
+  },
+  {
+    id: 'attendance',
+    label: 'Attendance',
+    icon: 'bi-calendar-check-fill',
+    reactTo: '/management/attendance',
+    legacyHref: '/management/unified-attendance',
+    perm: 'attendance:manage',
+  },
+  {
+    id: 'report-cards',
+    label: 'Report Cards',
+    icon: 'bi-mortarboard-fill',
+    reactTo: '/management/report-cards',
+    legacyHref: '/management/report-cards',
+    perm: ['report_cards:view', 'report_cards:generate'],
+  },
+  {
+    id: 'billing',
+    label: 'Billing & Financials',
+    icon: 'bi-currency-dollar',
+    reactTo: '/management/billing',
+    legacyHref: '/management/billing',
+    perm: 'billing:manage',
+  },
+  {
+    id: 'calendar',
+    label: 'School Calendar',
+    adminStaffLabel: 'Calendar',
+    icon: 'bi-calendar-event-fill',
+    reactTo: '/management/calendar',
+    legacyHref: '/management/calendar',
+  },
+  {
+    id: 'student-jobs',
+    label: 'Student Jobs',
+    icon: 'bi-briefcase-fill',
+    reactTo: '/management/student-jobs',
+    legacyHref: '/management/student-jobs',
+    adminOnly: true,
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: 'bi-gear-fill',
+    reactTo: '/management/settings',
+    legacyHref: '/management/settings',
+  },
+]

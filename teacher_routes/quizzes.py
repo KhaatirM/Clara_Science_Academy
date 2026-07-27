@@ -248,6 +248,15 @@ def _build_quiz_data_for_edit(assignment):
 @teacher_required
 def create_quiz_assignment():
     """Create or edit a quiz assignment"""
+    from management_routes.assignment_create_json import create_form_err, create_form_ok, create_form_wants_json
+    from utils.spa_assignment_create_urls import assignment_create_hub_redirect, assignment_create_success_redirect
+    from utils.spa_teacher_urls import spa_teacher_create_quiz_redirect
+
+    if request.method == 'GET':
+        spa_redirect = spa_teacher_create_quiz_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
+
     if request.method == 'POST':
         save_action = quiz_authoring_save_action(request.form)
         is_draft = save_action == 'draft'
@@ -267,6 +276,11 @@ def create_quiz_assignment():
         max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
 
         def _redirect_back():
+            if create_form_wants_json():
+                rt = url_for('teacher.create_quiz_assignment')
+                if is_edit:
+                    rt += f'?edit={assignment_id}'
+                return create_form_err("Please fix the errors and try again.", redirect_target=rt)
             rt = url_for('teacher.create_quiz_assignment')
             if is_edit:
                 rt += f'?edit={assignment_id}'
@@ -297,6 +311,34 @@ def create_quiz_assignment():
                 return _redirect_back()
 
         link_google_form = request.form.get('link_google_form') == 'on'
+        allow_save_and_continue = request.form.get('allow_save_and_continue') == 'on'
+        max_save_attempts = int(request.form.get('max_save_attempts', 10))
+        save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
+        time_limit_str = request.form.get('time_limit', '').strip()
+        time_limit_minutes = int(time_limit_str) if time_limit_str else None
+        max_attempts = int(request.form.get('attempts', 1))
+        shuffle_questions = request.form.get('shuffle_questions') == 'on'
+        show_correct_answers = request.form.get('show_correct_answers') == 'on'
+        google_form_url = request.form.get('google_form_url', '').strip()
+        google_form_id = None
+        if link_google_form and google_form_url:
+            import re
+            match = re.search(r'/forms/d/e/([A-Za-z0-9_-]+)/', google_form_url)
+            if match:
+                google_form_id = match.group(1)
+
+        def _apply_quiz_settings(assignment):
+            assignment.allow_save_and_continue = allow_save_and_continue
+            assignment.max_save_attempts = max_save_attempts
+            assignment.save_timeout_minutes = save_timeout_minutes
+            assignment.time_limit_minutes = time_limit_minutes
+            assignment.max_attempts = max_attempts
+            assignment.shuffle_questions = shuffle_questions
+            assignment.show_correct_answers = show_correct_answers
+            assignment.google_form_id = google_form_id
+            assignment.google_form_url = google_form_url if link_google_form else None
+            assignment.google_form_linked = link_google_form
+
         if not is_draft and not link_google_form and count_quiz_questions_in_request(request.form) < 1:
             flash("Add at least one question before publishing, or use Save draft.", "warning")
             return _redirect_back()
@@ -377,6 +419,7 @@ def create_quiz_assignment():
                 existing.category_weight = float(category_weight or 0.0)
                 existing.allow_extra_credit = allow_extra_credit
                 existing.max_extra_credit_points = float(max_extra_credit_points or 0.0) if allow_extra_credit else 0.0
+                _apply_quiz_settings(existing)
                 new_assignment = existing
                 # Delete old quiz graph in FK-safe order before rebuilding.
                 old_question_ids = [
@@ -410,6 +453,7 @@ def create_quiz_assignment():
                     max_extra_credit_points=float(max_extra_credit_points or 0.0) if allow_extra_credit else 0.0,
                     created_by=current_user.id
                 )
+                _apply_quiz_settings(new_assignment)
                 db.session.add(new_assignment)
                 db.session.flush()  # Get the assignment ID
             
@@ -548,22 +592,26 @@ def create_quiz_assignment():
             new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
             if is_draft:
-                flash(
+                draft_msg = (
                     'Draft saved. Open it again from Assignments & Grades when you are ready to continue.'
                     if is_edit
-                    else 'Draft saved. You can finish and publish later from Assignments & Grades.',
-                    'success',
+                    else 'Draft saved. You can finish and publish later from Assignments & Grades.'
                 )
+                draft_url = url_for('teacher.create_quiz_assignment') + f'?edit={new_assignment.id}'
+                if create_form_wants_json():
+                    return create_form_ok(draft_msg, redirect_url=draft_url)
+                flash(draft_msg, 'success')
                 return redirect(url_for('teacher.create_quiz_assignment') + f'?edit={new_assignment.id}')
-            flash('Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!', 'success')
-            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+            success_msg = 'Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!'
+            success_url = assignment_create_success_redirect(class_id) if class_id else assignment_create_hub_redirect()
+            return create_form_ok(success_msg, redirect_url=success_url)
             
         except Exception as e:
             db.session.rollback()
             print(f"DEBUG: Error creating quiz assignment: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash(f'Error creating quiz assignment: {str(e)}', 'danger')
+            return create_form_err(f'Error creating quiz assignment: {str(e)}')
     
     # GET request - show the form (create or edit)
     teacher = get_teacher_or_admin()
@@ -670,9 +718,17 @@ def save_to_bank():
 @teacher_required
 def create_discussion_assignment():
     """Create or edit a discussion assignment"""
+    from management_routes.assignment_create_json import create_form_err, create_form_ok
     from teacher_routes.assignment_utils import calculate_assignment_status, parse_discussion_description
+    from utils.spa_assignment_create_urls import assignment_create_success_redirect
+    from utils.spa_teacher_urls import spa_teacher_create_discussion_redirect
     from .utils import get_teacher_or_admin, is_authorized_for_class
     from datetime import timezone
+
+    if request.method == 'GET':
+        spa_redirect = spa_teacher_create_discussion_redirect()
+        if spa_redirect is not None:
+            return spa_redirect
 
     edit_id = request.args.get('edit', type=int)
     assignment = None
@@ -722,15 +778,11 @@ def create_discussion_assignment():
         close_date_str = request.form.get('close_date', '').strip()
 
         if not all([title, class_id, discussion_prompt, due_date_str, quarter]):
-            flash("Please fill in all required fields.", "danger")
-            prompt, instructions, rubric, mi, mr = parse_discussion_description(assignment.description) if assignment else ('', '', '', 1, 2)
-            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj, assignment=assignment,
-                                 discussion_prompt=prompt, instructions=instructions, rubric_criteria=rubric, min_initial_posts=mi or 1, min_replies=mr or 2, teacher=teacher)
+            return create_form_err("Please fill in all required fields.")
 
         class_obj = Class.query.get(class_id)
         if not class_obj or not is_authorized_for_class(class_obj):
-            flash("You are not authorized to create assignments for this class.", "danger")
-            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=None, assignment=assignment, teacher=teacher)
+            return create_form_err("You are not authorized to create assignments for this class.")
 
         try:
             from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
@@ -738,8 +790,7 @@ def create_discussion_assignment():
             tz_name = get_school_timezone_name()
             due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
             if not due_date:
-                flash("Invalid due date.", "danger")
-                return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj)
+                return create_form_err("Invalid due date.")
             open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
             close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             if not close_date:
@@ -748,8 +799,7 @@ def create_discussion_assignment():
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
-                flash("Cannot create assignment: No active school year.", "danger")
-                return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj)
+                return create_form_err("Cannot create assignment: No active school year.")
             
             # Build description with prompt and instructions
             full_description = f"**Discussion Prompt:**\n{discussion_prompt}\n\n"
@@ -782,11 +832,12 @@ def create_discussion_assignment():
                     existing.total_points = total_points
                     existing.allow_student_edit_posts = allow_student_edit_posts
                     db.session.commit()
-                    flash('Discussion assignment updated successfully!', 'success')
-                    return redirect(url_for('teacher.assignments.view_assignment', assignment_id=existing.id))
+                    return create_form_ok(
+                        'Discussion assignment updated successfully!',
+                        redirect_url=f'/app/teacher/assignments-and-grades/{existing.class_id}',
+                    )
                 else:
-                    flash("Discussion assignment not found or you are not authorized to edit it.", "danger")
-                    return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+                    return create_form_err("Discussion assignment not found or you are not authorized to edit it.")
 
             # Create the discussion assignment
             new_assignment = Assignment(
@@ -809,13 +860,15 @@ def create_discussion_assignment():
             db.session.add(new_assignment)
             db.session.commit()
             
-            flash('Discussion assignment created successfully!', 'success')
-            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+            return create_form_ok(
+                'Discussion assignment created successfully!',
+                redirect_url=assignment_create_success_redirect(class_id),
+            )
             
         except Exception as e:
             db.session.rollback()
             print(f"Error creating discussion assignment: {str(e)}")
-            flash(f'Error creating discussion assignment: {str(e)}', 'danger')
+            return create_form_err(f'Error creating discussion assignment: {str(e)}')
     
     # GET request - show the form
     from .utils import get_current_quarter

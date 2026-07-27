@@ -161,6 +161,11 @@ def _decorate_class(class_obj, subject_key, school_year_id):
 @teacher_required
 def grade3_standards_index():
     """Landing page: pick a class to edit."""
+    from utils.spa_management_urls import user_should_use_spa_management_shell
+
+    if user_should_use_spa_management_shell() and request.args.get('legacy') != '1':
+        return redirect('/app/management/report-cards/standards/grade3')
+
     school_year = _active_school_year()
     if not school_year:
         flash('No active school year is configured.', 'warning')
@@ -202,6 +207,28 @@ def grade3_standards_index():
 @teacher_required
 def grade3_standards_editor(class_id: int):
     """Edit standards marks for a class + quarter."""
+    from utils.spa_management_urls import user_should_use_spa_management_shell
+
+    if (
+        request.method == 'GET'
+        and user_should_use_spa_management_shell()
+        and request.args.get('legacy') != '1'
+    ):
+        quarter = request.args.get('quarter', '')
+        view = request.args.get('view', 'grid')
+        student_id = request.args.get('student_id', '')
+        path = f'/app/management/report-cards/standards/grade3/{class_id}'
+        params = []
+        if quarter:
+            params.append(f'quarter={quarter}')
+        if view:
+            params.append(f'view={view}')
+        if student_id:
+            params.append(f'student_id={student_id}')
+        if params:
+            path = f'{path}?{"&".join(params)}'
+        return redirect(path)
+
     class_obj = Class.query.get_or_404(class_id)
     if not is_authorized_for_class(class_obj):
         abort(403)

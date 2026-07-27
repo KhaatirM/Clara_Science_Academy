@@ -25,6 +25,12 @@ bp = Blueprint('attendance', __name__)
 @teacher_required
 def attendance_hub():
     """Main attendance hub for teachers."""
+    from utils.spa_teacher_urls import spa_teacher_attendance_redirect
+
+    spa_redirect = spa_teacher_attendance_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     from datetime import date
     
     # Get teacher object or None for administrators

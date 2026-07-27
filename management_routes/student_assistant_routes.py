@@ -19,6 +19,13 @@ from utils.school_timezone import get_school_timezone_name
 from utils.grade_helpers import numeric_score_from_grade_dict
 from utils.attendance_status import attendance_status_form_value, count_class_attendance_stats
 
+from management_routes.student_assistant_utils import (
+    active_assistant_classes_for_student,
+    is_class_open_for_assistant,
+    student_is_active_assistant_for_class,
+)
+
+
 bp = Blueprint('student_assistant', __name__, url_prefix='/assistant')
 
 
@@ -40,30 +47,29 @@ def assistant_console():
 
 
 def _is_assistant_for_class(class_id):
-    """Return True if current user is a Student and is the assigned assistant for this class."""
+    """Return True if current user is a Student and is the assigned assistant for this open class."""
     if not current_user.is_authenticated or current_user.role != 'Student' or not getattr(current_user, 'student_id', None):
         return False
-    return StudentAssistant.query.filter_by(
-        class_id=class_id,
-        student_id=current_user.student_id
-    ).first() is not None
+    return student_is_active_assistant_for_class(current_user.student_id, class_id)
 
 
 def _assistant_classes_for_user():
-    """All classes the current user is a student assistant for (sorted by name). Non-students get []."""
+    """Open classes the current user is a student assistant for (sorted by name). Non-students get []."""
     if not current_user.is_authenticated or current_user.role != 'Student' or not getattr(current_user, 'student_id', None):
         return []
-    rows = StudentAssistant.query.filter_by(student_id=current_user.student_id).all()
-    classes = [sa.class_info for sa in rows if sa.class_info]
-    classes.sort(key=lambda c: ((c.name or '').lower(), c.id))
-    return classes
+    return active_assistant_classes_for_student(current_user.student_id)
 
 
 def _require_assistant(class_id):
     """Redirect if not assistant; return (class_obj, None) or (None, response)."""
     class_obj = Class.query.get_or_404(class_id)
     if not _is_assistant_for_class(class_id):
-        flash('You are not assigned as student assistant for this class.', 'danger')
+        if StudentAssistant.query.filter_by(
+            class_id=class_id, student_id=getattr(current_user, "student_id", None)
+        ).first() and not is_class_open_for_assistant(class_obj):
+            flash('This class is closed for the school year. Assistant access is no longer available.', 'warning')
+        else:
+            flash('You are not assigned as student assistant for this class.', 'danger')
         if current_user.role == 'Student':
             return None, redirect(url_for('student.student_dashboard'))
         return None, redirect(url_for('management.classes'))

@@ -12,7 +12,7 @@ from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 
 # Authentication and decorators
 from decorators import is_teacher_role, has_any_permission
-from utils.user_roles import canonical_role_label
+from utils.user_roles import canonical_role_label, user_has_teacher_spa_entry
 from utils.password_policy import validate_new_password_against_old
 from services.login_security import handle_failed_login
 
@@ -383,24 +383,44 @@ def dashboard():
     )
 
     if canonical_role_label(current_user.role) == 'Student':
+        from utils.spa_student_urls import user_should_use_spa_student_shell
+
+        if user_should_use_spa_student_shell():
+            return redirect("/app/student")
         return redirect(url_for('student.student_dashboard'))
 
     if canonical_role_label(current_user.role) == 'Parent':
+        from utils.spa_parent_urls import user_should_use_spa_parent_shell
+
+        if user_should_use_spa_parent_shell():
+            return redirect("/app/parent")
         return redirect(url_for('parent.parent_dashboard'))
 
     if staff_must_choose_dashboard(current_user):
         target = session.get('staff_dashboard_target')
         if target == 'tech' and user_has_tech_route_access(current_user):
+            from utils.spa_tech_urls import user_should_use_spa_tech_shell
+            if user_should_use_spa_tech_shell():
+                return redirect("/app/tech")
             return redirect(url_for('tech.tech_dashboard'))
         if target == 'management' and user_has_management_entry_access(current_user):
-            return redirect(url_for('management.management_dashboard'))
+            from utils.spa_management_urls import management_home_redirect_target
+            return redirect(management_home_redirect_target())
         return redirect(url_for('auth.choose_staff_dashboard'))
 
     if is_teacher_role(current_user.role):
+        from utils.spa_teacher_urls import user_should_use_spa_teacher_shell
+
+        if user_should_use_spa_teacher_shell():
+            return redirect("/app/teacher")
         return redirect(url_for('teacher.dashboard.teacher_dashboard'))
     elif user_has_management_entry_access(current_user):
-        return redirect(url_for('management.management_dashboard'))
+        from utils.spa_management_urls import management_home_redirect_target
+        return redirect(management_home_redirect_target())
     elif user_has_tech_route_access(current_user):
+        from utils.spa_tech_urls import user_should_use_spa_tech_shell
+        if user_should_use_spa_tech_shell():
+            return redirect("/app/tech")
         return redirect(url_for('tech.tech_dashboard'))
     else:
         # Permission-based Administration staff (e.g. Other Staff with Administration department)
@@ -415,7 +435,8 @@ def dashboard():
         ]
         try:
             if has_any_permission(current_user, mgmt_perms):
-                return redirect(url_for('management.management_dashboard'))
+                from utils.spa_management_urls import management_home_redirect_target
+                return redirect(management_home_redirect_target())
         except Exception:
             pass
 
@@ -575,6 +596,18 @@ def submit_bug_report():
 @login_required
 def bug_reports():
     """Bug reports page - all users can submit, tech users can view all reports."""
+    from utils.spa_student_urls import spa_student_bug_reports_redirect
+
+    spa_redirect = spa_student_bug_reports_redirect()
+    if spa_redirect:
+        return spa_redirect
+
+    from utils.spa_tech_urls import spa_tech_bug_reports_redirect
+
+    tech_redirect = spa_tech_bug_reports_redirect()
+    if tech_redirect:
+        return tech_redirect
+
     # Get bug reports based on user role
     if current_user.role in ['Tech', 'IT Support']:
         # Tech users can see all bug reports
@@ -784,10 +817,18 @@ def change_password_ajax():
         # Determine redirect URL based on user role
         if current_user.role in ['Director', 'School Administrator']:
             redirect_url = url_for('management.dashboard')
-        elif current_user.role == 'Teacher':
+        elif user_has_teacher_spa_entry(current_user):
+            redirect_url = "/app/teacher"
+        elif current_user.role == 'Teacher' or is_teacher_role(current_user.role):
             redirect_url = url_for('teacher.dashboard.teacher_dashboard')
         elif canonical_role_label(current_user.role) == 'Student':
-            redirect_url = url_for('student.dashboard')
+            from utils.spa_student_urls import user_should_use_spa_student_shell
+
+            redirect_url = (
+                "/app/student"
+                if user_should_use_spa_student_shell()
+                else url_for('student.student_dashboard')
+            )
         else:
             redirect_url = url_for('auth.dashboard')
         

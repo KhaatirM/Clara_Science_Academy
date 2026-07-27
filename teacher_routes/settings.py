@@ -18,6 +18,12 @@ from . import teacher_blueprint as bp
 @teacher_required
 def settings():
     """Teacher settings page."""
+    from utils.spa_teacher_urls import spa_teacher_settings_redirect
+
+    spa_redirect = spa_teacher_settings_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+
     # Check if teacher has connected their Google account
     user = User.query.get(current_user.id)
     google_connected = user.google_refresh_token is not None

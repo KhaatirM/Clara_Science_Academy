@@ -1,6 +1,7 @@
 /**
  * Non-blocking feedback (toasts) for staff dashboards.
  * Use showAppToast() instead of alert() for success/error messages.
+ * Corner toasts auto-dismiss after a few seconds (unlike academic concerns).
  */
 (function () {
     'use strict';
@@ -21,13 +22,14 @@
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.id = 'toastContainer';
-            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            /* Bottom-right corner toasts (same region as academic concerns; auto-dismiss). */
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
             toastContainer.style.zIndex = '1090';
             document.body.appendChild(toastContainer);
         }
 
         var toast = document.createElement('div');
-        toast.className = 'toast align-items-center text-white bg-' + toastType + ' border-0';
+        toast.className = 'toast align-items-center text-bg-' + toastType + ' border-0 shadow';
         toast.setAttribute('role', 'alert');
         toast.setAttribute('aria-live', 'polite');
         toast.setAttribute('aria-atomic', 'true');
@@ -39,11 +41,11 @@
 
         toastContainer.appendChild(toast);
         if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
-            var bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+            var bsToast = new bootstrap.Toast(toast, { animation: true, autohide: true, delay: 4500 });
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', function () { toast.remove(); });
         } else {
-            setTimeout(function () { toast.remove(); }, 5000);
+            setTimeout(function () { toast.remove(); }, 4500);
         }
     }
 

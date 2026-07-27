@@ -22,7 +22,7 @@ def _spa_parent_get_redirect(app_path: str):
 
     if not user_should_use_spa_parent_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(app_path)
 

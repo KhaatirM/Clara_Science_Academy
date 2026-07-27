@@ -24,7 +24,7 @@ def _spa_student_get_redirect(app_path: str):
 
     if not user_should_use_spa_student_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(app_path)
 
@@ -38,7 +38,7 @@ def spa_student_assignments_redirect():
 
     if not user_should_use_spa_student_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     qs = request.query_string.decode("utf-8") if request.query_string else ""
     path = "/app/student/assignments"
@@ -72,7 +72,7 @@ def spa_student_calendar_redirect():
 
     if not user_should_use_spa_student_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     qs = request.query_string.decode("utf-8") if request.query_string else ""
     path = "/app/student/calendar"
@@ -98,7 +98,7 @@ def spa_student_take_quiz_redirect(assignment_id: int):
 
     if not user_should_use_spa_student_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     qs = request.query_string.decode("utf-8") if request.query_string else ""
     path = f"/app/student/take-quiz/{int(assignment_id)}"
@@ -112,7 +112,7 @@ def spa_student_discussion_redirect(assignment_id: int):
 
     if not user_should_use_spa_student_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     qs = request.query_string.decode("utf-8") if request.query_string else ""
     path = f"/app/student/discussion/{int(assignment_id)}"
@@ -126,7 +126,7 @@ def spa_student_discussion_thread_redirect(assignment_id: int, thread_id: int):
 
     if not user_should_use_spa_student_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     qs = request.query_string.decode("utf-8") if request.query_string else ""
     path = f"/app/student/discussion/{int(assignment_id)}/thread/{int(thread_id)}"

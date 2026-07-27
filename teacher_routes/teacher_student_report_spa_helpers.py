@@ -109,7 +109,7 @@ def build_teacher_student_grades_report(student_id: int) -> tuple[dict[str, Any]
         "grades_by_quarter": quarters_payload,
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "urls": {
-            "printable": f"/teacher/student/{student_id}/grades?legacy=1",
+            "printable": f"/app/teacher/students/{student_id}/grades",
             "pdf": f"/teacher/student/{student_id}/grades/pdf",
             "back": "/app/teacher/students",
         },
@@ -186,7 +186,7 @@ def build_teacher_student_attendance_report(
         ],
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "urls": {
-            "printable": f"/teacher/student/{student_id}/attendance?legacy=1",
+            "printable": f"/app/teacher/students/{student_id}/attendance",
             "pdf": f"/teacher/student/{student_id}/attendance/pdf",
             "back": "/app/teacher/students",
         },

@@ -147,7 +147,7 @@ def _decorate_class(class_obj, subject_key, school_year_id):
 def grade1_standards_index():
     from utils.spa_management_urls import user_should_use_spa_management_shell
 
-    if user_should_use_spa_management_shell() and request.args.get('legacy') != '1':
+    if user_should_use_spa_management_shell():
         return redirect('/app/management/report-cards/standards/grade1')
 
     school_year = _active_school_year()
@@ -194,7 +194,6 @@ def grade1_standards_editor(class_id: int):
     if (
         request.method == 'GET'
         and user_should_use_spa_management_shell()
-        and request.args.get('legacy') != '1'
     ):
         quarter = request.args.get('quarter', '')
         view = request.args.get('view', 'grid')

@@ -98,7 +98,6 @@ def parents_hub():
     if (
         react_spa_enabled()
         and user_has_management_entry_access(current_user)
-        and request.args.get("legacy") != "1"
     ):
         return redirect("/app/management/parents")
 

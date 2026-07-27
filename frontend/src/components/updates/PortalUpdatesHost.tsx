@@ -6,11 +6,11 @@ const SESSION_KEY = 'spaUpdateModalShownJul26_2026_v1'
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
     title: 'React SPA portals',
-    body: 'Management, teacher, student, parent, and tech continue under /app with soft redirects from legacy URLs.',
+    body: 'Management, teacher, student, parent, and tech run under /app. Soft redirects still map old bookmarks into the SPA.',
   },
   {
     title: 'Student quiz & discussion deep links',
-    body: 'Take-quiz and discussion bookmarks open the SPA. Add ?legacy=1 to use the old pages.',
+    body: 'Take-quiz and discussion bookmarks open the SPA (legacy Jinja pages removed from main).',
   },
   {
     title: 'Quiz & discussion editing',

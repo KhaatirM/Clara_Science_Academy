@@ -24,7 +24,7 @@ def _spa_teacher_get_redirect(app_path: str):
 
     if not user_should_use_spa_teacher_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(app_path)
 
@@ -94,7 +94,7 @@ def spa_teacher_create_quiz_redirect():
 
     if not user_should_use_spa_teacher_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/teacher/assignments/create/quiz"
     params = []
@@ -114,7 +114,7 @@ def spa_teacher_create_discussion_redirect():
 
     if not user_should_use_spa_teacher_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/teacher/assignments/create/discussion"
     params = []

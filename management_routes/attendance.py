@@ -273,7 +273,6 @@ def attendance_analytics():
     if (
         request.method == "GET"
         and react_spa_enabled()
-        and request.args.get("legacy") != "1"
     ):
         from utils.user_roles import user_has_management_entry_access
 
@@ -442,7 +441,6 @@ def unified_attendance():
     if (
         request.method == "GET"
         and react_spa_enabled()
-        and request.args.get("legacy") != "1"
     ):
         from utils.user_roles import user_has_management_entry_access
 
@@ -1028,7 +1026,6 @@ def attendance_reports():
     if (
         request.method == "GET"
         and react_spa_enabled()
-        and request.args.get("legacy") != "1"
         and not _wants_reports_partial(request)
     ):
         from utils.user_roles import user_has_management_entry_access

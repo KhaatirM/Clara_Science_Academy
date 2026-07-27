@@ -71,7 +71,7 @@ def spa_assignment_type_selector_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/management/assignments/create"
     class_id = request.args.get("class_id", "").strip()
@@ -86,7 +86,7 @@ def spa_add_assignment_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     context = request.args.get("context", "homework")
     if context not in ("homework", "in-class"):
@@ -104,7 +104,7 @@ def spa_create_discussion_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/management/assignments/create/discussion"
     params = []
@@ -125,7 +125,7 @@ def spa_create_quiz_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/management/assignments/create/quiz"
     params = []
@@ -146,7 +146,7 @@ def spa_group_class_picker_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/assignments/create/group")
 
@@ -157,7 +157,7 @@ def spa_group_type_selector_redirect(class_id: int):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(f"/app/management/assignments/create/group/{class_id}")
 
@@ -168,7 +168,7 @@ def spa_group_pdf_create_redirect(class_id: int):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(f"/app/management/assignments/create/group/{class_id}/pdf")
 
@@ -179,7 +179,7 @@ def spa_group_quiz_create_redirect(class_id: int):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(f"/app/management/assignments/create/group/{class_id}/quiz")
 
@@ -190,7 +190,7 @@ def spa_group_discussion_create_redirect(class_id: int):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(f"/app/management/assignments/create/group/{class_id}/discussion")
 
@@ -201,7 +201,7 @@ def spa_assignments_hub_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/management/assignments"
     class_id = request.args.get("class_id", "").strip()
@@ -225,7 +225,7 @@ def spa_extension_requests_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/extensions")
 
@@ -236,7 +236,7 @@ def spa_redo_dashboard_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/redo")
 
@@ -247,7 +247,7 @@ def spa_assignment_view_redirect(assignment_id: int, *, is_group: bool = False):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     if is_group:
         ga = GroupAssignment.query.get(assignment_id)
@@ -266,7 +266,7 @@ def spa_assignment_grade_redirect(assignment_id: int, *, is_group: bool = False)
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     if is_group:
         ga = GroupAssignment.query.get(assignment_id)
@@ -285,7 +285,7 @@ def spa_class_workflow_redirect(class_id: int, suffix: str = ""):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = f"/app/management/classes/{class_id}"
     if suffix:
@@ -302,7 +302,7 @@ def spa_billing_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/billing")
 
@@ -313,7 +313,7 @@ def spa_student_jobs_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/student-jobs")
 
@@ -324,7 +324,7 @@ def spa_settings_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/settings")
 
@@ -335,7 +335,7 @@ def spa_calendar_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = "/app/management/calendar"
     query = request.query_string.decode("utf-8") if request.query_string else ""
@@ -350,7 +350,7 @@ def spa_calendar_school_breaks_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/calendar?open=school-breaks")
 
@@ -361,7 +361,7 @@ def spa_closure_schedule_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/school-year/closure/schedule")
 
@@ -372,7 +372,7 @@ def spa_school_years_redirect():
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect("/app/management/school-years")
 
@@ -383,7 +383,7 @@ def spa_class_tool_redirect(class_id: int, tool: str):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(f"/app/management/classes/{class_id}/tools/{tool}")
 
@@ -394,7 +394,7 @@ def spa_take_class_attendance_redirect(class_id: int):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     path = f"/app/management/attendance/take/{class_id}"
     date = request.args.get("date", "").strip()
@@ -409,7 +409,7 @@ def spa_closure_dashboard_redirect(closure_id: int):
 
     if not user_should_use_spa_management_shell():
         return None
-    if request.method != "GET" or request.args.get("legacy") == "1":
+    if request.method != "GET":
         return None
     return redirect(f"/app/management/school-year/closure/{closure_id}")
 

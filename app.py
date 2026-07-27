@@ -85,6 +85,7 @@ import json
 from flask import Flask, render_template, g, current_app, redirect, url_for, flash, request, session, jsonify, abort
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_wtf.csrf import CSRFError
+from jinja2 import TemplateNotFound
 from werkzeug.security import check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 print("  loading config...", flush=True)
@@ -2048,6 +2049,17 @@ def create_app(config_class=None):
         """Handle CSRF errors."""
         flash('CSRF token missing or invalid. Please try again.', 'danger')
         return redirect(request.url or url_for('home'))
+
+    @app.errorhandler(TemplateNotFound)
+    def missing_legacy_template(error):
+        """SPA-only main removed portal Jinja; send leftovers into the shell."""
+        try:
+            app.logger.warning("Missing template %s; redirecting to dashboard", error)
+        except Exception:
+            pass
+        if current_user.is_authenticated:
+            return redirect("/dashboard")
+        return redirect(url_for("auth.login"))
     
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):

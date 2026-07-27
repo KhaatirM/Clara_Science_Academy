@@ -163,7 +163,7 @@ def grade3_standards_index():
     """Landing page: pick a class to edit."""
     from utils.spa_management_urls import user_should_use_spa_management_shell
 
-    if user_should_use_spa_management_shell() and request.args.get('legacy') != '1':
+    if user_should_use_spa_management_shell():
         return redirect('/app/management/report-cards/standards/grade3')
 
     school_year = _active_school_year()
@@ -212,7 +212,6 @@ def grade3_standards_editor(class_id: int):
     if (
         request.method == 'GET'
         and user_should_use_spa_management_shell()
-        and request.args.get('legacy') != '1'
     ):
         quarter = request.args.get('quarter', '')
         view = request.args.get('view', 'grid')

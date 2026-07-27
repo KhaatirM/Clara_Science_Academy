@@ -110,8 +110,9 @@ class Config:
     # Optional: monitored address for replies. Improves deliverability vs a bare no-reply From with no Reply-To.
     MAIL_REPLY_TO = (os.environ.get('MAIL_REPLY_TO') or '').strip() or None
 
-    # React management SPA (hybrid migration). When True, Flask serves /app/* from static/spa.
-    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'false').lower() in (
+    # SPA-only main: React shell is the product UI. Opt out with REACT_SPA_ENABLED=false
+    # only for emergency debugging (legacy Jinja portals were removed from this branch).
+    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'true').lower() in (
         'true', '1', 'yes', 'on',
     )
 
@@ -136,9 +137,8 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
 
-    # SPA is off unless REACT_SPA_ENABLED=true (set in render.yaml). static/spa/ is
-    # gitignored and must be produced by the deploy buildCommand (npm run build).
-    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'false').lower() in (
+    # Default on for SPA-only main. Built assets live in static/spa/ (also rebuild via scripts/build_spa.sh).
+    REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'true').lower() in (
         'true', '1', 'yes', 'on',
     )
 

@@ -94,7 +94,7 @@ def _grades_for_gpa(student_id, class_ids=None, school_year_id=None):
 
 
 def _compute_scoped_gpa(student_id, class_ids=None, school_year_id=None):
-    from gpa_scheduler import calculate_student_gpa
+    from services.gpa_scheduler import calculate_student_gpa
 
     grades = _grades_for_gpa(student_id, class_ids, school_year_id=school_year_id)
     if not grades:

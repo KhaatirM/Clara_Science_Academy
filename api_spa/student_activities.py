@@ -6,7 +6,7 @@ from flask import jsonify, request
 from flask_login import login_required
 
 from decorators import student_required
-from student_discussion_spa_helpers import (
+from student_routes.discussion_spa_helpers import (
     build_discussion_board_payload,
     build_discussion_thread_payload,
     create_discussion_thread_spa,
@@ -14,7 +14,7 @@ from student_discussion_spa_helpers import (
     edit_thread_spa,
     reply_to_thread_spa,
 )
-from student_quiz_spa_helpers import build_student_quiz_payload, submit_student_quiz
+from student_routes.quiz_spa_helpers import build_student_quiz_payload, submit_student_quiz
 
 from . import spa_api_blueprint
 

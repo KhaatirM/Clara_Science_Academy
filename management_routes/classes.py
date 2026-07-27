@@ -451,7 +451,7 @@ def add_class():
             google_classroom_created = False
             try:
                 # Import the Google Classroom service helper
-                from google_classroom_service import get_google_service
+                from services.google_classroom_service import get_google_service
                 
                 # 1. Find the primary teacher's User account
                 teacher_staff = TeacherStaff.query.get(new_class.teacher_id)
@@ -1084,7 +1084,7 @@ def create_and_link_classroom(class_id):
         return redirect(url_for('teacher.settings'))
     
     try:
-        from google_classroom_service import get_google_service
+        from services.google_classroom_service import get_google_service
         
         service = get_google_service(current_user)
         if not service:
@@ -1148,7 +1148,7 @@ def link_existing_classroom(class_id):
         return redirect(url_for('teacher.settings'))
     
     try:
-        from google_classroom_service import get_google_service
+        from services.google_classroom_service import get_google_service
         
         service = get_google_service(current_user)
         if not service:

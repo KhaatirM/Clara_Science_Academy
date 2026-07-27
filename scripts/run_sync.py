@@ -5,7 +5,7 @@ import sys
 # You may need to adjust the Python path or import based on your exact app structure.
 # If your app initialization is complex, you may need to wrap this in a helper function.
 from app import create_app  # Import your app factory
-from google_sync_tasks import sync_google_classroom_data
+from services.google_classroom_sync_tasks import sync_google_classroom_data
 from models import User
 from flask import current_app
 

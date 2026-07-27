@@ -2759,7 +2759,7 @@ def grade_assignment(assignment_id):
 @management_required
 def export_quiz_to_google_forms(assignment_id):
     """Export a native quiz to Google Forms"""
-    from google_forms_service import get_google_forms_service, export_quiz_to_google_form
+    from services.google_forms_service import get_google_forms_service, export_quiz_to_google_form
     from models import QuizQuestion, QuizOption, User
     from sqlalchemy.orm import joinedload
     
@@ -2838,7 +2838,7 @@ def export_quiz_to_google_forms(assignment_id):
 @management_required
 def sync_google_forms_submissions(assignment_id):
     """Sync submissions from a linked Google Form"""
-    from google_forms_service import get_google_forms_service, get_form_responses
+    from services.google_forms_service import get_google_forms_service, get_form_responses
     from models import Student, Submission, Grade, Enrollment, User
     from datetime import datetime
     import json

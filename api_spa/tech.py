@@ -8,7 +8,7 @@ from flask_login import login_required
 from decorators import tech_required
 from management_routes.bug_reports_spa_helpers import query_bug_reports
 from models import BugReport, db
-from tech_spa_helpers import (
+from tech_routes.spa_helpers import (
     build_activity_log_payload,
     build_audit_logs_payload,
     build_device_form_payload,
@@ -55,7 +55,7 @@ def tech_spa_settings_hub():
 @login_required
 @tech_required
 def tech_spa_settings_theme():
-    from authroutes import update_theme
+    from auth_routes import update_theme
 
     return update_theme()
 

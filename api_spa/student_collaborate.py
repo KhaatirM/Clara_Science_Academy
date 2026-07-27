@@ -6,7 +6,7 @@ from flask import jsonify, request
 from flask_login import login_required
 
 from decorators import student_required
-from student_collaborate_spa_helpers import (
+from student_routes.collaborate_spa_helpers import (
     build_student_collaborate_payload,
     submit_student_conflict,
     submit_student_feedback360,

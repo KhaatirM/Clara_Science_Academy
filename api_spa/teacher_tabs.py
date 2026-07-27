@@ -230,7 +230,7 @@ def teacher_settings_hub():
 @login_required
 @teacher_required
 def teacher_settings_update_theme():
-    from authroutes import update_theme
+    from auth_routes import update_theme
 
     return update_theme()
 

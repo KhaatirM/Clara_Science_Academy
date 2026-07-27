@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 
 from decorators import student_required
 from models import BugReport, db
-from student_tabs_spa_helpers import (
+from student_routes.tabs_spa_helpers import (
     build_student_bug_reports_payload,
     build_student_calendar_payload,
     build_student_jobs_payload,
@@ -62,7 +62,7 @@ def student_settings_hub():
 @login_required
 @student_required
 def student_settings_update_theme():
-    from authroutes import update_theme
+    from auth_routes import update_theme
 
     return update_theme()
 
@@ -71,7 +71,7 @@ def student_settings_update_theme():
 @login_required
 @student_required
 def student_settings_update_threshold():
-    from studentroutes import update_low_grade_threshold
+    from student_routes.routes import update_low_grade_threshold
 
     return update_low_grade_threshold()
 

@@ -22,6 +22,6 @@ def settings_hub():
 @login_required
 @management_required
 def settings_update_theme():
-    from authroutes import update_theme
+    from auth_routes import update_theme
 
     return update_theme()

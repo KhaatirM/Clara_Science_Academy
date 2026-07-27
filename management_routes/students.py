@@ -3486,7 +3486,7 @@ def admin_create_student_group(class_id):
 @management_required
 def view_student_details(student_id):
     """View detailed student information including academic analysis."""
-    from gpa_scheduler import calculate_student_gpa
+    from services.gpa_scheduler import calculate_student_gpa
     from copy import copy
     import json
     
@@ -3633,7 +3633,7 @@ def view_student_details(student_id):
 def view_student_details_data(student_id):
     """API endpoint to get detailed student information as JSON for academic alerts."""
     from flask import jsonify
-    from gpa_scheduler import calculate_student_gpa
+    from services.gpa_scheduler import calculate_student_gpa
     from copy import copy
     import json
     

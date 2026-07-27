@@ -139,7 +139,7 @@ def main() -> int:
     errors = 0
 
     with app.app_context():
-        from scripts.render_db_guard import print_database_target, require_postgres_database
+        from ops.render_db_guard import print_database_target, require_postgres_database
 
         require_postgres_database(app, script_name="sync_all_to_google.py")
         print_database_target(app)

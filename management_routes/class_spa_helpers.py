@@ -229,7 +229,7 @@ def query_class_detail(class_id: int) -> dict[str, Any]:
     )
     room = class_info.room_number or None
     schedule = class_info.schedule or None
-    from shared_communications import get_past_announcements_for_class_page, serialize_announcement_for_panel
+    from communications.shared import get_past_announcements_for_class_page, serialize_announcement_for_panel
 
     past_announcements = [
         {
@@ -870,7 +870,7 @@ def google_classroom_options(class_id: int) -> dict[str, Any]:
     class_to_link = Class.query.get_or_404(class_id)
     if not current_user.google_refresh_token:
         return {"success": False, "message": "Connect your Google account first.", "settings_url": "/teacher/settings"}
-    from google_classroom_service import get_google_service
+    from services.google_classroom_service import get_google_service
 
     service = get_google_service(current_user)
     if not service:
@@ -898,7 +898,7 @@ def google_classroom_action(class_id: int, action: str, google_classroom_id: str
         return {"success": True, "message": "Successfully unlinked from Google Classroom."}
     if not current_user.google_refresh_token:
         return {"success": False, "message": "Connect your Google account first.", "settings_url": "/teacher/settings"}
-    from google_classroom_service import get_google_service
+    from services.google_classroom_service import get_google_service
 
     service = get_google_service(current_user)
     if not service:

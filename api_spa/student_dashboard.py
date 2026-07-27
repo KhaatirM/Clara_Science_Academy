@@ -6,7 +6,7 @@ from flask import jsonify, request
 from flask_login import current_user, login_required
 
 from decorators import student_required
-from student_dashboard_spa_helpers import (
+from student_routes.dashboard_spa_helpers import (
     build_student_home_payload,
     delete_student_goal,
     set_student_goal,

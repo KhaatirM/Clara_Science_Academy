@@ -6,7 +6,7 @@ from flask import jsonify, request
 from flask_login import login_required
 
 from decorators import student_required
-from student_assignments_spa_helpers import build_student_assignments_payload
+from student_routes.assignments_spa_helpers import build_student_assignments_payload
 
 from . import spa_api_blueprint
 

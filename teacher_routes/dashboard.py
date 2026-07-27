@@ -23,7 +23,7 @@ from utils.grade_helpers import get_points_earned
 from utils.academic_concern_submission import academic_concern_effective_submitted
 from management_routes.utils import update_assignment_statuses
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'scripts'))
-from google_classroom_service import get_google_service
+from services.google_classroom_service import get_google_service
 from googleapiclient.errors import HttpError
 
 bp = Blueprint('dashboard', __name__)
@@ -1853,7 +1853,7 @@ def view_student_details_data(student_id):
     """API endpoint to get detailed student information as JSON for academic alerts (Teacher Version)."""
     from flask import jsonify
     from copy import copy
-    from gpa_scheduler import calculate_student_gpa
+    from services.gpa_scheduler import calculate_student_gpa
     
     try:
         print(f"[Teacher Details] Fetching details for student ID: {student_id}")

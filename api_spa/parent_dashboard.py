@@ -8,7 +8,7 @@ from werkzeug.exceptions import HTTPException
 
 from decorators import parent_required
 from models import ReportCard
-from parent_dashboard_spa_helpers import (
+from parent_routes.dashboard_spa_helpers import (
     build_parent_bootstrap_payload,
     build_parent_home_payload,
     build_parent_settings_payload,
@@ -122,6 +122,6 @@ def spa_parent_settings():
 @login_required
 @parent_required
 def spa_parent_settings_theme():
-    from authroutes import update_theme
+    from auth_routes import update_theme
 
     return update_theme()

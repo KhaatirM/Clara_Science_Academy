@@ -118,7 +118,7 @@ from services import (
     log_activity,
     get_user_activity_log,
 )
-from database_utils import run_production_database_fix
+from utils.database_utils import run_production_database_fix
 
 
 def create_app(config_class=None):
@@ -958,15 +958,15 @@ def create_app(config_class=None):
         return user
 
     # Import and register blueprints
-    from authroutes import auth_blueprint
-    from studentroutes import student_blueprint
-    from parentroutes import parent_blueprint
+    from auth_routes import auth_blueprint
+    from student_routes import student_blueprint
+    from parent_routes import parent_blueprint
     from teacher_routes import teacher_blueprint  # Using new modular teacher_routes package
     from management_routes import management_blueprint  # Using new modular management_routes package
     from management_routes.school_year_closure import school_year_closure_bp
-    from techroutes import tech_blueprint
-    from communications_api import api_bp as communications_api_bp
-    from shared_communications import bp as shared_communications_bp
+    from tech_routes import tech_blueprint
+    from communications.api import api_bp as communications_api_bp
+    from communications.shared import bp as shared_communications_bp
     from management_routes.student_assistant_routes import bp as student_assistant_blueprint
 
     app.register_blueprint(auth_blueprint)
@@ -990,7 +990,7 @@ def create_app(config_class=None):
     app.register_blueprint(shared_communications_bp)  # Shared communications routes
 
     from api_spa import spa_api_blueprint
-    from spa_routes import spa_blueprint
+    from spa import spa_blueprint
 
     app.register_blueprint(spa_api_blueprint)
     app.register_blueprint(spa_blueprint)
@@ -1889,7 +1889,7 @@ def create_app(config_class=None):
     # Start GPA scheduler in development mode
     if app.config.get('ENV') == 'development':
         try:
-            from scripts.gpa_scheduler import start_gpa_scheduler
+            from services.gpa_scheduler import start_gpa_scheduler
             start_gpa_scheduler()
             print("GPA scheduler started successfully.")
         except Exception as e:

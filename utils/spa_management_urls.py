@@ -20,8 +20,18 @@ MGMT_NAV_ROUTES: dict[str, tuple[str, str]] = {
 }
 
 
+def spa_build_available() -> bool:
+    """True when Vite output exists (static/spa is gitignored and built on deploy)."""
+    import os
+
+    return os.path.isfile(os.path.join(current_app.root_path, "static", "spa", "index.html"))
+
+
 def react_spa_enabled() -> bool:
-    return bool(current_app.config.get("REACT_SPA_ENABLED"))
+    """SPA routing only when enabled in config AND the frontend was built."""
+    if not current_app.config.get("REACT_SPA_ENABLED"):
+        return False
+    return spa_build_available()
 
 
 def user_should_use_spa_management_shell() -> bool:

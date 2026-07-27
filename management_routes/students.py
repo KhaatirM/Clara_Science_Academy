@@ -25,6 +25,7 @@ import random
 from .utils import allowed_file
 from utils.student_login_policy import grade_may_have_login, parse_grade_level_for_policy
 from utils.user_roles import user_has_management_entry_access
+from utils.spa_management_urls import react_spa_enabled
 from utils.school_year_filters import get_school_year_for_display, student_classes_for_school_year
 
 
@@ -150,7 +151,7 @@ def _student_account_badge(student) -> tuple[str, str]:
 
 def _spa_students_list_url():
     if (
-        current_app.config.get("REACT_SPA_ENABLED")
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
     ):
         return "/app/management/students"
@@ -580,7 +581,7 @@ def add_student():
     """Add a new student"""
     if request.method != 'POST':
         if (
-            current_app.config.get("REACT_SPA_ENABLED")
+            react_spa_enabled()
             and user_has_management_entry_access(current_user)
         ):
             return redirect("/app/management/students/new")
@@ -1107,7 +1108,7 @@ def get_student_details(student_id):
 @permissions_required('students:view', 'students:edit')
 def students():
     if (
-        current_app.config.get("REACT_SPA_ENABLED")
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
         and request.args.get("legacy") != "1"
     ):

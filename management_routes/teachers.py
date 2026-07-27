@@ -15,6 +15,7 @@ from utils.google_workspace_passwords import new_google_workspace_initial_passwo
 from services.email_service import send_staff_welcome_email
 from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
 from utils.user_roles import user_has_management_entry_access
+from utils.spa_management_urls import react_spa_enabled
 import os
 import uuid
 from management_routes.utils import allowed_file
@@ -86,7 +87,7 @@ def _staff_form_wants_json():
 
 def _spa_staff_list_url():
     if (
-        current_app.config.get("REACT_SPA_ENABLED")
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
     ):
         return "/app/management/teachers"
@@ -297,7 +298,7 @@ def add_teacher_staff():
     """Add a new teacher or staff member"""
     if request.method == "GET":
         if (
-            current_app.config.get("REACT_SPA_ENABLED")
+            react_spa_enabled()
             and user_has_management_entry_access(current_user)
         ):
             return redirect("/app/management/teachers/new")
@@ -573,7 +574,7 @@ def edit_teacher_staff(staff_id):
 
     if request.method == "GET":
         if (
-            current_app.config.get("REACT_SPA_ENABLED")
+            react_spa_enabled()
             and user_has_management_entry_access(current_user)
         ):
             return redirect(f"/app/management/teachers/{staff_id}/edit")
@@ -1164,7 +1165,7 @@ def teachers():
         teachers_view = 'manage'
 
     if (
-        current_app.config.get('REACT_SPA_ENABLED')
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
     ):
         if teachers_view == 'directory':

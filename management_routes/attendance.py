@@ -4,6 +4,7 @@ Attendance routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
+from utils.spa_management_urls import react_spa_enabled
 from decorators import management_required
 from models import db, Student, SchoolDayAttendance, Class, Enrollment, Attendance
 from sqlalchemy.orm import joinedload
@@ -271,7 +272,7 @@ def attendance_analytics():
     """Attendance analytics and pattern tracking"""
     if (
         request.method == "GET"
-        and current_app.config.get("REACT_SPA_ENABLED")
+        and react_spa_enabled()
         and request.args.get("legacy") != "1"
     ):
         from utils.user_roles import user_has_management_entry_access
@@ -440,7 +441,7 @@ def unified_attendance():
     # GET request - show unified attendance form
     if (
         request.method == "GET"
-        and current_app.config.get("REACT_SPA_ENABLED")
+        and react_spa_enabled()
         and request.args.get("legacy") != "1"
     ):
         from utils.user_roles import user_has_management_entry_access
@@ -1026,7 +1027,7 @@ def _attendance_reports_context(request, form_action=None, embed_tab=False):
 def attendance_reports():
     if (
         request.method == "GET"
-        and current_app.config.get("REACT_SPA_ENABLED")
+        and react_spa_enabled()
         and request.args.get("legacy") != "1"
         and not _wants_reports_partial(request)
     ):

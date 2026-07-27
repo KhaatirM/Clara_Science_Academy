@@ -14,6 +14,7 @@ from utils.parent_portal import (
     sync_student_parent_portal,
 )
 from utils.user_roles import user_has_management_entry_access
+from utils.spa_management_urls import react_spa_enabled
 
 bp = Blueprint("parents", __name__)
 
@@ -95,7 +96,7 @@ def query_parents_hub() -> dict:
 def parents_hub():
     """List parent portal accounts and linked children."""
     if (
-        current_app.config.get("REACT_SPA_ENABLED")
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
         and request.args.get("legacy") != "1"
     ):

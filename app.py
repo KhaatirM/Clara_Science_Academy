@@ -2175,7 +2175,7 @@ def create_app(config_class=None):
 print("Initializing Clara Science App (first load may take 1–2 minutes)...", flush=True)
 app = create_app()
 _cfg = app.config.get('ENV', 'production')
-print(f"Application ready (config: {_cfg}, react_spa={app.config.get('REACT_SPA_ENABLED')}).", flush=True)
+print(f"Application ready (config: {_cfg}, react_spa={app.config.get('REACT_SPA_ENABLED')}, spa_built={os.path.isfile(os.path.join(app.root_path, 'static', 'spa', 'index.html'))}).", flush=True)
 
 if __name__ == '__main__':
     # use_reloader=False avoids a common Windows hang with debug mode

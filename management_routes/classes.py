@@ -4,6 +4,7 @@ Classes routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
+from utils.spa_management_urls import react_spa_enabled
 from sqlalchemy import func
 from decorators import management_required, is_teacher_role, has_permission, user_can_manage_student_assistants
 from models import (
@@ -338,7 +339,7 @@ def management_api_school_years():
 def classes():
     """Enhanced classes management page for Directors and School Administrators."""
     if (
-        current_app.config.get("REACT_SPA_ENABLED")
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
         and request.args.get("legacy") != "1"
     ):
@@ -527,7 +528,7 @@ def core_class_setup():
     for a school year, plus an instruction guide for manual setup.
     """
     if (
-        current_app.config.get("REACT_SPA_ENABLED")
+        react_spa_enabled()
         and user_has_management_entry_access(current_user)
         and request.args.get("legacy") != "1"
     ):

@@ -179,4 +179,6 @@ logs/
 # Node / React frontend
 node_modules/
 frontend/node_modules/
-static/spa/
+# Built React SPA is committed so Render works even when Dashboard Build Command
+# is not Blueprint-synced. Prefer rebuilding via scripts/build_spa.sh on deploy.
+# static/spa/

@@ -336,11 +336,15 @@ def build_management_home_payload():
     'report_cards:view', 'report_cards:generate',
 )
 def management_dashboard():
-    from flask import current_app, flash
-    from utils.spa_management_urls import management_home_redirect_target
+    from flask import flash
+    from utils.spa_management_urls import (
+        management_home_redirect_target,
+        user_should_use_spa_management_shell,
+    )
 
     if user_has_management_entry_access(current_user):
-        if current_app.config.get("REACT_SPA_ENABLED"):
+        # Requires config flag AND static/spa/index.html (see react_spa_enabled).
+        if user_should_use_spa_management_shell():
             return redirect(management_home_redirect_target())
 
     try:

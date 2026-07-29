@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 29, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) introduces <strong>school-managed Google Classroom</strong> (botadmin creates courses and direct-enrolls teachers/students), keeps <strong>closed-year teacher names</strong> on report cards, hardens <strong>staff removal</strong>, and shows the <strong>calendar legend</strong> for teachers and students.</p>
+                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) ships <strong>school-managed Google Classroom</strong> end to end (create, direct enroll, delete when a class is removed or a year is finalized), lets <strong>School Administrators</strong> be assigned as class teachers, keeps <strong>closed-year teacher names</strong> on report cards, hardens <strong>staff removal</strong>, and shows the <strong>calendar legend</strong> for teachers and students.</p>
                     </div>
                 </div>
                 
@@ -178,7 +178,11 @@
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>School-managed Google Classroom:</strong> Clara creates Classrooms as the school botadmin/admin account, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a school year is archived. Teachers no longer create or link their own courses.
+                                <strong>School-managed Google Classroom:</strong> Clara creates Classrooms for the school, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a class is removed or a school year is finalized. Teachers no longer create or link their own courses.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School Admins on the teacher picker:</strong> School Administrators can be assigned as class teachers when creating or editing a class.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -198,7 +202,7 @@
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Classroom setup is centralized for the school. Historical report cards stay accurate after staff leave. View-only calendars are easier to read.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Classroom setup and cleanup stay centralized. Historical report cards stay accurate after staff leave. View-only calendars are easier to read.</p>
                         </div>
                     </div>
 
@@ -1836,11 +1840,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul26_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul29_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJul26_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownJul29_2026_v2', 'true');
         }, 500);
     }
 });

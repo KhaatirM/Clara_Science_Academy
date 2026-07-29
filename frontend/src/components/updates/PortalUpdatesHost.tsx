@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
     title: 'School-managed Google Classroom',
-    body: 'Clara creates Classrooms as botadmin/admin, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a school year is archived.',
+    body: 'Clara creates Classrooms for the school, adds teachers and students directly (no invite to accept), and removes those Classrooms when a class is deleted or a school year is finalized.',
+  },
+  {
+    title: 'School Admins on the teacher picker',
+    body: 'School Administrators can be assigned as class teachers when editing or creating a class.',
   },
   {
     title: 'Closed-year teacher names on report cards',
@@ -30,10 +34,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.506.0'
+  const display = version?.display || 'v 2.507.0'
   const releaseLabel = version?.release_label || 'July 29, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2590
+  const updatesEstimate = version?.updates_estimate ?? 2596
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -142,9 +146,9 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
                   Google Classroom &amp; Records – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  School-managed Classrooms (botadmin creates and roster-enrolls), closed-year teacher
-                  names preserved on report cards, safer staff removal, and calendar legends for
-                  view-only users.
+                  School-managed Classrooms with full lifecycle cleanup, School Admins assignable as
+                  teachers, closed-year teacher names on report cards, safer staff removal, and
+                  calendar legends for view-only users.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

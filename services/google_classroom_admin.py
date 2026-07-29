@@ -87,10 +87,33 @@ def _sa_identity_from_config() -> tuple[str | None, str | None]:
         return None, None
 
 
-def classroom_owner_email() -> str | None:
-    """Workspace user that owns school-managed courses (defaults to Directory admin)."""
+def classroom_api_subject() -> str | None:
+    """
+    Workspace user impersonated for Classroom API calls (DWD subject).
+
+    Direct teacher/student enrollment requires a **Super Admin** (or equivalent
+    Classroom domain-admin privilege). Course owners who are only verified
+    teachers can create courses but get PERMISSION_DENIED on roster create.
+    """
     email = (
-        current_app.config.get("GOOGLE_CLASSROOM_DELEGATED_USER")
+        current_app.config.get("GOOGLE_CLASSROOM_API_SUBJECT")
+        or current_app.config.get("GOOGLE_CLASSROOM_DELEGATED_USER")
+        or current_app.config.get("GOOGLE_DIRECTORY_DELEGATED_ADMIN")
+        or ""
+    ).strip()
+    return email or None
+
+
+def classroom_owner_email() -> str | None:
+    """
+    Workspace user set as course ownerId for school-managed Classrooms.
+
+    Defaults to botadmin / Classroom delegated user / Directory admin. May differ
+    from ``classroom_api_subject`` when a Super Admin performs API calls.
+    """
+    email = (
+        current_app.config.get("GOOGLE_CLASSROOM_COURSE_OWNER")
+        or current_app.config.get("GOOGLE_CLASSROOM_DELEGATED_USER")
         or current_app.config.get("GOOGLE_DIRECTORY_DELEGATED_ADMIN")
         or ""
     ).strip()
@@ -99,19 +122,20 @@ def classroom_owner_email() -> str | None:
 
 def get_classroom_admin_service(scopes: Optional[Sequence[str]] = None):
     """
-    Classroom API client impersonating the school botadmin / delegated admin.
-    Reuses the same service-account key as Directory (domain-wide delegation).
+    Classroom API client via service-account domain-wide delegation.
+    Impersonates ``classroom_api_subject`` (prefer a Super Admin for roster ops).
     """
     key_json = current_app.config.get("GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON")
     key_file = current_app.config.get("GOOGLE_DIRECTORY_SERVICE_ACCOUNT_FILE")
-    subject = classroom_owner_email()
+    subject = classroom_api_subject()
 
     if key_json is not None and isinstance(key_json, str):
         key_json = key_json.strip() or None
 
     if not subject:
         current_app.logger.error(
-            "Classroom admin not configured. Set GOOGLE_CLASSROOM_DELEGATED_USER "
+            "Classroom admin not configured. Set GOOGLE_CLASSROOM_API_SUBJECT "
+            "(preferred: a Super Admin), GOOGLE_CLASSROOM_DELEGATED_USER, "
             "or GOOGLE_DIRECTORY_DELEGATED_ADMIN."
         )
         return None
@@ -159,8 +183,9 @@ def get_classroom_admin_service(scopes: Optional[Sequence[str]] = None):
         service = build("classroom", "v1", credentials=delegated, cache_discovery=False)
         _classroom_service_cache[cache_key] = service
         current_app.logger.info(
-            "Classroom admin service ready (subject=%s sa=%s client_id=%s)",
+            "Classroom admin service ready (subject=%s owner=%s sa=%s client_id=%s)",
             subject,
+            classroom_owner_email(),
             sa_email,
             sa_client_id,
         )
@@ -202,7 +227,7 @@ def _probe_dwd_token(label: str, scopes: Sequence[str], subject: str) -> str:
 
 def log_classroom_dwd_diagnostics() -> None:
     """Compare Directory vs Classroom DWD token exchange (helps unauthorized_client)."""
-    subject = classroom_owner_email() or "?"
+    subject = classroom_api_subject() or "?"
     sa_email, sa_client_id = _sa_identity_from_config()
     directory_scopes = [
         "https://www.googleapis.com/auth/admin.directory.user",
@@ -222,12 +247,24 @@ def log_classroom_dwd_diagnostics() -> None:
         ),
     ]
     current_app.logger.error(
-        "Classroom DWD probe (subject=%s sa=%s client_id=%s): %s",
+        "Classroom DWD probe (subject=%s owner=%s sa=%s client_id=%s): %s",
         subject,
+        classroom_owner_email(),
         sa_email,
         sa_client_id,
         " | ".join(results),
     )
+
+
+def _roster_permission_hint(exc: Exception) -> str:
+    text = str(exc).lower()
+    if "permission" in text or "403" in text:
+        return (
+            " Hint: direct roster adds need the DWD subject to be a Workspace "
+            "Super Admin — set GOOGLE_CLASSROOM_API_SUBJECT to a Super Admin email "
+            "and keep GOOGLE_CLASSROOM_COURSE_OWNER=botadmin@… if desired."
+        )
+    return ""
 
 
 def create_course_as_admin(
@@ -349,12 +386,22 @@ def add_teacher_direct(course_id: str, teacher_email: str) -> bool:
         if _already_exists(exc):
             return True
         current_app.logger.error(
-            "Failed to add teacher %s to Classroom %s: %s", email, course_id, exc
+            "Failed to add teacher %s to Classroom %s (api_subject=%s): %s%s",
+            email,
+            course_id,
+            classroom_api_subject(),
+            exc,
+            _roster_permission_hint(exc),
         )
         return False
     except Exception as exc:
         current_app.logger.error(
-            "Failed to add teacher %s to Classroom %s: %s", email, course_id, exc
+            "Failed to add teacher %s to Classroom %s (api_subject=%s): %s%s",
+            email,
+            course_id,
+            classroom_api_subject(),
+            exc,
+            _roster_permission_hint(exc),
         )
         return False
 
@@ -376,12 +423,22 @@ def add_student_direct(course_id: str, student_email: str) -> bool:
         if _already_exists(exc):
             return True
         current_app.logger.error(
-            "Failed to add student %s to Classroom %s: %s", email, course_id, exc
+            "Failed to add student %s to Classroom %s (api_subject=%s): %s%s",
+            email,
+            course_id,
+            classroom_api_subject(),
+            exc,
+            _roster_permission_hint(exc),
         )
         return False
     except Exception as exc:
         current_app.logger.error(
-            "Failed to add student %s to Classroom %s: %s", email, course_id, exc
+            "Failed to add student %s to Classroom %s (api_subject=%s): %s%s",
+            email,
+            course_id,
+            classroom_api_subject(),
+            exc,
+            _roster_permission_hint(exc),
         )
         return False
 

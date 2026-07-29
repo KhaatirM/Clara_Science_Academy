@@ -18,6 +18,7 @@ from services.class_google_group import (
 from services.google_classroom_admin import (
     add_student_direct,
     add_teacher_direct,
+    classroom_api_subject,
     classroom_owner_email,
     create_course_as_admin,
     delete_course,
@@ -150,6 +151,8 @@ def provision_and_sync_class_google_classroom(class_id: int) -> bool:
     desired_teachers = {e.lower(): e for e in collect_classroom_teacher_emails(c)}
     desired_students = {e.lower(): e for e in collect_classroom_student_emails(c)}
     owner = (classroom_owner_email() or "").lower()
+    api_subject = (classroom_api_subject() or "").lower()
+    protected_teachers = {e for e in (owner, api_subject) if e}
 
     # Prefer adding primary teacher first so they appear promptly.
     primary = primary_teacher_group_owner_email(c)
@@ -164,7 +167,7 @@ def provision_and_sync_class_google_classroom(class_id: int) -> bool:
             add_teacher_direct(course_id, email)
 
     for low in current_teachers:
-        if low == owner:
+        if low in protected_teachers:
             continue
         if low not in desired_teachers:
             remove_teacher(course_id, low)

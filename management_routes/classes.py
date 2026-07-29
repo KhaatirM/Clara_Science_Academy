@@ -2085,6 +2085,16 @@ def remove_class(class_id):
         db.session.execute(class_additional_teachers.delete().where(class_additional_teachers.c.class_id == class_id))
         db.session.execute(class_substitute_teachers.delete().where(class_substitute_teachers.c.class_id == class_id))
 
+        # Remove school-managed Google Classroom before the Clara class row is gone.
+        try:
+            from services.class_google_classroom import try_delete_class_google_classroom
+
+            try_delete_class_google_classroom(class_obj)
+        except Exception:
+            current_app.logger.exception(
+                "Google Classroom cleanup failed during remove_class class_id=%s", class_id
+            )
+
         db.session.delete(class_obj)
         db.session.commit()
         if _classes_wants_json():

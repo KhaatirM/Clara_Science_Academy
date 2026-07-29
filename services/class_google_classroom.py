@@ -193,6 +193,41 @@ def try_provision_class_google_classroom(class_id: int) -> None:
         )
 
 
+def try_delete_class_google_classroom(class_obj: Class) -> bool:
+    """
+    Best-effort delete of the class's school-managed Google Classroom.
+    Clears ``google_classroom_id`` on success. Never raises.
+    """
+    if not class_obj:
+        return True
+    course_id = (class_obj.google_classroom_id or "").strip()
+    if not course_id:
+        return True
+    try:
+        if delete_course(course_id):
+            class_obj.google_classroom_id = None
+            current_app.logger.info(
+                "Deleted Google Classroom %s for class_id=%s",
+                course_id,
+                getattr(class_obj, "id", None),
+            )
+            return True
+        current_app.logger.warning(
+            "Could not delete Google Classroom %s for class_id=%s",
+            course_id,
+            getattr(class_obj, "id", None),
+        )
+        return False
+    except Exception as exc:
+        current_app.logger.warning(
+            "Google Classroom delete failed for class_id=%s course=%s: %s",
+            getattr(class_obj, "id", None),
+            course_id,
+            exc,
+        )
+        return False
+
+
 def delete_class_google_classrooms_for_school_year(school_year_id: int) -> dict:
     """
     Delete school-managed Google Classroom courses for all classes in a school year.

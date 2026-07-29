@@ -187,18 +187,32 @@ def _staff_can_be_assigned_to_classes(staff):
     """
     Decide whether a TeacherStaff record can be selected as a class teacher/additional/sub.
     - Teachers/Substitutes/Counselors: allowed
+    - Director / School Administrator: allowed (they may also teach)
     - Other Staff: only if they have explicit permission 'classes:assignable'
     """
     if not staff:
         return False
     try:
-        user = getattr(staff, 'user', None)
-        role = (getattr(user, 'role', None) or getattr(staff, 'assigned_role', None) or '').strip()
-        if role in ['Director', 'School Administrator']:
-            return True
-        if is_teacher_role(role) or role in ['Counselor', 'Substitute']:
-            return True
-        if user and has_permission(user, 'classes:assignable'):
+        from models import User
+        from utils.user_roles import all_role_strings, canonical_role_label
+
+        user = getattr(staff, "user", None)
+        if user is None:
+            user = User.query.filter_by(teacher_staff_id=staff.id).first()
+
+        role_candidates = []
+        if user is not None:
+            role_candidates.extend(all_role_strings(user))
+        role_candidates.append(getattr(staff, "assigned_role", None))
+
+        for raw in role_candidates:
+            canon = canonical_role_label(raw)
+            if canon in ("Director", "School Administrator"):
+                return True
+            if is_teacher_role(raw) or is_teacher_role(canon) or canon in ("Counselor", "Substitute"):
+                return True
+
+        if user and has_permission(user, "classes:assignable"):
             return True
         return False
     except Exception:

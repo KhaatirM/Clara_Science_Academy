@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { googleClassroomAction, removeClass } from '../../api/classes'
+import { removeClass } from '../../api/classes'
 import type { ClassListItem } from '../../types/classes'
 
 interface ClassCardProps {
@@ -31,25 +31,6 @@ export function ClassCard({
           detail: 'border-teal-500 text-teal-600',
           action: 'border-teal-300 text-teal-800 hover:border-teal-500 hover:bg-teal-50',
         }
-
-  const runGoogle = async (action: 'create' | 'unlink' | 'sync') => {
-    if (action === 'unlink' && !window.confirm('Clear the Google Classroom link for this class?')) return
-    try {
-      const res = await googleClassroomAction(item.id, action)
-      if (!res.success) {
-        if (res.settings_url) {
-          window.alert(`${res.message}\n\nOpen Settings to connect your Google account.`)
-          window.location.href = res.settings_url
-          return
-        }
-        throw new Error(res.message)
-      }
-      window.alert(res.message)
-      onChanged()
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Google Classroom action failed')
-    }
-  }
 
   const onRemove = async () => {
     if (!window.confirm(`Remove "${item.name}"? This cannot be undone.`)) return
@@ -131,9 +112,9 @@ export function ClassCard({
               Google Classroom ready
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
-              <i className="bi bi-hourglass-split" aria-hidden />
-              Classroom pending (school-managed)
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+              <i className="bi bi-building" aria-hidden />
+              School-managed Classroom
             </span>
           )}
         </div>
@@ -171,35 +152,16 @@ export function ClassCard({
             <i className="bi bi-clipboard-data" aria-hidden />
             Grades
           </Link>
-          {canAdminUi && item.google_classroom_linked && item.google_classroom_id ? (
-            <>
-              <a
-                href={`https://classroom.google.com/c/${item.google_classroom_id}`}
-                target="_blank"
-                rel="noreferrer"
-                className={`inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
-              >
-                <i className="bi bi-google" aria-hidden />
-                Open
-              </a>
-              <button
-                type="button"
-                onClick={() => void runGoogle('sync')}
-                className={`inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
-              >
-                <i className="bi bi-arrow-repeat" aria-hidden />
-                Sync roster
-              </button>
-            </>
-          ) : canAdminUi ? (
-            <button
-              type="button"
-              onClick={() => void runGoogle('sync')}
+          {item.google_classroom_linked && item.google_classroom_id ? (
+            <a
+              href={`https://classroom.google.com/c/${item.google_classroom_id}`}
+              target="_blank"
+              rel="noreferrer"
               className={`col-span-2 inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
             >
               <i className="bi bi-google" aria-hidden />
-              Create / sync Classroom
-            </button>
+              Open Google Classroom
+            </a>
           ) : null}
           {canCreate ? (
             <button

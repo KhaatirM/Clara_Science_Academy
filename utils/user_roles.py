@@ -14,8 +14,10 @@ _MGMT_ROLES = frozenset({"School Administrator", "Director"})
 _ROLE_CANON_ALIASES = {
     "admin": "School Administrator",
     "administrator": "School Administrator",
+    "school admin": "School Administrator",
     "school administrator": "School Administrator",
     "school_administrator": "School Administrator",
+    "schooladministrator": "School Administrator",
     "director": "Director",
     "teacher": "Teacher",
     "tech": "Tech",

@@ -156,7 +156,8 @@ def grade3_template_context(student_id, school_year_id, selected_quarters, class
         'report_period_label': build_report_period_label(school_year_id, quarters),
         'attendance_by_quarter': attendance,
         'attendance_rows': attendance_rows,
-        'include_attendance': include_attendance,
+        # Do not include include_attendance here — callers pass it to render_template
+        # explicitly; duplicating it causes "multiple values for keyword argument".
         'course_progress_rows': build_grade3_course_progress_rows(class_objects, grades),
     }
 

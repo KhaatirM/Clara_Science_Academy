@@ -1212,8 +1212,7 @@ def build_report_card_pdf_response(report_card):
     # Choose template based on grade level and report type
     template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
     template_name = _report_card_template_name(pdf_grade, template_prefix)
-    
-    # Render the HTML template
+
     # Backward-compat: older snapshots used comments_by_quarter; collapse to comments_by_class if needed.
     if not comments_by_class and isinstance(report_card_data, dict):
         legacy = report_card_data.get('comments_by_quarter')
@@ -1239,6 +1238,18 @@ def build_report_card_pdf_response(report_card):
         if key not in teachers_by_class:
             teachers_by_class[key] = class_obj.get_primary_teacher_display_name()
 
+    # Grade 1/3 helpers must not re-pass keys already set below (e.g. include_attendance).
+    elementary_extras = _elementary_pdf_extras(
+        student_for_template,
+        report_card.school_year_id,
+        selected_quarters,
+        class_objects,
+        grades,
+        include_attendance,
+        report_card_data,
+    )
+    elementary_extras.pop('include_attendance', None)
+
     html_content = render_template(
         template_name,
         report_card=report_card,
@@ -1256,15 +1267,7 @@ def build_report_card_pdf_response(report_card):
         generated_date=report_card.generated_at or datetime.utcnow(),
         report_type=report_type,
         template_prefix=template_prefix,
-        **_elementary_pdf_extras(
-            student_for_template,
-            report_card.school_year_id,
-            selected_quarters,
-            class_objects,
-            grades,
-            include_attendance,
-            report_card_data,
-        ),
+        **elementary_extras,
     )
     
     # Read CSS file from filesystem and inject it into the HTML

@@ -124,6 +124,30 @@ def serialize_student_roster(student: Student) -> dict[str, Any]:
     }
 
 
+def class_roster_grade_levels(class_info: Class) -> list[int]:
+    """Grade band configured on the class (empty if unset)."""
+    if not class_info or not hasattr(class_info, "get_grade_levels"):
+        return []
+    out: list[int] = []
+    for g in class_info.get_grade_levels() or []:
+        try:
+            out.append(int(g))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def student_matches_class_grades(student: Student, grade_levels: list[int]) -> bool:
+    """True when the student may be added to a class with the given grade band."""
+    if not grade_levels:
+        return True
+    try:
+        sg = int(student.grade_level) if student.grade_level is not None else None
+    except (TypeError, ValueError):
+        return False
+    return sg is not None and sg in grade_levels
+
+
 def _subject_has_standards(subject: str | None) -> bool:
     subj = (subject or "").lower()
     return any(k in subj for k in ("math", "language", "reading", "english", "ela", "literacy"))
@@ -315,8 +339,13 @@ def query_class_roster(class_id: int) -> dict[str, Any]:
         .order_by(Student.last_name, Student.first_name)
         .all()
     )
+    grade_levels = class_roster_grade_levels(class_info)
     enrolled = [s for s in all_students if s.id in enrolled_ids]
-    available = [s for s in all_students if s.id not in enrolled_ids]
+    available = [
+        s
+        for s in all_students
+        if s.id not in enrolled_ids and student_matches_class_grades(s, grade_levels)
+    ]
     max_students = class_info.max_students or 0
     enrolled_count = len(enrolled)
     with_accounts = sum(1 for s in enrolled if getattr(s, "user", None))
@@ -332,6 +361,12 @@ def query_class_roster(class_id: int) -> dict[str, Any]:
             "max_students": max_students,
             "room_number": class_info.room_number,
             "schedule": class_info.schedule,
+            "grade_levels": grade_levels,
+            "grade_levels_display": (
+                class_info.get_grade_levels_display()
+                if hasattr(class_info, "get_grade_levels_display")
+                else None
+            ),
         },
         "enrolled_students": [serialize_student_roster(s) for s in enrolled],
         "available_students": [serialize_student_roster(s) for s in available],
@@ -355,11 +390,16 @@ def query_class_roster(class_id: int) -> dict[str, Any]:
 
 def mutate_class_roster(class_id: int, action: str, student_ids: list[int]) -> dict[str, Any]:
     class_obj = Class.query.get_or_404(class_id)
+    grade_levels = class_roster_grade_levels(class_obj)
     if action == "add":
         added = 0
+        skipped_grade = 0
         for sid in student_ids:
             stu = Student.query.get(sid)
             if not stu or getattr(stu, "is_deleted", False):
+                continue
+            if not student_matches_class_grades(stu, grade_levels):
+                skipped_grade += 1
                 continue
             exists = Enrollment.query.filter_by(
                 class_id=class_id, student_id=sid, is_active=True
@@ -378,7 +418,25 @@ def mutate_class_roster(class_id: int, action: str, student_ids: list[int]) -> d
                     void_assignments_for_late_enrollment(int(sid), class_id)
                 except Exception:
                     pass
-            return {"success": True, "message": f"{added} student(s) added to class.", "added": added}
+            msg = f"{added} student(s) added to class."
+            if skipped_grade:
+                msg += f" Skipped {skipped_grade} outside this class grade band."
+            return {
+                "success": True,
+                "message": msg,
+                "added": added,
+                "skipped_grade": skipped_grade,
+            }
+        if skipped_grade:
+            return {
+                "success": False,
+                "message": (
+                    "Selected students are outside this class's grade level(s). "
+                    "Only matching grades can be enrolled."
+                ),
+                "added": 0,
+                "skipped_grade": skipped_grade,
+            }
         return {"success": False, "message": "Selected students are already enrolled or invalid.", "added": 0}
     if action == "remove":
         removed = 0

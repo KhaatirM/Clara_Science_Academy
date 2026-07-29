@@ -457,7 +457,11 @@ export function ClassRosterPage() {
                   </span>
                   <div>
                     <h2 className="font-bold">Add Students</h2>
-                    <p className="text-sm text-white/85">Enroll new students in this class</p>
+                    <p className="text-sm text-white/85">
+                      {data.class.grade_levels_display
+                        ? `Only ${data.class.grade_levels_display} students`
+                        : 'Enroll new students in this class'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -527,7 +531,9 @@ export function ClassRosterPage() {
                   ) : (
                     <div className="py-10 text-center text-sm text-hub-muted">
                       <i className="bi bi-check-circle mb-2 block text-2xl text-emerald-600" aria-hidden />
-                      All available students are already enrolled in this class.
+                      {data.class.grade_levels_display
+                        ? `No unenrolled ${data.class.grade_levels_display} students to add.`
+                        : 'All available students are already enrolled in this class.'}
                     </div>
                   )}
                 </div>

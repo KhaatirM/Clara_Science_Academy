@@ -622,12 +622,21 @@ def manage_class(class_id):
     
     class_obj = Class.query.get_or_404(class_id)
     
-    # Active students only (soft-deleted / archived students stay out of roster UI)
-    all_students = (
-        Student.query.filter(Student.is_deleted == False)
-        .order_by(Student.last_name, Student.first_name)
-        .all()
+    # Active students matching this class grade band
+    from management_routes.class_spa_helpers import (
+        class_roster_grade_levels,
+        student_matches_class_grades,
     )
+    grade_levels = class_roster_grade_levels(class_obj)
+    all_students = [
+        s
+        for s in (
+            Student.query.filter(Student.is_deleted == False)
+            .order_by(Student.last_name, Student.first_name)
+            .all()
+        )
+        if student_matches_class_grades(s, grade_levels)
+    ]
     
     # Get currently enrolled students
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -920,11 +929,18 @@ def class_roster(class_id):
             if action == 'add':
                 student_ids = request.form.getlist('student_id')
                 if student_ids:
+                    from management_routes.class_spa_helpers import (
+                        class_roster_grade_levels,
+                        student_matches_class_grades,
+                    )
+                    grade_levels = class_roster_grade_levels(class_obj)
                     added_count = 0
                     for student_id in student_ids:
                         student_id = int(student_id)
                         stu = Student.query.get(student_id)
                         if not stu or getattr(stu, 'is_deleted', False):
+                            continue
+                        if not student_matches_class_grades(stu, grade_levels):
                             continue
                         # Check if student is already enrolled
                         existing_enrollment = Enrollment.query.filter_by(
@@ -952,7 +968,7 @@ def class_roster(class_id):
                                 print(f"Automatically voided {voided_count} assignment(s) for student {student_id} due to late enrollment")
                         flash(f'{added_count} student(s) added to class successfully!', 'success')
                     else:
-                        flash('Selected students are already enrolled in this class.', 'warning')
+                        flash('Selected students are already enrolled or outside this class grade band.', 'warning')
                 else:
                     flash('Please select at least one student to add.', 'warning')
                         
@@ -988,12 +1004,21 @@ def class_roster(class_id):
             flash(f'Error updating roster: {str(e)}', 'danger')
             return redirect(url_for('management.class_roster', class_id=class_id))
     
-    # Active students only (soft-deleted / archived students stay out of roster UI)
-    all_students = (
-        Student.query.filter(Student.is_deleted == False)
-        .order_by(Student.last_name, Student.first_name)
-        .all()
+    # Active students matching this class grade band
+    from management_routes.class_spa_helpers import (
+        class_roster_grade_levels,
+        student_matches_class_grades,
     )
+    grade_levels = class_roster_grade_levels(class_obj)
+    all_students = [
+        s
+        for s in (
+            Student.query.filter(Student.is_deleted == False)
+            .order_by(Student.last_name, Student.first_name)
+            .all()
+        )
+        if student_matches_class_grades(s, grade_levels)
+    ]
     
     # Get currently enrolled students (ACTIVE enrollments only)
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -2464,6 +2489,16 @@ def manage_class_roster(class_id):
                         stu = Student.query.get(student_id)
                         if not stu or getattr(stu, 'is_deleted', False):
                             continue
+                        from management_routes.class_spa_helpers import (
+                            class_roster_grade_levels,
+                            student_matches_class_grades,
+                        )
+                        if not student_matches_class_grades(stu, class_roster_grade_levels(class_info)):
+                            flash(
+                                f'{stu.first_name} {stu.last_name} is outside this class grade band.',
+                                'warning',
+                            )
+                            continue
                         # Check if student is already enrolled
                         existing_enrollment = Enrollment.query.filter_by(
                             student_id=student_id, 
@@ -2543,12 +2578,22 @@ def manage_class_roster(class_id):
 
         return redirect(url_for('management.manage_class_roster', class_id=class_id))
     
-    # Active students only (soft-deleted / archived students stay out of roster UI)
-    all_students = (
-        Student.query.filter(Student.is_deleted == False)
-        .order_by(Student.last_name, Student.first_name)
-        .all()
+    # Active students matching this class's grade band (soft-deleted stay out)
+    from management_routes.class_spa_helpers import (
+        class_roster_grade_levels,
+        student_matches_class_grades,
     )
+
+    grade_levels = class_roster_grade_levels(class_info)
+    all_students = [
+        s
+        for s in (
+            Student.query.filter(Student.is_deleted == False)
+            .order_by(Student.last_name, Student.first_name)
+            .all()
+        )
+        if student_matches_class_grades(s, grade_levels)
+    ]
     
     # Convert dob string to date object for each student to allow for age calculation
     for student in all_students:

@@ -952,6 +952,7 @@ def finalize_closure(closure: SchoolYearClosure, *, triggered_by: str = 'manual'
                 errors_sample.append(f"{student.first_name} {student.last_name}: {res.get('error')}")
 
     google_group_stats = None
+    google_classroom_stats = None
     if class_ids:
         try:
             from services.class_google_group import delete_class_google_groups_for_school_year
@@ -961,6 +962,22 @@ def finalize_closure(closure: SchoolYearClosure, *, triggered_by: str = 'manual'
                 "Failed to delete class Google Groups for school year %s", sy.id
             )
             google_group_stats = {'deleted': 0, 'failed': -1, 'skipped': 0, 'errors_sample': ['exception']}
+
+        try:
+            from services.class_google_classroom import (
+                delete_class_google_classrooms_for_school_year,
+            )
+            google_classroom_stats = delete_class_google_classrooms_for_school_year(sy.id)
+        except Exception:
+            current_app.logger.exception(
+                "Failed to delete class Google Classrooms for school year %s", sy.id
+            )
+            google_classroom_stats = {
+                'deleted': 0,
+                'failed': -1,
+                'skipped': 0,
+                'errors_sample': ['exception'],
+            }
 
         Assignment.query.filter(
             Assignment.class_id.in_(class_ids),
@@ -1019,6 +1036,7 @@ def finalize_closure(closure: SchoolYearClosure, *, triggered_by: str = 'manual'
         'classes_archived': len(class_ids),
         'students_processed': len(enrolled_student_ids),
         'class_google_groups': google_group_stats,
+        'class_google_classrooms': google_classroom_stats,
     }
     closure.finalize_stats = json.dumps(stats)
 

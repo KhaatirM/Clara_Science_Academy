@@ -80,6 +80,9 @@ class Config:
     GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON = os.environ.get('GOOGLE_DIRECTORY_SERVICE_ACCOUNT_JSON')
     # Admin email to impersonate for domain-wide delegation (must be a Workspace admin).
     GOOGLE_DIRECTORY_DELEGATED_ADMIN = os.environ.get('GOOGLE_DIRECTORY_DELEGATED_ADMIN')
+    # Workspace user that owns school-managed Google Classrooms (defaults to Directory admin).
+    # Authorize Classroom scopes on the same service account in Admin Console → Domain-wide delegation.
+    GOOGLE_CLASSROOM_DELEGATED_USER = os.environ.get('GOOGLE_CLASSROOM_DELEGATED_USER')
     
     # Encryption key for storing sensitive data like refresh tokens
     # IMPORTANT: Set this environment variable in production

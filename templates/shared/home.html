@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated July 26, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated July 29, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 26, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 29, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>July 26</strong> (<strong>{{ app_version_display }}</strong>) advances the <strong>React SPA</strong> across management, teacher, student, parent, and tech portals: soft redirects for deep links, quiz/discussion editing in the SPA, permission-only staff on the management shell, native teacher student reports, corner toasts, and report-card hub placeholders for high school and K–8 transcripts.</p>
+                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) introduces <strong>school-managed Google Classroom</strong> (botadmin creates courses and direct-enrolls teachers/students), keeps <strong>closed-year teacher names</strong> on report cards, hardens <strong>staff removal</strong>, and shows the <strong>calendar legend</strong> for teachers and students.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- July 29, 2026 - Classroom + records -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Classroom &amp; Records – July 29, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School-managed Google Classroom:</strong> Clara creates Classrooms as the school botadmin/admin account, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a school year is archived. Teachers no longer create or link their own courses.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Closed-year teacher names on report cards:</strong> Archived / closed-year classes keep the teacher of record. Year close freezes teacher names so removing a staff login does not rewrite report cards to “Unassigned Teacher.”
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Safer staff removal:</strong> Deleting a teacher no longer fails when admin audit logs still reference their login; audit rows stay, with the user link cleared.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Calendar legend for viewers:</strong> Teachers and students see the same event-color legend as management on the school calendar.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Toasts &amp; version badge:</strong> Corner notifications and the version chip sit at the bottom-right so they do not cover Logout.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Classroom setup is centralized for the school. Historical report cards stay accurate after staff leave. View-only calendars are easier to read.</p>
+                        </div>
+                    </div>
+
                     <!-- July 26, 2026 - SPA migration wave -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-lightning-charge-fill me-2"></i>React SPA Portals &amp; Report Cards – July 26, 2026</h6>

@@ -1,14 +1,6 @@
-import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import type { TeacherClassItem } from '../../types/teacherClasses'
-import { spaRoute } from '../../utils/spaRoute'
-
-const META_ICONS: Record<string, string> = {
-  teacher: 'bg-pink-100 text-pink-700',
-  subject: 'bg-blue-100 text-blue-700',
-  students: 'bg-emerald-100 text-emerald-700',
-  schedule: 'bg-amber-100 text-amber-700',
-}
 
 function MetaItem({
   kind,
@@ -16,17 +8,17 @@ function MetaItem({
   label,
   children,
 }: {
-  kind: keyof typeof META_ICONS
+  kind: string
   icon: string
   label: string
   children: ReactNode
 }) {
   return (
-    <div className="teacher-class-card__meta-item">
-      <span className={`teacher-class-card__meta-icon ${META_ICONS[kind]}`}>
-        <i className={`bi ${icon}`} aria-hidden />
+    <div className={`teacher-class-card__meta-item teacher-class-card__meta-item--${kind}`}>
+      <span className="teacher-class-card__meta-icon" aria-hidden>
+        <i className={`bi ${icon}`} />
       </span>
-      <div className="min-w-0">
+      <div>
         <div className="teacher-class-card__meta-label">{label}</div>
         <div className="teacher-class-card__meta-value">{children}</div>
       </div>
@@ -40,16 +32,12 @@ function SpaLink({
   children,
 }: {
   href: string
-  className: string
+  className?: string
   children: ReactNode
 }) {
-  if (!href || href === 'spa') return null
-  if (href.startsWith('http')) {
-    return (
-      <a href={href} className={className} target="_blank" rel="noopener noreferrer">
-        {children}
-      </a>
-    )
+  const spaRoute = (path: string) => {
+    if (path.startsWith('/app/')) return path.slice(4) || '/'
+    return path
   }
   return (
     <Link to={spaRoute(href)} className={className}>
@@ -58,21 +46,8 @@ function SpaLink({
   )
 }
 
-export function TeacherClassCard({
-  item,
-  onLinkGoogle,
-  onCreateGoogle,
-  onUnlinkGoogle,
-  googleBusy,
-}: {
-  item: TeacherClassItem
-  onLinkGoogle: (classId: number, className: string) => void
-  onCreateGoogle: (classId: number) => void
-  onUnlinkGoogle: (classId: number) => void
-  googleBusy?: boolean
-}) {
+export function TeacherClassCard({ item }: { item: TeacherClassItem }) {
   const gradeLabel = item.grade_levels_display || 'N/A'
-  const busy = Boolean(googleBusy)
 
   return (
     <article className="teacher-class-card">
@@ -116,12 +91,12 @@ export function TeacherClassCard({
               {item.google_classroom_linked ? (
                 <span className="teacher-class-card__badge teacher-class-card__badge--ok">
                   <i className="bi bi-check-circle-fill" aria-hidden />
-                  Linked
+                  Ready
                 </span>
               ) : (
                 <span className="teacher-class-card__badge teacher-class-card__badge--warn">
-                  <i className="bi bi-exclamation-circle-fill" aria-hidden />
-                  Not linked
+                  <i className="bi bi-hourglass-split" aria-hidden />
+                  School setting up
                 </span>
               )}
             </div>
@@ -169,51 +144,17 @@ export function TeacherClassCard({
           </div>
         ) : null}
 
-        {item.show_google_integration ? (
+        {item.show_google_integration && item.google_classroom_linked && item.links.open_google ? (
           <div className="teacher-class-card__actions teacher-class-card__actions--pair">
-            {item.google_classroom_linked && item.links.open_google ? (
-              <>
-                <a
-                  href={item.links.open_google}
-                  className="teacher-class-card__btn teacher-class-card__btn--google-open"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <i className="bi bi-google" aria-hidden />
-                  Open
-                </a>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onUnlinkGoogle(item.id)}
-                  className="teacher-class-card__btn teacher-class-card__btn--google-unlink"
-                >
-                  <i className="bi bi-link-45deg" aria-hidden />
-                  Unlink
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onLinkGoogle(item.id, item.name)}
-                  className="teacher-class-card__btn teacher-class-card__btn--google-link"
-                >
-                  <i className="bi bi-link-45deg" aria-hidden />
-                  Link Existing
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onCreateGoogle(item.id)}
-                  className="teacher-class-card__btn teacher-class-card__btn--google-create"
-                >
-                  <i className="bi bi-plus-circle-fill" aria-hidden />
-                  Create New
-                </button>
-              </>
-            )}
+            <a
+              href={item.links.open_google}
+              className="teacher-class-card__btn teacher-class-card__btn--google-open"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i className="bi bi-google" aria-hidden />
+              Open Classroom
+            </a>
           </div>
         ) : null}
       </div>

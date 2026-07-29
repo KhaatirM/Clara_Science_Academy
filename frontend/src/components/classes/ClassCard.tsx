@@ -7,7 +7,6 @@ interface ClassCardProps {
   canAdminUi: boolean
   canCreate: boolean
   accentClass?: string
-  onLinkGoogle: (classId: number, className: string) => void
   onChanged: () => void
 }
 
@@ -16,7 +15,6 @@ export function ClassCard({
   canAdminUi,
   canCreate,
   accentClass = 'teal',
-  onLinkGoogle,
   onChanged,
 }: ClassCardProps) {
   const accent =
@@ -34,8 +32,8 @@ export function ClassCard({
           action: 'border-teal-300 text-teal-800 hover:border-teal-500 hover:bg-teal-50',
         }
 
-  const runGoogle = async (action: 'create' | 'unlink') => {
-    if (action === 'unlink' && !window.confirm('Unlink this class from Google Classroom?')) return
+  const runGoogle = async (action: 'create' | 'unlink' | 'sync') => {
+    if (action === 'unlink' && !window.confirm('Clear the Google Classroom link for this class?')) return
     try {
       const res = await googleClassroomAction(item.id, action)
       if (!res.success) {
@@ -130,12 +128,12 @@ export function ClassCard({
           {item.google_classroom_linked ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
               <i className="bi bi-check-circle-fill" aria-hidden />
-              Google Classroom linked
+              Google Classroom ready
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-              <i className="bi bi-exclamation-circle-fill" aria-hidden />
-              Not linked
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+              <i className="bi bi-hourglass-split" aria-hidden />
+              Classroom pending (school-managed)
             </span>
           )}
         </div>
@@ -186,32 +184,22 @@ export function ClassCard({
               </a>
               <button
                 type="button"
-                onClick={() => void runGoogle('unlink')}
+                onClick={() => void runGoogle('sync')}
                 className={`inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
               >
-                <i className="bi bi-link-45deg" aria-hidden />
-                Unlink
+                <i className="bi bi-arrow-repeat" aria-hidden />
+                Sync roster
               </button>
             </>
           ) : canAdminUi ? (
-            <>
-              <button
-                type="button"
-                onClick={() => onLinkGoogle(item.id, item.name)}
-                className={`inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
-              >
-                <i className="bi bi-link-45deg" aria-hidden />
-                Link
-              </button>
-              <button
-                type="button"
-                onClick={() => void runGoogle('create')}
-                className={`inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
-              >
-                <i className="bi bi-plus-circle-fill" aria-hidden />
-                Create
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => void runGoogle('sync')}
+              className={`col-span-2 inline-flex items-center justify-center gap-1 rounded-full border bg-white px-2 py-2 text-xs font-semibold ${accent.action}`}
+            >
+              <i className="bi bi-google" aria-hidden />
+              Create / sync Classroom
+            </button>
           ) : null}
           {canCreate ? (
             <button

@@ -868,59 +868,84 @@ def query_class_grades(class_id: int, view_mode: str = "table") -> dict[str, Any
 
 def google_classroom_options(class_id: int) -> dict[str, Any]:
     class_to_link = Class.query.get_or_404(class_id)
-    if not current_user.google_refresh_token:
-        return {"success": False, "message": "Connect your Google account first.", "settings_url": "/teacher/settings"}
-    from services.google_classroom_service import get_google_service
+    from services.class_google_group import class_needs_google_integration
+    from services.google_classroom_admin import classroom_owner_email
 
-    service = get_google_service(current_user)
-    if not service:
-        return {"success": False, "message": "Could not connect to Google."}
-    results = service.courses().list(teacherId="me", courseStates=["ACTIVE"]).execute()
-    courses = results.get("courses", [])
     return {
         "success": True,
         "class_id": class_id,
-        "items": [
-            {"id": c.get("id"), "name": c.get("name"), "section": c.get("section"), "room": c.get("room")}
-            for c in courses
-        ],
         "class_name": class_to_link.name,
+        "managed_by_school": True,
+        "google_classroom_id": class_to_link.google_classroom_id,
+        "needs_google": class_needs_google_integration(class_to_link),
+        "owner_email": classroom_owner_email(),
+        "items": [],
+        "message": (
+            "Google Classroom is created and rostered automatically by the school "
+            "(botadmin). Teachers and students are enrolled directly — no invite to accept."
+        ),
     }
 
 
 def google_classroom_action(class_id: int, action: str, google_classroom_id: str | None = None) -> dict[str, Any]:
     class_obj = Class.query.get_or_404(class_id)
+    from services.class_google_group import class_needs_google_integration
+    from services.class_google_classroom import (
+        provision_and_sync_class_google_classroom,
+    )
+    from services.google_classroom_admin import delete_course
+
     if action == "unlink":
         if not class_obj.google_classroom_id:
             return {"success": False, "message": "This class is not linked to Google Classroom."}
+        old_id = class_obj.google_classroom_id
+        # School-managed: clear local link only (does not delete the remote course).
         class_obj.google_classroom_id = None
         db.session.commit()
-        return {"success": True, "message": "Successfully unlinked from Google Classroom."}
-    if not current_user.google_refresh_token:
-        return {"success": False, "message": "Connect your Google account first.", "settings_url": "/teacher/settings"}
-    from services.google_classroom_service import get_google_service
-
-    service = get_google_service(current_user)
-    if not service:
-        return {"success": False, "message": "Could not connect to Google."}
-    if action == "create":
-        course = {
-            "name": class_obj.name,
-            "section": class_obj.subject or "",
-            "descriptionHeading": f"Class: {class_obj.name}",
-            "description": class_obj.description or f"Welcome to {class_obj.name}",
-            "room": class_obj.room_number or "",
-            "ownerId": "me",
-            "courseState": "ACTIVE",
+        return {
+            "success": True,
+            "message": f"Cleared Google Classroom link ({old_id}). Use Sync to recreate.",
         }
-        created = service.courses().create(body=course).execute()
-        class_obj.google_classroom_id = created.get("id")
-        db.session.commit()
-        return {"success": True, "message": "Google Classroom created and linked.", "google_classroom_id": class_obj.google_classroom_id}
-    if action == "link" and google_classroom_id:
-        class_obj.google_classroom_id = google_classroom_id
-        db.session.commit()
-        return {"success": True, "message": "Google Classroom linked.", "google_classroom_id": google_classroom_id}
+
+    if action in ("create", "sync", "link"):
+        if not class_needs_google_integration(class_obj):
+            return {
+                "success": False,
+                "message": "Google Classroom is not used for K–2 classes.",
+            }
+        if not class_obj.is_active:
+            return {"success": False, "message": "Cannot provision Google Classroom for an inactive class."}
+        # Optional: if management passes an existing id, adopt it then sync roster.
+        if action == "link" and google_classroom_id:
+            class_obj.google_classroom_id = str(google_classroom_id).strip()
+            db.session.commit()
+        ok = provision_and_sync_class_google_classroom(class_id)
+        db.session.refresh(class_obj)
+        if not ok or not class_obj.google_classroom_id:
+            return {
+                "success": False,
+                "message": (
+                    "Could not create or sync Google Classroom. Check that Classroom scopes "
+                    "are authorized for the service account and GOOGLE_CLASSROOM_DELEGATED_USER "
+                    "(or Directory admin) is set."
+                ),
+            }
+        return {
+            "success": True,
+            "message": "Google Classroom is ready. Teachers and students were enrolled directly.",
+            "google_classroom_id": class_obj.google_classroom_id,
+        }
+
+    if action == "delete_remote":
+        if not class_obj.google_classroom_id:
+            return {"success": False, "message": "No Google Classroom to delete."}
+        course_id = class_obj.google_classroom_id
+        if delete_course(course_id):
+            class_obj.google_classroom_id = None
+            db.session.commit()
+            return {"success": True, "message": f"Deleted Google Classroom {course_id}."}
+        return {"success": False, "message": f"Failed to delete Google Classroom {course_id}."}
+
     return {"success": False, "message": "Invalid Google Classroom action."}
 
 

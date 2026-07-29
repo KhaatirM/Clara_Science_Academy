@@ -10,8 +10,6 @@ import { CreateClassModal } from '../components/classes/CreateClassModal'
 
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 
-import { LinkGoogleClassroomModal } from '../components/classes/LinkGoogleClassroomModal'
-
 import type { ManagementOutletContext } from '../types/layout'
 
 import type { ClassListItem, SchoolYearOption } from '../types/classes'
@@ -217,8 +215,6 @@ export function ClassesPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [showCreate, setShowCreate] = useState(false)
-
-  const [linkGoogle, setLinkGoogle] = useState<{ id: number; name: string } | null>(null)
 
 
 
@@ -934,8 +930,6 @@ export function ClassesPage() {
 
               accentClass={isDirector ? 'violet' : 'teal'}
 
-              onLinkGoogle={(id, name) => setLinkGoogle({ id, name })}
-
               onChanged={() => void load()}
 
             />
@@ -961,22 +955,6 @@ export function ClassesPage() {
             navigate(`/management/classes/${classId}`)
 
           }}
-
-        />
-
-      ) : null}
-
-      {linkGoogle ? (
-
-        <LinkGoogleClassroomModal
-
-          classId={linkGoogle.id}
-
-          className={linkGoogle.name}
-
-          onClose={() => setLinkGoogle(null)}
-
-          onLinked={() => void load()}
 
         />
 

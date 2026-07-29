@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { googleClassroomAction } from '../api/classes'
 import { fetchTeacherClasses } from '../api/teacherClasses'
-import { LinkGoogleClassroomModal } from '../components/classes/LinkGoogleClassroomModal'
 import { TeacherClassCard } from '../components/teacher/TeacherClassCard'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { TeacherClassesResponse } from '../types/teacherClasses'
@@ -11,8 +9,6 @@ export function TeacherClassesPage() {
   const [data, setData] = useState<TeacherClassesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [linkGoogle, setLinkGoogle] = useState<{ id: number; name: string } | null>(null)
-  const [googleBusyId, setGoogleBusyId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -30,19 +26,6 @@ export function TeacherClassesPage() {
     void load()
   }, [load])
 
-  const runGoogle = async (classId: number, action: 'create' | 'unlink') => {
-    setGoogleBusyId(classId)
-    try {
-      const res = await googleClassroomAction(classId, action, undefined, 'teacher')
-      if (!res.success) throw new Error(res.message)
-      await load()
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Google Classroom action failed')
-    } finally {
-      setGoogleBusyId(null)
-    }
-  }
-
   return (
     <ManagementPageShell>
       <div className="mgmt-home mgmt-home--teacher container-fluid px-0 px-md-1">
@@ -52,42 +35,15 @@ export function TeacherClassesPage() {
           ) : error || !data ? (
             <div className="alert alert-danger m-3">{error || 'Could not load classes'}</div>
           ) : (
-            <TeacherClassesBody
-              data={data}
-              googleBusyId={googleBusyId}
-              onLinkGoogle={(id, name) => setLinkGoogle({ id, name })}
-              onCreateGoogle={(id) => void runGoogle(id, 'create')}
-              onUnlinkGoogle={(id) => void runGoogle(id, 'unlink')}
-            />
+            <TeacherClassesBody data={data} />
           )}
         </div>
       </div>
-      {linkGoogle ? (
-        <LinkGoogleClassroomModal
-          classId={linkGoogle.id}
-          className={linkGoogle.name}
-          scope="teacher"
-          onClose={() => setLinkGoogle(null)}
-          onLinked={() => void load()}
-        />
-      ) : null}
     </ManagementPageShell>
   )
 }
 
-function TeacherClassesBody({
-  data,
-  googleBusyId,
-  onLinkGoogle,
-  onCreateGoogle,
-  onUnlinkGoogle,
-}: {
-  data: TeacherClassesResponse
-  googleBusyId: number | null
-  onLinkGoogle: (classId: number, className: string) => void
-  onCreateGoogle: (classId: number) => void
-  onUnlinkGoogle: (classId: number) => void
-}) {
+function TeacherClassesBody({ data }: { data: TeacherClassesResponse }) {
   const st = data.stats
 
   return (
@@ -134,7 +90,7 @@ function TeacherClassesBody({
             <i className="bi bi-google" aria-hidden />
           </div>
           <p className="mgmt-home-stat-number">{st.linked_classrooms}</p>
-          <p className="mgmt-home-stat-label">Linked</p>
+          <p className="mgmt-home-stat-label">Classrooms</p>
         </article>
         <article className="mgmt-home-stat mgmt-home-stat--assignments">
           <div className="mgmt-home-stat-icon">
@@ -158,14 +114,7 @@ function TeacherClassesBody({
       ) : (
         <div className="teacher-classes-grid">
           {data.items.map((item) => (
-            <TeacherClassCard
-              key={item.id}
-              item={item}
-              googleBusy={googleBusyId === item.id}
-              onLinkGoogle={onLinkGoogle}
-              onCreateGoogle={onCreateGoogle}
-              onUnlinkGoogle={onUnlinkGoogle}
-            />
+            <TeacherClassCard key={item.id} item={item} />
           ))}
         </div>
       )}

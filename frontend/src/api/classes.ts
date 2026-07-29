@@ -102,7 +102,7 @@ export async function fetchGoogleClassroomOptions(
 
 export async function googleClassroomAction(
   classId: number,
-  action: 'create' | 'link' | 'unlink',
+  action: 'create' | 'link' | 'unlink' | 'sync',
   googleClassroomId?: string,
   scope: GoogleClassroomScope = 'management',
 ): Promise<{ success: boolean; message: string; google_classroom_id?: string; settings_url?: string }> {

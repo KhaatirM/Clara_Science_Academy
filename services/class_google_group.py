@@ -203,12 +203,23 @@ def provision_and_sync_class_google_group(class_id: int) -> bool:
 
 
 def try_provision_class_google_group(class_id: int) -> None:
-    """Log warnings only; never raises (safe after HTTP handlers)."""
+    """Log warnings only; never raises (safe after HTTP handlers).
+
+    Also provisions/syncs the school-managed Google Classroom for the class.
+    """
     try:
         provision_and_sync_class_google_group(class_id)
     except Exception as exc:
         current_app.logger.warning(
             "Class Google Group sync failed for class_id=%s: %s", class_id, exc
+        )
+    try:
+        from services.class_google_classroom import try_provision_class_google_classroom
+
+        try_provision_class_google_classroom(class_id)
+    except Exception as exc:
+        current_app.logger.warning(
+            "Class Google Classroom sync failed for class_id=%s: %s", class_id, exc
         )
 
 

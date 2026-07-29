@@ -1,36 +1,28 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul26_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
-    title: 'React SPA portals',
-    body: 'Management, teacher, student, parent, and tech run under /app. Soft redirects still map old bookmarks into the SPA.',
+    title: 'School-managed Google Classroom',
+    body: 'Clara creates Classrooms as botadmin/admin, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a school year is archived.',
   },
   {
-    title: 'Student quiz & discussion deep links',
-    body: 'Take-quiz and discussion bookmarks open the SPA (legacy Jinja pages removed from main).',
+    title: 'Closed-year teacher names on report cards',
+    body: 'Archived classes keep the teacher of record. Year close freezes teacher names so removing a staff login does not turn report cards into “Unassigned Teacher”.',
   },
   {
-    title: 'Quiz & discussion editing',
-    body: 'Create/edit with ?edit= now loads the SPA authoring forms for management and teachers.',
+    title: 'Safer staff removal',
+    body: 'Deleting a teacher no longer fails when admin audit logs still reference their login; audit history is preserved with the user link cleared.',
   },
   {
-    title: 'Permission-only Administration staff',
-    body: 'Staff with management permissions can use the React management shell; nav stays filtered by permission.',
+    title: 'Calendar legend for viewers',
+    body: 'Teachers and students see the same event-color legend as management on the school calendar.',
   },
   {
-    title: 'Teacher student reports',
-    body: 'Grades and attendance reports are native SPA pages (printable and PDF links still available).',
-  },
-  {
-    title: 'Report cards hub',
-    body: 'High school (9–12) is under development (transcripts). New K–8 Transcripts section is also under development.',
-  },
-  {
-    title: 'Corner toasts',
-    body: 'Login and flash feedback appear as fading notifications above the version badge (bottom-right).',
+    title: 'Toasts & version badge',
+    body: 'Corner notifications and the version chip sit at the bottom-right so they no longer cover Logout.',
   },
 ]
 
@@ -38,10 +30,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.505.0'
-  const releaseLabel = version?.release_label || 'July 26, 2026'
+  const display = version?.display || 'v 2.506.0'
+  const releaseLabel = version?.release_label || 'July 29, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2580
+  const updatesEstimate = version?.updates_estimate ?? 2590
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -147,12 +139,12 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  React SPA Portals & Report Cards – {releaseLabel}
+                  Google Classroom &amp; Records – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  This release advances the React SPA across portals: soft redirects, quiz/discussion
-                  editing, permission-only staff on the management shell, native teacher student reports,
-                  corner toasts, and report-card placeholders for high school and K–8 transcripts.
+                  School-managed Classrooms (botadmin creates and roster-enrolls), closed-year teacher
+                  names preserved on report cards, safer staff removal, and calendar legends for
+                  view-only users.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

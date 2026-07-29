@@ -1000,9 +1000,11 @@ def remove_teacher_staff(staff_id):
         return redirect(url_for('management.teachers'))
     
     try:
-        # If this staff member is assigned as primary teacher for any class,
-        # reassign those classes to a placeholder so class workflows keep working.
-        from models import Class
+        # If this staff member is assigned as primary teacher for any *current*
+        # class, reassign those to a placeholder so live workflows keep working.
+        # Archived classes and closed school years keep the original teacher_id
+        # so report cards still show their name of record.
+        from models import Class, SchoolYear
         placeholder_email = 'unassigned.teacher@clarascienceacademy.org'
         placeholder = TeacherStaff.query.filter_by(email=placeholder_email).first()
         if not placeholder:
@@ -1017,16 +1019,46 @@ def remove_teacher_staff(staff_id):
             db.session.add(placeholder)
             db.session.flush()
 
-        # Move primary-teacher classes away from the removed account.
         primary_classes = Class.query.filter_by(teacher_id=staff_id).all()
         for c in primary_classes:
+            sy = SchoolYear.query.get(c.school_year_id) if c.school_year_id else None
+            keep_historical = (not c.is_active) or (sy is not None and not sy.is_active)
+            if keep_historical:
+                # Ensure a frozen display name exists even if year closed before this field existed.
+                if not (getattr(c, 'primary_teacher_name', None) or '').strip():
+                    c.primary_teacher_name = (
+                        f"{(teacher_staff.first_name or '').strip()} "
+                        f"{(teacher_staff.last_name or '').strip()}"
+                    ).strip() or None
+                continue
             c.teacher_id = placeholder.id
 
-        # Remove from additional/substitute teacher mappings to avoid showing deleted staff in class rosters.
+        # Remove from additional/substitute mappings only on current (active year) classes.
+        # Keep historical co-teacher links on archived / closed-year classes.
         try:
             from models import class_additional_teachers, class_substitute_teachers
-            db.session.execute(class_additional_teachers.delete().where(class_additional_teachers.c.teacher_id == staff_id))
-            db.session.execute(class_substitute_teachers.delete().where(class_substitute_teachers.c.teacher_id == staff_id))
+            current_class_ids = [
+                row[0]
+                for row in (
+                    Class.query.join(SchoolYear, Class.school_year_id == SchoolYear.id)
+                    .filter(Class.is_active.is_(True), SchoolYear.is_active.is_(True))
+                    .with_entities(Class.id)
+                    .all()
+                )
+            ]
+            if current_class_ids:
+                db.session.execute(
+                    class_additional_teachers.delete().where(
+                        class_additional_teachers.c.teacher_id == staff_id,
+                        class_additional_teachers.c.class_id.in_(current_class_ids),
+                    )
+                )
+                db.session.execute(
+                    class_substitute_teachers.delete().where(
+                        class_substitute_teachers.c.teacher_id == staff_id,
+                        class_substitute_teachers.c.class_id.in_(current_class_ids),
+                    )
+                )
         except Exception:
             pass
 
@@ -1053,15 +1085,14 @@ def remove_teacher_staff(staff_id):
                 _detach_user_references_before_delete(user.id, fallback_uid)
                 db.session.delete(user)
         
-        # IMPORTANT: Do NOT modify class assignments, assignments, grades, or any other data
-        # All foreign key references to this teacher remain intact
-        # This preserves the historical record of who created/graded what
-        # The teacher will simply not appear in active teacher lists due to is_deleted flag
+        # Historical primary teacher_id on archived/closed-year classes is kept.
+        # Assignments/grades FKs also remain intact.
         
         db.session.commit()
         success_msg = (
             f'Teacher/Staff member "{teacher_staff.first_name} {teacher_staff.last_name}" has been removed. '
-            'Their account has been deleted, but all their work (assignments, grades, etc.) has been preserved.'
+            'Their account has been deleted, but all their work (assignments, grades, etc.) has been preserved. '
+            'Teacher names on archived / closed school-year classes are unchanged.'
         )
         if _remove_staff_wants_json():
             return jsonify({'success': True, 'message': success_msg})

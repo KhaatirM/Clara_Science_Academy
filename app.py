@@ -487,6 +487,32 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: class term_type/term_value column check failed (may already exist): {e}")
 
+        # Frozen primary teacher name for closed/archived school years
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                col_name = 'primary_teacher_name'
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(class)"))
+                    columns = [row[1] for row in r]
+                    if col_name not in columns:
+                        conn.execute(text("ALTER TABLE class ADD COLUMN primary_teacher_name TEXT"))
+                        conn.commit()
+                        print("Added class.primary_teacher_name column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'class' AND column_name = :col"
+                    ), {"col": col_name})
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            'ALTER TABLE "class" ADD COLUMN primary_teacher_name VARCHAR(200)'
+                        ))
+                        conn.commit()
+                        print("Added class.primary_teacher_name column.")
+        except Exception as e:
+            print(f"Note: class primary_teacher_name column check failed (may already exist): {e}")
+
         # Add assignment advanced grading columns if missing
         _assignment_cols = [
             ('allow_extra_credit', 'BOOLEAN DEFAULT FALSE', 'INTEGER DEFAULT 0'),

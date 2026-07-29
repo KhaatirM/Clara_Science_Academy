@@ -975,9 +975,17 @@ def finalize_closure(closure: SchoolYearClosure, *, triggered_by: str = 'manual'
             {Enrollment.is_active: False, Enrollment.dropped_at: _now()},
             synchronize_session=False,
         )
-        Class.query.filter(Class.id.in_(class_ids)).update(
-            {Class.is_active: False}, synchronize_session=False,
-        )
+        # Freeze primary teacher display names and archive classes so report cards
+        # keep the teacher of record after staff leave.
+        for c in classes_in_year:
+            teacher = getattr(c, 'teacher', None)
+            if teacher:
+                name = (
+                    f"{(teacher.first_name or '').strip()} {(teacher.last_name or '').strip()}"
+                ).strip()
+                if name:
+                    c.primary_teacher_name = name
+            c.is_active = False
         from models import StudentAssistant
         StudentAssistant.query.filter(StudentAssistant.class_id.in_(class_ids)).delete(
             synchronize_session=False

@@ -155,9 +155,9 @@
             <tbody>
                 {% if class_objects %}
                     {% for class_obj in class_objects %}
-                        {% set teacher = class_obj.teacher if class_obj.teacher else None %}
+                        {% set teacher_name = (teachers_by_class or {}).get(class_obj.id|string) or (teachers_by_class or {}).get(class_obj.id) or class_obj.get_primary_teacher_display_name() %}
                         <tr>
-                            <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
+                            <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ teacher_name if teacher_name else 'N/A' }}</small></td>
                             {# Always show all 4 quarters, but only populate data for selected ones #}
                             {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
                                 {% set term_type = class_obj.term_type if class_obj.term_type else 'full_year' %}

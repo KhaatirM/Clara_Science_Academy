@@ -126,7 +126,7 @@ export function TeachersStaffPage() {
 
   const handleRemove = async (staff: StaffListItem) => {
     const ok = window.confirm(
-      `Remove ${staff.display_name}? Their account will be deleted but historical work is preserved.`,
+      `Remove ${staff.display_name}? Their account will be deleted but historical work is preserved. Teacher names on archived / closed school-year classes stay on record.`,
     )
     if (!ok) return
     try {

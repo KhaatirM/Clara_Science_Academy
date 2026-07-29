@@ -706,6 +706,14 @@ def persist_report_card_record(
             'grades_by_quarter': calculated_grades_by_quarter,
             'selected_quarters': quarters_clean,
         }
+        # Freeze teacher-of-record names onto the snapshot (id → display name).
+        teachers_by_class = {}
+        for cid in valid_class_ids:
+            class_obj = Class.query.get(cid)
+            if not class_obj:
+                continue
+            teachers_by_class[str(cid)] = class_obj.get_primary_teacher_display_name()
+        report_card_data['teachers_by_class'] = teachers_by_class
         report_card_data['additional_comments'] = (additional_comments or '').strip()
 
         # Attach report card comments (teacher-entered) and optionally apply overrides.
@@ -1220,6 +1228,17 @@ def build_report_card_pdf_response(report_card):
                         tmp[str(cid)] = txt
             comments_by_class = tmp
 
+    teachers_by_class = {}
+    if isinstance(report_card_data, dict):
+        raw_teachers = report_card_data.get('teachers_by_class') or {}
+        if isinstance(raw_teachers, dict):
+            teachers_by_class = {str(k): v for k, v in raw_teachers.items() if v}
+    # Backfill from live/frozen class fields for older snapshots.
+    for class_obj in class_objects:
+        key = str(class_obj.id)
+        if key not in teachers_by_class:
+            teachers_by_class[key] = class_obj.get_primary_teacher_display_name()
+
     html_content = render_template(
         template_name,
         report_card=report_card,
@@ -1229,6 +1248,7 @@ def build_report_card_pdf_response(report_card):
         selected_quarters=selected_quarters,  # So template shows grades for this report's quarter
         attendance=attendance,
         class_objects=class_objects,
+        teachers_by_class=teachers_by_class,
         include_attendance=include_attendance,
         include_comments=include_comments,
         comments_by_class=comments_by_class,

@@ -519,6 +519,8 @@ class Class(db.Model):
     name = db.Column(db.String(150), nullable=False)
     subject = db.Column(db.String(100), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)  # Primary teacher
+    # Frozen at school-year close so report cards keep the teacher of record after staff leave.
+    primary_teacher_name = db.Column(db.String(200), nullable=True)
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
     grade_levels = db.Column(db.String(200), nullable=True)  # JSON string of grade level integers, e.g., "[6,7,8]"
     
@@ -592,6 +594,18 @@ class Class(db.Model):
                 return sorted(grade_list)
             except (ValueError, AttributeError):
                 return []
+
+    def get_primary_teacher_display_name(self) -> str:
+        """Prefer frozen year-end name, then live TeacherStaff name."""
+        frozen = (getattr(self, 'primary_teacher_name', None) or '').strip()
+        if frozen:
+            return frozen
+        teacher = getattr(self, 'teacher', None)
+        if teacher:
+            name = f"{(teacher.first_name or '').strip()} {(teacher.last_name or '').strip()}".strip()
+            if name:
+                return name
+        return 'N/A'
     
     def set_grade_levels(self, grade_list):
         """Set grade levels from a list of integers"""

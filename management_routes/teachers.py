@@ -921,22 +921,33 @@ def _actor_user_id_for_staff_removal(excluded_user_ids):
 
 def _detach_user_references_before_delete(user_id, fallback_user_id):
     """
-    Reassign NOT NULL FKs that point at user_id, and delete membership-style rows.
-    Required before deleting a User; otherwise SQLAlchemy emits SET NULL updates that
-    violate NOT NULL (e.g. message_group.created_by).
+    Reassign NOT NULL FKs that point at user_id, null nullable audit FKs, and delete
+    membership-style rows. Required before deleting a User; otherwise Postgres
+    rejects the delete (e.g. admin_audit_log_user_id_fkey) or SQLAlchemy emits
+    SET NULL updates that violate NOT NULL (e.g. message_group.created_by).
     """
     from models import (
+        ActivityLog,
+        AdminAuditLog,
         Announcement,
         AnnouncementReadReceipt,
+        Assignment,
         BugReport,
         GradeHistory,
+        GroupAssignment,
+        MaintenanceMode,
         Message,
         MessageGroup,
         MessageGroupMember,
         MessageReaction,
         Notification,
         QuestionBank,
+        ReportCard,
+        ReportCardComment,
         ScheduledAnnouncement,
+        SchoolDayAttendance,
+        StudentAssistant,
+        SystemConfig,
     )
 
     if fallback_user_id is None or int(user_id) == int(fallback_user_id):
@@ -945,6 +956,7 @@ def _detach_user_references_before_delete(user_id, fallback_user_id):
     uid = int(user_id)
     fb = int(fallback_user_id)
 
+    # NOT NULL ownership / authorship — reassign to the actor performing removal.
     MessageGroup.query.filter_by(created_by=uid).update(
         {MessageGroup.created_by: fb}, synchronize_session=False
     )
@@ -969,6 +981,94 @@ def _detach_user_references_before_delete(user_id, fallback_user_id):
     Message.query.filter_by(recipient_id=uid).update(
         {Message.recipient_id: fb}, synchronize_session=False
     )
+
+    # Nullable audit / attribution — clear so history rows can remain without a live user.
+    AdminAuditLog.query.filter_by(user_id=uid).update(
+        {AdminAuditLog.user_id: None}, synchronize_session=False
+    )
+    ActivityLog.query.filter_by(user_id=uid).update(
+        {ActivityLog.user_id: None}, synchronize_session=False
+    )
+    Assignment.query.filter_by(created_by=uid).update(
+        {Assignment.created_by: None}, synchronize_session=False
+    )
+    Assignment.query.filter_by(assistant_approval_reviewed_by_user_id=uid).update(
+        {Assignment.assistant_approval_reviewed_by_user_id: None}, synchronize_session=False
+    )
+    GroupAssignment.query.filter_by(created_by=uid).update(
+        {GroupAssignment.created_by: None}, synchronize_session=False
+    )
+    GroupAssignment.query.filter_by(assistant_approval_reviewed_by_user_id=uid).update(
+        {GroupAssignment.assistant_approval_reviewed_by_user_id: None}, synchronize_session=False
+    )
+    MaintenanceMode.query.filter_by(initiated_by=uid).update(
+        {MaintenanceMode.initiated_by: None}, synchronize_session=False
+    )
+    ReportCard.query.filter_by(generated_by_user_id=uid).update(
+        {ReportCard.generated_by_user_id: None}, synchronize_session=False
+    )
+    ReportCard.query.filter_by(approved_by_user_id=uid).update(
+        {ReportCard.approved_by_user_id: None}, synchronize_session=False
+    )
+    ReportCardComment.query.filter_by(author_user_id=uid).update(
+        {ReportCardComment.author_user_id: None}, synchronize_session=False
+    )
+    StudentAssistant.query.filter_by(assigned_by_user_id=uid).update(
+        {StudentAssistant.assigned_by_user_id: None}, synchronize_session=False
+    )
+    BugReport.query.filter_by(resolved_by=uid).update(
+        {BugReport.resolved_by: None}, synchronize_session=False
+    )
+    SchoolDayAttendance.query.filter_by(recorded_by=uid).update(
+        {SchoolDayAttendance.recorded_by: None}, synchronize_session=False
+    )
+    SystemConfig.query.filter_by(updated_by=uid).update(
+        {SystemConfig.updated_by: None}, synchronize_session=False
+    )
+
+    # Optional year-closure / syllabus FKs (models may exist in newer schemas).
+    try:
+        from models import (
+            ClassNotesFolder,
+            ClassNotesItem,
+            ClassSyllabus,
+            SchoolYearClosure,
+            SchoolYearClosureEvent,
+            SchoolYearClosureExtension,
+        )
+
+        SchoolYearClosure.query.filter_by(created_by_user_id=uid).update(
+            {SchoolYearClosure.created_by_user_id: None}, synchronize_session=False
+        )
+        SchoolYearClosure.query.filter_by(cancelled_by_user_id=uid).update(
+            {SchoolYearClosure.cancelled_by_user_id: None}, synchronize_session=False
+        )
+        SchoolYearClosure.query.filter_by(paused_by_user_id=uid).update(
+            {SchoolYearClosure.paused_by_user_id: None}, synchronize_session=False
+        )
+        SchoolYearClosureExtension.query.filter_by(scope_user_id=uid).update(
+            {SchoolYearClosureExtension.scope_user_id: None}, synchronize_session=False
+        )
+        SchoolYearClosureExtension.query.filter_by(granted_by_user_id=uid).update(
+            {SchoolYearClosureExtension.granted_by_user_id: None}, synchronize_session=False
+        )
+        SchoolYearClosureExtension.query.filter_by(revoked_by_user_id=uid).update(
+            {SchoolYearClosureExtension.revoked_by_user_id: None}, synchronize_session=False
+        )
+        SchoolYearClosureEvent.query.filter_by(actor_user_id=uid).update(
+            {SchoolYearClosureEvent.actor_user_id: None}, synchronize_session=False
+        )
+        ClassSyllabus.query.filter_by(uploaded_by_user_id=uid).update(
+            {ClassSyllabus.uploaded_by_user_id: None}, synchronize_session=False
+        )
+        ClassNotesFolder.query.filter_by(created_by_user_id=uid).update(
+            {ClassNotesFolder.created_by_user_id: None}, synchronize_session=False
+        )
+        ClassNotesItem.query.filter_by(uploaded_by_user_id=uid).update(
+            {ClassNotesItem.uploaded_by_user_id: None}, synchronize_session=False
+        )
+    except Exception:
+        pass
 
     Notification.query.filter_by(user_id=uid).delete(synchronize_session=False)
     MessageGroupMember.query.filter_by(user_id=uid).delete(synchronize_session=False)

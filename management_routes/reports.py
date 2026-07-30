@@ -825,12 +825,13 @@ def persist_report_card_record(
             'grade': snapshot_grade,
             'grade_display': report_card_grade_display(snapshot_grade),
         }
-        record_student_school_year_grade(
-            student_id_int,
-            school_year_id_int,
-            int(snapshot_grade),
-            enrolled=True,
-        )
+        if snapshot_grade is not None:
+            record_student_school_year_grade(
+                student_id_int,
+                school_year_id_int,
+                int(snapshot_grade),
+                enrolled=True,
+            )
 
         report_card.grades_details = json.dumps(report_card_data)
         report_card.generated_at = datetime.utcnow()
@@ -1056,7 +1057,17 @@ class _ReportCardStudentView:
         return getattr(self._student, name)
 
 
-def _report_card_pdf_grade_level(student, report_card_data):
+def _report_card_pdf_grade_level(student, report_card_data, school_year=None):
+    """
+    Grade printed on the PDF.
+
+    Prefer the year-aware resolved grade (class enrollments / live grade) over a
+    possibly stale student_display snapshot written before promotions.
+    """
+    if student is not None and school_year is not None:
+        resolved = grade_level_for_school_year(student, school_year)
+        if resolved is not None:
+            return resolved
     if isinstance(report_card_data, dict):
         saved = report_card_data.get('student_display') or {}
         grade = saved.get('grade')
@@ -1065,7 +1076,8 @@ def _report_card_pdf_grade_level(student, report_card_data):
                 return int(grade)
             except (TypeError, ValueError):
                 pass
-    return getattr(student, 'grade_level', None)
+    return getattr(student, 'grade_level', None) if student is not None else None
+
 
 
 def build_report_card_pdf_response(report_card):
@@ -1167,7 +1179,9 @@ def build_report_card_pdf_response(report_card):
         except Exception:
             return 'N/A'
     
-    pdf_grade = _report_card_pdf_grade_level(student, report_card_data)
+    pdf_grade = _report_card_pdf_grade_level(
+        student, report_card_data, getattr(report_card, 'school_year', None)
+    )
     student_for_template = _ReportCardStudentView(student, pdf_grade)
 
     student_data = {
@@ -1183,6 +1197,8 @@ def build_report_card_pdf_response(report_card):
         'expected_grad_date': _calculate_expected_grad_from_student(student) or 'N/A',
     }
     # Override with saved confirmation data from when report was generated
+    # (do not override grade — year-aware resolve is authoritative when
+    # snapshots were written before promotions or with stale SSY rows).
     saved_student = report_card_data.get('student_display') if isinstance(report_card_data, dict) else None
     if saved_student:
         if saved_student.get('name'):
@@ -1199,13 +1215,10 @@ def build_report_card_pdf_response(report_card):
             student_data['entrance_date'] = saved_student.get('entrance_date') or 'N/A'
         if 'expected_grad_date' in saved_student:
             student_data['expected_grad_date'] = saved_student.get('expected_grad_date') or 'N/A'
-        if saved_student.get('grade') is not None:
-            try:
-                student_data['grade'] = int(saved_student['grade'])
-                pdf_grade = int(saved_student['grade'])
-                student_for_template = _ReportCardStudentView(student, pdf_grade)
-            except (TypeError, ValueError):
-                pass
+        if saved_student.get('student_id_formatted'):
+            student_data['student_id_formatted'] = saved_student['student_id_formatted']
+        if saved_student.get('ssn') is not None:
+            student_data['ssn'] = saved_student.get('ssn')
 
     selected_quarters = _selected_quarters_from_report_card(report_card, report_card_data)
 

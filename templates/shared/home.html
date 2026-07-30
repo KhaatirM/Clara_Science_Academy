@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 29, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>idle auto sign-out</strong> (30 minutes), fixes <strong>grade-3 report card PDFs</strong>, filters <strong>class rosters by grade band</strong>, and continues <strong>school-managed Google Classroom</strong> (create, enroll, delete on class remove / year finalize).</p>
+                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) fixes <strong>report card grades by school year</strong> (closed-year PDFs no longer print one grade too low), adds <strong>idle auto sign-out</strong> (30 minutes), fixes <strong>grade-3 report card PDFs</strong>, filters <strong>class rosters by grade band</strong>, and continues <strong>school-managed Google Classroom</strong>.</p>
                     </div>
                 </div>
                 
@@ -176,6 +176,10 @@
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-shield-lock me-2"></i>Security, Reports &amp; Classroom – July 29, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report card grades by school year:</strong> Closed-year report cards use the grade from that year’s classes (not a year-offset guess). Regenerating a PDF for 2025–2026 no longer prints one grade too low when 2026–2027 is active.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Auto sign-out when idle:</strong> After 30 minutes without activity you are signed out. A short warning appears before logout; move the mouse or press a key to stay signed in. (Configurable via <code>IDLE_SESSION_TIMEOUT_MINUTES</code>.)
@@ -202,7 +206,7 @@
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Idle accounts are signed out automatically. Report PDFs and rostering are more reliable. Classroom setup and cleanup stay centralized.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Report cards show the correct grade for each school year. Idle accounts are signed out automatically. Roster picks and Classroom cleanup stay reliable.</p>
                         </div>
                     </div>
 
@@ -1840,11 +1844,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul29_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul29_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJul29_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownJul29_2026_v4', 'true');
         }, 500);
     }
 });

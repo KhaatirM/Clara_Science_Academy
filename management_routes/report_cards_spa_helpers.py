@@ -248,13 +248,14 @@ def _parse_report_card_snapshot(report_card: ReportCard) -> dict[str, Any]:
 
 
 def _grade_for_report_card(rc: ReportCard, student: Student | None, school_year: SchoolYear | None) -> tuple[int | None, str]:
-    snapshot_grade = grade_from_report_card_snapshot(rc.grades_details)
-    if snapshot_grade is not None:
-        return snapshot_grade, rc_grade_display(snapshot_grade)
+    # Year-aware resolution first (heals off-by-one StudentSchoolYear / class band).
     if student and school_year:
         derived = grade_level_for_school_year(student, school_year)
         if derived is not None:
             return derived, rc_grade_display(derived)
+    snapshot_grade = grade_from_report_card_snapshot(rc.grades_details)
+    if snapshot_grade is not None:
+        return snapshot_grade, rc_grade_display(snapshot_grade)
     if student:
         return student.grade_level, _grade_display(student.grade_level)
     return None, "N/A"
@@ -1056,15 +1057,19 @@ def query_student_report_card_school_years(student_id: int) -> dict[str, Any] | 
     years_payload = []
     for sy in school_years:
         derived = grade_level_for_school_year(student, sy)
-        grade_level = derived
-        grade_display = rc_grade_display(derived) if derived is not None else "N/A"
+        if derived is not None:
+            grade_level, grade_display = derived, rc_grade_display(derived)
+        else:
+            grade_level, grade_display = None, "N/A"
+            year_cards_preview = cards_by_year_id.get(sy.id, [])
+            if year_cards_preview:
+                snapshot_grade, snapshot_display = _grade_for_report_card(
+                    year_cards_preview[0], student, sy
+                )
+                if snapshot_grade is not None:
+                    grade_level, grade_display = snapshot_grade, snapshot_display
+
         year_cards = cards_by_year_id.get(sy.id, [])
-        if year_cards:
-            snapshot_grade, snapshot_display = _grade_for_report_card(
-                year_cards[0], student, sy
-            )
-            if snapshot_grade is not None:
-                grade_level, grade_display = snapshot_grade, snapshot_display
 
         class_payload = query_student_classes_for_report_card(student_id, sy.id, ["Q1", "Q2", "Q3", "Q4"])
         years_payload.append(

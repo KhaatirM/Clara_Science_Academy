@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 from extensions import db
@@ -43,8 +44,44 @@ def grade_display(grade_level: int | None) -> str:
     return "N/A"
 
 
+def _grade_from_year_enrollments(student_id: int, school_year_id: int) -> int | None:
+    """
+    Infer grade from classes the student attended that year.
+
+    Prefers single-grade classes (e.g. \"4th Homeroom\" → 4). Multi-grade
+    electives are ignored so they don't skew the result.
+    """
+    classes = (
+        Class.query.join(Enrollment, Enrollment.class_id == Class.id)
+        .filter(
+            Enrollment.student_id == student_id,
+            Class.school_year_id == school_year_id,
+        )
+        .all()
+    )
+    votes: list[int] = []
+    for class_obj in classes:
+        levels = []
+        if hasattr(class_obj, "get_grade_levels"):
+            for g in class_obj.get_grade_levels() or []:
+                try:
+                    levels.append(int(g))
+                except (TypeError, ValueError):
+                    continue
+        if len(levels) == 1:
+            votes.append(levels[0])
+    if not votes:
+        return None
+    return Counter(votes).most_common(1)[0][0]
+
+
 def _derive_grade_level_for_school_year(student: Student, school_year: SchoolYear) -> int | None:
-    """Estimate grade from current level and year offset (fallback when no stored record)."""
+    """
+    Estimate grade from current level and year offset.
+
+    Only valid when ``student.grade_level`` already reflects the *active* year
+    (i.e. promotions have been applied). Prefer enrollment-based inference.
+    """
     current = getattr(student, "grade_level", None)
     if current is None or school_year is None:
         return None
@@ -65,6 +102,12 @@ def _derive_grade_level_for_school_year(student: Student, school_year: SchoolYea
 
     active_start = school_year_start_year(active_sy)
     if active_start is None:
+        return int(current)
+
+    # Active year: current grade is authoritative.
+    if school_year.id == active_sy.id or (
+        school_year_start_year(school_year) == active_start
+    ):
         return int(current)
 
     years_diff = active_start - target_start
@@ -124,19 +167,48 @@ def grade_level_for_school_year(student: Student, school_year: SchoolYear) -> in
     """
     Return the student's grade during ``school_year``.
 
-    Uses ``StudentSchoolYear`` when present; otherwise derives and persists when
-    the student has enrollment in that year.
+    Priority:
+    1. Active year → live ``Student.grade_level``
+    2. Grade inferred from that year's class enrollments (single-grade classes)
+    3. Stored ``StudentSchoolYear`` row
+    4. Year-offset derivation from current grade (not auto-persisted)
     """
     if student is None or school_year is None:
         return None
 
+    # Live roster grade is source of truth for the open year.
+    if bool(getattr(school_year, "is_active", False)):
+        current = getattr(student, "grade_level", None)
+        if current is not None:
+            try:
+                upsert_student_school_year(
+                    student.id, school_year.id, int(current), enrolled=True
+                )
+            except Exception:
+                pass
+            return int(current)
+        return None
+
+    from_classes = _grade_from_year_enrollments(student.id, school_year.id)
     record = get_student_school_year_record(student.id, school_year.id)
+
+    if from_classes is not None:
+        # Heal stale / wrongly derived StudentSchoolYear rows.
+        if record is None or int(record.grade_level) != int(from_classes):
+            try:
+                upsert_student_school_year(
+                    student.id, school_year.id, int(from_classes), enrolled=True
+                )
+            except Exception:
+                pass
+        return int(from_classes)
+
     if record is not None:
         return int(record.grade_level)
 
     derived = _derive_grade_level_for_school_year(student, school_year)
-    if derived is not None and student_has_enrollment_in_year(student.id, school_year.id):
-        upsert_student_school_year(student.id, school_year.id, derived, enrolled=True)
+    # Do not persist offset-derived grades — if promotions never ran, they are
+    # off-by-one and would poison StudentSchoolYear.
     return derived
 
 
@@ -194,9 +266,162 @@ def record_student_year_grades_before_close(
         student = Student.query.get(sid)
         if not student or student.grade_level is None:
             continue
+        # Prefer class-band grade for the year being closed when available.
+        from_classes = _grade_from_year_enrollments(sid, school_year_id)
+        grade = from_classes if from_classes is not None else int(student.grade_level)
         record_student_school_year_grade(
             sid,
             school_year_id,
-            int(student.grade_level),
+            int(grade),
             enrolled=True,
         )
+
+
+def repair_student_school_year_grades(
+    school_year_id: int,
+    *,
+    fix_report_card_snapshots: bool = True,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """
+    Rebuild StudentSchoolYear (and optional report-card display grades) from
+    that year's class enrollments. Fixes off-by-one rows created by deriving
+    from an un-promoted live grade_level.
+    """
+    from models import ReportCard
+    import json
+
+    school_year = SchoolYear.query.get(school_year_id)
+    if not school_year:
+        return {"ok": False, "error": "School year not found."}
+
+    student_ids = {
+        row[0]
+        for row in (
+            db.session.query(Enrollment.student_id)
+            .join(Class, Class.id == Enrollment.class_id)
+            .filter(Class.school_year_id == school_year_id)
+            .distinct()
+            .all()
+        )
+    }
+
+    updated_ssy = 0
+    skipped = 0
+    fixed_cards = 0
+
+    for sid in student_ids:
+        inferred = _grade_from_year_enrollments(sid, school_year_id)
+        if inferred is None:
+            skipped += 1
+            continue
+        record = get_student_school_year_record(sid, school_year_id)
+        if record is None or int(record.grade_level) != int(inferred):
+            upsert_student_school_year(sid, school_year_id, int(inferred), enrolled=True)
+            updated_ssy += 1
+
+        if fix_report_card_snapshots:
+            cards = ReportCard.query.filter_by(
+                student_id=sid, school_year_id=school_year_id
+            ).all()
+            for card in cards:
+                try:
+                    data = json.loads(card.grades_details) if card.grades_details else {}
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if not isinstance(data, dict):
+                    continue
+                display = data.get("student_display")
+                if not isinstance(display, dict):
+                    display = {}
+                    data["student_display"] = display
+                prev = display.get("grade")
+                try:
+                    prev_i = int(prev) if prev is not None else None
+                except (TypeError, ValueError):
+                    prev_i = None
+                if prev_i != int(inferred):
+                    display["grade"] = int(inferred)
+                    display["grade_display"] = grade_display(int(inferred))
+                    card.grades_details = json.dumps(data)
+                    fixed_cards += 1
+
+    if commit:
+        db.session.commit()
+
+    return {
+        "ok": True,
+        "school_year_id": school_year_id,
+        "school_year_name": school_year.name,
+        "students_considered": len(student_ids),
+        "student_school_year_updated": updated_ssy,
+        "skipped_no_single_grade_class": skipped,
+        "report_cards_updated": fixed_cards,
+    }
+
+
+def promote_students_still_on_prior_year_grade(
+    closed_school_year_id: int,
+    *,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """
+    If a closed year has grade G for a student (from classes / SSY) and their
+    live ``grade_level`` is still G, promote them to G+1 for the new year.
+    """
+    school_year = SchoolYear.query.get(closed_school_year_id)
+    if not school_year or bool(getattr(school_year, "is_active", False)):
+        return {"ok": False, "error": "Pass a closed (inactive) school year id."}
+
+    active = SchoolYear.query.filter_by(is_active=True).first()
+    if not active:
+        return {"ok": False, "error": "No active school year."}
+
+    student_ids = {
+        row[0]
+        for row in (
+            db.session.query(Enrollment.student_id)
+            .join(Class, Class.id == Enrollment.class_id)
+            .filter(Class.school_year_id == closed_school_year_id)
+            .distinct()
+            .all()
+        )
+    }
+
+    promoted = 0
+    skipped = 0
+    for sid in student_ids:
+        student = Student.query.get(sid)
+        if not student or getattr(student, "is_deleted", False):
+            skipped += 1
+            continue
+        if getattr(student, "is_repeating", False):
+            skipped += 1
+            continue
+        closed_grade = grade_level_for_school_year(student, school_year)
+        if closed_grade is None or student.grade_level is None:
+            skipped += 1
+            continue
+        if int(student.grade_level) != int(closed_grade):
+            skipped += 1
+            continue
+        if int(closed_grade) >= 12:
+            skipped += 1
+            continue
+        student.grade_level = int(closed_grade) + 1
+        upsert_student_school_year(
+            sid, active.id, int(student.grade_level), enrolled=True
+        )
+        promoted += 1
+
+    if commit:
+        db.session.commit()
+
+    return {
+        "ok": True,
+        "closed_school_year_id": closed_school_year_id,
+        "active_school_year_id": active.id,
+        "promoted": promoted,
+        "skipped": skipped,
+        "students_considered": len(student_ids),
+    }

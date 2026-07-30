@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Report card grades by school year',
+    body: 'Closed-year report cards use the grade from that year’s classes (not a year-offset guess). Regenerating a PDF for 2025–2026 no longer prints one grade too low when 2026–2027 is active.',
+  },
   {
     title: 'Auto sign-out when idle',
     body: 'After 30 minutes without activity you are signed out for security. A short warning appears before logout; move the mouse or press a key to stay signed in.',
@@ -24,20 +28,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'School Admins on the teacher picker',
     body: 'School Administrators can be assigned as class teachers when editing or creating a class.',
   },
-  {
-    title: 'Closed-year teacher names on report cards',
-    body: 'Archived classes keep the teacher of record. Year close freezes teacher names so removing a staff login does not turn report cards into “Unassigned Teacher”.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.508.0'
+  const display = version?.display || 'v 2.509.0'
   const releaseLabel = version?.release_label || 'July 29, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2599
+  const updatesEstimate = version?.updates_estimate ?? 2600
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

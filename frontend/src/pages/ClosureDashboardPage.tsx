@@ -11,6 +11,7 @@ import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import type { ClosureDashboardResponse, ClosureExtension } from '../types/schoolYearClosure'
+import { YearEndOutcomesHelp } from '../components/students/YearEndOutcomesHelp'
 import {
   adminWindowPhaseState,
   finalizedPhaseState,
@@ -1024,13 +1025,17 @@ function EighthGradeOutcomesCard({
 
   return (
     <section className="mgmt-syc-card">
-      <h2 className="mgmt-syc-card-title">
-        <i className="bi bi-mortarboard" aria-hidden="true" />
-        8th grade outcomes
-      </h2>
+      <div className="d-flex align-items-start justify-content-between gap-2 mb-1">
+        <h2 className="mgmt-syc-card-title mb-0">
+          <i className="bi bi-mortarboard" aria-hidden="true" />
+          8th grade outcomes
+        </h2>
+        <YearEndOutcomesHelp tone="muted" title="8th grade outcomes" />
+      </div>
       <p className="mgmt-syc-card-sub">
-        Default at finalize is <strong>promote to 9th</strong>. Stage graduate (alumni, keep
-        record) or withdraw (former/removed) before finalize. {outcomes.total} eighth grader
+        <strong>Default at finalize is still promote to 9th</strong> for every 8th grader you do
+        not change here. Use the controls only for graduate (alumni), withdraw (former), or
+        repeat. {outcomes.total} eighth grader
         {outcomes.total !== 1 ? 's' : ''}: promote {counts.promote ?? 0}, graduate{' '}
         {counts.graduate ?? 0}, withdraw {counts.withdraw ?? 0}, repeat {counts.repeat ?? 0}.
       </p>

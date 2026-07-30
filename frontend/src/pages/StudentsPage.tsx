@@ -12,6 +12,7 @@ import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import { StudentDetailModal } from '../components/students/StudentDetailModal'
 import { StudentEditModal } from '../components/students/StudentEditModal'
+import { YearEndOutcomesHelp } from '../components/students/YearEndOutcomesHelp'
 import type { ManagementOutletContext } from '../types/layout'
 import type {
   StudentDetail,
@@ -608,17 +609,20 @@ export function StudentsPage() {
             {canAdminUi ? (
               <div className="students-csv-card mb-4 overflow-hidden">
                 <div className="students-csv-header border-0 bg-gradient-to-r from-teal-800 to-teal-600 text-white">
-                  <h5 className="mb-0 text-white">
-                    <i className="bi bi-mortarboard me-2" aria-hidden="true" />
-                    Grade &amp; exit actions
-                  </h5>
+                  <div className="d-flex align-items-center justify-content-between gap-2">
+                    <h5 className="mb-0 text-white">
+                      <i className="bi bi-mortarboard me-2" aria-hidden="true" />
+                      Grade &amp; exit actions
+                    </h5>
+                    <YearEndOutcomesHelp />
+                  </div>
                 </div>
                 <div className="students-csv-body">
                   <p className="text-muted small mb-3">
-                    Select students below, then choose an action. By default actions apply{' '}
-                    <strong>immediately</strong> (promote +1 grade, graduate to alumni, withdraw to
-                    former). Check the box to only stage an end-of-year intent for school-year
-                    finalize.
+                    <strong>At year finalize, everyone is still promoted by default</strong> unless
+                    you graduate, withdraw, or mark them repeating. Use these buttons only when you
+                    need a different outcome. Actions apply <strong>immediately</strong> unless you
+                    check the staging box below.
                   </p>
                   <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-hub-text">
                     <input

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul30_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownJul30_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Year-end outcomes help',
+    body: 'A ? help control on Students and the closure dashboard explains that everyone is still promoted by default at finalize unless you graduate, withdraw, or mark repeating.',
+  },
   {
     title: 'Instant promote / graduate / withdraw',
     body: 'Students bulk actions apply immediately by default. Check “Stage as end-of-year intent only” when you want the choice saved for year finalize instead.',
@@ -24,20 +28,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Auto sign-out when idle',
     body: 'After 30 minutes without activity you are signed out for security. A short warning appears before logout; move the mouse or press a key to stay signed in.',
   },
-  {
-    title: 'Report card PDF fix (grade 3)',
-    body: 'Generating PDFs for grade-3 progress reports no longer fails with the include_attendance template error.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.512.0'
+  const display = version?.display || 'v 2.512.1'
   const releaseLabel = version?.release_label || 'July 30, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2603
+  const updatesEstimate = version?.updates_estimate ?? 2604
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

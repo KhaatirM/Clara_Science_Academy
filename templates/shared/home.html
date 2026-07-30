@@ -1856,11 +1856,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul30_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul30_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJul30_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownJul30_2026_v3', 'true');
         }, 500);
     }
 });

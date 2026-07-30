@@ -1010,6 +1010,13 @@ def create_app(config_class=None):
         register_closure_gates(app)
     except Exception as _gate_exc:
         app.logger.exception("Failed to register closure gates: %s", _gate_exc)
+
+    try:
+        from utils.idle_session import register_idle_session_guard
+        register_idle_session_guard(app)
+    except Exception as _idle_exc:
+        app.logger.exception("Failed to register idle session guard: %s", _idle_exc)
+
     app.register_blueprint(tech_blueprint, url_prefix='/tech')
     app.register_blueprint(student_assistant_blueprint)  # /assistant/... for student assistants
     app.register_blueprint(communications_api_bp)  # Communications API - no prefix, uses absolute paths

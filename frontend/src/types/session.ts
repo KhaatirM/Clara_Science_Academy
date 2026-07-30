@@ -40,6 +40,8 @@ export interface SessionResponse {
   school_timezone?: SchoolTimezone
   login_url?: string
   app_version?: AppVersionInfo
+  /** Minutes of inactivity before forced logout (server + SPA). */
+  idle_timeout_minutes?: number
   /** Flask flash messages consumed once on SPA bootstrap (corner toasts). */
   flashes?: Array<{ category: string; message: string }>
 }

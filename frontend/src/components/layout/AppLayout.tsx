@@ -9,15 +9,22 @@ import { useLegacyMgmtShell } from '../../hooks/useLegacyStyles'
 import { AcademicConcernsHost } from '../academic/AcademicConcernsHost'
 import { AppToastHost } from '../toasts/AppToastHost'
 import { PortalUpdatesHost } from '../updates/PortalUpdatesHost'
+import { IdleSessionGuard } from '../session/IdleSessionGuard'
 import { Sidebar } from './Sidebar'
 
 interface AppLayoutProps {
   user: SessionUser
   schoolTimezone: SchoolTimezone | null
   appVersion?: AppVersionInfo | null
+  idleTimeoutMinutes?: number
 }
 
-export function AppLayout({ user, schoolTimezone, appVersion }: AppLayoutProps) {
+export function AppLayout({
+  user,
+  schoolTimezone,
+  appVersion,
+  idleTimeoutMinutes = 30,
+}: AppLayoutProps) {
   const legacyShell = useLegacyMgmtShell()
   const outletContext: ManagementOutletContext = { user, schoolTimezone }
   const showAcademicConcerns =
@@ -26,6 +33,7 @@ export function AppLayout({ user, schoolTimezone, appVersion }: AppLayoutProps) 
 
   return (
     <div className="flex h-dvh w-full overflow-hidden">
+      <IdleSessionGuard timeoutMinutes={idleTimeoutMinutes} />
       <Sidebar user={user} schoolTimezone={schoolTimezone} />
       <main
         className={

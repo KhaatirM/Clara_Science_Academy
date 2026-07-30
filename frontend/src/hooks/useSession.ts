@@ -9,6 +9,7 @@ interface UseSessionResult {
   user: SessionUser | null
   schoolTimezone: SchoolTimezone | null
   appVersion: AppVersionInfo | null
+  idleTimeoutMinutes: number
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -21,6 +22,7 @@ export function useSession(): UseSessionResult {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [schoolTimezone, setSchoolTimezone] = useState<SchoolTimezone | null>(null)
   const [appVersion, setAppVersion] = useState<AppVersionInfo | null>(null)
+  const [idleTimeoutMinutes, setIdleTimeoutMinutes] = useState(30)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,6 +37,11 @@ export function useSession(): UseSessionResult {
       }
       setUser(data.user)
       setAppVersion(data.app_version || null)
+      setIdleTimeoutMinutes(
+        typeof data.idle_timeout_minutes === 'number' && data.idle_timeout_minutes >= 5
+          ? data.idle_timeout_minutes
+          : 30,
+      )
       applyUserTheme(data.user.theme)
       setSchoolTimezone(
         data.school_timezone?.iana
@@ -64,5 +71,5 @@ export function useSession(): UseSessionResult {
     void refresh()
   }, [refresh])
 
-  return { user, schoolTimezone, appVersion, loading, error, refresh }
+  return { user, schoolTimezone, appVersion, idleTimeoutMinutes, loading, error, refresh }
 }

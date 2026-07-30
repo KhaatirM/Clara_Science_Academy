@@ -95,6 +95,7 @@ def spa_me():
         school_timezone = {"iana": DEFAULT_SCHOOL_TIMEZONE, "clock": "", "zone": ""}
 
     from utils.app_version import app_version_context
+    from utils.idle_session import idle_timeout_minutes
 
     ver = app_version_context()
     return jsonify(
@@ -102,6 +103,7 @@ def spa_me():
             "authenticated": True,
             "school_timezone": school_timezone,
             "flashes": flashes,
+            "idle_timeout_minutes": idle_timeout_minutes(),
             "app_version": {
                 "version": ver["app_version"],
                 "display": ver["app_version_display"],

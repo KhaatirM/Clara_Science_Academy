@@ -88,6 +88,12 @@ class Config:
     # Legacy alias: used as fallback for both API subject and course owner when the above are unset.
     GOOGLE_CLASSROOM_DELEGATED_USER = os.environ.get('GOOGLE_CLASSROOM_DELEGATED_USER')
     
+    # Idle logout: minutes without activity before forced sign-out (server + SPA).
+    try:
+        IDLE_SESSION_TIMEOUT_MINUTES = int(os.environ.get('IDLE_SESSION_TIMEOUT_MINUTES') or 30)
+    except (TypeError, ValueError):
+        IDLE_SESSION_TIMEOUT_MINUTES = 30
+
     # Encryption key for storing sensitive data like refresh tokens
     # IMPORTANT: Set this environment variable in production
     # Generate a key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
@@ -142,7 +148,8 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
     SESSION_COOKIE_HTTPONLY = True  # Prevent XSS attacks
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
-    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
+    # Overridden at startup by idle_session.register_idle_session_guard to match idle timeout.
+    PERMANENT_SESSION_LIFETIME = 2100  # ~35 minutes default (30 idle + buffer)
 
     # Default on for SPA-only main. Built assets live in static/spa/ (also rebuild via scripts/build_spa.sh).
     REACT_SPA_ENABLED = os.environ.get('REACT_SPA_ENABLED', 'true').lower() in (

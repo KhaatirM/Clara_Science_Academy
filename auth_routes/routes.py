@@ -248,6 +248,11 @@ def login():
                 login_user(user, remember=remember)
                 # Fresh staff dashboard choice every sign-in (Tech vs management)
                 session.pop('staff_dashboard_target', None)
+                try:
+                    from utils.idle_session import mark_session_activity
+                    mark_session_activity()
+                except Exception:
+                    session.permanent = True
                 
                 # Increment login count
                 user.login_count += 1
@@ -309,7 +314,7 @@ def logout():
     get_log_activity()(
         user_id=current_user.id,
         action='logout',
-        details={'role': current_user.role},
+        details={'role': current_user.role, 'reason': request.args.get('reason')},
         ip_address=request.remote_addr,
         user_agent=request.headers.get('User-Agent')
     )
@@ -317,8 +322,11 @@ def logout():
     session.pop('staff_dashboard_target', None)
     session.pop('pending_login_success', None)
     logout_user()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('auth.login'))
+    if request.args.get('reason') == 'idle' or request.args.get('idle'):
+        flash('You were signed out after a period of inactivity. Please sign in again.', 'info')
+    else:
+        flash('You have been logged out.', 'info')
+    return redirect(url_for('auth.login', idle=1) if request.args.get('reason') == 'idle' else url_for('auth.login'))
 
 @auth_blueprint.route('/', methods=['GET', 'POST'])
 @auth_blueprint.route('/home', methods=['GET', 'POST'])
@@ -1106,6 +1114,11 @@ def google_callback():
             # User exists - log them in
             login_user(user, remember=True)
             session.pop('staff_dashboard_target', None)
+            try:
+                from utils.idle_session import mark_session_activity
+                mark_session_activity()
+            except Exception:
+                session.permanent = True
             
             # Increment login count
             user.login_count += 1

@@ -1,0 +1,17 @@
+---
+description: Always bump portal version and updates popup when shipping/pushing
+alwaysApply: true
+---
+
+# Version & updates popup on every push
+
+When you commit and push user-facing changes to this repo (especially `main`):
+
+1. Bump `utils/app_version.py` (`VERSION_MINOR` or `VERSION_PATCH`, `ESTIMATED_UPDATE_COUNT`, `RELEASE_LABEL` if the day changed).
+2. Update the System Updates popup in both:
+   - `frontend/src/components/updates/PortalUpdatesHost.tsx` (SPA) — bump `SESSION_KEY`, refresh `LATEST_UPDATES`, fallbacks for `display` / estimate
+   - `templates/shared/home.html` — intro + top update section bullets; bump the `sessionStorage` key so the modal shows again
+3. If SPA UI changed, rebuild (`cd frontend && npm run build`) and commit `static/spa/` with the release.
+4. Include the version bump in the same push (or immediately after) so production shows the new badge and notes.
+
+Do not skip this for “small” fixes that users will notice (bugs, security, roster, Classroom, grading, auth).

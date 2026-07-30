@@ -137,7 +137,7 @@ function ErrorScreen({ message }: { message: string }) {
 }
 
 export default function App() {
-  const { user, schoolTimezone, appVersion, loading, error } = useSession()
+  const { user, schoolTimezone, appVersion, idleTimeoutMinutes, loading, error } = useSession()
 
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
@@ -165,7 +165,16 @@ export default function App() {
   return (
     <BrowserRouter basename="/app">
       <Routes>
-        <Route element={<AppLayout user={user} schoolTimezone={schoolTimezone} appVersion={appVersion} />}>
+        <Route
+          element={
+            <AppLayout
+              user={user}
+              schoolTimezone={schoolTimezone}
+              appVersion={appVersion}
+              idleTimeoutMinutes={idleTimeoutMinutes}
+            />
+          }
+        >
           <Route index element={<Navigate to={homePath} replace />} />
           {techShell ? (
             <>

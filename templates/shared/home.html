@@ -167,18 +167,30 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 29, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) ships <strong>school-managed Google Classroom</strong> end to end (create, direct enroll, delete when a class is removed or a year is finalized), lets <strong>School Administrators</strong> be assigned as class teachers, keeps <strong>closed-year teacher names</strong> on report cards, hardens <strong>staff removal</strong>, and shows the <strong>calendar legend</strong> for teachers and students.</p>
+                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>idle auto sign-out</strong> (30 minutes), fixes <strong>grade-3 report card PDFs</strong>, filters <strong>class rosters by grade band</strong>, and continues <strong>school-managed Google Classroom</strong> (create, enroll, delete on class remove / year finalize).</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- July 29, 2026 - Classroom + records -->
+                    <!-- July 29, 2026 - Security + Classroom + records -->
                     <div class="update-section mb-4">
-                        <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Classroom &amp; Records – July 29, 2026</h6>
+                        <h6 class="mb-3"><i class="bi bi-shield-lock me-2"></i>Security, Reports &amp; Classroom – July 29, 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>School-managed Google Classroom:</strong> Clara creates Classrooms for the school, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a class is removed or a school year is finalized. Teachers no longer create or link their own courses.
+                                <strong>Auto sign-out when idle:</strong> After 30 minutes without activity you are signed out. A short warning appears before logout; move the mouse or press a key to stay signed in. (Configurable via <code>IDLE_SESSION_TIMEOUT_MINUTES</code>.)
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report card PDF fix (grade 3):</strong> Generating PDFs for grade-3 progress reports no longer fails with the include_attendance template error.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Class roster by grade band:</strong> When adding students to a class, only students in that class’s grade level(s) appear in the picker.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School-managed Google Classroom:</strong> Clara creates Classrooms for the school, adds teachers and students directly (no invite to accept), and deletes those Classrooms when a class is removed or a school year is finalized.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -188,21 +200,9 @@
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Closed-year teacher names on report cards:</strong> Archived / closed-year classes keep the teacher of record. Year close freezes teacher names so removing a staff login does not rewrite report cards to “Unassigned Teacher.”
                             </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Safer staff removal:</strong> Deleting a teacher no longer fails when admin audit logs still reference their login; audit rows stay, with the user link cleared.
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Calendar legend for viewers:</strong> Teachers and students see the same event-color legend as management on the school calendar.
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Toasts &amp; version badge:</strong> Corner notifications and the version chip sit at the bottom-right so they do not cover Logout.
-                            </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Classroom setup and cleanup stay centralized. Historical report cards stay accurate after staff leave. View-only calendars are easier to read.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Idle accounts are signed out automatically. Report PDFs and rostering are more reliable. Classroom setup and cleanup stay centralized.</p>
                         </div>
                     </div>
 
@@ -1840,11 +1840,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul29_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul29_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJul29_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownJul29_2026_v3', 'true');
         }, 500);
     }
 });

@@ -104,27 +104,15 @@ def _display_grade_label(grade_level) -> str:
 
 
 def _student_gpa_alert_level(gpa) -> str:
-    if gpa is None:
-        return "none"
-    if gpa < 2.0:
-        return "critical"
-    if gpa < 3.0:
-        return "warning"
-    if gpa >= 3.5:
-        return "excellent"
-    return "none"
+    from utils.student_gpa import gpa_alert_level
+
+    return gpa_alert_level(gpa)
 
 
 def _student_academic_status(gpa):
-    if gpa is None:
-        return "No Data", "muted"
-    if gpa >= 3.5:
-        return "Honors", "success"
-    if gpa >= 3.0:
-        return "Good Standing", "primary"
-    if gpa >= 2.0:
-        return "Needs Improvement", "warning"
-    return "At Risk", "danger"
+    from utils.student_gpa import academic_status_for_gpa
+
+    return academic_status_for_gpa(gpa)
 
 
 def _grade_is_young(grade_level) -> bool:
@@ -327,6 +315,7 @@ def _students_list_query(params: dict):
 
 
 def serialize_student_list_item(student: Student) -> dict:
+    # Student.gpa is kept aligned to the active school year (list sync + scheduler).
     gpa = student.gpa
     alert_level = _student_gpa_alert_level(gpa)
     academic_status, academic_tone = _student_academic_status(gpa)
@@ -361,6 +350,14 @@ def serialize_student_list_item(student: Student) -> dict:
 
 
 def query_students_list(args) -> dict:
+    # Keep stored Student.gpa aligned with active year so alert filters / GPA sort / stats match the UI.
+    try:
+        from utils.student_gpa import sync_active_year_gpas
+
+        sync_active_year_gpas(commit=True)
+    except Exception:
+        pass
+
     params = _parse_students_list_args(args)
     query = _students_list_query(params)
 
@@ -2404,7 +2401,9 @@ def serialize_student_detail(student_id: int) -> dict:
                 'subject': class_info.subject,
             })
 
-    gpa = student.gpa if student.gpa is not None else 0.0
+    from utils.student_gpa import compute_active_year_gpa
+
+    gpa = compute_active_year_gpa(student.id)
 
     return {
         'id': student.id,

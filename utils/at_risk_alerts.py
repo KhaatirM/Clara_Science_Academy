@@ -76,30 +76,19 @@ def _percentage_from_grade_data(grade_data, assignment_total_points):
 
 def _grades_for_gpa(student_id, class_ids=None, school_year_id=None):
     """Non-voided grades used for GPA (optionally limited to class_ids / school year)."""
-    from models import Grade, Assignment
+    from utils.student_gpa import grades_for_gpa
 
-    q = (
-        Grade.query.join(Assignment)
-        .filter(
-            Grade.student_id == student_id,
-            Grade.is_voided.is_(False),
-            Assignment.status != 'Voided',
-        )
+    return grades_for_gpa(
+        student_id, class_ids=class_ids, school_year_id=school_year_id
     )
-    if class_ids is not None:
-        q = q.filter(Assignment.class_id.in_(class_ids))
-    if school_year_id is not None:
-        q = q.filter(Assignment.school_year_id == school_year_id)
-    return q.all()
 
 
 def _compute_scoped_gpa(student_id, class_ids=None, school_year_id=None):
-    from services.gpa_scheduler import calculate_student_gpa
+    from utils.student_gpa import compute_scoped_gpa
 
-    grades = _grades_for_gpa(student_id, class_ids, school_year_id=school_year_id)
-    if not grades:
-        return None
-    return calculate_student_gpa(grades)
+    return compute_scoped_gpa(
+        student_id, class_ids=class_ids, school_year_id=school_year_id
+    )
 
 
 def _assignment_type_label(raw_type):

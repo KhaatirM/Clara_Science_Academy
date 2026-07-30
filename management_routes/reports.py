@@ -1463,52 +1463,19 @@ def delete_report_card(report_card_id):
 
 def _apply_grade_promotion_after_year_close(enrolled_student_ids):
     """
-    For each student ID that had an active enrollment in the closed year:
-    - If is_repeating: clear the flag; do not change grade_level.
-    - Else if grade_level is None: skip.
-    - Else if grade_level >= 12: skip (no auto-promotion past 12th).
-    - Else: increment grade_level by 1.
+    Apply staged year-end outcomes for enrolled students:
+    - withdraw → soft-remove (former)
+    - graduate → off roster, keep profile (alumni)
+    - repeat / is_repeating → clear flag, no grade change
+    - else → promote one grade (skip 12th+)
 
     Then provision new 3rd+ portal accounts where missing.
 
     Returns a stats dict.
     """
-    from datetime import datetime
-    from .students import _provision_student_login_if_needed
+    from utils.student_departure import apply_year_end_outcomes
 
-    stats = {
-        "promoted": 0,
-        "repeating_cleared": 0,
-        "skipped": 0,
-        "provisioned_accounts": 0,
-    }
-    for sid in enrolled_student_ids:
-        student = Student.query.get(sid)
-        if not student or getattr(student, "is_deleted", False):
-            continue
-        gl = student.grade_level
-        if gl is None:
-            stats["skipped"] += 1
-            continue
-        if student.is_repeating:
-            student.is_repeating = False
-            stats["repeating_cleared"] += 1
-            continue
-        if int(gl) >= 12:
-            stats["skipped"] += 1
-            continue
-        student.grade_level = int(gl) + 1
-        student.status_updated_at = datetime.utcnow()
-        stats["promoted"] += 1
-
-    for sid in enrolled_student_ids:
-        student = Student.query.get(sid)
-        if not student or getattr(student, "is_deleted", False):
-            continue
-        if _provision_student_login_if_needed(student):
-            stats["provisioned_accounts"] += 1
-
-    return stats
+    return apply_year_end_outcomes(enrolled_student_ids)
 
 
 def close_school_year():

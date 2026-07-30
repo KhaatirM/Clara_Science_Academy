@@ -5,6 +5,7 @@ import {
   fetchStudentList,
   markStudentsRepeating,
   removeStudent,
+  setStudentsYearEndIntent,
   uploadStudentsCsv,
 } from '../api/students'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
@@ -236,6 +237,30 @@ export function StudentsPage() {
     if (!window.confirm(`Mark ${ids.length} student(s) as repeating?`)) return
     try {
       const result = await markStudentsRepeating(ids)
+      setActionMessage(result.message)
+      void load(filters)
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Update failed')
+    }
+  }
+
+  const handleYearEndIntent = async (intent: 'promote' | 'graduate' | 'withdraw' | 'repeat') => {
+    const ids = [...selectedIds]
+    if (!ids.length) {
+      setActionMessage('Select at least one student first.')
+      return
+    }
+    const labels: Record<string, string> = {
+      promote: 'promote (default)',
+      graduate: 'graduate (alumni)',
+      withdraw: 'withdraw (former)',
+      repeat: 'repeat grade',
+    }
+    if (!window.confirm(`Set year-end intent to ${labels[intent]} for ${ids.length} student(s)?`)) {
+      return
+    }
+    try {
+      const result = await setStudentsYearEndIntent(ids, intent)
       setActionMessage(result.message)
       void load(filters)
     } catch (err) {
@@ -494,8 +519,9 @@ export function StudentsPage() {
                       <option value="no_account">No Account</option>
                       {canAdminUi ? (
                         <>
-                          <option value="former">Former (Removed)</option>
-                          <option value="all">All (Current + Former)</option>
+                          <option value="graduated">Graduated (alumni)</option>
+                          <option value="former">Former (Withdrawn / Removed)</option>
+                          <option value="all">All (Current + Former + Graduated)</option>
                         </>
                       ) : null}
                     </select>
@@ -581,24 +607,47 @@ export function StudentsPage() {
               <div className="students-csv-card mb-4">
                 <div className="students-csv-header">
                   <h5 className="mb-0">
-                    <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
-                    Repeat Grade (Bulk Update)
+                    <i className="bi bi-mortarboard me-2" aria-hidden="true" />
+                    Year-end outcomes (bulk)
                   </h5>
                 </div>
                 <div className="students-csv-body">
                   <p className="text-muted small mb-2">
-                    Select students below, then mark them as repeating. This will set{' '}
-                    <code>is_repeating</code> and bump <code>grad_year</code> by 1 (when grad year is
-                    known).
+                    Stage what happens at school-year finalize for selected students. Default is{' '}
+                    <strong>promote</strong>. For 8th graders: graduate = alumni (off roster, keep
+                    record); withdraw = former/removed. Repeat also bumps graduation year when known.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => void handleMarkRepeating()}
-                    className="btn btn-warning btn-sm"
-                  >
-                    <i className="bi bi-arrow-repeat me-1" aria-hidden="true" />
-                    Mark Selected as Repeating
-                  </button>
+                  <div className="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleYearEndIntent('promote')}
+                      className="btn btn-outline-secondary btn-sm"
+                    >
+                      Promote
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleYearEndIntent('graduate')}
+                      className="btn btn-outline-primary btn-sm"
+                    >
+                      Graduate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleYearEndIntent('withdraw')}
+                      className="btn btn-outline-danger btn-sm"
+                    >
+                      Withdraw
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleMarkRepeating()}
+                      className="btn btn-warning btn-sm"
+                    >
+                      <i className="bi bi-arrow-repeat me-1" aria-hidden="true" />
+                      Mark repeating
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : null}

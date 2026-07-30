@@ -88,6 +88,7 @@ def _sync_student_workspace(
         is_deleted=is_deleted,
         status_updated_at=getattr(student, "status_updated_at", None),
         expected_graduation_year=getattr(student, "expected_graduation_year", None),
+        departure_status=getattr(student, "departure_status", None),
     )
 
     sync_student_google_suspension(

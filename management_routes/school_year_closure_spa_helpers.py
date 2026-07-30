@@ -210,6 +210,31 @@ def query_closure_dashboard(closure_id: int) -> dict[str, Any]:
     extensions = syc.list_active_extensions(closure)
     events = sorted(closure.events, key=lambda e: e.created_at, reverse=True)[:30]
 
+    from utils.student_departure import (
+        effective_year_end_intent,
+        list_eighth_graders_for_school_year,
+    )
+
+    eighth_graders = []
+    intent_counts = {"promote": 0, "graduate": 0, "withdraw": 0, "repeat": 0}
+    if closure.phase not in syc.TERMINAL_PHASES:
+        for student in list_eighth_graders_for_school_year(closure.school_year_id):
+            intent = effective_year_end_intent(student)
+            intent_counts[intent] = intent_counts.get(intent, 0) + 1
+            eighth_graders.append(
+                {
+                    "id": student.id,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "name": f"{student.first_name} {student.last_name}".strip(),
+                    "student_id": student.student_id or "",
+                    "grade_level": student.grade_level,
+                    "year_end_intent": intent,
+                    "is_repeating": bool(getattr(student, "is_repeating", False)),
+                    "is_active": bool(getattr(student, "is_active", True)),
+                }
+            )
+
     sy = closure.school_year
     return {
         "closure": {
@@ -244,6 +269,11 @@ def query_closure_dashboard(closure_id: int) -> dict[str, Any]:
         "events": [_serialize_event(e) for e in events],
         "checklist": checklist,
         "finalize_stats": finalize_stats,
+        "eighth_grade_outcomes": {
+            "students": eighth_graders,
+            "counts": intent_counts,
+            "total": len(eighth_graders),
+        },
         "next_year_suggestion": next_year_suggestion,
         "next_year_exists": next_year_exists,
         "phase_labels": syc.PHASE_LABELS,
@@ -322,6 +352,34 @@ def run_closure_action(closure_id: int, action: str, body: dict[str, Any], actor
             raise ValueError("You must type REOPEN to confirm.")
         syc.reopen_closure(closure, actor=actor, reason=reason)
         return {"success": True, "message": "Closure reopened."}
+    if action == "set-eighth-grade-intent":
+        from models import Student
+        from utils.student_departure import normalize_year_end_intent, set_year_end_intent
+
+        if closure.phase in syc.TERMINAL_PHASES:
+            raise ValueError("Cannot change year-end intents after finalize.")
+        intent = normalize_year_end_intent(body.get("intent"))
+        if not intent:
+            raise ValueError("Intent must be promote, graduate, withdraw, or repeat.")
+        raw_ids = body.get("student_ids") or []
+        if not isinstance(raw_ids, list) or not raw_ids:
+            raise ValueError("Provide student_ids.")
+        updated = 0
+        for sid in raw_ids:
+            student = Student.query.get(int(sid))
+            if not student or getattr(student, "is_deleted", False):
+                continue
+            if int(getattr(student, "grade_level", -1) or -1) != 8:
+                continue
+            set_year_end_intent(student, intent)
+            updated += 1
+        db.session.commit()
+        return {
+            "success": True,
+            "message": f"Set “{intent}” for {updated} 8th grader(s).",
+            "updated": updated,
+            "intent": intent,
+        }
 
     raise ValueError(f"Unknown action: {action}")
 

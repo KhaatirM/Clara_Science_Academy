@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v5'
+const SESSION_KEY = 'spaUpdateModalShownJul30_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Middle-school year-end outcomes',
+    body: 'Before year finalize, stage 8th graders to promote to 9th (default), graduate as alumni (off roster, keep records), withdraw as former, or repeat. Students list and closure dashboard include these controls.',
+  },
   {
     title: 'Closed-year grade from class names',
     body: 'When a class has no grade band saved (common for older classes like “Math [4th]”), report cards now read the grade from the class name so students are not pulled into the wrong grade by a single mis-tagged class.',
@@ -24,20 +28,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Class roster by grade band',
     body: 'When adding students to a class, only students in that class’s grade level(s) appear in the picker.',
   },
-  {
-    title: 'School-managed Google Classroom',
-    body: 'Clara creates Classrooms for the school, adds teachers and students directly (no invite to accept), and removes those Classrooms when a class is deleted or a school year is finalized.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.510.0'
-  const releaseLabel = version?.release_label || 'July 29, 2026'
+  const display = version?.display || 'v 2.511.0'
+  const releaseLabel = version?.release_label || 'July 30, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2601
+  const updatesEstimate = version?.updates_estimate ?? 2602
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

@@ -269,13 +269,27 @@ def _departure_ou_path_and_reason(
     event_date: date,
     prior_school_year_end: Optional[date],
     next_school_year_start: Optional[date],
+    departure_status: Optional[str] = None,
 ) -> Tuple[str, str]:
     """
     Classify a departing student:
 
+    - Explicit ``graduated`` → Alumni/{tier}
+    - Explicit ``withdrawn`` (or deleted without graduated) → Transferred & Removed
     - **Summer gap** after completing a division (5th→6th, 8th→9th, 12th done) → Alumni/{tier}
     - **Mid-year** or left before that milestone → Transferred & Removed
     """
+    status = (departure_status or "").strip().lower()
+    if status == "withdrawn":
+        return _transferred_path(effective), "transferred_removed"
+    if status == "graduated":
+        alumni_sub = None
+        if grade is not None:
+            alumni_sub = _alumni_sub_for_summer_departure(int(grade))
+        if not alumni_sub:
+            alumni_sub = ALUMNI_SUB_MIDDLE
+        return _alumni_path(alumni_sub, effective), "alumni_completed_level"
+
     if grade is None:
         return _transferred_path(effective), "transferred_removed"
 
@@ -310,6 +324,7 @@ def _compute_ou_path_and_reason(
     today: date,
     prior_school_year_end: Optional[date],
     next_school_year_start: Optional[date],
+    departure_status: Optional[str] = None,
 ) -> Tuple[str, str]:
     reference_year = today.year
     grade = _parse_grade_level(grade_level)
@@ -319,12 +334,17 @@ def _compute_ou_path_and_reason(
 
     if _is_departing(is_active=is_active, marked_for_removal=marked_for_removal, is_deleted=is_deleted):
         event_date = status_updated_at.date() if status_updated_at else today
+        # Soft-deleted without explicit status → withdrawn
+        effective_departure = departure_status
+        if is_deleted and not (departure_status or "").strip():
+            effective_departure = "withdrawn"
         return _departure_ou_path_and_reason(
             grade=grade,
             effective=effective,
             event_date=event_date,
             prior_school_year_end=prior_school_year_end,
             next_school_year_start=next_school_year_start,
+            departure_status=effective_departure,
         )
 
     return _active_student_ou_path(grade, effective)
@@ -339,6 +359,7 @@ def get_student_ou_path(
     marked_for_removal: bool,
     is_deleted: bool = False,
     expected_graduation_year: Optional[int] = None,
+    departure_status: Optional[str] = None,
     today: Optional[date] = None,
 ) -> str:
     """
@@ -366,6 +387,7 @@ def get_student_ou_path(
         today=today or date.today(),
         prior_school_year_end=None,
         next_school_year_start=None,
+        departure_status=departure_status,
     )
     return path
 
@@ -380,6 +402,7 @@ def resolve_student_ou(
     status_updated_at: Optional[datetime],
     expected_graduation_year: Optional[int] = None,
     is_deleted: bool = False,
+    departure_status: Optional[str] = None,
     today: Optional[date] = None,
     prior_school_year_end: Optional[date] = None,
     next_school_year_start: Optional[date] = None,
@@ -405,6 +428,7 @@ def resolve_student_ou(
         today=today,
         prior_school_year_end=prior_school_year_end,
         next_school_year_start=next_school_year_start,
+        departure_status=departure_status,
     )
 
     should_suspend = False

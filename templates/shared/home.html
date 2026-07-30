@@ -165,17 +165,21 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 29, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 30, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>July 29</strong> (<strong>{{ app_version_display }}</strong>) improves <strong>closed-year report card grades</strong> (reads tags like “Math [4th]” when grade bands were never saved), fixes <strong>report card grades by school year</strong>, adds <strong>idle auto sign-out</strong>, and continues <strong>school-managed Google Classroom</strong>.</p>
+                        <p class="updates-intro-text mb-0"><strong>July 30</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>middle-school year-end outcomes</strong> (promote / graduate / withdraw / repeat), improves <strong>closed-year report card grades</strong>, and continues idle sign-out and Classroom tools.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- July 29, 2026 - Security + Classroom + records -->
+                    <!-- July 30, 2026 - MS exit + reports -->
                     <div class="update-section mb-4">
-                        <h6 class="mb-3"><i class="bi bi-shield-lock me-2"></i>Security, Reports &amp; Classroom – July 29, 2026</h6>
+                        <h6 class="mb-3"><i class="bi bi-mortarboard me-2"></i>Middle School Exit &amp; Reports – July 30, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Middle-school year-end outcomes:</strong> Before year finalize, stage 8th graders to promote to 9th (default), graduate as alumni (off roster, keep records), withdraw as former, or repeat. Controls are on the Students page and the closure dashboard.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Closed-year grade from class names:</strong> When a class has no grade band saved (common for older classes like “Math [4th]”), report cards now read the grade from the class name so a single mis-tagged class does not pull a student into the wrong grade.
@@ -210,7 +214,7 @@
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Report cards show the correct grade for each school year. Idle accounts are signed out automatically. Roster picks and Classroom cleanup stay reliable.</p>
+                            <p class="mb-0"><strong>Impact:</strong> 8th graders can graduate or withdraw cleanly at year end instead of always becoming 9th. Report cards show the correct grade for each school year.</p>
                         </div>
                     </div>
 
@@ -1848,11 +1852,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul29_2026_v5')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul30_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJul29_2026_v5', 'true');
+            sessionStorage.setItem('updateModalShownJul30_2026_v1', 'true');
         }, 500);
     }
 });

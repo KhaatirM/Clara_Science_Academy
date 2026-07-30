@@ -80,6 +80,65 @@ export async function markStudentsRepeating(ids: number[]): Promise<{ message: s
   return { message: data.message || 'Students marked as repeating.' }
 }
 
+export async function setStudentsYearEndIntent(
+  ids: number[],
+  intent: 'promote' | 'graduate' | 'withdraw' | 'repeat',
+): Promise<{ message: string }> {
+  const form = new FormData()
+  ids.forEach((id) => form.append('student_ids', String(id)))
+  form.append('intent', intent)
+  const csrf = getCsrfToken()
+  if (csrf) form.append('csrf_token', csrf)
+
+  const response = await fetch('/management/students/year-end-intent', {
+    method: 'POST',
+    body: form,
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(csrf ? { 'X-CSRFToken': csrf } : {}),
+    },
+  })
+
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean
+    message?: string
+    error?: string
+  }
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || data.error || 'Could not set year-end intent')
+  }
+  return { message: data.message || 'Year-end intent updated.' }
+}
+
+export async function graduateStudentNow(id: number): Promise<{ message: string }> {
+  const form = new FormData()
+  const csrf = getCsrfToken()
+  if (csrf) form.append('csrf_token', csrf)
+
+  const response = await fetch(`/management/students/${id}/graduate`, {
+    method: 'POST',
+    body: form,
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(csrf ? { 'X-CSRFToken': csrf } : {}),
+    },
+  })
+
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean
+    message?: string
+    error?: string
+  }
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || data.error || 'Could not graduate student')
+  }
+  return { message: data.message || 'Student marked as graduated.' }
+}
+
 export async function uploadStudentsCsv(file: File): Promise<{ message: string }> {
   const form = new FormData()
   form.append('csv_file', file)

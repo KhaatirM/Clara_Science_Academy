@@ -396,6 +396,8 @@ def create_app(config_class=None):
             ('expected_graduation_year', 'INTEGER', 'INTEGER'),
             ('is_active', 'BOOLEAN NOT NULL DEFAULT true', 'INTEGER NOT NULL DEFAULT 1'),
             ('is_repeating', 'BOOLEAN NOT NULL DEFAULT false', 'INTEGER NOT NULL DEFAULT 0'),
+            ('year_end_intent', 'VARCHAR(20)', 'TEXT'),
+            ('departure_status', 'VARCHAR(20)', 'TEXT'),
         ]
         try:
             with db.engine.connect() as conn:

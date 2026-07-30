@@ -139,6 +139,10 @@ class Student(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     # Admin flag: student is repeating (affects grad_year / OU placement policy)
     is_repeating = db.Column(db.Boolean, default=False, nullable=False)
+    # Staging for year finalize: promote | graduate | withdraw | repeat (None = promote)
+    year_end_intent = db.Column(db.String(20), nullable=True)
+    # Set when leaving the active roster: graduated | withdrawn
+    departure_status = db.Column(db.String(20), nullable=True)
     address = db.Column(db.Text, nullable=True)
     photo_filename = db.Column(db.String(255), nullable=True)
     transcript_filename = db.Column(db.String(255), nullable=True)

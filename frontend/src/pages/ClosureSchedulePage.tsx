@@ -226,8 +226,8 @@ export function ClosureSchedulePage() {
                   <h3 className="mgmt-syc-tlp-title">Auto-finalize</h3>
                   <p>
                     The system generates official Q1–Q4 report cards (marked as auto-generated),
-                    archives the year&apos;s classes/enrollments, promotes students one grade level
-                    (skipping anyone flagged as repeating and 12th graders), and deactivates the
+                    archives the year&apos;s classes/enrollments, applies year-end outcomes
+                    (promote by default; graduate / withdraw / repeat when staged), and deactivates the
                     school year.
                   </p>
                 </div>

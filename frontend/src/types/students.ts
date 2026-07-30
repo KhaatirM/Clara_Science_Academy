@@ -23,6 +23,10 @@ export interface StudentListItem {
   academic_status: string
   academic_tone: StudentTone
   is_deleted: boolean
+  is_active?: boolean
+  is_repeating?: boolean
+  year_end_intent?: string
+  departure_status?: string | null
   has_account: boolean
   username: string | null
   account_status: string
@@ -137,4 +141,9 @@ export interface StudentDetail extends Record<string, unknown> {
   medical_concerns?: string | null
   notes?: string | null
   parent_portal?: StudentParentPortalStatus | null
+  is_active?: boolean
+  is_deleted?: boolean
+  is_repeating?: boolean
+  year_end_intent?: string
+  departure_status?: string | null
 }

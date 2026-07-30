@@ -265,6 +265,11 @@ def _students_list_query(params: dict):
     status_filter = params.get("status") or ""
     if status_filter == "former":
         query = Student.query.filter(Student.is_deleted == True)
+    elif status_filter == "graduated":
+        query = Student.query.filter(
+            Student.is_deleted.is_(False),
+            Student.departure_status == "graduated",
+        )
     elif status_filter == "all":
         query = Student.query
     else:
@@ -343,6 +348,10 @@ def serialize_student_list_item(student: Student) -> dict:
         "academic_status": academic_status,
         "academic_tone": academic_tone,
         "is_deleted": bool(getattr(student, "is_deleted", False)),
+        "is_active": bool(getattr(student, "is_active", True)),
+        "is_repeating": bool(getattr(student, "is_repeating", False)),
+        "year_end_intent": getattr(student, "year_end_intent", None) or "promote",
+        "departure_status": getattr(student, "departure_status", None),
         "has_account": getattr(student, "user", None) is not None,
         "username": student.user.username if getattr(student, "user", None) else None,
         "account_status": account_status,
@@ -1150,13 +1159,14 @@ def mark_students_repeating():
 
     updated = 0
     try:
+        from utils.student_departure import set_year_end_intent
+
         for sid in student_ids:
             student = Student.query.get(int(sid))
             if not student or getattr(student, 'is_deleted', False):
                 continue
 
-            # Mark repeating
-            student.is_repeating = True
+            set_year_end_intent(student, 'repeat')
 
             # Ensure grad_year exists; derive from expected_grad_date if needed
             grad_year = getattr(student, 'grad_year', None)
@@ -1169,8 +1179,6 @@ def mark_students_repeating():
             if grad_year:
                 student.grad_year = int(grad_year) + 1
 
-            # Audit timestamp (also used by automation for time-based policies)
-            student.status_updated_at = datetime.utcnow()
             updated += 1
 
         db.session.commit()
@@ -1185,6 +1193,105 @@ def mark_students_repeating():
             return jsonify({"success": False, "message": "Failed to update selected students."}), 500
         flash("Failed to update selected students. Please try again.", "danger")
 
+    return redirect(url_for("management.students"))
+
+
+@bp.route('/students/year-end-intent', methods=['POST'])
+@login_required
+@permissions_required('students:edit')
+def set_students_year_end_intent():
+    """Bulk set year-end intent: promote | graduate | withdraw | repeat."""
+    from utils.student_departure import (
+        normalize_year_end_intent,
+        set_year_end_intent,
+    )
+
+    student_ids = request.form.getlist('student_ids')
+    if not student_ids and request.is_json:
+        body = request.get_json(silent=True) or {}
+        student_ids = [str(x) for x in (body.get('student_ids') or [])]
+        intent_raw = body.get('intent')
+    else:
+        intent_raw = request.form.get('intent')
+
+    intent = normalize_year_end_intent(intent_raw)
+    if not intent:
+        msg = "Intent must be promote, graduate, withdraw, or repeat."
+        if _students_wants_json() or request.is_json:
+            return jsonify({"success": False, "message": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("management.students"))
+
+    if not student_ids:
+        msg = "No students selected."
+        if _students_wants_json() or request.is_json:
+            return jsonify({"success": False, "message": msg}), 400
+        flash(msg, "warning")
+        return redirect(url_for("management.students"))
+
+    updated = 0
+    try:
+        for sid in student_ids:
+            student = Student.query.get(int(sid))
+            if not student or getattr(student, "is_deleted", False):
+                continue
+            if getattr(student, "departure_status", None):
+                continue
+            set_year_end_intent(student, intent)
+            if intent == "repeat":
+                grad_year = getattr(student, "grad_year", None)
+                if not grad_year and student.expected_grad_date and "/" in str(student.expected_grad_date):
+                    try:
+                        grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+                    except Exception:
+                        grad_year = None
+                if grad_year:
+                    student.grad_year = int(grad_year) + 1
+            updated += 1
+        db.session.commit()
+        msg = f"Set year-end intent “{intent}” for {updated} student(s)."
+        if _students_wants_json() or request.is_json:
+            return jsonify({"success": True, "message": msg, "updated": updated, "intent": intent})
+        flash(msg, "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("set_students_year_end_intent failed")
+        msg = "Failed to update year-end intent."
+        if _students_wants_json() or request.is_json:
+            return jsonify({"success": False, "message": msg}), 500
+        flash(msg, "danger")
+
+    return redirect(url_for("management.students"))
+
+
+@bp.route('/students/<int:student_id>/graduate', methods=['POST'])
+@login_required
+@permissions_required('students:edit')
+def graduate_student_now(student_id: int):
+    """Immediately mark a student as graduated (off roster, keep record)."""
+    from utils.student_departure import mark_student_graduated
+
+    student = Student.query.get_or_404(student_id)
+    try:
+        if getattr(student, "is_deleted", False) or getattr(student, "departure_status", None) == "graduated":
+            msg = "Student is already off the active roster."
+            if _students_wants_json() or request.is_json:
+                return jsonify({"success": False, "message": msg}), 400
+            flash(msg, "warning")
+            return redirect(url_for("management.students"))
+        mark_student_graduated(student, strip_login=True)
+        db.session.commit()
+        msg = f"{student.first_name} {student.last_name} marked as graduated (record preserved)."
+        if _students_wants_json() or request.is_json:
+            return jsonify({"success": True, "message": msg})
+        flash(msg, "success")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("graduate_student_now failed student_id=%s", student_id)
+        msg = "Could not mark student as graduated."
+        if _students_wants_json() or request.is_json:
+            return jsonify({"success": False, "message": msg}), 500
+        flash(msg, "danger")
     return redirect(url_for("management.students"))
 
 
@@ -2301,6 +2408,11 @@ def serialize_student_detail(student_id: int) -> dict:
         'state': student.state,
         'zip_code': student.zip_code,
         'parent_portal': parent_portal_status_for_student(student),
+        'is_active': bool(getattr(student, 'is_active', True)),
+        'is_deleted': bool(getattr(student, 'is_deleted', False)),
+        'is_repeating': bool(getattr(student, 'is_repeating', False)),
+        'year_end_intent': getattr(student, 'year_end_intent', None) or 'promote',
+        'departure_status': getattr(student, 'departure_status', None),
     }
 
 
@@ -2605,28 +2717,10 @@ def remove_student(student_id):
         from datetime import datetime, timezone
         from models import Enrollment
 
-        ws_email = _student_workspace_email(student)
+        from utils.student_departure import mark_student_withdrawn
 
-        # Mark as deleted / off roster (record preserved for logs & former report cards)
-        student.is_deleted = True
-        student.deleted_at = datetime.now(timezone.utc)
-        student.marked_for_removal = False
-        student.is_active = False
-        student.status_updated_at = datetime.now(timezone.utc)
-
-        # Deactivate enrollments so they no longer appear in active rosters
-        for enr in Enrollment.query.filter_by(student_id=student_id).all():
-            enr.is_active = False
-            if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
-                enr.dropped_at = datetime.now(timezone.utc)
-
-        # Remove associated login account (keep student profile data)
-        _strip_student_user_account(student)
-
+        mark_student_withdrawn(student, strip_login=True)
         db.session.commit()
-
-        if ws_email:
-            _suspend_student_google_workspace(student, workspace_email=ws_email)
 
         msg = "Student removed (record preserved)."
         if _students_wants_json():

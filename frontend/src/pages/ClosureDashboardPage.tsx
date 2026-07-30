@@ -117,7 +117,8 @@ export function ClosureDashboardPage() {
     )
   }
 
-  const { closure, school_year, days_to, checklist, finalize_stats, extensions, events } = data
+  const { closure, school_year, days_to, checklist, finalize_stats, extensions, events, eighth_grade_outcomes } =
+    data
   const phase = closure.phase
   const isTerminal = data.terminal_phases.includes(phase)
   const isPaused = phase === 'paused'
@@ -301,6 +302,28 @@ export function ClosureDashboardPage() {
                 </section>
               ) : null}
 
+              {!isTerminal && eighth_grade_outcomes && eighth_grade_outcomes.total > 0 ? (
+                <EighthGradeOutcomesCard
+                  outcomes={eighth_grade_outcomes}
+                  busy={busy}
+                  onSetIntent={async (studentIds, intent) => {
+                    setBusy(true)
+                    try {
+                      const res = await runClosureAction(closureId, 'set-eighth-grade-intent', {
+                        student_ids: studentIds,
+                        intent,
+                      })
+                      showMessage(res.message)
+                      void load()
+                    } catch (e) {
+                      showMessage(e instanceof Error ? e.message : 'Could not update intent.')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                />
+              ) : null}
+
               {finalize_stats ? (
                 <section className="mgmt-syc-card">
                   <h2 className="mgmt-syc-card-title">
@@ -337,6 +360,14 @@ export function ClosureDashboardPage() {
                         <div>
                           <dt>Promoted one grade</dt>
                           <dd>{String((finalize_stats.promotion as Record<string, unknown>).promoted ?? 0)}</dd>
+                        </div>
+                        <div>
+                          <dt>Graduated (off roster)</dt>
+                          <dd>{String((finalize_stats.promotion as Record<string, unknown>).graduated ?? 0)}</dd>
+                        </div>
+                        <div>
+                          <dt>Withdrawn</dt>
+                          <dd>{String((finalize_stats.promotion as Record<string, unknown>).withdrawn ?? 0)}</dd>
                         </div>
                         <div>
                           <dt>Repeating (flag cleared)</dt>
@@ -978,6 +1009,130 @@ function AdvanceModal({
   )
 }
 
+function EighthGradeOutcomesCard({
+  outcomes,
+  busy,
+  onSetIntent,
+}: {
+  outcomes: NonNullable<ClosureDashboardResponse['eighth_grade_outcomes']>
+  busy: boolean
+  onSetIntent: (studentIds: number[], intent: string) => Promise<void>
+}) {
+  const [selected, setSelected] = useState<number[]>([])
+  const allIds = outcomes.students.map((s) => s.id)
+  const counts = outcomes.counts || {}
+
+  return (
+    <section className="mgmt-syc-card">
+      <h2 className="mgmt-syc-card-title">
+        <i className="bi bi-mortarboard" aria-hidden="true" />
+        8th grade outcomes
+      </h2>
+      <p className="mgmt-syc-card-sub">
+        Default at finalize is <strong>promote to 9th</strong>. Stage graduate (alumni, keep
+        record) or withdraw (former/removed) before finalize. {outcomes.total} eighth grader
+        {outcomes.total !== 1 ? 's' : ''}: promote {counts.promote ?? 0}, graduate{' '}
+        {counts.graduate ?? 0}, withdraw {counts.withdraw ?? 0}, repeat {counts.repeat ?? 0}.
+      </p>
+      <div className="d-flex flex-wrap gap-2 mb-3">
+        <button
+          type="button"
+          className="mgmt-syc-btn mgmt-syc-btn--ghost mgmt-syc-btn--sm"
+          disabled={busy || !selected.length}
+          onClick={() => void onSetIntent(selected, 'promote')}
+        >
+          Promote
+        </button>
+        <button
+          type="button"
+          className="mgmt-syc-btn mgmt-syc-btn--ghost mgmt-syc-btn--sm"
+          disabled={busy || !selected.length}
+          onClick={() => void onSetIntent(selected, 'graduate')}
+        >
+          Graduate
+        </button>
+        <button
+          type="button"
+          className="mgmt-syc-btn mgmt-syc-btn--ghost mgmt-syc-btn--sm"
+          disabled={busy || !selected.length}
+          onClick={() => void onSetIntent(selected, 'withdraw')}
+        >
+          Withdraw
+        </button>
+        <button
+          type="button"
+          className="mgmt-syc-btn mgmt-syc-btn--ghost mgmt-syc-btn--sm"
+          disabled={busy || !selected.length}
+          onClick={() => void onSetIntent(selected, 'repeat')}
+        >
+          Repeat
+        </button>
+        <button
+          type="button"
+          className="mgmt-syc-btn mgmt-syc-btn--ghost mgmt-syc-btn--sm"
+          disabled={busy}
+          onClick={() =>
+            setSelected((prev) => (prev.length === allIds.length ? [] : [...allIds]))
+          }
+        >
+          {selected.length === allIds.length ? 'Clear selection' : 'Select all'}
+        </button>
+      </div>
+      <div className="table-responsive">
+        <table className="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col" style={{ width: '2.5rem' }} />
+              <th scope="col">Student</th>
+              <th scope="col">Intent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {outcomes.students.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={selected.includes(s.id)}
+                    onChange={() =>
+                      setSelected((prev) =>
+                        prev.includes(s.id) ? prev.filter((id) => id !== s.id) : [...prev, s.id],
+                      )
+                    }
+                    aria-label={`Select ${s.name}`}
+                  />
+                </td>
+                <td>
+                  {s.name}
+                  {s.student_id ? (
+                    <span className="text-muted small ms-1">({s.student_id})</span>
+                  ) : null}
+                </td>
+                <td>
+                  <select
+                    className="form-select form-select-sm"
+                    style={{ maxWidth: '11rem' }}
+                    value={s.year_end_intent || 'promote'}
+                    disabled={busy}
+                    onChange={(e) => void onSetIntent([s.id], e.target.value)}
+                    aria-label={`Year-end intent for ${s.name}`}
+                  >
+                    <option value="promote">Promote to 9th</option>
+                    <option value="graduate">Graduate (alumni)</option>
+                    <option value="withdraw">Withdraw</option>
+                    <option value="repeat">Repeat 8th</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 function FinalizeModal({
   show,
   busy,
@@ -1006,7 +1161,8 @@ function FinalizeModal({
             <li>Generate official Q1–Q4 report cards for every enrolled student.</li>
             <li>Mark all classes / enrollments / assignments in this year inactive.</li>
             <li>
-              Promote students one grade level (skipping <em>is_repeating</em> and 12th).
+              Apply year-end outcomes: promote one grade by default; graduate or withdraw when
+              staged; skip / clear <em>is_repeating</em>; never promote past 12th.
             </li>
             <li>Deactivate the school year.</li>
           </ul>

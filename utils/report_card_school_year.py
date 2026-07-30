@@ -468,7 +468,14 @@ def promote_students_still_on_prior_year_grade(
     """
     If a closed year has grade G for a student (from classes / SSY) and their
     live ``grade_level`` is still G, promote them to G+1 for the new year.
+
+    Skips departed students and those staged to graduate/withdraw/repeat.
     """
+    from utils.student_departure import (
+        DEPARTURE_STATUSES,
+        effective_year_end_intent,
+    )
+
     school_year = SchoolYear.query.get(closed_school_year_id)
     if not school_year or bool(getattr(school_year, "is_active", False)):
         return {"ok": False, "error": "Pass a closed (inactive) school year id."}
@@ -495,6 +502,16 @@ def promote_students_still_on_prior_year_grade(
         if not student or getattr(student, "is_deleted", False):
             skipped += 1
             continue
+        if not bool(getattr(student, "is_active", True)):
+            skipped += 1
+            continue
+        if getattr(student, "departure_status", None) in DEPARTURE_STATUSES:
+            skipped += 1
+            continue
+        intent = effective_year_end_intent(student)
+        if intent in ("graduate", "withdraw", "repeat"):
+            skipped += 1
+            continue
         if getattr(student, "is_repeating", False):
             skipped += 1
             continue
@@ -509,6 +526,7 @@ def promote_students_still_on_prior_year_grade(
             skipped += 1
             continue
         student.grade_level = int(closed_grade) + 1
+        student.year_end_intent = None
         upsert_student_school_year(
             sid, active.id, int(student.grade_level), enrolled=True
         )

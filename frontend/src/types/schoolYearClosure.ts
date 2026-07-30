@@ -82,6 +82,21 @@ export interface ClosureDashboardResponse {
     }[]
   } | null
   finalize_stats: Record<string, unknown> | null
+  eighth_grade_outcomes?: {
+    students: Array<{
+      id: number
+      first_name: string
+      last_name: string
+      name: string
+      student_id: string
+      grade_level: number | null
+      year_end_intent: string
+      is_repeating: boolean
+      is_active: boolean
+    }>
+    counts: Record<string, number>
+    total: number
+  }
   next_year_suggestion: {
     name: string
     start_date: string

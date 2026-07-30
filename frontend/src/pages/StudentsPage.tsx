@@ -20,6 +20,7 @@ import type {
   StudentListItem,
   StudentTone,
 } from '../types/students'
+import { showAppToast } from '../utils/appToast'
 import { canStudentAdminUi } from '../utils/studentAccess'
 
 type RecordsView = 'table' | 'cards' | 'grouped'
@@ -158,7 +159,6 @@ export function StudentsPage() {
   const [canAdminUi, setCanAdminUi] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [detail, setDetail] = useState<StudentDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [editStudentId, setEditStudentId] = useState<number | null>(null)
@@ -233,23 +233,23 @@ export function StudentsPage() {
   const handleMarkRepeating = async () => {
     const ids = [...selectedIds]
     if (!ids.length) {
-      setActionMessage('Select at least one student first.')
+      showAppToast('Select at least one student first.', 'warning')
       return
     }
     if (!window.confirm(`Mark ${ids.length} student(s) as repeating?`)) return
     try {
       const result = await markStudentsRepeating(ids)
-      setActionMessage(result.message)
+      showAppToast(result.message, 'success')
       void load(filters)
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Update failed')
+      showAppToast(err instanceof Error ? err.message : 'Update failed', 'danger')
     }
   }
 
   const handleYearEndIntent = async (intent: 'promote' | 'graduate' | 'withdraw' | 'repeat') => {
     const ids = [...selectedIds]
     if (!ids.length) {
-      setActionMessage('Select at least one student first.')
+      showAppToast('Select at least one student first.', 'warning')
       return
     }
     const applyNow = !stageEndOfYearOnly
@@ -264,10 +264,10 @@ export function StudentsPage() {
     }
     try {
       const result = await setStudentsYearEndIntent(ids, intent, { applyNow })
-      setActionMessage(result.message)
+      showAppToast(result.message, 'success')
       void load(filters)
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Update failed')
+      showAppToast(err instanceof Error ? err.message : 'Update failed', 'danger')
     }
   }
 
@@ -277,10 +277,10 @@ export function StudentsPage() {
     }
     try {
       const result = await removeStudent(student.id)
-      setActionMessage(result.message)
+      showAppToast(result.message, 'success')
       void load(filters)
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Remove failed')
+      showAppToast(err instanceof Error ? err.message : 'Remove failed', 'danger')
     }
   }
 
@@ -291,7 +291,7 @@ export function StudentsPage() {
       const data = await fetchStudentDetail(id)
       setDetail(data)
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Could not load student details')
+      showAppToast(err instanceof Error ? err.message : 'Could not load student details', 'danger')
       setDetail(null)
     } finally {
       setDetailLoading(false)
@@ -326,7 +326,7 @@ export function StudentsPage() {
     if (canEditStudents) {
       setEditStudentId(id)
     } else {
-      setActionMessage('You do not have permission to edit students.')
+      showAppToast('You do not have permission to edit students.', 'warning')
       void openDetail(id)
     }
   }, [canEditStudents, searchParams, setSearchParams, openDetail])
@@ -703,7 +703,7 @@ export function StudentsPage() {
             {canAdminUi ? (
               <CsvImportExportPanel
                 onUploaded={(msg) => {
-                  setActionMessage(msg)
+                  showAppToast(msg, 'success')
                   void load(filters)
                 }}
               />
@@ -714,18 +714,6 @@ export function StudentsPage() {
                 <i className="bi bi-info-circle me-2" aria-hidden="true" />
                 <strong>Search Results:</strong> Found {stats.total} student(s)
                 {filters.search ? ` matching "${filters.search}"` : ''}
-              </div>
-            ) : null}
-
-            {actionMessage ? (
-              <div className="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4" role="status">
-                <span>{actionMessage}</span>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Dismiss"
-                  onClick={() => setActionMessage(null)}
-                />
               </div>
             ) : null}
 
@@ -859,7 +847,7 @@ export function StudentsPage() {
           onClose={() => setEditStudentId(null)}
           onSaved={(message) => {
             setEditStudentId(null)
-            setActionMessage(message)
+            showAppToast(message, 'success')
             void load(filters)
           }}
         />

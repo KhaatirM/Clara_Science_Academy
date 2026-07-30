@@ -333,6 +333,11 @@ def serialize_student_list_item(student: Student) -> dict:
         "grade_display": _display_grade_label(student.grade_level),
         "student_id": student.student_id,
         "gpa": gpa,
+        "gpa_scope": (
+            "high_school"
+            if (student.grade_level is not None and int(student.grade_level) >= 9)
+            else "active_year"
+        ),
         "alert_level": alert_level,
         "academic_status": academic_status,
         "academic_tone": academic_tone,
@@ -2401,9 +2406,9 @@ def serialize_student_detail(student_id: int) -> dict:
                 'subject': class_info.subject,
             })
 
-    from utils.student_gpa import compute_active_year_gpa
+    from utils.student_gpa import compute_roster_gpa
 
-    gpa = compute_active_year_gpa(student.id)
+    gpa = compute_roster_gpa(student)
 
     return {
         'id': student.id,

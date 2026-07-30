@@ -85,7 +85,7 @@ def calculate_student_gpa(grades):
         return 0.0
 
 def update_all_gpas():
-    """Update GPA for all students from the active school year's grades."""
+    """Update roster GPA (K–8: active year; HS: cumulative high-school tenure)."""
     # Lazy import to avoid circular dependency
     from app import create_app
     app = create_app()

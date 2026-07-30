@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Force-refresh Student.gpa from the active school year's grades."""
+"""Force-refresh Student.gpa for roster (K-8 active year; HS cumulative tenure)."""
 
 from __future__ import annotations
 

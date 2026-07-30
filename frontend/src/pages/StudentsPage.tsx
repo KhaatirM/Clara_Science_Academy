@@ -1144,8 +1144,10 @@ function StudentTable({
               <th>Name</th>
               <th>Grade Level</th>
               <th>Student ID</th>
-              <th>GPA</th>
-              <th>Academic Status</th>
+              <th title="K–8: active school year. High school (9–12): cumulative high-school GPA.">
+                GPA
+              </th>
+              <th title="Derived from GPA (same year/tenure scope).">Academic Status</th>
               <th>Account</th>
               <th>Actions</th>
             </tr>
@@ -1183,10 +1185,20 @@ function StudentTable({
                 </td>
                 <td>
                   {student.gpa != null ? (
-                    <div className="gpa-display">
+                    <div
+                      className="gpa-display"
+                      title={
+                        student.gpa_scope === 'high_school'
+                          ? 'Cumulative high-school GPA (grades 9–12 tenure)'
+                          : 'Active school year GPA'
+                      }
+                    >
                       <span className={`gpa-badge gpa-${student.alert_level}`}>
                         {student.gpa.toFixed(2)}
                       </span>
+                      {student.gpa_scope === 'high_school' ? (
+                        <span className="ms-1 small text-muted">HS</span>
+                      ) : null}
                       <div className="gpa-progress-bar">
                         <div
                           className={`gpa-progress-fill gpa-progress-${student.alert_level}`}

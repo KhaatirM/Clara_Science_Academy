@@ -19,6 +19,8 @@ export interface StudentListItem {
   grade_display: string
   student_id: string | null
   gpa: number | null
+  /** active_year for K–8; high_school cumulative tenure for grades 9–12 */
+  gpa_scope?: 'active_year' | 'high_school'
   alert_level: GpaAlertLevel
   academic_status: string
   academic_tone: StudentTone

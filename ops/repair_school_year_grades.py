@@ -66,6 +66,11 @@ def main() -> int:
         help="Do not rewrite report-card student_display.grade JSON.",
     )
     parser.add_argument(
+        "--inspect-student",
+        type=int,
+        help="Print enrollment grade signals for one student id, then exit.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Compute changes but roll back instead of committing.",
@@ -80,8 +85,11 @@ def main() -> int:
     config_class = ProductionConfig if config_name == "production" else DevelopmentConfig
     app = create_app(config_class=config_class)
     with app.app_context():
-        from models import SchoolYear
+        from models import Class, Enrollment, SchoolYear, Student, StudentSchoolYear
         from utils.report_card_school_year import (
+            _grade_from_year_enrollments,
+            _grades_from_class_name,
+            grade_level_for_school_year,
             promote_students_still_on_prior_year_grade,
             repair_student_school_year_grades,
         )
@@ -91,6 +99,42 @@ def main() -> int:
             for sy in years:
                 flag = "active" if sy.is_active else "closed"
                 print(f"  id={sy.id}  {sy.name}  ({flag})")
+            return 0
+
+        if args.inspect_student:
+            student = Student.query.get(args.inspect_student)
+            if not student:
+                raise SystemExit(f"No student id={args.inspect_student}")
+            print(
+                f"Student {student.id} {student.first_name} {student.last_name} "
+                f"live_grade={student.grade_level}"
+            )
+            years = SchoolYear.query.order_by(SchoolYear.name).all()
+            for sy in years:
+                inferred = _grade_from_year_enrollments(student.id, sy.id)
+                resolved = grade_level_for_school_year(student, sy)
+                ssy = StudentSchoolYear.query.filter_by(
+                    student_id=student.id, school_year_id=sy.id
+                ).first()
+                print(
+                    f"\n{sy.name} (id={sy.id}, {'active' if sy.is_active else 'closed'}): "
+                    f"inferred={inferred} resolved={resolved} "
+                    f"ssy={ssy.grade_level if ssy else None}"
+                )
+                classes = (
+                    Class.query.join(Enrollment, Enrollment.class_id == Class.id)
+                    .filter(
+                        Enrollment.student_id == student.id,
+                        Class.school_year_id == sy.id,
+                    )
+                    .all()
+                )
+                for class_obj in classes:
+                    levels = class_obj.get_grade_levels() if hasattr(class_obj, "get_grade_levels") else []
+                    print(
+                        f"  - {class_obj.name!r} grade_levels={levels} "
+                        f"name_grades={_grades_from_class_name(class_obj.name)}"
+                    )
             return 0
 
         closed = _resolve_closed_year(args)

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownJul29_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Closed-year grade from class names',
+    body: 'When a class has no grade band saved (common for older classes like “Math [4th]”), report cards now read the grade from the class name so students are not pulled into the wrong grade by a single mis-tagged class.',
+  },
   {
     title: 'Report card grades by school year',
     body: 'Closed-year report cards use the grade from that year’s classes (not a year-offset guess). Regenerating a PDF for 2025–2026 no longer prints one grade too low when 2026–2027 is active.',
@@ -24,20 +28,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'School-managed Google Classroom',
     body: 'Clara creates Classrooms for the school, adds teachers and students directly (no invite to accept), and removes those Classrooms when a class is deleted or a school year is finalized.',
   },
-  {
-    title: 'School Admins on the teacher picker',
-    body: 'School Administrators can be assigned as class teachers when editing or creating a class.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.509.0'
+  const display = version?.display || 'v 2.510.0'
   const releaseLabel = version?.release_label || 'July 29, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2600
+  const updatesEstimate = version?.updates_estimate ?? 2601
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

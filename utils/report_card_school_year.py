@@ -44,12 +44,89 @@ def grade_display(grade_level: int | None) -> str:
     return "N/A"
 
 
+_ORDINAL_TO_GRADE = {
+    "k": 0,
+    "kindergarten": 0,
+    "1st": 1,
+    "2nd": 2,
+    "3rd": 3,
+    "4th": 4,
+    "5th": 5,
+    "6th": 6,
+    "7th": 7,
+    "8th": 8,
+    "9th": 9,
+    "10th": 10,
+    "11th": 11,
+    "12th": 12,
+}
+
+
+def _parse_grade_token(token: str) -> int | None:
+    raw = (token or "").strip().lower()
+    if not raw:
+        return None
+    if raw in _ORDINAL_TO_GRADE:
+        return _ORDINAL_TO_GRADE[raw]
+    if raw.isdigit():
+        value = int(raw)
+        if 0 <= value <= 12:
+            return value
+    return None
+
+
+def _grades_from_class_name(name: str | None) -> list[int]:
+    """
+    Pull grade hints from names like \"Math [4th]\", \"LA [4th-5th]\", \"4th Grade Homeroom\".
+    """
+    import re
+
+    if not name:
+        return []
+    text = str(name)
+
+    bracket = re.search(r"\[([^\]]+)\]", text)
+    if bracket:
+        inner = bracket.group(1).strip().lower()
+        if "-" in inner:
+            left_s, right_s = [p.strip() for p in inner.split("-", 1)]
+            left = _parse_grade_token(left_s)
+            right = _parse_grade_token(right_s)
+            if left is not None and right is not None and left <= right:
+                return list(range(left, right + 1))
+            return [g for g in (left, right) if g is not None]
+        single = _parse_grade_token(inner)
+        return [single] if single is not None else []
+
+    found: list[int] = []
+    for match in re.finditer(
+        r"\b(kindergarten|k|1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th)\b",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        grade = _parse_grade_token(match.group(1))
+        if grade is not None:
+            found.append(grade)
+    for match in re.finditer(r"\bgrade\s*([0-9]{1,2})\b", text, flags=re.IGNORECASE):
+        grade = _parse_grade_token(match.group(1))
+        if grade is not None:
+            found.append(grade)
+    # Preserve order, drop duplicates.
+    out: list[int] = []
+    for g in found:
+        if g not in out:
+            out.append(g)
+    return out
+
+
 def _grade_from_year_enrollments(student_id: int, school_year_id: int) -> int | None:
     """
     Infer grade from classes the student attended that year.
 
-    Prefers single-grade classes (e.g. \"4th Homeroom\" → 4). Multi-grade
-    electives are ignored so they don't skew the result.
+    Uses configured grade_levels when present, and falls back to grade tags in
+    class names (e.g. \"Math [4th]\") when grade_levels were never set. Narrow
+    single-grade signals outweigh broad multi-grade bands; if single-grade
+    signals conflict, multi-grade / range hints break the tie.
     """
     classes = (
         Class.query.join(Enrollment, Enrollment.class_id == Class.id)
@@ -59,20 +136,42 @@ def _grade_from_year_enrollments(student_id: int, school_year_id: int) -> int | 
         )
         .all()
     )
-    votes: list[int] = []
+    hard_votes: list[int] = []
+    soft_votes: list[int] = []
     for class_obj in classes:
-        levels = []
+        levels: list[int] = []
         if hasattr(class_obj, "get_grade_levels"):
             for g in class_obj.get_grade_levels() or []:
                 try:
                     levels.append(int(g))
                 except (TypeError, ValueError):
                     continue
+        name_grades = _grades_from_class_name(getattr(class_obj, "name", None))
+
         if len(levels) == 1:
-            votes.append(levels[0])
-    if not votes:
-        return None
-    return Counter(votes).most_common(1)[0][0]
+            hard_votes.append(levels[0])
+        elif not levels and len(name_grades) == 1:
+            hard_votes.append(name_grades[0])
+        elif len(levels) > 1:
+            soft_votes.extend(levels)
+        elif len(name_grades) > 1:
+            soft_votes.extend(name_grades)
+
+    if hard_votes:
+        tallies = Counter(hard_votes)
+        top_grade, top_count = tallies.most_common(1)[0]
+        # Clear majority among single-grade classes.
+        if top_count > sum(1 for g in hard_votes if g != top_grade):
+            return top_grade
+        # Tie / weak hard signal — let multi-grade name bands break it.
+        if soft_votes:
+            return Counter(hard_votes + soft_votes).most_common(1)[0][0]
+        return top_grade
+
+    if soft_votes:
+        return Counter(soft_votes).most_common(1)[0][0]
+    return None
+
 
 
 def _derive_grade_level_for_school_year(student: Student, school_year: SchoolYear) -> int | None:
@@ -356,6 +455,7 @@ def repair_student_school_year_grades(
         "students_considered": len(student_ids),
         "student_school_year_updated": updated_ssy,
         "skipped_no_single_grade_class": skipped,
+        "skipped_no_grade_signal": skipped,
         "report_cards_updated": fixed_cards,
     }
 

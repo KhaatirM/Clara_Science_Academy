@@ -1200,19 +1200,33 @@ def mark_students_repeating():
 @login_required
 @permissions_required('students:edit')
 def set_students_year_end_intent():
-    """Bulk set year-end intent: promote | graduate | withdraw | repeat."""
+    """
+    Bulk year-end action: promote | graduate | withdraw | repeat.
+
+    By default ``apply_now`` is true (instant promote / graduate / withdraw).
+    Pass apply_now=0 / false to only stage ``year_end_intent`` for finalize.
+    """
     from utils.student_departure import (
+        apply_outcome_now,
         normalize_year_end_intent,
         set_year_end_intent,
     )
 
     student_ids = request.form.getlist('student_ids')
+    apply_now = True
     if not student_ids and request.is_json:
         body = request.get_json(silent=True) or {}
         student_ids = [str(x) for x in (body.get('student_ids') or [])]
         intent_raw = body.get('intent')
+        apply_raw = body.get('apply_now', True)
     else:
         intent_raw = request.form.get('intent')
+        apply_raw = request.form.get('apply_now', '1')
+
+    if isinstance(apply_raw, bool):
+        apply_now = apply_raw
+    else:
+        apply_now = str(apply_raw).strip().lower() not in ('0', 'false', 'no', 'intent')
 
     intent = normalize_year_end_intent(intent_raw)
     if not intent:
@@ -1230,33 +1244,58 @@ def set_students_year_end_intent():
         return redirect(url_for("management.students"))
 
     updated = 0
+    counts = {"promoted": 0, "graduated": 0, "withdrawn": 0, "repeating": 0, "skipped": 0, "staged": 0}
     try:
         for sid in student_ids:
             student = Student.query.get(int(sid))
-            if not student or getattr(student, "is_deleted", False):
+            if not student:
+                counts["skipped"] += 1
                 continue
-            if getattr(student, "departure_status", None):
-                continue
-            set_year_end_intent(student, intent)
-            if intent == "repeat":
-                grad_year = getattr(student, "grad_year", None)
-                if not grad_year and student.expected_grad_date and "/" in str(student.expected_grad_date):
-                    try:
-                        grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
-                    except Exception:
-                        grad_year = None
-                if grad_year:
-                    student.grad_year = int(grad_year) + 1
-            updated += 1
+            if apply_now:
+                result = apply_outcome_now(student, intent)
+                counts[result] = counts.get(result, 0) + 1
+                if result != "skipped":
+                    updated += 1
+            else:
+                if getattr(student, "is_deleted", False) or getattr(student, "departure_status", None):
+                    counts["skipped"] += 1
+                    continue
+                set_year_end_intent(student, intent)
+                if intent == "repeat":
+                    grad_year = getattr(student, "grad_year", None)
+                    if not grad_year and student.expected_grad_date and "/" in str(student.expected_grad_date):
+                        try:
+                            grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+                        except Exception:
+                            grad_year = None
+                    if grad_year:
+                        student.grad_year = int(grad_year) + 1
+                counts["staged"] += 1
+                updated += 1
         db.session.commit()
-        msg = f"Set year-end intent “{intent}” for {updated} student(s)."
+        if apply_now:
+            msg = (
+                f"Applied “{intent}” now for {updated} student(s) "
+                f"(promoted {counts['promoted']}, graduated {counts['graduated']}, "
+                f"withdrawn {counts['withdrawn']}, repeating {counts['repeating']}, "
+                f"skipped {counts['skipped']})."
+            )
+        else:
+            msg = f"Staged year-end intent “{intent}” for {updated} student(s)."
         if _students_wants_json() or request.is_json:
-            return jsonify({"success": True, "message": msg, "updated": updated, "intent": intent})
+            return jsonify({
+                "success": True,
+                "message": msg,
+                "updated": updated,
+                "intent": intent,
+                "apply_now": apply_now,
+                "counts": counts,
+            })
         flash(msg, "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("set_students_year_end_intent failed")
-        msg = "Failed to update year-end intent."
+        msg = "Failed to update year-end outcome."
         if _students_wants_json() or request.is_json:
             return jsonify({"success": False, "message": msg}), 500
         flash(msg, "danger")

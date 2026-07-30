@@ -137,6 +137,7 @@ export function StudentsPage() {
   const [recordsView, setRecordsView] = useState<RecordsView>('table')
   const [showSearchTips, setShowSearchTips] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [stageEndOfYearOnly, setStageEndOfYearOnly] = useState(false)
   const [items, setItems] = useState<StudentListItem[]>([])
   const [stats, setStats] = useState({
     total: 0,
@@ -250,17 +251,18 @@ export function StudentsPage() {
       setActionMessage('Select at least one student first.')
       return
     }
+    const applyNow = !stageEndOfYearOnly
     const labels: Record<string, string> = {
-      promote: 'promote (default)',
-      graduate: 'graduate (alumni)',
-      withdraw: 'withdraw (former)',
-      repeat: 'repeat grade',
+      promote: applyNow ? 'promote one grade now' : 'stage promote for year-end',
+      graduate: applyNow ? 'graduate now (alumni)' : 'stage graduate for year-end',
+      withdraw: applyNow ? 'withdraw now (former)' : 'stage withdraw for year-end',
+      repeat: applyNow ? 'mark repeating now' : 'stage repeat for year-end',
     }
-    if (!window.confirm(`Set year-end intent to ${labels[intent]} for ${ids.length} student(s)?`)) {
+    if (!window.confirm(`${labels[intent]} for ${ids.length} student(s)?`)) {
       return
     }
     try {
-      const result = await setStudentsYearEndIntent(ids, intent)
+      const result = await setStudentsYearEndIntent(ids, intent, { applyNow })
       setActionMessage(result.message)
       void load(filters)
     } catch (err) {
@@ -604,48 +606,90 @@ export function StudentsPage() {
             </div>
 
             {canAdminUi ? (
-              <div className="students-csv-card mb-4">
-                <div className="students-csv-header">
-                  <h5 className="mb-0">
+              <div className="students-csv-card mb-4 overflow-hidden">
+                <div className="students-csv-header border-0 bg-gradient-to-r from-teal-800 to-teal-600 text-white">
+                  <h5 className="mb-0 text-white">
                     <i className="bi bi-mortarboard me-2" aria-hidden="true" />
-                    Year-end outcomes (bulk)
+                    Grade &amp; exit actions
                   </h5>
                 </div>
                 <div className="students-csv-body">
-                  <p className="text-muted small mb-2">
-                    Stage what happens at school-year finalize for selected students. Default is{' '}
-                    <strong>promote</strong>. For 8th graders: graduate = alumni (off roster, keep
-                    record); withdraw = former/removed. Repeat also bumps graduation year when known.
+                  <p className="text-muted small mb-3">
+                    Select students below, then choose an action. By default actions apply{' '}
+                    <strong>immediately</strong> (promote +1 grade, graduate to alumni, withdraw to
+                    former). Check the box to only stage an end-of-year intent for school-year
+                    finalize.
                   </p>
-                  <div className="d-flex flex-wrap gap-2">
+                  <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-hub-text">
+                    <input
+                      type="checkbox"
+                      className="form-check-input mt-0.5"
+                      checked={stageEndOfYearOnly}
+                      onChange={(e) => setStageEndOfYearOnly(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-semibold">Stage as end-of-year intent only</span>
+                      <span className="mt-0.5 block text-xs text-hub-muted">
+                        Do not change grade or roster now — apply at year finalize instead.
+                      </span>
+                    </span>
+                  </label>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <button
                       type="button"
                       onClick={() => void handleYearEndIntent('promote')}
-                      className="btn btn-outline-secondary btn-sm"
+                      className="group flex flex-col items-start rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-left transition hover:border-emerald-400 hover:bg-emerald-100"
                     >
-                      Promote
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-emerald-900">
+                        <i className="bi bi-arrow-up-circle-fill text-emerald-600" aria-hidden />
+                        Promote
+                      </span>
+                      <span className="mt-1 text-xs text-emerald-800/80">
+                        {stageEndOfYearOnly ? 'Stage +1 at finalize' : 'Move up one grade now'}
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleYearEndIntent('graduate')}
-                      className="btn btn-outline-primary btn-sm"
+                      className="group flex flex-col items-start rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3 text-left transition hover:border-violet-400 hover:bg-violet-100"
                     >
-                      Graduate
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-violet-900">
+                        <i className="bi bi-award-fill text-violet-600" aria-hidden />
+                        Graduate
+                      </span>
+                      <span className="mt-1 text-xs text-violet-800/80">
+                        {stageEndOfYearOnly
+                          ? 'Stage alumni at finalize'
+                          : 'Alumni roster now (keep record)'}
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleYearEndIntent('withdraw')}
-                      className="btn btn-outline-danger btn-sm"
+                      className="group flex flex-col items-start rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left transition hover:border-rose-400 hover:bg-rose-100"
                     >
-                      Withdraw
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-rose-900">
+                        <i className="bi bi-box-arrow-right text-rose-600" aria-hidden />
+                        Withdraw
+                      </span>
+                      <span className="mt-1 text-xs text-rose-800/80">
+                        {stageEndOfYearOnly
+                          ? 'Stage former at finalize'
+                          : 'Remove to former roster now'}
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleMarkRepeating()}
-                      className="btn btn-warning btn-sm"
+                      className="group flex flex-col items-start rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-left transition hover:border-amber-400 hover:bg-amber-100"
                     >
-                      <i className="bi bi-arrow-repeat me-1" aria-hidden="true" />
-                      Mark repeating
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-amber-900">
+                        <i className="bi bi-arrow-repeat text-amber-600" aria-hidden />
+                        Repeat grade
+                      </span>
+                      <span className="mt-1 text-xs text-amber-800/80">
+                        Keep same grade; bump grad year when known
+                      </span>
                     </button>
                   </div>
                 </div>

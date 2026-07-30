@@ -83,10 +83,12 @@ export async function markStudentsRepeating(ids: number[]): Promise<{ message: s
 export async function setStudentsYearEndIntent(
   ids: number[],
   intent: 'promote' | 'graduate' | 'withdraw' | 'repeat',
+  options?: { applyNow?: boolean },
 ): Promise<{ message: string }> {
   const form = new FormData()
   ids.forEach((id) => form.append('student_ids', String(id)))
   form.append('intent', intent)
+  form.append('apply_now', options?.applyNow === false ? '0' : '1')
   const csrf = getCsrfToken()
   if (csrf) form.append('csrf_token', csrf)
 
@@ -107,9 +109,9 @@ export async function setStudentsYearEndIntent(
     error?: string
   }
   if (!response.ok || data.success === false) {
-    throw new Error(data.message || data.error || 'Could not set year-end intent')
+    throw new Error(data.message || data.error || 'Could not update year-end outcome')
   }
-  return { message: data.message || 'Year-end intent updated.' }
+  return { message: data.message || 'Year-end outcome updated.' }
 }
 
 export async function graduateStudentNow(id: number): Promise<{ message: string }> {

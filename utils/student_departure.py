@@ -67,6 +67,76 @@ def _strip_and_suspend(student: Student) -> None:
         _suspend_student_google_workspace(student, workspace_email=ws_email)
 
 
+def promote_student_one_grade(student: Student) -> bool:
+    """
+    Immediately promote live grade by one. Returns False if skipped.
+    Clears year_end_intent / repeating for a clean active-year grade.
+    """
+    if student is None or getattr(student, "is_deleted", False):
+        return False
+    if getattr(student, "departure_status", None) in DEPARTURE_STATUSES:
+        return False
+    if not bool(getattr(student, "is_active", True)):
+        return False
+    gl = getattr(student, "grade_level", None)
+    if gl is None:
+        return False
+    if int(gl) >= 12:
+        return False
+    student.grade_level = int(gl) + 1
+    student.year_end_intent = None
+    student.is_repeating = False
+    student.status_updated_at = datetime.now(timezone.utc)
+    try:
+        from models import SchoolYear
+        from utils.report_card_school_year import upsert_student_school_year
+
+        active = SchoolYear.query.filter_by(is_active=True).first()
+        if active:
+            upsert_student_school_year(
+                student.id, active.id, int(student.grade_level), enrolled=True
+            )
+    except Exception:
+        pass
+    return True
+
+
+def apply_outcome_now(student: Student, action: str) -> str:
+    """
+    Apply promote / graduate / withdraw / repeat immediately.
+    Returns a short result label: promoted|graduated|withdrawn|repeating|skipped.
+    """
+    action_n = normalize_year_end_intent(action) or ""
+    if not action_n:
+        return "skipped"
+    if getattr(student, "is_deleted", False) and action_n != "withdraw":
+        return "skipped"
+    if getattr(student, "departure_status", None) in DEPARTURE_STATUSES:
+        return "skipped"
+
+    if action_n == "promote":
+        return "promoted" if promote_student_one_grade(student) else "skipped"
+    if action_n == "graduate":
+        mark_student_graduated(student, strip_login=True)
+        return "graduated"
+    if action_n == "withdraw":
+        mark_student_withdrawn(student, strip_login=True)
+        return "withdrawn"
+    if action_n == "repeat":
+        set_year_end_intent(student, "repeat")
+        student.is_repeating = True
+        grad_year = getattr(student, "grad_year", None)
+        if not grad_year and student.expected_grad_date and "/" in str(student.expected_grad_date):
+            try:
+                grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+            except Exception:
+                grad_year = None
+        if grad_year:
+            student.grad_year = int(grad_year) + 1
+        return "repeating"
+    return "skipped"
+
+
 def mark_student_graduated(student: Student, *, strip_login: bool = True) -> None:
     """
     Off active roster as middle-school (or division) graduate. Keep profile (not deleted).

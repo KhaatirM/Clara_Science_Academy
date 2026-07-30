@@ -47,57 +47,69 @@ def main() -> int:
         ]
         results = []
         for t in targets:
-            q = Student.query.filter(
-                Student.first_name.ilike(t["first"]),
-                Student.last_name.ilike(t["last"]),
-            )
-            matches = q.all()
-            if not matches:
-                results.append({**t, "ok": False, "error": "not found"})
-                continue
-            if len(matches) > 1:
-                results.append({
-                    **t,
-                    "ok": False,
-                    "error": "multiple matches",
-                    "ids": [s.id for s in matches],
-                })
-                continue
-            student = matches[0]
-            before = {
-                "id": student.id,
-                "grade_level": student.grade_level,
-                "is_active": student.is_active,
-                "is_deleted": student.is_deleted,
-                "departure_status": getattr(student, "departure_status", None),
-            }
-            if t["action"] == "promote":
-                ok = promote_student_one_grade(student)
-                action_result = "promoted" if ok else "skipped"
-            else:
-                action_result = apply_outcome_now(student, t["action"])
-            after = {
-                "grade_level": student.grade_level,
-                "is_active": student.is_active,
-                "is_deleted": student.is_deleted,
-                "departure_status": getattr(student, "departure_status", None),
-            }
-            results.append({
-                **t,
-                "ok": action_result != "skipped",
-                "result": action_result,
-                "before": before,
-                "after": after,
-            })
+            try:
+                with db.session.no_autoflush:
+                    matches = (
+                        Student.query.filter(
+                            Student.first_name.ilike(t["first"]),
+                            Student.last_name.ilike(t["last"]),
+                        ).all()
+                    )
+                if not matches:
+                    results.append({**t, "ok": False, "error": "not found"})
+                    continue
+                if len(matches) > 1:
+                    results.append(
+                        {
+                            **t,
+                            "ok": False,
+                            "error": "multiple matches",
+                            "ids": [s.id for s in matches],
+                        }
+                    )
+                    continue
+                student = matches[0]
+                before = {
+                    "id": student.id,
+                    "grade_level": student.grade_level,
+                    "is_active": student.is_active,
+                    "is_deleted": student.is_deleted,
+                    "departure_status": getattr(student, "departure_status", None),
+                }
+                if t["action"] == "promote":
+                    ok = promote_student_one_grade(student)
+                    action_result = "promoted" if ok else "skipped"
+                else:
+                    action_result = apply_outcome_now(student, t["action"])
+                after = {
+                    "grade_level": student.grade_level,
+                    "is_active": student.is_active,
+                    "is_deleted": student.is_deleted,
+                    "departure_status": getattr(student, "departure_status", None),
+                }
+                if args.dry_run:
+                    db.session.rollback()
+                else:
+                    db.session.commit()
+                results.append(
+                    {
+                        **t,
+                        "ok": action_result != "skipped",
+                        "result": action_result,
+                        "before": before,
+                        "after": after,
+                    }
+                )
+            except Exception as exc:
+                db.session.rollback()
+                results.append({**t, "ok": False, "error": str(exc)})
 
-        print(json.dumps(results, indent=2))
+        print(json.dumps(results, indent=2, default=str))
         if args.dry_run:
-            db.session.rollback()
-            print("Dry run — rolled back.")
+            print("Dry run — no changes saved.")
         else:
-            db.session.commit()
-            print("Committed.")
-    return 0
+            print("Done (per-student commits).")
+    return 0 if all(r.get("ok") for r in results) else 1
 
 
 if __name__ == "__main__":

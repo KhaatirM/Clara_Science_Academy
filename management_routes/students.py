@@ -432,9 +432,11 @@ def _strip_student_user_account(student):
     """Remove portal login only; keep Student row and academic history."""
     if not getattr(student, 'user', None):
         return
+    from utils.tech_user_purge import purge_user_dependencies
+
     user = student.user
-    Notification.query.filter_by(user_id=user.id).delete(synchronize_session=False)
-    MessageGroupMember.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    # Clear FK refs (assistant logs, messages, notifications, etc.) before DELETE user.
+    purge_user_dependencies(user.id)
     db.session.delete(user)
 
 

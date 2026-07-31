@@ -55,13 +55,13 @@
                     {% if maintenance.start_time %}
                     <div class="mnt__meta-item">
                         <p class="mnt__meta-label">Started</p>
-                        <p class="mnt__meta-value">{{ maintenance.start_time.strftime('%b %d, %Y · %I:%M %p') }}</p>
+                        <p class="mnt__meta-value">{{ maintenance.start_time|schooltime('%b %d, %Y · %I:%M %p') }}</p>
                     </div>
                     {% endif %}
                     {% if maintenance.end_time %}
                     <div class="mnt__meta-item">
                         <p class="mnt__meta-label">Expected back</p>
-                        <p class="mnt__meta-value">{{ maintenance.end_time.strftime('%b %d, %Y · %I:%M %p') }}</p>
+                        <p class="mnt__meta-value">{{ maintenance.end_time|schooltime('%b %d, %Y · %I:%M %p') }}</p>
                     </div>
                     {% endif %}
                 </div>

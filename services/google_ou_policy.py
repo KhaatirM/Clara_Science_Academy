@@ -326,25 +326,52 @@ def _compute_ou_path_and_reason(
     next_school_year_start: Optional[date],
     departure_status: Optional[str] = None,
 ) -> Tuple[str, str]:
+    # Prefer active school-year start year so Class of stays stable within a SY
+    # (e.g. SY 2026–27 → ref 2026 → grade 9 → Class of 2029).
     reference_year = today.year
+    try:
+        from utils.school_year_filters import get_active_school_year
+
+        active = get_active_school_year()
+        if active is not None and getattr(active, "start_date", None) is not None:
+            reference_year = int(active.start_date.year)
+    except Exception:
+        pass
+
     grade = _parse_grade_level(grade_level)
+    departing = _is_departing(
+        is_active=is_active, marked_for_removal=marked_for_removal, is_deleted=is_deleted
+    )
+    status = (departure_status or "").strip().lower()
+    if is_deleted and not status:
+        status = "withdrawn"
+
+    # Removed / withdrawn students often still have last year's grade (they were not
+    # promoted with their cohort). Infer Class of from the cohort grade (grade+1)
+    # so a removed 5th matches active 6th classmates (Class of 2032, not 2033).
+    grade_for_year = grade
+    if (
+        departing
+        and status != "graduated"
+        and expected_graduation_year is None
+        and grade is not None
+        and grade < 12
+    ):
+        grade_for_year = int(grade) + 1
+
     effective = _effective_grad_year(
-        grade, expected_graduation_year, grad_year, expected_grad_date, reference_year
+        grade_for_year, expected_graduation_year, grad_year, expected_grad_date, reference_year
     )
 
-    if _is_departing(is_active=is_active, marked_for_removal=marked_for_removal, is_deleted=is_deleted):
+    if departing:
         event_date = status_updated_at.date() if status_updated_at else today
-        # Soft-deleted without explicit status → withdrawn
-        effective_departure = departure_status
-        if is_deleted and not (departure_status or "").strip():
-            effective_departure = "withdrawn"
         return _departure_ou_path_and_reason(
             grade=grade,
             effective=effective,
             event_date=event_date,
             prior_school_year_end=prior_school_year_end,
             next_school_year_start=next_school_year_start,
-            departure_status=effective_departure,
+            departure_status=status or departure_status,
         )
 
     return _active_student_ou_path(grade, effective)

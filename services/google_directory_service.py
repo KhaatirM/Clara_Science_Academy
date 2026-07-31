@@ -211,10 +211,13 @@ def create_google_user(user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 
-def get_google_user(user_email: str) -> Optional[Dict[str, Any]]:
+def get_google_user(user_email: str, *, quiet_404: bool = False) -> Optional[Dict[str, Any]]:
     """
     Fetch a Google Workspace user resource.
     Useful for reading current orgUnitPath / suspended state.
+
+    When ``quiet_404`` is True, missing users are not logged as errors (used when
+    probing generated email candidates).
     """
     service = get_directory_service()
     if not service:
@@ -223,6 +226,9 @@ def get_google_user(user_email: str) -> Optional[Dict[str, Any]]:
     try:
         return service.users().get(userKey=user_email).execute()
     except HttpError as e:
+        status = int(getattr(getattr(e, "resp", None), "status", None) or 0)
+        if quiet_404 and status == 404:
+            return None
         current_app.logger.error(f"Directory API error fetching user {user_email}: {e}")
         return None
     except Exception as e:

@@ -101,21 +101,36 @@ def _candidate_workspace_emails(student) -> list[str]:
     if primary:
         out.append(primary)
 
-    try:
-        generated = (student.generate_email() or "").strip().lower()
-    except Exception:
-        generated = ""
-    if generated and generated not in out:
-        out.append(generated)
-        # Common collision suffixes when User rows were deleted.
+    def _add_generated_from_first(first_name: str) -> None:
+        if not first_name or not student.last_name or not student.dob:
+            return
+        # Temporarily use a single given name (Esther Marie → Esther).
+        original = student.first_name
+        try:
+            student.first_name = first_name
+            generated = (student.generate_email() or "").strip().lower()
+        except Exception:
+            generated = ""
+        finally:
+            student.first_name = original
+        if not generated:
+            return
+        if generated not in out:
+            out.append(generated)
         if "@" in generated:
             local, _, domain = generated.partition("@")
-            # Strip trailing digits that generate_email may have added for collisions.
             base_local = re.sub(r"\d+$", "", local) or local
             for n in range(2, 6):
                 cand = f"{base_local}{n}@{domain}".lower()
                 if cand not in out:
                     out.append(cand)
+
+    first_full = (student.first_name or "").strip()
+    _add_generated_from_first(first_full)
+    # Also try first token only (Esther Marie Hope → Esther…).
+    first_token = first_full.split()[0] if first_full else ""
+    if first_token and first_token.lower() != first_full.lower().replace(" ", ""):
+        _add_generated_from_first(first_token)
 
     email_field = (getattr(student, "email", None) or "").strip().lower()
     if email_field.endswith("@clarascienceacademy.org") and email_field not in out:
@@ -129,7 +144,7 @@ def _resolve_google_account(student):
     from services.google_directory_service import get_google_user
 
     for email in _candidate_workspace_emails(student):
-        gu = get_google_user(email)
+        gu = get_google_user(email, quiet_404=True)
         if gu:
             return email, gu
     return None, None
@@ -142,7 +157,7 @@ def _transferred_target_ou(student, current_ou: str | None, fallback_year: int) 
         _sanitize_ou_path,
     )
 
-    # Prefer policy (uses expected_graduation_year / grade).
+    # Always prefer policy Class of (grade/cohort), not the (often stale) current OU year.
     decision = resolve_student_ou(
         grade_level=getattr(student, "grade_level", None),
         grad_year=getattr(student, "grad_year", None),
@@ -158,9 +173,9 @@ def _transferred_target_ou(student, current_ou: str | None, fallback_year: int) 
         return decision.target_ou_path
 
     class_year = (
-        _class_year_from_ou(current_ou)
-        or getattr(student, "expected_graduation_year", None)
+        getattr(student, "expected_graduation_year", None)
         or getattr(student, "grad_year", None)
+        or _class_year_from_ou(current_ou)
         or fallback_year
     )
     return _sanitize_ou_path(
@@ -301,11 +316,7 @@ def main() -> int:
 
                 moved = None
                 suspended = None
-                already_ok = bool(
-                    t["ensure"] == "transferred"
-                    and current_ou
-                    and _is_under_transferred_ou(current_ou)
-                )
+                already_ok = bool(current_ou and current_ou == target_ou)
 
                 if args.dry_run:
                     db.session.rollback()
@@ -313,7 +324,7 @@ def main() -> int:
                     db.session.commit()
                     if email:
                         handled_emails.add(email)
-                        if not already_ok and current_ou != target_ou:
+                        if not already_ok:
                             moved = move_user_to_ou(email, target_ou)
                         if t["ensure"] in ("alumni", "transferred"):
                             suspended = suspend_user(email)
@@ -391,7 +402,8 @@ def main() -> int:
                     continue
 
                 current_ou = g_user.get("orgUnitPath") or ""
-                if _is_under_transferred_ou(current_ou):
+                target_ou = _transferred_target_ou(student, current_ou, COHORT_YEAR)
+                if current_ou == target_ou:
                     removed_results.append(
                         {
                             "id": student.id,
@@ -413,7 +425,6 @@ def main() -> int:
                 if not getattr(student, "status_updated_at", None):
                     student.status_updated_at = datetime.now(timezone.utc)
 
-                target_ou = _transferred_target_ou(student, current_ou, COHORT_YEAR)
                 moved = None
                 suspended = None
                 if args.dry_run:

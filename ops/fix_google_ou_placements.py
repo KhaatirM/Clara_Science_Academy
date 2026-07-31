@@ -2,17 +2,20 @@
 """
 Repair Google Workspace OU placements.
 
-Named fixes (Jul 2026):
-  - Zawadi Ajuwa  → /Students/High School/Class of 2029 (active)
-  - Mason Jackson → /Students/Alumni/Middle/Class of 2029 (MS graduate)
-  - Major Sharif  → /Students/Alumni/Middle/Class of 2029 (MS graduate)
-  - Jayden Hope   → /Students/Transferred & Removed/Class of 2029 (withdrawn)
+Named fixes:
+  - Zawadi Ajuwa  → High School / Class of 2029
+  - Mason Jackson → Alumni/Middle / Class of 2029
+  - Major Sharif  → Alumni/Middle / Class of 2029
+  - Jayden Hope   → Transferred & Removed / Class of 2029
 
-Also scans all suspended Workspace users still under active student OUs
-(Elementary / Middle School / High School) and moves them to
-Transferred & Removed (Class of year inferred from current OU when possible).
+Also:
+  1) Suspended Workspace users still under active Elementary/Middle/High School OUs
+     → Transferred & Removed
+  2) All DB “Removed” / withdrawn students grade 3+ (portal Account=Removed)
+     whose Workspace account is missing from Transferred & Removed
+     → move + suspend (covers Emack Akili, Nathan Cassidy, Esther Hope, etc.)
 
-Usage (Render shell, after deploy):
+Usage:
 
   python ops/fix_google_ou_placements.py --dry-run
   python ops/fix_google_ou_placements.py
@@ -34,14 +37,12 @@ def _bootstrap_path() -> None:
 
 
 ACTIVE_STUDENT_OU_PREFIXES = (
-    "/Students/Elementary/",
-    "/Students/Middle School/",
-    "/Students/High School/",
-    # Edge: parked at school level without class folder
     "/Students/Elementary",
     "/Students/Middle School",
     "/Students/High School",
 )
+
+TRANSFERRED_OU_MARKER = "Transferred & Removed"
 
 
 def _find_student(first: str, last: str):
@@ -69,22 +70,102 @@ def _is_under_active_student_ou(ou_path: str | None) -> bool:
     if not ou_path:
         return False
     path = ou_path.rstrip("/")
+    if TRANSFERRED_OU_MARKER in path or "/Alumni" in path:
+        return False
     for prefix in ACTIVE_STUDENT_OU_PREFIXES:
         p = prefix.rstrip("/")
         if path == p or path.startswith(p + "/"):
-            # Exclude Alumni / Transferred even if nested oddly
-            if "/Alumni" in path or "Transferred" in path:
-                return False
             return True
     return False
+
+
+def _is_under_transferred_ou(ou_path: str | None) -> bool:
+    if not ou_path:
+        return False
+    return TRANSFERRED_OU_MARKER in ou_path
 
 
 def _set_cohort_year(student, year: int) -> None:
     student.expected_graduation_year = int(year)
     student.grad_year = int(year)
-    # Keep month/year string in sync when present.
     if getattr(student, "expected_grad_date", None):
         student.expected_grad_date = f"06/{int(year)}"
+
+
+def _candidate_workspace_emails(student) -> list[str]:
+    """Best-effort Workspace emails when the portal User row was stripped."""
+    from management_routes.students import _student_workspace_email
+
+    out: list[str] = []
+    primary = (_student_workspace_email(student) or "").strip().lower()
+    if primary:
+        out.append(primary)
+
+    try:
+        generated = (student.generate_email() or "").strip().lower()
+    except Exception:
+        generated = ""
+    if generated and generated not in out:
+        out.append(generated)
+        # Common collision suffixes when User rows were deleted.
+        if "@" in generated:
+            local, _, domain = generated.partition("@")
+            # Strip trailing digits that generate_email may have added for collisions.
+            base_local = re.sub(r"\d+$", "", local) or local
+            for n in range(2, 6):
+                cand = f"{base_local}{n}@{domain}".lower()
+                if cand not in out:
+                    out.append(cand)
+
+    email_field = (getattr(student, "email", None) or "").strip().lower()
+    if email_field.endswith("@clarascienceacademy.org") and email_field not in out:
+        out.append(email_field)
+
+    return out
+
+
+def _resolve_google_account(student):
+    """Return (email, google_user_dict) for the first candidate that exists in Directory."""
+    from services.google_directory_service import get_google_user
+
+    for email in _candidate_workspace_emails(student):
+        gu = get_google_user(email)
+        if gu:
+            return email, gu
+    return None, None
+
+
+def _transferred_target_ou(student, current_ou: str | None, fallback_year: int) -> str:
+    from services.google_ou_policy import (
+        STUDENT_OU_TRANSFERRED_REMOVED,
+        resolve_student_ou,
+        _sanitize_ou_path,
+    )
+
+    # Prefer policy (uses expected_graduation_year / grade).
+    decision = resolve_student_ou(
+        grade_level=getattr(student, "grade_level", None),
+        grad_year=getattr(student, "grad_year", None),
+        expected_grad_date=getattr(student, "expected_grad_date", None),
+        is_active=False,
+        marked_for_removal=False,
+        is_deleted=True,
+        status_updated_at=getattr(student, "status_updated_at", None),
+        expected_graduation_year=getattr(student, "expected_graduation_year", None),
+        departure_status="withdrawn",
+    )
+    if decision.target_ou_path and TRANSFERRED_OU_MARKER in decision.target_ou_path:
+        return decision.target_ou_path
+
+    class_year = (
+        _class_year_from_ou(current_ou)
+        or getattr(student, "expected_graduation_year", None)
+        or getattr(student, "grad_year", None)
+        or fallback_year
+    )
+    return _sanitize_ou_path(
+        f"/Students/{STUDENT_OU_TRANSFERRED_REMOVED}/Class of {int(class_year)}"
+    )
 
 
 def main() -> int:
@@ -93,7 +174,12 @@ def main() -> int:
     parser.add_argument(
         "--skip-scan",
         action="store_true",
-        help="Only fix named students; skip suspended-in-active-OU scan.",
+        help="Skip Google suspended-in-active-OU scan.",
+    )
+    parser.add_argument(
+        "--skip-removed-roster",
+        action="store_true",
+        help="Skip DB Removed grade-3+ → Transferred scan.",
     )
     args = parser.parse_args()
     _bootstrap_path()
@@ -105,7 +191,6 @@ def main() -> int:
     config_class = ProductionConfig if config_name == "production" else DevelopmentConfig
     app = create_app(config_class=config_class)
 
-    # Same MS cohort as Zawadi (HS Class of 2029).
     COHORT_YEAR = 2029
 
     targets = [
@@ -113,15 +198,17 @@ def main() -> int:
         {"first": "Mason", "last": "Jackson", "ensure": "alumni", "cohort_year": COHORT_YEAR},
         {"first": "Major", "last": "Sharif", "ensure": "alumni", "cohort_year": COHORT_YEAR},
         {"first": "Jayden", "last": "Hope", "ensure": "transferred", "cohort_year": COHORT_YEAR},
+        # Explicit callouts from former roster (also covered by removed-roster scan).
+        {"first": "Emack", "last": "Akili", "ensure": "transferred"},
+        {"first": "Nathan", "last": "Cassidy", "ensure": "transferred"},
     ]
 
     with app.app_context():
         from datetime import datetime, timezone
 
         from extensions import db
-        from management_routes.students import _student_workspace_email
+        from models import Student
         from services.google_directory_service import (
-            get_google_user,
             list_google_users,
             move_user_to_ou,
             suspend_user,
@@ -131,6 +218,7 @@ def main() -> int:
             resolve_student_ou,
             _sanitize_ou_path,
         )
+        from utils.student_login_policy import grade_may_have_login
 
         named_results = []
         handled_emails: set[str] = set()
@@ -162,18 +250,16 @@ def main() -> int:
                     "expected_graduation_year": getattr(
                         student, "expected_graduation_year", None
                     ),
-                    "grad_year": getattr(student, "grad_year", None),
                 }
 
-                cohort = int(t.get("cohort_year") or COHORT_YEAR)
-                _set_cohort_year(student, cohort)
+                if t.get("cohort_year"):
+                    _set_cohort_year(student, int(t["cohort_year"]))
 
                 if t["ensure"] == "alumni":
                     student.is_active = False
                     student.is_deleted = False
                     student.departure_status = "graduated"
                     student.marked_for_removal = False
-                    # Keep finished MS grade (8) for alumni tier.
                     if student.grade_level is None or int(student.grade_level) > 8:
                         student.grade_level = 8
                     student.status_updated_at = datetime.now(timezone.utc)
@@ -205,69 +291,67 @@ def main() -> int:
                     departure_status=getattr(student, "departure_status", None),
                 )
 
-                email = (_student_workspace_email(student) or "").strip().lower()
-                g_user = get_google_user(email) if email else None
+                email, g_user = _resolve_google_account(student)
                 current_ou = (g_user or {}).get("orgUnitPath")
+                target_ou = decision.target_ou_path
+                if t["ensure"] == "transferred":
+                    target_ou = _transferred_target_ou(
+                        student, current_ou, COHORT_YEAR
+                    )
 
                 moved = None
                 suspended = None
+                already_ok = bool(
+                    t["ensure"] == "transferred"
+                    and current_ou
+                    and _is_under_transferred_ou(current_ou)
+                )
+
                 if args.dry_run:
                     db.session.rollback()
                 else:
                     db.session.commit()
                     if email:
                         handled_emails.add(email)
-                        moved = move_user_to_ou(email, decision.target_ou_path)
+                        if not already_ok and current_ou != target_ou:
+                            moved = move_user_to_ou(email, target_ou)
                         if t["ensure"] in ("alumni", "transferred"):
                             suspended = suspend_user(email)
 
                 named_results.append(
                     {
                         **t,
-                        "ok": True,
-                        "email": email or None,
+                        "ok": True if email or t["ensure"] == "active_hs" else False,
+                        "email": email,
                         "before_db": before_db,
-                        "after_db": {
-                            "grade_level": student.grade_level,
-                            "is_active": student.is_active,
-                            "is_deleted": student.is_deleted,
-                            "departure_status": getattr(student, "departure_status", None),
-                            "expected_graduation_year": getattr(
-                                student, "expected_graduation_year", None
-                            ),
-                        },
                         "current_ou": current_ou,
-                        "target_ou": decision.target_ou_path,
-                        "reason": decision.reason,
+                        "target_ou": target_ou,
+                        "already_in_target": already_ok or (current_ou == target_ou),
                         "moved": moved,
                         "suspended": suspended,
+                        "error": None if email else "no Workspace account found",
                     }
                 )
             except Exception as exc:
                 db.session.rollback()
                 named_results.append({**t, "ok": False, "error": str(exc)})
 
+        # --- Pass: suspended Google users still in active school OUs ---
         scan_results = []
         if not args.skip_scan:
-            suspended_users = list_google_users(query="isSuspended=true")
-            for gu in suspended_users:
+            for gu in list_google_users(query="isSuspended=true"):
                 email = (gu.get("primaryEmail") or "").strip().lower()
                 if not email or email in handled_emails:
                     continue
                 current_ou = gu.get("orgUnitPath") or ""
                 if not _is_under_active_student_ou(current_ou):
                     continue
-
                 class_year = _class_year_from_ou(current_ou) or COHORT_YEAR
                 target_ou = _sanitize_ou_path(
                     f"/Students/{STUDENT_OU_TRANSFERRED_REMOVED}/Class of {class_year}"
                 )
-                moved = None
-                if args.dry_run:
-                    moved = None
-                else:
-                    moved = move_user_to_ou(email, target_ou)
-
+                moved = None if args.dry_run else move_user_to_ou(email, target_ou)
+                handled_emails.add(email)
                 scan_results.append(
                     {
                         "email": email,
@@ -279,23 +363,105 @@ def main() -> int:
                     }
                 )
 
+        # --- Pass: DB Removed / withdrawn, grade 3+, not already in Transferred ---
+        removed_results = []
+        if not args.skip_removed_roster:
+            removed_students = Student.query.filter(Student.is_deleted.is_(True)).all()
+            for student in removed_students:
+                if not grade_may_have_login(getattr(student, "grade_level", None)):
+                    continue
+                # Skip alumni graduates (kept as is_deleted=False usually, but be safe).
+                if (getattr(student, "departure_status", None) or "").lower() == "graduated":
+                    continue
+
+                email, g_user = _resolve_google_account(student)
+                if not email or not g_user:
+                    removed_results.append(
+                        {
+                            "id": student.id,
+                            "name": f"{student.first_name} {student.last_name}".strip(),
+                            "grade_level": student.grade_level,
+                            "ok": False,
+                            "error": "no Workspace account found",
+                        }
+                    )
+                    continue
+
+                if email in handled_emails:
+                    continue
+
+                current_ou = g_user.get("orgUnitPath") or ""
+                if _is_under_transferred_ou(current_ou):
+                    removed_results.append(
+                        {
+                            "id": student.id,
+                            "name": f"{student.first_name} {student.last_name}".strip(),
+                            "email": email,
+                            "current_ou": current_ou,
+                            "already_ok": True,
+                            "ok": True,
+                        }
+                    )
+                    handled_emails.add(email)
+                    continue
+
+                # Align DB withdrawal fields if missing.
+                student.is_active = False
+                student.departure_status = (
+                    getattr(student, "departure_status", None) or "withdrawn"
+                )
+                if not getattr(student, "status_updated_at", None):
+                    student.status_updated_at = datetime.now(timezone.utc)
+
+                target_ou = _transferred_target_ou(student, current_ou, COHORT_YEAR)
+                moved = None
+                suspended = None
+                if args.dry_run:
+                    db.session.rollback()
+                else:
+                    db.session.commit()
+                    moved = move_user_to_ou(email, target_ou)
+                    suspended = suspend_user(email)
+                handled_emails.add(email)
+                removed_results.append(
+                    {
+                        "id": student.id,
+                        "name": f"{student.first_name} {student.last_name}".strip(),
+                        "grade_level": student.grade_level,
+                        "email": email,
+                        "current_ou": current_ou,
+                        "target_ou": target_ou,
+                        "moved": moved,
+                        "suspended": suspended,
+                        "ok": True if args.dry_run else bool(moved),
+                    }
+                )
+
         payload = {
             "named": named_results,
             "suspended_in_active_ou": scan_results,
-            "suspended_in_active_ou_count": len(scan_results),
+            "removed_roster_grade3plus": removed_results,
+            "counts": {
+                "named_ok": sum(1 for r in named_results if r.get("ok")),
+                "suspended_scan": len(scan_results),
+                "removed_need_move": sum(
+                    1 for r in removed_results if r.get("moved") or (args.dry_run and r.get("target_ou"))
+                ),
+                "removed_already_ok": sum(1 for r in removed_results if r.get("already_ok")),
+                "removed_missing_email": sum(
+                    1 for r in removed_results if r.get("error") == "no Workspace account found"
+                ),
+            },
         }
         print(json.dumps(payload, indent=2, default=str))
         if args.dry_run:
             print("Dry run — no DB/Google changes saved.")
         else:
-            print(
-                f"Done. Named={sum(1 for r in named_results if r.get('ok'))}/{len(named_results)}; "
-                f"scan_moved={sum(1 for r in scan_results if r.get('moved'))}/{len(scan_results)}."
-            )
+            print("Done.")
 
         named_ok = all(r.get("ok") for r in named_results) if named_results else True
-        scan_ok = all(r.get("ok") for r in scan_results) if scan_results else True
-        return 0 if named_ok and scan_ok else 1
+        # Missing Workspace email for old removals is reported but not a hard failure.
+        return 0 if named_ok else 1
 
 
 if __name__ == "__main__":

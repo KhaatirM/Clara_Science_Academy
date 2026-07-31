@@ -3,155 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Maintenance - Clara Science Academy</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Maintenance — Clara Science Academy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/maintenance.css') }}?v={{ app_version }}">
 </head>
-<body>
-    <div class="maintenance-container">
-        <div class="container px-2 px-md-4">
-            <div class="row justify-content-center">
-                <div class="col-12 col-md-10 col-lg-7 col-xl-6">
-                    <div class="maintenance-card p-4 p-md-5 text-center">
-                        <div class="maintenance-icon mb-4">
-                            <i class="bi bi-tools"></i>
-                        </div>
-                        <h1 class="text-danger mb-3">System Maintenance</h1>
-                        <div class="alert alert-info mb-4">
-                            <h5><i class="bi bi-info-circle"></i> We're making improvements!</h5>
-                            <p class="mb-0">{{ maintenance.maintenance_message }}</p>
-                        </div>
-                        <div class="row mb-4 g-3">
-                            <div class="col-12 col-md-6">
-                                <div class="card border-light">
-                                    <div class="card-body">
-                                        <h6><i class="bi bi-clock"></i> Started</h6>
-                                        <p class="mb-0">{{ maintenance.start_time.strftime('%H:%M') }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <div class="card border-light">
-                                    <div class="card-body">
-                                        <h6><i class="bi bi-calendar-check"></i> Expected End</h6>
-                                        <p class="mb-0">{{ maintenance.end_time.strftime('%H:%M') }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <h6>Maintenance Progress</h6>
-                            <div class="progress">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ progress_percentage }}%" 
-                                     aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
-                                    {{ progress_percentage }}%
-                                </div>
-                            </div>
-                        </div>
-                        <div class="countdown mb-4" id="countdown">
-                            <!-- Countdown will be populated by JavaScript -->
-                        </div>
-                        <div class="alert alert-warning">
-                            <h6><i class="bi bi-exclamation-triangle"></i> What's happening?</h6>
-                            <p class="mb-0">{{ maintenance.reason }}</p>
-                        </div>
-                        <!-- Tech Login Section -->
-                        {% if maintenance.allow_tech_access %}
-                        <div class="tech-login-section mt-4">
-                            <h5><i class="bi bi-shield-lock"></i> Tech Support Access</h5>
-                            <p class="text-muted mb-3">Tech support personnel can login during maintenance</p>
-                            <form method="POST" action="{{ url_for('auth.login') }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <div class="row g-3">
-                                    <div class="col-12 col-md-6">
-                                        <input type="text" class="form-control" name="username" placeholder="Username" autocomplete="username" required>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <input type="password" class="form-control" name="password" placeholder="Password" autocomplete="current-password" required>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <button type="submit" class="btn btn-primary w-100 w-md-auto">
-                                        <i class="bi bi-box-arrow-in-right"></i> Tech Login
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                        {% endif %}
-                        <div class="d-grid gap-2 mt-4">
-                            <button class="btn btn-primary" onclick="location.reload()">
-                                <i class="bi bi-arrow-clockwise"></i> Check Again
-                            </button>
-                            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-house"></i> Back to Home
-                            </a>
-                        </div>
-                        <div class="mt-4 text-muted">
-                            <small>
-                                <i class="bi bi-shield-check"></i> 
-                                Your data is safe and secure during this maintenance period.
-                            </small>
-                        </div>
+<body class="mnt-page">
+    <main class="mnt">
+        <div class="mnt__inner">
+            <header class="mnt__brand">
+                <img
+                    class="mnt__logo"
+                    src="{{ url_for('static', filename='img/clara_logo.png') }}"
+                    alt=""
+                    width="72"
+                    height="72"
+                >
+                <h1 class="mnt__brand-name">Clara Science Academy</h1>
+                <p class="mnt__brand-tag">Student &amp; staff portal</p>
+            </header>
+
+            <section class="mnt__panel" aria-labelledby="mnt-headline">
+                <p class="mnt__status"><i class="bi bi-tools" aria-hidden="true"></i> System maintenance</p>
+                <h2 id="mnt-headline" class="mnt__headline">We’ll be right back</h2>
+                <p class="mnt__lead">
+                    {{ maintenance.maintenance_message or "We’re updating the portal to keep things running smoothly. Please check back shortly." }}
+                </p>
+
+                {% if maintenance.end_time %}
+                <div class="mnt__countdown" aria-live="polite">
+                    <p class="mnt__countdown-label">Estimated time remaining</p>
+                    <p class="mnt__countdown-value" id="countdown">Calculating…</p>
+                </div>
+                {% endif %}
+
+                {% if progress_percentage is defined and progress_percentage is not none %}
+                <div class="mnt__progress">
+                    <div class="mnt__progress-head">
+                        <p class="mnt__progress-label">Progress</p>
+                        <p class="mnt__progress-pct">{{ progress_percentage }}%</p>
+                    </div>
+                    <div class="mnt__progress-track" role="progressbar"
+                         aria-valuenow="{{ progress_percentage }}"
+                         aria-valuemin="0" aria-valuemax="100">
+                        <div class="mnt__progress-fill" style="width: {{ progress_percentage }}%;"></div>
                     </div>
                 </div>
-            </div>
+                {% endif %}
+
+                {% if maintenance.start_time or maintenance.end_time %}
+                <div class="mnt__meta">
+                    {% if maintenance.start_time %}
+                    <div class="mnt__meta-item">
+                        <p class="mnt__meta-label">Started</p>
+                        <p class="mnt__meta-value">{{ maintenance.start_time.strftime('%b %d, %Y · %I:%M %p') }}</p>
+                    </div>
+                    {% endif %}
+                    {% if maintenance.end_time %}
+                    <div class="mnt__meta-item">
+                        <p class="mnt__meta-label">Expected back</p>
+                        <p class="mnt__meta-value">{{ maintenance.end_time.strftime('%b %d, %Y · %I:%M %p') }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if maintenance.reason %}
+                <div class="mnt__reason">
+                    <p class="mnt__reason-title"><i class="bi bi-info-circle" aria-hidden="true"></i> Why we’re offline</p>
+                    <p class="mnt__reason-body">{{ maintenance.reason }}</p>
+                </div>
+                {% endif %}
+
+                <div class="mnt__actions">
+                    <button type="button" class="mnt__btn mnt__btn--primary" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                        Check again
+                    </button>
+                </div>
+
+                <p class="mnt__safe">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>
+                    Your data is safe — nothing is lost during maintenance.
+                </p>
+
+                {% if maintenance.allow_tech_access %}
+                <div class="mnt__tech">
+                    <h3 class="mnt__tech-title"><i class="bi bi-person-gear" aria-hidden="true"></i> Tech access</h3>
+                    <p class="mnt__tech-hint">Authorized tech accounts can sign in while maintenance is on.</p>
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mnt__tech-fields">
+                            <label class="visually-hidden" for="mnt-username">Username</label>
+                            <input class="mnt__input" type="text" id="mnt-username" name="username"
+                                   placeholder="Username" required autocomplete="username">
+                            <label class="visually-hidden" for="mnt-password">Password</label>
+                            <input class="mnt__input" type="password" id="mnt-password" name="password"
+                                   placeholder="Password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="mnt__btn mnt__btn--ghost">
+                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                            Sign in as tech
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </section>
+
+            <p class="mnt__footer">This page refreshes automatically every minute.</p>
         </div>
-    </div>
-    <script>
-        // Countdown timer with proper timezone handling
-        function updateCountdown() {
-            const now = new Date();
-            
-            // Parse the end time from the server (assuming UTC if no timezone specified)
-            const endTimeStr = '{{ maintenance.end_time.isoformat() }}';
-            let endTime;
-            
-            // Handle timezone properly - if no timezone info, treat as UTC
-            if (endTimeStr.includes('+') || endTimeStr.includes('Z') || endTimeStr.includes('-', 10)) {
-                endTime = new Date(endTimeStr);
-            } else {
-                // No timezone info, treat as UTC
-                endTime = new Date(endTimeStr + 'Z');
-            }
-            
-            const timeLeft = endTime - now;
-            
-            if (timeLeft <= 0) {
-                document.getElementById('countdown').innerHTML = 
-                    '<span class="text-success">Maintenance completed! Please refresh the page.</span>';
-                return;
-            }
-            
-            const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            
-            // Format the countdown display
-            let timeDisplay = '';
-            if (hours > 0) {
-                timeDisplay += `${hours}h `;
-            }
-            if (minutes > 0 || hours > 0) {
-                timeDisplay += `${minutes}m `;
-            }
-            timeDisplay += `${seconds}s`;
-            
-            document.getElementById('countdown').innerHTML = 
-                `<div class="alert alert-primary">
-                    <i class="bi bi-clock"></i> 
-                    <strong>Estimated time remaining:</strong> ${timeDisplay}
-                </div>`;
+    </main>
+
+    <style>
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0,0,0,0);
+            white-space: nowrap; border: 0;
         }
-        
-        // Update countdown every second
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
-        
-        // Auto-refresh every 60 seconds to check if maintenance is complete
-        setTimeout(function() {
-            location.reload();
-        }, 60000);
+    </style>
+
+    {% if maintenance.end_time %}
+    <script>
+        (function () {
+            var el = document.getElementById("countdown");
+            if (!el) return;
+
+            var endTimeStr = "{{ maintenance.end_time.isoformat() }}";
+            var endTime;
+            if (endTimeStr.indexOf("+") !== -1 || endTimeStr.indexOf("Z") !== -1 || endTimeStr.indexOf("-", 10) !== -1) {
+                endTime = new Date(endTimeStr).getTime();
+            } else {
+                endTime = new Date(endTimeStr + "Z").getTime();
+            }
+
+            function tick() {
+                var distance = endTime - Date.now();
+                if (distance <= 0) {
+                    el.textContent = "Maintenance should be complete — refresh to continue.";
+                    el.classList.add("is-done");
+                    return;
+                }
+                var hours = Math.floor(distance / (1000 * 60 * 60));
+                var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                var parts = [];
+                if (hours > 0) parts.push(hours + (hours === 1 ? " hour" : " hours"));
+                if (minutes > 0 || hours > 0) parts.push(minutes + " min");
+                parts.push(seconds + "s");
+                el.textContent = parts.join(" · ");
+            }
+
+            tick();
+            setInterval(tick, 1000);
+            setTimeout(function () { location.reload(); }, 60000);
+        })();
     </script>
+    {% else %}
+    <script>
+        setTimeout(function () { location.reload(); }, 60000);
+    </script>
+    {% endif %}
 </body>
-</html> 
+</html>

@@ -1,0 +1,120 @@
+/* Bundled with the SPA (not legacy /static CSS) so Render always ships these rules. */
+
+.students-exit-card .students-exit-header {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%) !important;
+  border-bottom: none !important;
+  color: #fff !important;
+  padding: 1.1rem 1.35rem !important;
+}
+
+.students-exit-card .students-exit-header h5,
+.students-exit-card .students-exit-header h5 .bi {
+  color: #fff !important;
+  margin: 0;
+  font-weight: 700;
+}
+
+.students-exit-card .students-exit-actions {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 576px) {
+  .students-exit-card .students-exit-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 992px) {
+  .students-exit-card .students-exit-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.students-exit-card button.students-exit-action-btn {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 1.05rem;
+  border-radius: 1.15rem !important;
+  border-width: 1.5px;
+  border-style: solid;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  cursor: pointer;
+  font-family: inherit;
+  transition: box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.students-exit-card button.students-exit-action-btn:hover {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  filter: brightness(1.03);
+}
+
+.students-exit-card .students-exit-action-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.students-exit-card .students-exit-action-sub {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  opacity: 0.9;
+}
+
+.students-exit-card button.students-exit-action-btn--promote {
+  background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 48%, #a7f3d0 100%) !important;
+  border-color: #34d399 !important;
+  color: #064e3b !important;
+}
+.students-exit-card button.students-exit-action-btn--promote .students-exit-action-title i {
+  color: #059669;
+}
+
+.students-exit-card button.students-exit-action-btn--graduate {
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 48%, #ddd6fe 100%) !important;
+  border-color: #a78bfa !important;
+  color: #4c1d95 !important;
+}
+.students-exit-card button.students-exit-action-btn--graduate .students-exit-action-title i {
+  color: #7c3aed;
+}
+
+.students-exit-card button.students-exit-action-btn--withdraw {
+  background: linear-gradient(145deg, #fff1f2 0%, #ffe4e6 48%, #fecdd3 100%) !important;
+  border-color: #fb7185 !important;
+  color: #881337 !important;
+}
+.students-exit-card button.students-exit-action-btn--withdraw .students-exit-action-title i {
+  color: #e11d48;
+}
+
+.students-exit-card button.students-exit-action-btn--repeat {
+  background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 48%, #fde68a 100%) !important;
+  border-color: #fbbf24 !important;
+  color: #78350f !important;
+}
+.students-exit-card button.students-exit-action-btn--repeat .students-exit-action-title i {
+  color: #d97706;
+}
+
+.students-exit-card .students-exit-stage {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0.9rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.875rem;
+  color: #0f172a;
+}

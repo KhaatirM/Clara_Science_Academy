@@ -13,6 +13,7 @@ import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import { StudentDetailModal } from '../components/students/StudentDetailModal'
 import { StudentEditModal } from '../components/students/StudentEditModal'
 import { YearEndOutcomesHelp } from '../components/students/YearEndOutcomesHelp'
+import '../styles/studentsExitCard.css'
 import type { ManagementOutletContext } from '../types/layout'
 import type {
   StudentDetail,
@@ -607,11 +608,19 @@ export function StudentsPage() {
             </div>
 
             {canAdminUi ? (
-              <div className="students-csv-card students-exit-card mb-4 overflow-hidden">
-                <div className="students-csv-header students-exit-header">
+              <div className="students-csv-card students-exit-card mb-4 overflow-hidden rounded-[15px]">
+                <div
+                  className="students-exit-header"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)',
+                    color: '#fff',
+                    padding: '1.1rem 1.35rem',
+                    borderBottom: 'none',
+                  }}
+                >
                   <div className="d-flex align-items-center justify-content-between gap-2">
-                    <h5 className="mb-0">
-                      <i className="bi bi-mortarboard me-2" aria-hidden="true" />
+                    <h5 className="mb-0" style={{ color: '#fff', fontWeight: 700 }}>
+                      <i className="bi bi-mortarboard me-2" aria-hidden="true" style={{ color: '#fff' }} />
                       Grade &amp; exit actions
                     </h5>
                     <YearEndOutcomesHelp />
@@ -624,11 +633,12 @@ export function StudentsPage() {
                     need a different outcome. Actions apply <strong>immediately</strong> unless you
                     check the staging box under the buttons.
                   </p>
-                  <div className="students-exit-actions mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="students-exit-actions">
                     <button
                       type="button"
                       onClick={() => void handleYearEndIntent('promote')}
                       className="students-exit-action-btn students-exit-action-btn--promote"
+                      style={{ borderRadius: '1.15rem' }}
                     >
                       <span className="students-exit-action-title">
                         <i className="bi bi-arrow-up-circle-fill" aria-hidden />
@@ -642,6 +652,7 @@ export function StudentsPage() {
                       type="button"
                       onClick={() => void handleYearEndIntent('graduate')}
                       className="students-exit-action-btn students-exit-action-btn--graduate"
+                      style={{ borderRadius: '1.15rem' }}
                     >
                       <span className="students-exit-action-title">
                         <i className="bi bi-award-fill" aria-hidden />
@@ -657,6 +668,7 @@ export function StudentsPage() {
                       type="button"
                       onClick={() => void handleYearEndIntent('withdraw')}
                       className="students-exit-action-btn students-exit-action-btn--withdraw"
+                      style={{ borderRadius: '1.15rem' }}
                     >
                       <span className="students-exit-action-title">
                         <i className="bi bi-box-arrow-right" aria-hidden />
@@ -672,6 +684,7 @@ export function StudentsPage() {
                       type="button"
                       onClick={() => void handleMarkRepeating()}
                       className="students-exit-action-btn students-exit-action-btn--repeat"
+                      style={{ borderRadius: '1.15rem' }}
                     >
                       <span className="students-exit-action-title">
                         <i className="bi bi-arrow-repeat" aria-hidden />

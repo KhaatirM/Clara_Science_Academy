@@ -17,6 +17,9 @@ const STATUS_CLASS: Record<string, string> = {
   closed: 'bg-slate-100 text-slate-700',
 }
 
+const fieldClass =
+  'w-full rounded-xl border border-[color-mix(in_srgb,var(--spa-mgmt-accent)_22%,var(--spa-mgmt-border))] bg-[var(--spa-mgmt-surface)] px-3 py-2.5 text-sm text-hub-text shadow-sm outline-none transition focus:border-[var(--spa-mgmt-accent)]'
+
 export function BugReportsPanel({
   fetchReports = fetchBugReports,
   submitReport = submitBugReport,
@@ -88,7 +91,7 @@ export function BugReportsPanel({
   }
 
   if (loading && !data) {
-    return <div className="text-sm text-hub-muted">Loading bug reports…</div>
+    return <div className="spa-mgmt-card p-8 text-center text-sm text-hub-muted shadow-sm">Loading bug reports…</div>
   }
 
   if (error) {
@@ -101,13 +104,13 @@ export function BugReportsPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-hub-text">Bug reports</h2>
-          <p className="text-sm text-hub-muted">Submit issues and track reports you have filed.</p>
+          <h2 className="mb-0 text-lg font-bold text-hub-text">Bug reports</h2>
+          <p className="mb-0 text-sm text-hub-muted">Submit issues and track reports you have filed.</p>
         </div>
         <button
           type="button"
           onClick={() => setShowForm((open) => !open)}
-          className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800"
+          className="spa-mgmt-btn-primary px-4 py-2 text-sm"
         >
           <i className="bi bi-bug" aria-hidden />
           Report a bug
@@ -115,7 +118,7 @@ export function BugReportsPanel({
       </div>
 
       {message ? (
-        <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">{message}</div>
+        <div className="spa-mgmt-insight px-4 py-3 text-sm font-medium">{message}</div>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -125,135 +128,148 @@ export function BugReportsPanel({
           ['In progress', data.summary.in_progress],
           ['Resolved', data.summary.resolved],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-xl font-bold text-hub-text">{value}</div>
-            <div className="text-sm text-hub-muted">{label}</div>
+          <div key={String(label)} className="spa-mgmt-stat p-4 shadow-sm">
+            <div className="text-xl font-bold tabular-nums text-hub-text">{value}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-hub-muted">{label}</div>
           </div>
         ))}
       </div>
 
       {showForm ? (
-        <form onSubmit={(e) => void handleSubmit(e)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-bold text-hub-text">New bug report</h3>
-          <div className="mt-4 grid gap-3">
-            <input
-              required
-              value={form.title}
-              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="Short title"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-            <textarea
-              required
-              rows={4}
-              value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe what happened and how to reproduce it"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
+        <form onSubmit={(e) => void handleSubmit(e)} className="spa-mgmt-card overflow-hidden shadow-sm">
+          <div className="spa-mgmt-accent-bar" />
+          <div className="p-5">
+            <h3 className="mb-0 font-bold text-hub-text">New bug report</h3>
+            <div className="mt-4 grid gap-3">
               <input
-                type="email"
-                value={form.contact_email}
-                onChange={(e) => setForm((prev) => ({ ...prev, contact_email: e.target.value }))}
-                placeholder="Contact email (optional)"
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                required
+                value={form.title}
+                onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Short title"
+                className={fieldClass}
               />
-              <select
-                value={form.severity}
-                onChange={(e) => setForm((prev) => ({ ...prev, severity: e.target.value }))}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              >
-                <option value="low">Low severity</option>
-                <option value="medium">Medium severity</option>
-                <option value="high">High severity</option>
-                <option value="critical">Critical severity</option>
-              </select>
+              <textarea
+                required
+                rows={4}
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe what happened and how to reproduce it"
+                className={fieldClass}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  type="email"
+                  value={form.contact_email}
+                  onChange={(e) => setForm((prev) => ({ ...prev, contact_email: e.target.value }))}
+                  placeholder="Contact email (optional)"
+                  className={fieldClass}
+                />
+                <select
+                  value={form.severity}
+                  onChange={(e) => setForm((prev) => ({ ...prev, severity: e.target.value }))}
+                  className={fieldClass}
+                >
+                  <option value="low">Low severity</option>
+                  <option value="medium">Medium severity</option>
+                  <option value="high">High severity</option>
+                  <option value="critical">Critical severity</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              Submit report
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-hub-text"
-            >
-              Cancel
-            </button>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="submit"
+                disabled={busy}
+                className="spa-mgmt-btn-primary px-4 py-2 text-sm disabled:opacity-60"
+              >
+                Submit report
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="spa-mgmt-btn-ghost px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </form>
       ) : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-hub-muted">
-            <tr>
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Severity</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Submitted</th>
-              {data.can_manage ? <th className="px-4 py-3">Reporter</th> : null}
-            </tr>
-          </thead>
-          <tbody>
-            {data.reports.length ? (
-              data.reports.map((report) => (
-                <tr key={report.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-hub-text">{report.title}</div>
-                    <div className="mt-1 max-w-md truncate text-xs text-hub-muted">{report.description}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-semibold ${SEVERITY_CLASS[report.severity] || SEVERITY_CLASS.medium}`}
-                    >
-                      {report.severity}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {data.can_manage ? (
-                      <select
-                        value={report.status}
-                        disabled={busy}
-                        onChange={(e) => void handleStatusChange(report, e.target.value)}
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
-                      >
-                        <option value="open">Open</option>
-                        <option value="in_progress">In progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                      </select>
-                    ) : (
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_CLASS[report.status] || STATUS_CLASS.open}`}
-                      >
-                        {report.status.replace('_', ' ')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-hub-muted">
-                    {report.created_at ? new Date(report.created_at).toLocaleString() : '—'}
-                  </td>
-                  {data.can_manage ? (
-                    <td className="px-4 py-3 text-hub-muted">{report.reporter_username || '—'}</td>
-                  ) : null}
-                </tr>
-              ))
-            ) : (
+      <div className="spa-mgmt-card overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[color-mix(in_srgb,var(--spa-mgmt-accent-soft)_55%,var(--spa-mgmt-surface))] text-left text-xs uppercase tracking-wide text-hub-muted">
               <tr>
-                <td colSpan={data.can_manage ? 5 : 4} className="px-4 py-8 text-center text-hub-muted">
-                  No bug reports yet.
-                </td>
+                <th className="px-4 py-3">Title</th>
+                <th className="px-4 py-3">Severity</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Submitted</th>
+                {data.can_manage ? <th className="px-4 py-3">Reporter</th> : null}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.reports.length ? (
+                data.reports.map((report) => (
+                  <tr
+                    key={report.id}
+                    className="border-t border-[color-mix(in_srgb,var(--spa-mgmt-border)_70%,transparent)]"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-hub-text">{report.title}</div>
+                      <div className="mt-1 max-w-md truncate text-xs text-hub-muted">
+                        {report.description}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${SEVERITY_CLASS[report.severity] || SEVERITY_CLASS.medium}`}
+                      >
+                        {report.severity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {data.can_manage ? (
+                        <select
+                          value={report.status}
+                          disabled={busy}
+                          onChange={(e) => void handleStatusChange(report, e.target.value)}
+                          className="rounded-lg border border-[var(--spa-mgmt-border)] bg-[var(--spa-mgmt-surface)] px-2 py-1 text-xs"
+                        >
+                          <option value="open">Open</option>
+                          <option value="in_progress">In progress</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      ) : (
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_CLASS[report.status] || STATUS_CLASS.open}`}
+                        >
+                          {report.status.replace('_', ' ')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-hub-muted">
+                      {report.created_at ? new Date(report.created_at).toLocaleString() : '—'}
+                    </td>
+                    {data.can_manage ? (
+                      <td className="px-4 py-3 text-hub-muted">{report.reporter_username || '—'}</td>
+                    ) : null}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={data.can_manage ? 5 : 4}
+                    className="px-4 py-8 text-center text-hub-muted"
+                  >
+                    No bug reports yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

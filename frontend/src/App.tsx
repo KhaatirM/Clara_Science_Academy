@@ -101,16 +101,20 @@ import {
   TechSettingsPage,
 } from './pages/TechDevicesSettingsPages'
 import {
-  TechActivityLogPage,
-  TechAuditLogsPage,
-  TechBugReportsPage,
-  TechBugsPage,
-  TechErrorReportsPage,
-  TechLogsPage,
   TechUserDetailPage,
   TechUserManagementPage,
 } from './pages/TechLogsSystemUsersPages'
 import { TechSystemPage } from './pages/TechSystemPage'
+import {
+  TechActivityLogPage,
+  TechAuditLogsPage,
+  TechLogsPage,
+} from './pages/TechLogsPage'
+import {
+  TechBugReportsPage,
+  TechBugsPage,
+  TechErrorReportsPage,
+} from './pages/TechBugsPage'
 
 function LoadingScreen() {
   return (

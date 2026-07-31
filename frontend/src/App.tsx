@@ -107,10 +107,10 @@ import {
   TechBugsPage,
   TechErrorReportsPage,
   TechLogsPage,
-  TechSystemPage,
   TechUserDetailPage,
   TechUserManagementPage,
 } from './pages/TechLogsSystemUsersPages'
+import { TechSystemPage } from './pages/TechSystemPage'
 
 function LoadingScreen() {
   return (

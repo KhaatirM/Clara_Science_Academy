@@ -464,94 +464,134 @@ STUDENTS TAB STYLES ==================== */
         font-weight: 700;
     }
 
-/* Grade & exit actions — dark teal header (overrides light CSV header) */
-.mgmt-stu-content .students-exit-header {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%);
-        border-bottom: none;
-        color: #fff;
+/* Grade & exit actions card */
+.mgmt-stu-content .students-exit-card .students-exit-header,
+.mgmt-stu .students-exit-card .students-exit-header,
+.legacy-mgmt-bootstrap .mgmt-stu .students-exit-card .students-exit-header {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%) !important;
+  border-bottom: none !important;
+  color: #fff !important;
 }
-.mgmt-stu-content .students-exit-header h5 {
-        color: #fff;
+.mgmt-stu-content .students-exit-card .students-exit-header h5,
+.mgmt-stu .students-exit-card .students-exit-header h5,
+.legacy-mgmt-bootstrap .mgmt-stu .students-exit-card .students-exit-header h5 {
+  color: #fff !important;
+  margin: 0;
+  font-weight: 700;
 }
-.legacy-mgmt-bootstrap .mgmt-stu .students-exit-action-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-        text-align: left;
-        padding: 0.85rem 1rem;
-        border-radius: 1.1rem;
-        border-width: 1.5px;
-        border-style: solid;
-        appearance: none;
-        -webkit-appearance: none;
-        cursor: pointer;
-        font-family: inherit;
-        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+.mgmt-stu-content .students-exit-card .students-exit-header h5 .bi,
+.mgmt-stu .students-exit-card .students-exit-header h5 .bi {
+  color: #fff !important;
 }
-.legacy-mgmt-bootstrap .mgmt-stu .students-exit-action-btn:hover {
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+
+.mgmt-stu-content .students-exit-actions,
+.mgmt-stu .students-exit-actions {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
 }
-.mgmt-stu-content .students-exit-action-title {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        font-size: 0.9rem;
-        font-weight: 700;
+@media (min-width: 576px) {
+  .mgmt-stu-content .students-exit-actions,
+  .mgmt-stu .students-exit-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
-.mgmt-stu-content .students-exit-action-sub {
-        margin-top: 0.35rem;
-        font-size: 0.75rem;
-        line-height: 1.35;
-        opacity: 0.88;
+@media (min-width: 992px) {
+  .mgmt-stu-content .students-exit-actions,
+  .mgmt-stu .students-exit-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
-.mgmt-stu-content .students-exit-action-btn--promote {
-        background: #ecfdf5;
-        border-color: #a7f3d0;
-        color: #064e3b;
+
+.mgmt-stu-content .students-exit-card button.students-exit-action-btn,
+.mgmt-stu .students-exit-card button.students-exit-action-btn,
+.legacy-mgmt-bootstrap .mgmt-stu .students-exit-card button.students-exit-action-btn {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 1.05rem;
+  border-radius: 1.15rem !important;
+  border-width: 1.5px;
+  border-style: solid;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
-.mgmt-stu-content .students-exit-action-btn--promote:hover {
-        background: #d1fae5;
-        border-color: #34d399;
+.mgmt-stu-content .students-exit-card button.students-exit-action-btn:hover,
+.mgmt-stu .students-exit-card button.students-exit-action-btn:hover {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  filter: brightness(1.03);
+}
+.mgmt-stu-content .students-exit-action-title,
+.mgmt-stu .students-exit-action-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+.mgmt-stu-content .students-exit-action-sub,
+.mgmt-stu .students-exit-action-sub {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  opacity: 0.9;
+}
+
+.mgmt-stu-content .students-exit-action-btn--promote,
+.mgmt-stu .students-exit-action-btn--promote {
+  background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 48%, #a7f3d0 100%) !important;
+  border-color: #34d399 !important;
+  color: #064e3b !important;
 }
 .mgmt-stu-content .students-exit-action-btn--promote .students-exit-action-title i {
-        color: #059669;
+  color: #059669;
 }
-.mgmt-stu-content .students-exit-action-btn--graduate {
-        background: #f5f3ff;
-        border-color: #ddd6fe;
-        color: #4c1d95;
-}
-.mgmt-stu-content .students-exit-action-btn--graduate:hover {
-        background: #ede9fe;
-        border-color: #a78bfa;
+.mgmt-stu-content .students-exit-action-btn--graduate,
+.mgmt-stu .students-exit-action-btn--graduate {
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 48%, #ddd6fe 100%) !important;
+  border-color: #a78bfa !important;
+  color: #4c1d95 !important;
 }
 .mgmt-stu-content .students-exit-action-btn--graduate .students-exit-action-title i {
-        color: #7c3aed;
+  color: #7c3aed;
 }
-.mgmt-stu-content .students-exit-action-btn--withdraw {
-        background: #fff1f2;
-        border-color: #fecdd3;
-        color: #881337;
-}
-.mgmt-stu-content .students-exit-action-btn--withdraw:hover {
-        background: #ffe4e6;
-        border-color: #fb7185;
+.mgmt-stu-content .students-exit-action-btn--withdraw,
+.mgmt-stu .students-exit-action-btn--withdraw {
+  background: linear-gradient(145deg, #fff1f2 0%, #ffe4e6 48%, #fecdd3 100%) !important;
+  border-color: #fb7185 !important;
+  color: #881337 !important;
 }
 .mgmt-stu-content .students-exit-action-btn--withdraw .students-exit-action-title i {
-        color: #e11d48;
+  color: #e11d48;
 }
-.mgmt-stu-content .students-exit-action-btn--repeat {
-        background: #fffbeb;
-        border-color: #fde68a;
-        color: #78350f;
-}
-.mgmt-stu-content .students-exit-action-btn--repeat:hover {
-        background: #fef3c7;
-        border-color: #fbbf24;
+.mgmt-stu-content .students-exit-action-btn--repeat,
+.mgmt-stu .students-exit-action-btn--repeat {
+  background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 48%, #fde68a 100%) !important;
+  border-color: #fbbf24 !important;
+  color: #78350f !important;
 }
 .mgmt-stu-content .students-exit-action-btn--repeat .students-exit-action-title i {
-        color: #d97706;
+  color: #d97706;
+}
+
+.mgmt-stu-content .students-exit-stage,
+.mgmt-stu .students-exit-stage {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0.9rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.875rem;
+  color: #0f172a;
 }
 
 .mgmt-stu-content .students-csv-body {

@@ -682,7 +682,7 @@ export function StudentsPage() {
                       </span>
                     </button>
                   </div>
-                  <label className="mb-0 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-hub-text">
+                  <label className="students-exit-stage">
                     <input
                       type="checkbox"
                       className="form-check-input mt-0.5"

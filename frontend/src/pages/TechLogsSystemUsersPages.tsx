@@ -636,6 +636,81 @@ function ErrorLogPanel() {
   )
 }
 
+const SYSTEM_CONFIG_FIELDS: Record<string, { label: string; options: string[] }> = {
+  debug_mode: {
+    label: 'Server mode',
+    options: ['Development Server', 'Production Server'],
+  },
+  database_path: {
+    label: 'Database path',
+    options: ['instance/app.db'],
+  },
+  max_upload_size: {
+    label: 'Max upload size',
+    options: ['8 MB', '16 MB', '32 MB', '64 MB', '128 MB'],
+  },
+  session_timeout: {
+    label: 'Session timeout',
+    options: ['1 hour', '4 hours', '8 hours', '24 hours', '48 hours', '7 days'],
+  },
+  backup_location: {
+    label: 'Backup location',
+    options: ['backups/'],
+  },
+  log_level: {
+    label: 'Log level',
+    options: ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+  },
+}
+
+const SCHOOL_TIMEZONE_OPTIONS = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Phoenix',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+]
+
+const MAINT_DURATION_OPTIONS = [
+  { value: '15', label: '15 minutes' },
+  { value: '30', label: '30 minutes' },
+  { value: '60', label: '1 hour' },
+  { value: '90', label: '1.5 hours' },
+  { value: '120', label: '2 hours' },
+  { value: '180', label: '3 hours' },
+  { value: '240', label: '4 hours' },
+  { value: '360', label: '6 hours' },
+  { value: '480', label: '8 hours' },
+  { value: '720', label: '12 hours' },
+  { value: '1440', label: '24 hours' },
+  { value: '2880', label: '2 days' },
+  { value: '10080', label: '7 days' },
+]
+
+const MAINT_REASON_OPTIONS = [
+  'Scheduled maintenance',
+  'System upgrade',
+  'Database maintenance',
+  'Security update',
+  'Emergency maintenance',
+  'Performance tuning',
+]
+
+const MAINT_MESSAGE_OPTIONS = [
+  'System is under maintenance. Please check back later.',
+  'We are performing scheduled updates. The portal will return shortly.',
+  'Clara Science Academy portal is temporarily unavailable for maintenance.',
+  'Emergency maintenance is in progress. Thank you for your patience.',
+]
+
+function withCurrentOption(options: string[], current: string | null | undefined) {
+  const value = (current || '').trim()
+  if (value && !options.includes(value)) return [value, ...options]
+  return options
+}
+
 export function TechSystemPage() {
   const [tab, setTab] = useState<'status' | 'config' | 'maintenance'>('status')
   const [data, setData] = useState<any>(null)
@@ -646,8 +721,8 @@ export function TechSystemPage() {
   const [theme, setTheme] = useState('')
   const [maint, setMaint] = useState({
     duration_minutes: '60',
-    reason: 'Scheduled maintenance',
-    maintenance_message: 'System is under maintenance. Please check back later.',
+    reason: MAINT_REASON_OPTIONS[0],
+    maintenance_message: MAINT_MESSAGE_OPTIONS[0],
   })
 
   const load = useCallback(async () => {
@@ -656,7 +731,7 @@ export function TechSystemPage() {
       const payload = await fetchTechSystem()
       setData(payload)
       setConfig(payload.config || {})
-      setTz(payload.school_timezone?.db_raw || '')
+      setTz(payload.school_timezone?.db_raw || payload.school_timezone?.effective || '')
       setTheme(payload.site_theme_override || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load system')
@@ -679,132 +754,174 @@ export function TechSystemPage() {
   }
 
   const fieldClass =
-    'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800'
-  const labelClass = 'text-xs font-semibold uppercase tracking-wide text-slate-500'
+    'w-full rounded-xl border border-hub-border bg-hub-surface px-3 py-2.5 text-sm text-hub-text shadow-sm outline-none transition focus:border-hub-accent focus:ring-2 focus:ring-hub-accent-soft'
+  const labelClass = 'text-xs font-semibold uppercase tracking-wide text-hub-muted'
+  const panelClass =
+    'space-y-5 rounded-2xl border border-hub-border bg-hub-surface p-5 shadow-sm'
+  const sectionTitleClass = 'mb-1 text-sm font-bold text-hub-text'
+  const tabBtnBase =
+    'inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition'
+  const tabBtnActive =
+    `${tabBtnBase} border-hub-accent bg-hub-accent text-white shadow-md`
+  const tabBtnIdle =
+    `${tabBtnBase} border-hub-border bg-hub-surface text-hub-text hover:border-hub-accent hover:bg-hub-accent-soft`
+  const btnThemePrimary =
+    'inline-flex items-center justify-center rounded-xl border border-hub-accent-deep bg-hub-accent px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-hub-accent-deep'
+  const btnThemeMuted =
+    'inline-flex items-center justify-center rounded-xl border border-hub-border bg-hub-surface px-4 py-2.5 text-sm font-semibold text-hub-text shadow-sm transition hover:bg-hub-accent-soft'
+
+  const tabMeta = {
+    status: { label: 'Status', icon: 'bi-speedometer2', hint: 'Live health and quick actions' },
+    config: { label: 'Config', icon: 'bi-sliders', hint: 'Server settings, timezone, and theme' },
+    maintenance: { label: 'Maintenance', icon: 'bi-tools', hint: 'Public maintenance window controls' },
+  } as const
 
   return (
     <ManagementPageShell>
       <div className="mgmt-home mgmt-home--teacher container-fluid px-0 px-md-1">
         <div className="mgmt-home-shell space-y-4 px-1 pb-8 md:px-2">
-          <div>
-            <h1 className="mb-0 text-2xl font-bold text-slate-900">System</h1>
-            <p className="mb-0 mt-1 text-sm text-hub-muted">
-              Status, configuration, and maintenance controls
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {(['status', 'config', 'maintenance'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={tab === t ? btnPrimary : btnMuted}
-                onClick={() => setTab(t)}
-              >
-                {t[0].toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
+          <header className="overflow-hidden rounded-2xl border border-hub-border bg-hub-surface shadow-sm">
+            <div className="border-b border-hub-border bg-hub-accent-soft px-5 py-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-hub-accent-deep">
+                Tech · Server
+              </p>
+              <h1 className="mb-0 text-2xl font-bold text-hub-text">System</h1>
+              <p className="mb-0 mt-1 text-sm text-hub-muted">
+                {tabMeta[tab].hint}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 px-4 py-3" role="tablist" aria-label="System sections">
+              {(['status', 'config', 'maintenance'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t}
+                  className={tab === t ? tabBtnActive : tabBtnIdle}
+                  onClick={() => setTab(t)}
+                >
+                  <i className={`bi ${tabMeta[t].icon}`} aria-hidden="true" />
+                  {tabMeta[t].label}
+                </button>
+              ))}
+            </div>
+          </header>
 
           {message ? (
-            <div className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+            <div className="rounded-xl border border-hub-accent bg-hub-accent-soft px-3 py-2 text-sm text-hub-accent-deep">
               {message}
             </div>
           ) : null}
           {error ? <div className="alert alert-danger">{error}</div> : null}
 
           {!data ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-hub-muted shadow-sm">
-              Loading system…
-            </div>
+            <div className={`${panelClass} text-center text-hub-muted`}>Loading system…</div>
           ) : tab === 'status' ? (
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {Object.entries(data.status || {}).map(([k, v]) => (
-                  <div
-                    key={k}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                  >
+                  <div key={k} className="rounded-xl border border-hub-border bg-hub-surface p-4 shadow-sm">
                     <div className={labelClass}>{k.replace(/_/g, ' ')}</div>
-                    <div className="mt-1 font-semibold text-slate-900">{String(v ?? '—')}</div>
+                    <div className="mt-1 font-semibold text-hub-text">{String(v ?? '—')}</div>
                   </div>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <button type="button" className={btnMuted} onClick={() => void run('backup')}>
+              <div className={`flex flex-wrap gap-2 ${panelClass}`}>
+                <button type="button" className={btnThemeMuted} onClick={() => void run('backup')}>
                   Backup DB
                 </button>
-                <button type="button" className={btnMuted} onClick={() => void run('integrity')}>
+                <button type="button" className={btnThemeMuted} onClick={() => void run('integrity')}>
                   Integrity check
                 </button>
-                <button type="button" className={btnMuted} onClick={() => void run('clear-cache')}>
+                <button type="button" className={btnThemeMuted} onClick={() => void run('clear-cache')}>
                   Clear cache
                 </button>
               </div>
             </div>
           ) : tab === 'config' ? (
-            <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <h2 className="mb-3 text-sm font-bold text-slate-900">App configuration</h2>
+            <div className={panelClass}>
+              <section>
+                <h2 className={sectionTitleClass}>App configuration</h2>
+                <p className="mb-4 text-sm text-hub-muted">
+                  Choose only from approved values — free typing is disabled to avoid invalid settings.
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {Object.keys(config).map((key) => (
-                    <label key={key} className="flex flex-col gap-1.5">
-                      <span className={labelClass}>{key.replace(/_/g, ' ')}</span>
-                      <input
-                        className={fieldClass}
-                        value={config[key] || ''}
-                        onChange={(e) => setConfig((c) => ({ ...c, [key]: e.target.value }))}
-                      />
-                    </label>
-                  ))}
+                  {Object.keys(SYSTEM_CONFIG_FIELDS).map((key) => {
+                    const meta = SYSTEM_CONFIG_FIELDS[key]
+                    const current = config[key] || ''
+                    const options = withCurrentOption(meta.options, current)
+                    return (
+                      <label key={key} className="flex flex-col gap-1.5">
+                        <span className={labelClass}>{meta.label}</span>
+                        <select
+                          className={fieldClass}
+                          value={current}
+                          onChange={(e) => setConfig((c) => ({ ...c, [key]: e.target.value }))}
+                        >
+                          {options.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )
+                  })}
                 </div>
                 <button
                   type="button"
-                  className={`${btnPrimary} mt-4`}
+                  className={`${btnThemePrimary} mt-4`}
                   onClick={() => void run('config', config)}
                 >
                   Save config
                 </button>
-              </div>
+              </section>
 
-              <hr className="border-slate-200" />
+              <hr className="border-hub-border" />
 
-              <div>
-                <h2 className="mb-3 text-sm font-bold text-slate-900">School timezone</h2>
-                <label className="flex max-w-md flex-col gap-1.5">
-                  <span className={labelClass}>IANA timezone</span>
-                  <input
-                    className={fieldClass}
-                    placeholder="America/New_York"
-                    value={tz}
-                    onChange={(e) => setTz(e.target.value)}
-                  />
-                </label>
-                <p className="mb-3 mt-2 text-xs text-hub-muted">
+              <section>
+                <h2 className={sectionTitleClass}>School timezone</h2>
+                <p className="mb-3 text-sm text-hub-muted">
                   {data.school_timezone?.source_label || '—'}
+                  {data.school_timezone?.now_sample
+                    ? ` · Local sample: ${data.school_timezone.now_sample}`
+                    : ''}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <label className="flex max-w-md flex-col gap-1.5">
+                  <span className={labelClass}>Timezone</span>
+                  <select className={fieldClass} value={tz} onChange={(e) => setTz(e.target.value)}>
+                    {withCurrentOption(SCHOOL_TIMEZONE_OPTIONS, tz).map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className={btnPrimary}
+                    className={btnThemePrimary}
                     onClick={() => void run('timezone', { action: 'set', school_timezone: tz })}
                   >
                     Set timezone
                   </button>
                   <button
                     type="button"
-                    className={btnMuted}
+                    className={btnThemeMuted}
                     onClick={() => void run('timezone', { action: 'clear' })}
                   >
-                    Clear
+                    Clear override
                   </button>
                 </div>
-              </div>
+              </section>
 
-              <hr className="border-slate-200" />
+              <hr className="border-hub-border" />
 
-              <div>
-                <h2 className="mb-3 text-sm font-bold text-slate-900">Site theme override</h2>
+              <section>
+                <h2 className={sectionTitleClass}>Site theme override</h2>
+                <p className="mb-3 text-sm text-hub-muted">
+                  Forces a portal theme for everyone until cleared.
+                </p>
                 <label className="flex max-w-xs flex-col gap-1.5">
                   <span className={labelClass}>Theme</span>
                   <select
@@ -822,33 +939,33 @@ export function TechSystemPage() {
                 </label>
                 <button
                   type="button"
-                  className={`${btnPrimary} mt-4`}
+                  className={`${btnThemePrimary} mt-4`}
                   onClick={() => void run('site-theme', { theme })}
                 >
                   Save site theme
                 </button>
-              </div>
+              </section>
             </div>
           ) : (
-            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className={panelClass}>
               {data.maintenance?.is_active ? (
                 <>
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                  <div className="rounded-xl border border-hub-accent bg-hub-accent-soft px-4 py-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-hub-accent-deep">
                       Maintenance active
                     </p>
-                    <p className="mb-0 text-sm text-amber-950">
+                    <p className="mb-0 text-sm text-hub-text">
                       {data.maintenance.reason || 'No reason provided'}
                     </p>
                     {data.maintenance.maintenance_message ? (
-                      <p className="mb-0 mt-2 text-sm text-amber-900/80">
+                      <p className="mb-0 mt-2 text-sm text-hub-muted">
                         {data.maintenance.maintenance_message}
                       </p>
                     ) : null}
                   </div>
                   <button
                     type="button"
-                    className={btnPrimary}
+                    className={btnThemePrimary}
                     onClick={() => void run('maintenance/stop')}
                   >
                     Stop maintenance
@@ -856,45 +973,66 @@ export function TechSystemPage() {
                 </>
               ) : (
                 <>
-                  <p className="mb-0 text-sm text-hub-muted">
-                    Start a maintenance window to block non-tech sign-ins and show a message to users.
-                  </p>
+                  <div>
+                    <h2 className={sectionTitleClass}>Start maintenance window</h2>
+                    <p className="mb-0 text-sm text-hub-muted">
+                      Blocks non-tech sign-ins and shows a public message. Dual-role staff can still
+                      open Tech; School management stays unavailable until you stop maintenance.
+                    </p>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="flex flex-col gap-1.5">
-                      <span className={labelClass}>Duration (minutes)</span>
-                      <input
-                        type="number"
-                        min={1}
+                      <span className={labelClass}>Duration</span>
+                      <select
                         className={fieldClass}
                         value={maint.duration_minutes}
                         onChange={(e) =>
                           setMaint((m) => ({ ...m, duration_minutes: e.target.value }))
                         }
-                      />
+                      >
+                        {MAINT_DURATION_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                     <label className="flex flex-col gap-1.5">
                       <span className={labelClass}>Reason</span>
-                      <input
+                      <select
                         className={fieldClass}
                         value={maint.reason}
                         onChange={(e) => setMaint((m) => ({ ...m, reason: e.target.value }))}
-                      />
+                      >
+                        {withCurrentOption(MAINT_REASON_OPTIONS, maint.reason).map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                     <label className="flex flex-col gap-1.5 sm:col-span-2">
                       <span className={labelClass}>Message shown to users</span>
-                      <textarea
+                      <select
                         className={fieldClass}
-                        rows={4}
                         value={maint.maintenance_message}
                         onChange={(e) =>
                           setMaint((m) => ({ ...m, maintenance_message: e.target.value }))
                         }
-                      />
+                      >
+                        {withCurrentOption(MAINT_MESSAGE_OPTIONS, maint.maintenance_message).map(
+                          (opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ),
+                        )}
+                      </select>
                     </label>
                   </div>
                   <button
                     type="button"
-                    className={btnPrimary}
+                    className={btnThemePrimary}
                     onClick={() =>
                       void run('maintenance/start', {
                         duration_minutes: Number(maint.duration_minutes),

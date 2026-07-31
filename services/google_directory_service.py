@@ -829,6 +829,46 @@ def suspend_user(user_email: str) -> bool:
     return r is True
 
 
+def list_google_users(
+    *,
+    query: Optional[str] = None,
+    max_results: int = 200,
+) -> List[Dict[str, Any]]:
+    """
+    List Workspace users (paginated). Optional Directory ``query`` (e.g. ``isSuspended=true``).
+    """
+    service = get_directory_service()
+    if not service:
+        return []
+
+    out: List[Dict[str, Any]] = []
+    page_token: Optional[str] = None
+    try:
+        while True:
+            kwargs: Dict[str, Any] = {
+                "customer": DIRECTORY_CUSTOMER_ID,
+                "maxResults": min(500, max(1, int(max_results))),
+                "orderBy": "email",
+                "projection": "basic",
+            }
+            if query:
+                kwargs["query"] = query
+            if page_token:
+                kwargs["pageToken"] = page_token
+            resp = service.users().list(**kwargs).execute()
+            out.extend(resp.get("users") or [])
+            page_token = resp.get("nextPageToken")
+            if not page_token:
+                break
+        return out
+    except HttpError as e:
+        current_app.logger.error(f"Directory API error listing users: {e}")
+        return out
+    except Exception as e:
+        current_app.logger.error(f"Failed to list Google users: {e}")
+        return out
+
+
 def delete_google_user(user_email: str) -> bool:
     """
     Delete a Google Workspace user (irreversible).

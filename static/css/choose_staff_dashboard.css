@@ -118,6 +118,56 @@ main.choose-dashboard-main > .alert {
   box-shadow: 0 12px 32px rgba(5, 150, 105, 0.15);
 }
 
+.choose-dashboard-maintenance-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.choose-dashboard-maintenance-banner .bi {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  font-size: 1.05rem;
+}
+
+.choose-dashboard-option.is-disabled,
+.choose-dashboard-option:disabled {
+  opacity: 0.55;
+  filter: grayscale(1);
+  cursor: not-allowed;
+  pointer-events: none;
+  border-color: #cbd5e1;
+  box-shadow: none;
+  transform: none;
+  background: #f8fafc;
+}
+
+.choose-dashboard-option.is-disabled:hover,
+.choose-dashboard-option:disabled:hover {
+  border-color: #cbd5e1;
+  box-shadow: none;
+  transform: none;
+}
+
+.choose-dashboard-option.is-disabled .choose-dashboard-icon-mgmt,
+.choose-dashboard-option:disabled .choose-dashboard-icon-mgmt {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.choose-dashboard-option.is-disabled .choose-dashboard-option-title,
+.choose-dashboard-option:disabled .choose-dashboard-option-title {
+  color: #64748b;
+}
+
 .choose-dashboard-option-inner {
   display: flex;
   gap: 1rem;

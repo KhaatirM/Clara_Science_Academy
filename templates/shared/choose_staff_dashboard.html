@@ -5,7 +5,7 @@
 {% block main_classes %}choose-dashboard-main{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/choose_staff_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/choose_staff_dashboard.css') }}?v={{ app_version }}">
 {% endblock %}
 
 {% block content %}
@@ -17,6 +17,13 @@
       Your account has both technical and school administration access. Pick where you want to work now.
       Use <strong>Switch dashboard</strong> on the <strong>Home</strong> tab or in the top bar anytime to change without signing out.
     </p>
+
+    {% if management_disabled_for_maintenance %}
+    <div class="choose-dashboard-maintenance-banner" role="status">
+      <i class="bi bi-tools" aria-hidden="true"></i>
+      <span>System maintenance is active. School management is unavailable — use <strong>Tech</strong> until maintenance ends.</span>
+    </div>
+    {% endif %}
 
     <p class="choose-dashboard-actions-intro">Choose one:</p>
 
@@ -34,14 +41,26 @@
             </span>
           </span>
         </button>
-        <button type="submit" name="target" value="management" class="choose-dashboard-option choose-dashboard-option-mgmt">
+        <button
+          type="submit"
+          name="target"
+          value="management"
+          class="choose-dashboard-option choose-dashboard-option-mgmt{% if management_disabled_for_maintenance %} is-disabled{% endif %}"
+          {% if management_disabled_for_maintenance %}disabled aria-disabled="true"{% endif %}
+        >
           <span class="choose-dashboard-option-inner">
             <span class="choose-dashboard-icon-wrap choose-dashboard-icon-mgmt" aria-hidden="true">
               <i class="bi bi-building-fill-gear"></i>
             </span>
             <span>
               <span class="choose-dashboard-option-title">School management</span>
-              <span class="choose-dashboard-option-desc">Students, staff, classes, attendance, and school operations.</span>
+              <span class="choose-dashboard-option-desc">
+                {% if management_disabled_for_maintenance %}
+                Unavailable during system maintenance.
+                {% else %}
+                Students, staff, classes, attendance, and school operations.
+                {% endif %}
+              </span>
             </span>
           </span>
         </button>

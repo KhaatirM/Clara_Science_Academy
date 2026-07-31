@@ -337,6 +337,12 @@ def home():
         return redirect(url_for('auth.home'))
     return render_template('shared/home.html')
 
+def _active_maintenance_blocks_school_management() -> bool:
+    """True while MaintenanceMode is on — dual-role staff should use Tech only."""
+    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    return bool(maintenance)
+
+
 @auth_blueprint.route('/choose-staff-dashboard', methods=['GET', 'POST'])
 @login_required
 def choose_staff_dashboard():
@@ -352,6 +358,8 @@ def choose_staff_dashboard():
     if not staff_must_choose_dashboard(current_user):
         return redirect(url_for('auth.dashboard'))
 
+    management_disabled = _active_maintenance_blocks_school_management()
+
     if request.method == 'POST':
         choice = (request.form.get('target') or '').strip()
         if choice == 'tech' and user_has_tech_route_access(current_user):
@@ -359,13 +367,23 @@ def choose_staff_dashboard():
             _flash_pending_login_success_after_choose()
             return redirect(url_for('auth.dashboard'))
         if choice == 'management' and user_has_management_entry_access(current_user):
-            session['staff_dashboard_target'] = 'management'
-            _flash_pending_login_success_after_choose()
-            return redirect(url_for('auth.dashboard'))
-        flash('Please choose a valid dashboard.', 'warning')
+            if management_disabled:
+                flash(
+                    'School management is unavailable during system maintenance. Please use Tech.',
+                    'warning',
+                )
+            else:
+                session['staff_dashboard_target'] = 'management'
+                _flash_pending_login_success_after_choose()
+                return redirect(url_for('auth.dashboard'))
+        else:
+            flash('Please choose a valid dashboard.', 'warning')
 
     _consume_login_success_flashes_for_choose_page()
-    return render_template('shared/choose_staff_dashboard.html')
+    return render_template(
+        'shared/choose_staff_dashboard.html',
+        management_disabled_for_maintenance=management_disabled,
+    )
 
 
 @auth_blueprint.route('/switch-staff-dashboard')
@@ -406,6 +424,17 @@ def dashboard():
 
     if staff_must_choose_dashboard(current_user):
         target = session.get('staff_dashboard_target')
+        if (
+            target == 'management'
+            and _active_maintenance_blocks_school_management()
+            and user_has_tech_route_access(current_user)
+        ):
+            session.pop('staff_dashboard_target', None)
+            flash(
+                'School management is unavailable during system maintenance. Please use Tech.',
+                'warning',
+            )
+            return redirect(url_for('auth.choose_staff_dashboard'))
         if target == 'tech' and user_has_tech_route_access(current_user):
             from utils.spa_tech_urls import user_should_use_spa_tech_shell
             if user_should_use_spa_tech_shell():

@@ -54,17 +54,21 @@ def _deactivate_enrollments(student_id: int) -> None:
 
 
 def _strip_and_suspend(student: Student) -> None:
-    """Best-effort portal login removal + Workspace suspend (lazy import)."""
+    """Best-effort Workspace OU move + suspend, then remove portal login."""
     from management_routes.students import (
+        _apply_student_google_ou_lifecycle,
         _strip_student_user_account,
         _student_workspace_email,
-        _suspend_student_google_workspace,
     )
 
+    # Capture email before portal User is deleted.
     ws_email = _student_workspace_email(student)
-    _strip_student_user_account(student)
     if ws_email:
-        _suspend_student_google_workspace(student, workspace_email=ws_email)
+        # Move to Alumni / Transferred & Removed first, then suspend.
+        _apply_student_google_ou_lifecycle(
+            student, workspace_email=ws_email, force_suspend=True
+        )
+    _strip_student_user_account(student)
 
 
 def promote_student_one_grade(student: Student) -> bool:
@@ -96,6 +100,13 @@ def promote_student_one_grade(student: Student) -> bool:
             upsert_student_school_year(
                 student.id, active.id, int(student.grade_level), enrolled=True
             )
+    except Exception:
+        pass
+    # Best-effort: move Workspace OU (e.g. Middle → High School) while login still exists.
+    try:
+        from management_routes.students import _apply_student_google_ou_lifecycle
+
+        _apply_student_google_ou_lifecycle(student, force_suspend=False)
     except Exception:
         pass
     return True

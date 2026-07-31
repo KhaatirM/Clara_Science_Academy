@@ -411,7 +411,67 @@ def _can_student_admin_ui(user) -> bool:
 
 def _student_workspace_email(student, *, user=None) -> str:
     u = user or getattr(student, "user", None)
-    return (getattr(u, "google_workspace_email", None) or "").strip()
+    email = (getattr(u, "google_workspace_email", None) or "").strip()
+    if email:
+        return email
+    # Departed students often have no portal User; fall back to naming convention.
+    try:
+        generated = (student.generate_email() or "").strip()
+        if generated:
+            return generated
+    except Exception:
+        pass
+    return ""
+
+
+def _apply_student_google_ou_lifecycle(
+    student,
+    *,
+    workspace_email: str | None = None,
+    force_suspend: bool = False,
+) -> None:
+    """
+    Move the Workspace account to the policy OU, then align suspension.
+
+    Used on promote / graduate / withdraw. ``force_suspend`` keeps the current
+    offboard behavior (suspend immediately even for Alumni grace).
+    """
+    email = (workspace_email or _student_workspace_email(student)).strip()
+    if not email or google_workspace_sync_should_skip_student(getattr(student, "grade_level", None)):
+        return
+    try:
+        from services.google_directory_service import move_user_to_ou, suspend_user
+        from services.google_ou_policy import resolve_student_ou, sync_student_google_suspension
+
+        decision = resolve_student_ou(
+            grade_level=getattr(student, "grade_level", None),
+            grad_year=getattr(student, "grad_year", None),
+            expected_grad_date=getattr(student, "expected_grad_date", None),
+            is_active=bool(getattr(student, "is_active", True)),
+            marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+            is_deleted=bool(getattr(student, "is_deleted", False)),
+            status_updated_at=getattr(student, "status_updated_at", None),
+            expected_graduation_year=getattr(student, "expected_graduation_year", None),
+            departure_status=getattr(student, "departure_status", None),
+        )
+        move_user_to_ou(email, decision.target_ou_path)
+        if force_suspend:
+            suspend_user(email)
+        else:
+            sync_student_google_suspension(
+                email,
+                decision=decision,
+                is_active=bool(getattr(student, "is_active", True)),
+                marked_for_removal=bool(getattr(student, "marked_for_removal", False)),
+                is_deleted=bool(getattr(student, "is_deleted", False)),
+            )
+    except Exception as e:
+        current_app.logger.warning(
+            "Google Workspace OU/lifecycle sync failed for student %s (%s): %s",
+            getattr(student, "id", None),
+            email,
+            e,
+        )
 
 
 def _suspend_student_google_workspace(student, *, workspace_email: str | None = None) -> None:

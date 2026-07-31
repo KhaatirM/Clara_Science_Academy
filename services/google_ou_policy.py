@@ -14,7 +14,7 @@ ALUMNI_SUSPEND_AFTER_DAYS = 365  # 1 year in Alumni before Google deactivation
 REMOVAL_SUSPEND_AFTER_DAYS = 183  # legacy alias; transferred departures suspend immediately
 
 # Set True when /Students/High School is live; until then grades 9–12 use Alumni/Middle.
-HIGH_SCHOOL_OU_ENABLED = False
+HIGH_SCHOOL_OU_ENABLED = True
 
 STUDENT_OU_TRANSFERRED_REMOVED = "Transferred & Removed"
 STUDENT_OU_ALUMNI = "Alumni"

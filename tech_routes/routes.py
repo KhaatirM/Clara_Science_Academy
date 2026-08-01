@@ -193,7 +193,8 @@ def tech_dashboard():
         return spa
     users = User.query.all()
     # Check if maintenance mode is active
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    from utils.maintenance_mode import get_active_maintenance
+    maintenance = get_active_maintenance()
     
     # Debug logging for tech dashboard
     print(f"Tech dashboard - User: {current_user.username}, Role: {current_user.role}")
@@ -456,7 +457,8 @@ def system():
     }
     
     # Get maintenance mode (from maintenance_control)
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    from utils.maintenance_mode import get_active_maintenance
+    maintenance = get_active_maintenance()
     
     return render_template(
         'tech/system.html',
@@ -1264,7 +1266,8 @@ def user_management():
 @login_required
 @tech_required
 def maintenance_control():
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    from utils.maintenance_mode import get_active_maintenance
+    maintenance = get_active_maintenance()
     return render_template('management/maintenance_control.html', maintenance=maintenance)
 
 @tech_blueprint.route('/maintenance/start', methods=['POST'])

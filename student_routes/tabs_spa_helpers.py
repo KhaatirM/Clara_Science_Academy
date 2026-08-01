@@ -14,6 +14,7 @@ from management_routes.settings_spa_helpers import THEME_OPTIONS
 from management_routes.student_jobs_spa_helpers import query_student_jobs_hub
 from models import Assignment, Class, Enrollment, Grade, SchoolYear, Student, User
 from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
+from utils.school_year_filters import get_active_school_year, student_classes_for_school_year
 from utils.user_theme import get_effective_theme, get_site_theme_override
 
 
@@ -38,8 +39,8 @@ def build_student_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
         sid = getattr(current_user, "student_id", None)
         if not sid:
             return None, "Student profile required"
-        enrollments = Enrollment.query.filter_by(student_id=sid, is_active=True).all()
-        classes = [e.class_info for e in enrollments if e.class_info]
+        active_year = get_active_school_year()
+        classes = student_classes_for_school_year(sid, active_year) if active_year else []
         weekly_schedule = build_weekly_schedule(classes, role="student")
         weekly_schedule, today_weekday, insights, schedule_grid = finalize_schedule_view(weekly_schedule)
 

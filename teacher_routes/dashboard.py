@@ -1617,36 +1617,11 @@ def teacher_schedule():
     if spa_redirect is not None:
         return spa_redirect
 
-    from models import ClassSchedule
-    
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get classes assigned to teacher
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        if teacher is None:
-            classes = []
-        else:
-            # Get classes where teacher is primary, additional, or substitute
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-            # Also get classes where teacher is additional or substitute
-            from models import class_additional_teachers, class_substitute_teachers
-            additional_classes = db.session.query(Class).join(
-                class_additional_teachers
-            ).filter(class_additional_teachers.c.teacher_id == teacher.id).all()
-            substitute_classes = db.session.query(Class).join(
-                class_substitute_teachers
-            ).filter(class_substitute_teachers.c.teacher_id == teacher.id).all()
-            # Combine all classes
-            all_class_ids = {c.id for c in classes}
-            for c in additional_classes + substitute_classes:
-                if c.id not in all_class_ids:
-                    classes.append(c)
-                    all_class_ids.add(c.id)
-    
+    from teacher_routes.classes_spa_helpers import _teacher_classes_for_active_school_year
     from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
+
+    teacher = get_teacher_or_admin()
+    classes = _teacher_classes_for_active_school_year(teacher)
 
     weekly_schedule = build_weekly_schedule(classes, role='teacher')
     weekly_schedule, today_weekday, schedule_insights, schedule_grid = finalize_schedule_view(weekly_schedule)

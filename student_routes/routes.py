@@ -2040,15 +2040,12 @@ def student_schedule():
         return spa_redirect
 
     student = Student.query.get_or_404(current_user.student_id)
-    
-    # Get student's enrolled classes
-    enrollments = Enrollment.query.filter_by(
-        student_id=student.id,
-        is_active=True
-    ).all()
-    classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
-    
+
     from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
+    from utils.school_year_filters import get_active_school_year, student_classes_for_school_year
+
+    active_year = get_active_school_year()
+    classes = student_classes_for_school_year(student.id, active_year) if active_year else []
 
     weekly_schedule = build_weekly_schedule(classes, role='student')
     weekly_schedule, today_weekday, schedule_insights, schedule_grid = finalize_schedule_view(weekly_schedule)

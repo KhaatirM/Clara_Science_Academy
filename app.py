@@ -1655,14 +1655,11 @@ def create_app(config_class=None):
         if request.method == 'POST':
             return redirect(url_for('home'))
         # Check for maintenance mode - handle case where table might not exist
-        maintenance = None
-        try:
-            maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
-        except Exception as e:
-            # Table might not exist yet, continue without maintenance mode
-            pass
-        
-        if maintenance and maintenance.end_time > datetime.now(timezone.utc):
+        from utils.maintenance_mode import get_active_maintenance
+
+        maintenance = get_active_maintenance()
+
+        if maintenance:
             # Debug logging for maintenance mode
             print(f"Maintenance mode active: {maintenance.is_active}")
             print(f"Maintenance end time: {maintenance.end_time}")
@@ -1679,9 +1676,16 @@ def create_app(config_class=None):
                 return render_template('shared/home.html')
             
             # Calculate progress percentage using UTC time
-            total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
-            elapsed = (datetime.now(timezone.utc) - maintenance.start_time).total_seconds()
-            progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
+            start = maintenance.start_time
+            end = maintenance.end_time
+            if start is not None and getattr(start, "tzinfo", None) is None:
+                start = start.replace(tzinfo=timezone.utc)
+            if end is not None and getattr(end, "tzinfo", None) is None:
+                end = end.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            total_duration = (end - start).total_seconds() if start and end else 1
+            elapsed = (now - start).total_seconds() if start else 0
+            progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100))) if total_duration else 0
             
             return render_template('shared/maintenance.html', 
                                  maintenance=maintenance, 

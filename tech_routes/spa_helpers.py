@@ -69,7 +69,9 @@ def _maintenance_payload(maintenance: MaintenanceMode | None) -> dict[str, Any] 
 
 
 def build_tech_dashboard_payload() -> dict[str, Any]:
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    from utils.maintenance_mode import get_active_maintenance
+
+    maintenance = get_active_maintenance()
     return {
         "username": current_user.username,
         "role": current_user.role,
@@ -544,6 +546,11 @@ def build_system_payload() -> dict[str, Any]:
     import psutil
 
     now = datetime.now()
+    from utils.maintenance_mode import get_active_maintenance
+
+    maintenance = get_active_maintenance()
+    maint_on = maintenance is not None
+
     try:
         cpu_percent = psutil.cpu_percent(interval=0.2)
         memory = psutil.virtual_memory()
@@ -587,7 +594,7 @@ def build_system_payload() -> dict[str, Any]:
             ).count(),
             "open_bugs": BugReport.query.filter(BugReport.status == "open").count(),
             "total_bugs": BugReport.query.count(),
-            "is_maintenance_mode": MaintenanceMode.query.filter_by(is_active=True).first() is not None,
+            "is_maintenance_mode": maint_on,
             "now": _iso(now),
         }
     except Exception as exc:
@@ -598,7 +605,7 @@ def build_system_payload() -> dict[str, Any]:
             "total_teachers": TeacherStaff.query.count(),
             "open_bugs": BugReport.query.filter(BugReport.status == "open").count(),
             "total_bugs": BugReport.query.count(),
-            "is_maintenance_mode": MaintenanceMode.query.filter_by(is_active=True).first() is not None,
+            "is_maintenance_mode": maint_on,
             "now": _iso(now),
         }
 
@@ -635,7 +642,6 @@ def build_system_payload() -> dict[str, Any]:
     else:
         school_tz_source = "Server configuration (SCHOOL_TIMEZONE in .env / hosting)"
 
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
     return {
         "status": status,
         "config": config,

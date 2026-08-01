@@ -77,13 +77,10 @@ def login():
         return redirect(url_for('auth.dashboard'))
     
     # Check for maintenance mode - handle case where table might not exist
-    maintenance = None
-    try:
-        maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
-    except Exception as e:
-        # Table might not exist yet, continue without maintenance mode
-        pass
-    
+    from utils.maintenance_mode import get_active_maintenance
+
+    maintenance = get_active_maintenance()
+
     # Helper function to ensure timezone-aware datetime
     def ensure_aware(dt):
         if dt is None:
@@ -91,95 +88,104 @@ def login():
         if dt.tzinfo is None:
             return dt.replace(tzinfo=timezone.utc)
         return dt
-    
+
     if maintenance:
-        end_time = ensure_aware(maintenance.end_time)
-        now = datetime.now(timezone.utc)
-        if end_time and end_time > now:
-            # Allow tech users and administrators to login during maintenance
-            if request.method == 'POST':
-                username = request.form.get('username')
-                password = request.form.get('password')
-                
-                # Check if username and password are provided
-                if not username or not password:
-                    flash('Username and password are required.', 'danger')
-                    return render_template('shared/maintenance.html', 
-                                         maintenance=maintenance, 
-                                         progress_percentage=0)
-                
-                user = User.query.filter_by(username=username).first()
-                if user and password and check_password_hash(user.password_hash, password):
-                    # Tech users and administrators can access during maintenance
-                    from utils.user_roles import user_has_tech_route_access, user_has_management_entry_access
-                    can_break_glass = (
-                        maintenance.allow_tech_access
-                        and (
-                            user_has_tech_route_access(user)
-                            or user_has_management_entry_access(user)
-                        )
+        # Effective window already validated by get_active_maintenance()
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+
+            # Check if username and password are provided
+            if not username or not password:
+                flash('Username and password are required.', 'danger')
+                return render_template(
+                    'shared/maintenance.html',
+                    maintenance=maintenance,
+                    progress_percentage=0,
+                )
+
+            user = User.query.filter_by(username=username).first()
+            if user and password and check_password_hash(user.password_hash, password):
+                # Tech users and administrators can access during maintenance
+                from utils.user_roles import user_has_tech_route_access, user_has_management_entry_access
+
+                can_break_glass = (
+                    maintenance.allow_tech_access
+                    and (
+                        user_has_tech_route_access(user)
+                        or user_has_management_entry_access(user)
                     )
-                    if can_break_glass:
-                        login_user(user)
-                        session.pop('staff_dashboard_target', None)
-                        # Log successful tech login during maintenance
-                        get_log_activity()(
-                            user_id=user.id,
-                            action='login_maintenance',
-                            details={'role': user.role, 'maintenance_mode': True},
-                            ip_address=request.remote_addr,
-                            user_agent=request.headers.get('User-Agent')
-                        )
-                        flash('Welcome back! You have access during maintenance mode.', 'info')
-                        return redirect(url_for('auth.dashboard'))
-                    else:
-                        # Log failed login attempt during maintenance
-                        get_log_activity()(
-                            user_id=user.id if user else None,
-                            action='login_failed_maintenance',
-                            details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'access_denied'},
-                            ip_address=request.remote_addr,
-                            user_agent=request.headers.get('User-Agent'),
-                            success=False,
-                            error_message='Access denied during maintenance'
-                        )
-                        flash('Access denied during maintenance. Only technical staff and administrators can login.', 'warning')
-                        return redirect(url_for('auth.login'))
+                )
+                if can_break_glass:
+                    login_user(user)
+                    session.pop('staff_dashboard_target', None)
+                    # Log successful tech login during maintenance
+                    get_log_activity()(
+                        user_id=user.id,
+                        action='login_maintenance',
+                        details={'role': user.role, 'maintenance_mode': True},
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent'),
+                    )
+                    flash('Welcome back! You have access during maintenance mode.', 'info')
+                    return redirect(url_for('auth.dashboard'))
                 else:
                     # Log failed login attempt during maintenance
                     get_log_activity()(
-                        user_id=None,
+                        user_id=user.id if user else None,
                         action='login_failed_maintenance',
                         details={
                             'username': username,
                             'role': user.role if user else 'unknown',
-                            'reason': 'invalid_credentials',
+                            'reason': 'access_denied',
                         },
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent'),
                         success=False,
-                        error_message='Login blocked during maintenance'
+                        error_message='Access denied during maintenance',
                     )
-                    handle_failed_login(
-                        username,
-                        ip_address=request.remote_addr,
-                        user_agent=request.headers.get('User-Agent'),
+                    flash(
+                        'Access denied during maintenance. Only technical staff and administrators can login.',
+                        'warning',
                     )
-                    flash('System is currently under maintenance. Please try again later.', 'warning')
                     return redirect(url_for('auth.login'))
-            
-            # Show maintenance page for non-tech/admin users
-            start_time = ensure_aware(maintenance.start_time)
-            end_time = ensure_aware(maintenance.end_time)
-            now = datetime.now(timezone.utc)
-            total_duration = (end_time - start_time).total_seconds()
-            elapsed = (now - start_time).total_seconds()
-            progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
-            
-            return render_template('shared/maintenance.html', 
-                                 maintenance=maintenance, 
-                                 progress_percentage=progress_percentage)
-    
+            else:
+                # Log failed login attempt during maintenance
+                get_log_activity()(
+                    user_id=None,
+                    action='login_failed_maintenance',
+                    details={
+                        'username': username,
+                        'role': user.role if user else 'unknown',
+                        'reason': 'invalid_credentials',
+                    },
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    success=False,
+                    error_message='Login blocked during maintenance',
+                )
+                handle_failed_login(
+                    username,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                )
+                flash('System is currently under maintenance. Please try again later.', 'warning')
+                return redirect(url_for('auth.login'))
+
+        # Show maintenance page for non-tech/admin users
+        start_time = ensure_aware(maintenance.start_time)
+        end_time = ensure_aware(maintenance.end_time)
+        now = datetime.now(timezone.utc)
+        total_duration = (end_time - start_time).total_seconds() if start_time and end_time else 1
+        elapsed = (now - start_time).total_seconds() if start_time else 0
+        progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100))) if total_duration else 0
+
+        return render_template(
+            'shared/maintenance.html',
+            maintenance=maintenance,
+            progress_percentage=progress_percentage,
+        )
+
     if request.method == 'POST':
         try:
             username = request.form.get('username')
@@ -338,9 +344,10 @@ def home():
     return render_template('shared/home.html')
 
 def _active_maintenance_blocks_school_management() -> bool:
-    """True while MaintenanceMode is on — dual-role staff should use Tech only."""
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
-    return bool(maintenance)
+    """True while an *effective* maintenance window is on — dual-role staff should use Tech only."""
+    from utils.maintenance_mode import maintenance_is_active
+
+    return maintenance_is_active()
 
 
 @auth_blueprint.route('/choose-staff-dashboard', methods=['GET', 'POST'])
@@ -957,27 +964,12 @@ def google_login():
     """Initiate Google OAuth login flow."""
     try:
         # Check for maintenance mode
-        maintenance = None
-        try:
-            maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
-        except:
-            pass
-        
-        # Helper function to ensure timezone-aware datetime
-        def ensure_aware(dt):
-            if dt is None:
-                return None
-            if dt.tzinfo is None:
-                return dt.replace(tzinfo=timezone.utc)
-            return dt
-        
-        if maintenance:
-            end_time = ensure_aware(maintenance.end_time)
-            now = datetime.now(timezone.utc)
-            if end_time and end_time > now:
-                flash('System is currently under maintenance. Please try again later.', 'warning')
-                return redirect(url_for('auth.login'))
-        
+        from utils.maintenance_mode import get_active_maintenance
+
+        if get_active_maintenance():
+            flash('System is currently under maintenance. Please try again later.', 'warning')
+            return redirect(url_for('auth.login'))
+
         # Create OAuth flow
         flow = get_google_oauth_flow()
         

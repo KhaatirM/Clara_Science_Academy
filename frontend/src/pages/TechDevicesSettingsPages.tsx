@@ -13,7 +13,6 @@ import {
   ManagementPageShell,
 } from '../components/layout/ManagementPageShell'
 import { applyUserTheme } from '../utils/userTheme'
-import { btnMuted, btnPrimary } from './TechHomePage'
 
 const fieldClass =
   'w-full rounded-xl border border-[color-mix(in_srgb,var(--spa-mgmt-accent)_22%,var(--spa-mgmt-border))] bg-[var(--spa-mgmt-surface)] px-3 py-2.5 text-sm text-hub-text shadow-sm outline-none transition focus:border-[var(--spa-mgmt-accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--spa-mgmt-accent)_25%,transparent)]'
@@ -443,6 +442,7 @@ export function TechSettingsPage() {
   const [theme, setTheme] = useState('default')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     void fetchTechSettingsHub()
@@ -464,87 +464,214 @@ export function TechSettingsPage() {
     return groups
   }, [data])
 
+  const tabMeta = {
+    account: {
+      label: 'Account',
+      icon: 'bi-person',
+      hint: 'Your tech portal identity and password.',
+    },
+    preferences: {
+      label: 'Preferences',
+      icon: 'bi-palette',
+      hint: 'Personal theme for the tech portal interface.',
+    },
+  } as const
+
   return (
     <ManagementPageShell>
-      <div className="mgmt-home mgmt-home--teacher container-fluid px-0 px-md-1">
-        <div className="mgmt-home-shell space-y-4 px-1 pb-8 md:px-2">
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={tab === 'account' ? btnPrimary : btnMuted}
-              onClick={() => {
-                setTab('account')
-                navigate('/tech/settings')
-              }}
-            >
-              Account
-            </button>
-            <button
-              type="button"
-              className={tab === 'preferences' ? btnPrimary : btnMuted}
-              onClick={() => setTab('preferences')}
-            >
-              Preferences
-            </button>
+      <ManagementPageHero className="mb-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] spa-mgmt-hero-muted">
+              Tech · Settings
+            </p>
+            <h1 className="mb-0 text-3xl font-bold tracking-tight">Settings</h1>
+            <p className="mb-0 mt-2 max-w-xl text-sm spa-mgmt-hero-muted">{tabMeta[tab].hint}</p>
           </div>
-          {error ? <div className="alert alert-danger">{error}</div> : null}
-          {message ? <div className="rounded-xl bg-teal-50 px-3 py-2 text-sm">{message}</div> : null}
-          {!data ? (
-            <div className="text-muted">Loading…</div>
-          ) : tab === 'account' ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="mb-1">
-                <strong>Username:</strong> {data.account?.username}
-              </p>
-              <p className="mb-3">
-                <strong>Role:</strong> {data.account?.role}
-              </p>
-              <a href="/change-password" className={btnPrimary}>
+          {data?.account?.username ? (
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white">
+              <i className="bi bi-person-badge" aria-hidden />
+              {data.account.username}
+              {data.account.role ? ` · ${data.account.role}` : ''}
+            </span>
+          ) : null}
+        </div>
+      </ManagementPageHero>
+
+      <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Settings sections">
+        {(['account', 'preferences'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            className={`spa-mgmt-tab ${tab === t ? 'is-active' : ''}`}
+            onClick={() => {
+              setTab(t)
+              if (t === 'account') navigate('/tech/settings')
+            }}
+          >
+            <i className={`bi ${tabMeta[t].icon}`} aria-hidden />
+            {tabMeta[t].label}
+          </button>
+        ))}
+      </div>
+
+      {error ? <div className="alert alert-danger mb-4">{error}</div> : null}
+      {message ? (
+        <div className="spa-mgmt-insight mb-4 px-4 py-3 text-sm font-medium">{message}</div>
+      ) : null}
+
+      {!data ? (
+        <div className="spa-mgmt-card p-8 text-center text-hub-muted shadow-sm">Loading settings…</div>
+      ) : tab === 'account' ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="spa-mgmt-card overflow-hidden shadow-sm">
+            <div className="spa-mgmt-accent-bar" />
+            <div className="p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <span className="spa-mgmt-avatar h-11 w-11 text-lg">
+                  <i className="bi bi-person" aria-hidden />
+                </span>
+                <div>
+                  <h2 className="mb-0 text-lg font-bold text-hub-text">Account</h2>
+                  <p className="mb-0 mt-1 text-sm text-hub-muted">
+                    Signed-in profile for this tech session.
+                  </p>
+                </div>
+              </div>
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div className="spa-mgmt-stat p-3">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+                    Username
+                  </dt>
+                  <dd className="mb-0 mt-1 text-sm font-semibold text-hub-text">
+                    {data.account?.username || '—'}
+                  </dd>
+                </div>
+                <div className="spa-mgmt-stat p-3">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+                    Role
+                  </dt>
+                  <dd className="mb-0 mt-1 text-sm font-semibold text-hub-text">
+                    {data.account?.role || '—'}
+                  </dd>
+                </div>
+                {data.account?.email ? (
+                  <div className="spa-mgmt-stat p-3 sm:col-span-2">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+                      Email
+                    </dt>
+                    <dd className="mb-0 mt-1 text-sm font-semibold text-hub-text">
+                      {data.account.email}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          </section>
+
+          <section className="spa-mgmt-card overflow-hidden shadow-sm">
+            <div className="spa-mgmt-accent-bar" />
+            <div className="p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <span className="spa-mgmt-avatar h-11 w-11 text-lg">
+                  <i className="bi bi-shield-lock" aria-hidden />
+                </span>
+                <div>
+                  <h2 className="mb-0 text-lg font-bold text-hub-text">Security</h2>
+                  <p className="mb-0 mt-1 text-sm text-hub-muted">
+                    Update your password when rotating credentials.
+                  </p>
+                </div>
+              </div>
+              <a href="/change-password" className="spa-mgmt-btn-primary px-4 py-2.5 text-sm no-underline">
+                <i className="bi bi-key" aria-hidden />
                 Change password
               </a>
             </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              {data.preferences?.theme_locked ? (
-                <p className="text-amber-800">Theme is locked by a site-wide Tech override.</p>
-              ) : null}
+          </section>
+        </div>
+      ) : (
+        <section className="spa-mgmt-card overflow-hidden shadow-sm">
+          <div className="spa-mgmt-accent-bar" />
+          <div className="p-5 md:p-6">
+            <div className="mb-4 flex items-start gap-3">
+              <span className="spa-mgmt-avatar h-11 w-11 text-lg">
+                <i className="bi bi-palette" aria-hidden />
+              </span>
+              <div>
+                <h2 className="mb-0 text-lg font-bold text-hub-text">Theme preferences</h2>
+                <p className="mb-0 mt-1 text-sm text-hub-muted">
+                  Preview and save the look of your tech portal. Accents update with the theme.
+                </p>
+              </div>
+            </div>
+
+            {data.preferences?.theme_locked ? (
+              <div className="mb-4 rounded-2xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                Theme is locked by a site-wide Tech override. Clear it under System → Config to allow
+                personal themes again.
+              </div>
+            ) : null}
+
+            <div className="space-y-5">
               {[...themeGroups.entries()].map(([group, options]) => (
-                <div key={group} className="mb-3">
-                  <h3 className="text-sm font-bold text-hub-muted">{group}</h3>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {options.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={theme === opt.value ? btnPrimary : btnMuted}
-                        onClick={() => setTheme(opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                <div key={group}>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    {group}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {options.map((opt) => {
+                      const selected = theme === opt.value
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={Boolean(data.preferences?.theme_locked)}
+                          className={
+                            selected
+                              ? 'spa-mgmt-tab is-active disabled:opacity-60'
+                              : 'spa-mgmt-tab disabled:opacity-60'
+                          }
+                          onClick={() => {
+                            setTheme(opt.value)
+                            if (!data.preferences?.theme_locked) applyUserTheme(opt.value)
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
-              <button
-                type="button"
-                className={btnPrimary}
-                onClick={async () => {
-                  try {
-                    const res = await updateTechTheme(theme)
-                    setMessage(res.message || 'Theme saved')
-                    applyUserTheme(theme)
-                  } catch (err) {
-                    setMessage(err instanceof Error ? err.message : 'Could not save theme')
-                  }
-                }}
-              >
-                Save theme
-              </button>
             </div>
-          )}
-        </div>
-      </div>
+
+            <button
+              type="button"
+              className="spa-mgmt-btn-primary mt-5 px-4 py-2.5 text-sm disabled:opacity-60"
+              disabled={saving || Boolean(data.preferences?.theme_locked)}
+              onClick={async () => {
+                setSaving(true)
+                setMessage(null)
+                try {
+                  const res = await updateTechTheme(theme)
+                  setMessage(res.message || 'Theme saved')
+                  applyUserTheme(theme)
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : 'Could not save theme')
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            >
+              <i className="bi bi-check2-circle" aria-hidden />
+              {saving ? 'Saving…' : 'Save theme'}
+            </button>
+          </div>
+        </section>
+      )}
     </ManagementPageShell>
   )
 }

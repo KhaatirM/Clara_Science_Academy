@@ -11,6 +11,8 @@ primary to OWNER before demoting the former primary to MEMBER (if still on the r
 
 from __future__ import annotations
 
+import threading
+
 from flask import current_app
 
 from extensions import db
@@ -221,6 +223,56 @@ def try_provision_class_google_group(class_id: int) -> None:
         current_app.logger.warning(
             "Class Google Classroom sync failed for class_id=%s: %s", class_id, exc
         )
+
+
+def schedule_try_provision_class_google_groups(class_ids: list[int]) -> None:
+    """
+    Provision Google Groups + Classrooms after the HTTP response returns.
+
+    Core class setup (and other bulk flows) can create many classes; each Google API
+    round-trip is slow enough to trip gunicorn worker timeouts if done in-request.
+    """
+    ids: list[int] = []
+    seen: set[int] = set()
+    for raw in class_ids or []:
+        try:
+            cid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if cid in seen:
+            continue
+        seen.add(cid)
+        ids.append(cid)
+    if not ids:
+        return
+
+    app = current_app._get_current_object()
+
+    def _run() -> None:
+        with app.app_context():
+            app.logger.info(
+                "Background Google provision starting for %s class(es)",
+                len(ids),
+            )
+            for cid in ids:
+                try:
+                    try_provision_class_google_group(cid)
+                except Exception as exc:
+                    app.logger.warning(
+                        "Background class Google provision failed for class_id=%s: %s",
+                        cid,
+                        exc,
+                    )
+            app.logger.info(
+                "Background Google provision finished for %s class(es)",
+                len(ids),
+            )
+
+    threading.Thread(
+        target=_run,
+        name="class-google-provision",
+        daemon=True,
+    ).start()
 
 
 def delete_class_google_groups_for_school_year(school_year_id: int) -> dict:

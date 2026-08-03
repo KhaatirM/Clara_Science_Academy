@@ -1092,6 +1092,7 @@ def core_setup_create(body: dict[str, Any]) -> dict[str, Any]:
         return {"success": False, "message": "; ".join(result["errors"]), "result": result}
     created = result.get("created_count", 0)
     enrolled = (result.get("enrollment") or {}).get("enrolled_count", 0)
+    google_queued = int(result.get("google_provision_queued") or 0)
     parts = []
     if created:
         parts.append(f"Created {created} core class(es)")
@@ -1099,6 +1100,10 @@ def core_setup_create(body: dict[str, Any]) -> dict[str, Any]:
         parts.append("No new classes were needed")
     if enrolled:
         parts.append(f"enrolled {enrolled} student(s) by grade level")
+    if google_queued:
+        parts.append(
+            f"Google Groups and Classrooms for {google_queued} class(es) are syncing in the background"
+        )
     message = ". ".join(parts) + "."
     return {
         "success": True,

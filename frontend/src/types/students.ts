@@ -33,6 +33,11 @@ export interface StudentListItem {
   username: string | null
   account_status: string
   account_badge_kind: 'removed' | 'has_young' | 'has_active' | 'no_young' | 'no_active'
+  /** ISO timestamp when the linked portal User was created */
+  account_created_at?: string | null
+  /** True when the portal login was created within the last 7 days */
+  is_new_account?: boolean
+  is_temporary_password?: boolean
   dob?: string | null
 }
 

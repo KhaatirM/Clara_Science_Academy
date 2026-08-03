@@ -523,6 +523,7 @@ export function StudentsPage() {
                       <option value="no_account">No Account</option>
                       {canAdminUi ? (
                         <>
+                          <option value="new_accounts">New accounts (last 7 days)</option>
                           <option value="graduated">Graduated (alumni)</option>
                           <option value="former">Former (Withdrawn / Removed)</option>
                           <option value="all">All (Current + Former + Graduated)</option>
@@ -725,8 +726,17 @@ export function StudentsPage() {
             {hasActiveFilters ? (
               <div className="students-results-banner mb-4">
                 <i className="bi bi-info-circle me-2" aria-hidden="true" />
-                <strong>Search Results:</strong> Found {stats.total} student(s)
-                {filters.search ? ` matching "${filters.search}"` : ''}
+                {filters.status === 'new_accounts' ? (
+                  <>
+                    <strong>New accounts:</strong> Showing {stats.total} student portal login
+                    {stats.total === 1 ? '' : 's'} created in the last 7 days
+                  </>
+                ) : (
+                  <>
+                    <strong>Search Results:</strong> Found {stats.total} student(s)
+                    {filters.search ? ` matching "${filters.search}"` : ''}
+                  </>
+                )}
               </div>
             ) : null}
 
@@ -786,7 +796,9 @@ export function StudentsPage() {
               ) : items.length === 0 ? (
                 <div className="students-table-body text-center py-5 text-muted">
                   <i className="bi bi-inbox display-1 text-muted d-block mb-3" aria-hidden="true" />
-                  No students found.
+                  {filters.status === 'new_accounts'
+                    ? 'No student accounts were created in the last 7 days.'
+                    : 'No students found.'}
                 </div>
               ) : recordsView === 'table' ? (
                 <StudentTable
@@ -1054,16 +1066,39 @@ function ViewToggleButton({
   )
 }
 
+function formatAccountCreated(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 function AccountBadge({ student }: { student: StudentListItem }) {
   const kind = resolveAccountBadgeKind(student)
+  const createdLabel = formatAccountCreated(student.account_created_at)
+  const titleParts = [student.account_status]
+  if (createdLabel) titleParts.push(`Created ${createdLabel}`)
+  if (student.is_temporary_password) titleParts.push('Temporary password')
   return (
-    <span
-      className={`badge ${accountBootstrapBadge(kind)}`}
-      style={{ fontWeight: 500 }}
-      title={student.account_status}
-    >
-      <i className={`bi ${accountBadgeIcon(kind)} me-1`} aria-hidden="true" />
-      {student.account_status}
+    <span className="d-inline-flex flex-wrap align-items-center gap-1">
+      <span
+        className={`badge ${accountBootstrapBadge(kind)}`}
+        style={{ fontWeight: 500 }}
+        title={titleParts.join(' · ')}
+      >
+        <i className={`bi ${accountBadgeIcon(kind)} me-1`} aria-hidden="true" />
+        {student.account_status}
+      </span>
+      {student.is_new_account ? (
+        <span className="badge bg-info text-dark border border-info" title="Portal login created in the last 7 days">
+          New
+        </span>
+      ) : null}
+      {student.is_temporary_password ? (
+        <span className="badge bg-light text-dark border" title="Still on temporary password">
+          Temp PW
+        </span>
+      ) : null}
     </span>
   )
 }
@@ -1312,11 +1347,17 @@ function StudentCards({
                   </div>
                   <div className="student-card-detail">
                     <i className="bi bi-person-circle me-2" aria-hidden="true" />
-                    <span>
+                    <span className="d-inline-flex flex-wrap align-items-center gap-1">
                       Account:{' '}
                       <span className={`badge ${accountBootstrapBadge(kind)}`}>
                         {student.account_status}
                       </span>
+                      {student.is_new_account ? (
+                        <span className="badge bg-info text-dark border border-info">New</span>
+                      ) : null}
+                      {student.is_temporary_password ? (
+                        <span className="badge bg-light text-dark border">Temp PW</span>
+                      ) : null}
                     </span>
                   </div>
                 </div>

@@ -28,6 +28,9 @@ from utils.user_roles import user_has_management_entry_access
 from utils.spa_management_urls import react_spa_enabled
 from utils.school_year_filters import get_school_year_for_display, student_classes_for_school_year
 
+# School-admin “New accounts” filter: student portal logins created within this window.
+NEW_STUDENT_ACCOUNT_DAYS = 7
+
 
 def enrolled_students_payload_for_class(class_id, *, include_archived_fallback=True):
     """
@@ -122,6 +125,17 @@ def _grade_is_young(grade_level) -> bool:
         return int(grade_level) < 3
     except (TypeError, ValueError):
         return False
+
+
+def _new_student_account_cutoff():
+    return datetime.utcnow() - timedelta(days=NEW_STUDENT_ACCOUNT_DAYS)
+
+
+def _user_account_is_new(user) -> bool:
+    created = getattr(user, "created_at", None) if user else None
+    if not created:
+        return False
+    return created >= _new_student_account_cutoff()
 
 
 def _student_account_badge(student) -> tuple[str, str]:
@@ -280,15 +294,31 @@ def _students_list_query(params: dict):
         query = query.filter(Student.gpa.isnot(None), Student.gpa >= 3.0)
 
     _has_login = exists().where(User.student_id == Student.id)
-    if status_filter in ("has_account", "no_account"):
-        if status_filter == "has_account":
-            query = query.filter(_has_login)
-        else:
-            query = query.filter(~_has_login)
+    new_account_cutoff = _new_student_account_cutoff()
+    _has_new_login = exists().where(
+        and_(
+            User.student_id == Student.id,
+            User.created_at >= new_account_cutoff,
+        )
+    )
+    if status_filter == "has_account":
+        query = query.filter(_has_login)
+    elif status_filter == "no_account":
+        query = query.filter(~_has_login)
+    elif status_filter == "new_accounts":
+        # Only students whose portal login was created in the last N days.
+        query = query.filter(_has_new_login)
 
     sort_by = params.get("sort") or "name"
     sort_order = params.get("order") or "asc"
-    if sort_by == "name":
+    # New-accounts view defaults to newest login first (name sort still used as tie-breaker).
+    if status_filter == "new_accounts" and sort_by == "name":
+        query = query.outerjoin(User, User.student_id == Student.id).order_by(
+            User.created_at.desc(),
+            Student.last_name,
+            Student.first_name,
+        )
+    elif sort_by == "name":
         if sort_order == "desc":
             query = query.order_by(Student.last_name.desc(), Student.first_name.desc())
         else:
@@ -320,6 +350,8 @@ def serialize_student_list_item(student: Student) -> dict:
     alert_level = _student_gpa_alert_level(gpa)
     academic_status, academic_tone = _student_academic_status(gpa)
     account_status, account_badge_kind = _student_account_badge(student)
+    user = getattr(student, "user", None)
+    account_created_at = getattr(user, "created_at", None) if user else None
     initials = (
         f"{(student.first_name or '?')[:1]}{(student.last_name or '?')[:1]}".upper()
     )
@@ -346,10 +378,13 @@ def serialize_student_list_item(student: Student) -> dict:
         "is_repeating": bool(getattr(student, "is_repeating", False)),
         "year_end_intent": getattr(student, "year_end_intent", None) or "promote",
         "departure_status": getattr(student, "departure_status", None),
-        "has_account": getattr(student, "user", None) is not None,
-        "username": student.user.username if getattr(student, "user", None) else None,
+        "has_account": user is not None,
+        "username": user.username if user else None,
         "account_status": account_status,
         "account_badge_kind": account_badge_kind,
+        "account_created_at": account_created_at.isoformat() if account_created_at else None,
+        "is_new_account": _user_account_is_new(user),
+        "is_temporary_password": bool(getattr(user, "is_temporary_password", False)) if user else False,
         "dob": getattr(student, "dob", None),
     }
 

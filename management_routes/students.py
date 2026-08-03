@@ -295,25 +295,23 @@ def _students_list_query(params: dict):
 
     _has_login = exists().where(User.student_id == Student.id)
     new_account_cutoff = _new_student_account_cutoff()
-    _has_new_login = exists().where(
-        and_(
-            User.student_id == Student.id,
-            User.created_at >= new_account_cutoff,
-        )
-    )
+    joined_user_for_new_accounts = False
     if status_filter == "has_account":
         query = query.filter(_has_login)
     elif status_filter == "no_account":
         query = query.filter(~_has_login)
     elif status_filter == "new_accounts":
-        # Only students whose portal login was created in the last N days.
-        query = query.filter(_has_new_login)
+        # Join (not EXISTS + join) so .count() does not auto-correlate User away.
+        query = query.join(User, User.student_id == Student.id).filter(
+            User.created_at >= new_account_cutoff
+        )
+        joined_user_for_new_accounts = True
 
     sort_by = params.get("sort") or "name"
     sort_order = params.get("order") or "asc"
     # New-accounts view defaults to newest login first (name sort still used as tie-breaker).
-    if status_filter == "new_accounts" and sort_by == "name":
-        query = query.outerjoin(User, User.student_id == Student.id).order_by(
+    if joined_user_for_new_accounts and sort_by == "name":
+        query = query.order_by(
             User.created_at.desc(),
             Student.last_name,
             Student.first_name,
@@ -400,13 +398,19 @@ def query_students_list(args) -> dict:
 
     params = _parse_students_list_args(args)
     query = _students_list_query(params)
+    status_filter = params.get("status") or ""
 
     stats_query = query
     total_students = stats_query.count()
-    students_with_accounts = stats_query.filter(
-        exists().where(User.student_id == Student.id)
-    ).count()
-    students_without_accounts = total_students - students_with_accounts
+    if status_filter == "new_accounts":
+        # Every row already has a joined User; avoid EXISTS (auto-correlation with joined User).
+        students_with_accounts = total_students
+        students_without_accounts = 0
+    else:
+        students_with_accounts = stats_query.filter(
+            exists().where(User.student_id == Student.id)
+        ).count()
+        students_without_accounts = total_students - students_with_accounts
     high_gpa_count = stats_query.filter(Student.gpa.isnot(None), Student.gpa >= 3.5).count()
 
     pagination = query.paginate(

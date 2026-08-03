@@ -141,3 +141,20 @@ export async function createCoreSetup(body: Record<string, unknown>): Promise<{
     body: JSON.stringify(body),
   })
 }
+
+export async function queueMissingGoogleClassrooms(schoolYearId?: number | null): Promise<{
+  success: boolean
+  message: string
+  queued: number
+  missing: number
+  school_year_id?: number
+}> {
+  return apiFetch('/api/spa/classes/google-provision-missing', {
+    method: 'POST',
+    body: JSON.stringify(
+      schoolYearId != null && schoolYearId !== undefined
+        ? { school_year_id: schoolYearId }
+        : {},
+    ),
+  })
+}

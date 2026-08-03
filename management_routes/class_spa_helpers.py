@@ -1112,3 +1112,49 @@ def core_setup_create(body: dict[str, Any]) -> dict[str, Any]:
         "redirect": f"/app/management/classes?school_year_id={school_year_id}",
     }
 
+
+def queue_missing_google_classrooms(school_year_id: int | None = None) -> dict[str, Any]:
+    """
+    Background-provision every active grade-3+ class that still lacks Google Classroom.
+    Safe to call after a timed-out core setup left higher grades without Classroom.
+    """
+    from models import SchoolYear
+    from services.class_google_group import (
+        class_ids_needing_google_classroom,
+        schedule_missing_google_classroom_provision,
+    )
+
+    year_id = school_year_id
+    if year_id is None:
+        active = SchoolYear.query.filter_by(is_active=True).first()
+        year_id = active.id if active else None
+    if year_id is None:
+        return {
+            "success": False,
+            "message": "No school year selected and no active school year is set.",
+            "queued": 0,
+            "missing": 0,
+        }
+
+    missing = class_ids_needing_google_classroom(year_id)
+    if not missing:
+        return {
+            "success": True,
+            "message": "All grade 3+ classes already have Google Classroom.",
+            "queued": 0,
+            "missing": 0,
+            "school_year_id": year_id,
+        }
+
+    queued = schedule_missing_google_classroom_provision(year_id)
+    return {
+        "success": True,
+        "message": (
+            f"Queued Google Classroom setup for {queued} class(es) in the background "
+            "(grade 3 and above). Refresh Classes in a few minutes."
+        ),
+        "queued": queued,
+        "missing": len(missing),
+        "school_year_id": year_id,
+    }
+

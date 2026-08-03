@@ -111,10 +111,15 @@ export function ClassCard({
               <i className="bi bi-check-circle-fill" aria-hidden />
               Google Classroom ready
             </span>
+          ) : item.grade_levels.some((g) => g > 2) ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+              <i className="bi bi-exclamation-circle-fill" aria-hidden />
+              Classroom not set up yet
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
               <i className="bi bi-building" aria-hidden />
-              School-managed Classroom
+              No Classroom (K–2)
             </span>
           )}
         </div>

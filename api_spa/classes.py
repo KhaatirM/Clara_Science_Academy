@@ -19,6 +19,7 @@ from management_routes.class_spa_helpers import (
     query_class_grades,
     query_class_roster,
     query_core_setup_form,
+    queue_missing_google_classrooms,
     update_class_from_body,
 )
 from management_routes.classes import _can_class_admin_ui, query_classes_list
@@ -74,6 +75,21 @@ def classes_core_setup_create():
         return jsonify({"error": "Forbidden"}), 403
     body = request.get_json(silent=True) or {}
     return jsonify(core_setup_create(body))
+
+
+@spa_api_blueprint.route("/classes/google-provision-missing", methods=["POST"])
+@login_required
+@permissions_required("classes:manage")
+def classes_google_provision_missing():
+    """Queue background Google Classroom creation for grade 3+ classes still missing it."""
+    if not user_has_management_entry_access(current_user):
+        return jsonify({"error": "Forbidden"}), 403
+    body = request.get_json(silent=True) or {}
+    raw_year = body.get("school_year_id")
+    year_id = int(raw_year) if raw_year not in (None, "") else None
+    result = queue_missing_google_classrooms(year_id)
+    status = 200 if result.get("success") else 400
+    return jsonify({**result, "meta": _class_meta()}), status
 
 
 @spa_api_blueprint.route("/classes", methods=["POST"])

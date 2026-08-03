@@ -275,6 +275,32 @@ def schedule_try_provision_class_google_groups(class_ids: list[int]) -> None:
     ).start()
 
 
+def class_ids_needing_google_classroom(school_year_id: int | None = None) -> list[int]:
+    """
+    Active classes (grade 3+) that still lack a school-managed Google Classroom id.
+
+    K–2 are excluded via ``class_needs_google_integration``.
+    """
+    q = Class.query.filter(Class.is_active.is_(True))
+    if school_year_id is not None:
+        q = q.filter(Class.school_year_id == int(school_year_id))
+    out: list[int] = []
+    for class_obj in q.order_by(Class.id).all():
+        if not class_needs_google_integration(class_obj):
+            continue
+        if (class_obj.google_classroom_id or "").strip():
+            continue
+        out.append(int(class_obj.id))
+    return out
+
+
+def schedule_missing_google_classroom_provision(school_year_id: int | None = None) -> int:
+    """Queue background provision for every active class missing Classroom. Returns count queued."""
+    ids = class_ids_needing_google_classroom(school_year_id)
+    schedule_try_provision_class_google_groups(ids)
+    return len(ids)
+
+
 def delete_class_google_groups_for_school_year(school_year_id: int) -> dict:
     """
     Delete Workspace Google Groups for all classes in a school year being archived.

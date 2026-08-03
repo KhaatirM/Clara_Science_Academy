@@ -173,8 +173,22 @@ def query_classes_list(args) -> dict:
             "default_school_year_id": params["school_year_id"],
             "active_school_year_id": active_school_year.id if active_school_year else None,
             "has_active_school_year": active_school_year is not None,
+            "missing_google_classroom_count": _missing_google_classroom_count(
+                params["school_year_id"]
+            ),
         },
     }
+
+
+def _missing_google_classroom_count(school_year_id) -> int:
+    if not school_year_id:
+        return 0
+    try:
+        from services.class_google_group import class_ids_needing_google_classroom
+
+        return len(class_ids_needing_google_classroom(int(school_year_id)))
+    except Exception:
+        return 0
 
 
 def _can_class_admin_ui(user) -> bool:

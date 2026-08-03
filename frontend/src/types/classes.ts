@@ -48,5 +48,7 @@ export interface ClassListResponse {
     has_active_school_year: boolean
     can_admin_ui: boolean
     can_create: boolean
+    /** Grade 3+ active classes still missing school-managed Google Classroom */
+    missing_google_classroom_count?: number
   }
 }

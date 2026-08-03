@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 
 import { useNavigate, useOutletContext, useSearchParams, Link } from 'react-router-dom'
 
-import { fetchClassList } from '../api/classes'
+import { fetchClassList, queueMissingGoogleClassrooms } from '../api/classes'
 
 import { ClassCard } from '../components/classes/ClassCard'
 
@@ -13,6 +13,8 @@ import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 
 import type { ClassListItem, SchoolYearOption } from '../types/classes'
+
+import { showAppToast } from '../utils/appToast'
 
 import {
 
@@ -208,6 +210,10 @@ export function ClassesPage() {
 
   const [canCreate, setCanCreate] = useState(false)
 
+  const [missingGoogleCount, setMissingGoogleCount] = useState(0)
+
+  const [provisioningGoogle, setProvisioningGoogle] = useState(false)
+
   const [hasActiveSchoolYear, setHasActiveSchoolYear] = useState(true)
 
   const [loading, setLoading] = useState(true)
@@ -235,6 +241,8 @@ export function ClassesPage() {
       setCanAdminUi(data.meta.can_admin_ui)
 
       setCanCreate(data.meta.can_create)
+
+      setMissingGoogleCount(data.meta.missing_google_classroom_count ?? 0)
 
       setHasActiveSchoolYear(data.meta.has_active_school_year)
 
@@ -436,6 +444,74 @@ export function ClassesPage() {
 
           ) : null}
 
+          {canCreate && missingGoogleCount > 0 ? (
+
+            <button
+
+              type="button"
+
+              disabled={provisioningGoogle}
+
+              onClick={() => {
+
+                void (async () => {
+
+                  setProvisioningGoogle(true)
+
+                  try {
+
+                    const yearId = filters.schoolYearId ? Number(filters.schoolYearId) : null
+
+                    const res = await queueMissingGoogleClassrooms(
+
+                      Number.isFinite(yearId as number) ? (yearId as number) : null,
+
+                    )
+
+                    showAppToast(res.message, res.success ? 'success' : 'error')
+
+                    if (res.success) {
+
+                      void load()
+
+                    }
+
+                  } catch (err) {
+
+                    showAppToast(
+
+                      err instanceof Error ? err.message : 'Could not queue Google Classroom setup',
+
+                      'error',
+
+                    )
+
+                  } finally {
+
+                    setProvisioningGoogle(false)
+
+                  }
+
+                })()
+
+              }}
+
+              className={`inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-2 text-[0.82rem] font-semibold text-amber-950 ${ghostHover} disabled:opacity-60`}
+
+            >
+
+              <i className="bi bi-google" aria-hidden />
+
+              {provisioningGoogle
+
+                ? 'Queuing…'
+
+                : `Set up Google Classroom (${missingGoogleCount})`}
+
+            </button>
+
+          ) : null}
+
           {canCreate ? (
 
             <button
@@ -483,6 +559,20 @@ export function ClassesPage() {
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
 
           No active school year is set. Class creation and some actions may be limited until a school year is active.
+
+        </div>
+
+      ) : null}
+
+
+
+      {canCreate && missingGoogleCount > 0 ? (
+
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+
+          <strong>{missingGoogleCount}</strong> grade 3+ class(es) still need school-managed Google Classroom
+
+          (K–2 are skipped on purpose). Use <strong>Set up Google Classroom</strong> to finish in the background.
 
         </div>
 

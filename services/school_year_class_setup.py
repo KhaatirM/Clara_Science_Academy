@@ -288,12 +288,24 @@ def run_core_class_setup(
     enrollment = auto_enroll_students_by_grade(class_ids, school_year_id)
     preview['enrollment'] = enrollment
 
-    from services.class_google_group import schedule_try_provision_class_google_groups
+    from services.class_google_group import (
+        class_ids_needing_google_classroom,
+        schedule_try_provision_class_google_groups,
+    )
 
-    # Google Group + Classroom API calls are slow; do them after the response so
-    # gunicorn does not kill the worker mid-setup (classes/enrollments already committed).
-    schedule_try_provision_class_google_groups(class_ids)
-    preview["google_provision_queued"] = len(class_ids)
+    # Prefer classes still missing Classroom (e.g. after a prior timeout), then the
+    # rest of this setup run. try_provision no-ops K–2 via class_needs_google_integration.
+    missing_ids = class_ids_needing_google_classroom(school_year_id)
+    queued: list[int] = []
+    seen: set[int] = set()
+    for cid in missing_ids + class_ids:
+        if cid in seen:
+            continue
+        seen.add(cid)
+        queued.append(cid)
+    schedule_try_provision_class_google_groups(queued)
+    preview["google_provision_queued"] = len(queued)
+    preview["google_provision_missing"] = len(missing_ids)
 
     if not created and not enrollment.get('enrolled_count'):
         db.session.rollback()

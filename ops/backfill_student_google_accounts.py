@@ -94,7 +94,7 @@ def main() -> int:
 
         candidates: list[tuple[User, Student]] = []
         for user in rows:
-            student = user.student or db.session.get(Student, user.student_id)
+            student = db.session.get(Student, user.student_id)
             if not student:
                 continue
             if not grade_may_have_login(student.grade_level):

@@ -99,21 +99,29 @@ def _sync_student_workspace(
         is_deleted=is_deleted,
     )
 
-    g_user = get_google_user(email)
+    g_user = get_google_user(email, quiet_404=True)
     if not g_user:
-        if not ensure_ou_exists(decision.target_ou_path):
+        ou_path = decision.target_ou_path
+        if not ensure_ou_exists(ou_path):
+            # Still create the account under the deepest OU we can use so new students
+            # get a Workspace mailbox even when "Class of YYYY" insert is forbidden.
+            from services.google_directory_service import deepest_existing_ou_ancestor
+
+            fallback = deepest_existing_ou_ancestor(ou_path) or "/Students"
             logger.warning(
-                "sync_single_user_to_google: ensure_ou_exists failed for %s (%s)",
-                decision.target_ou_path,
+                "sync_single_user_to_google: ensure_ou_exists failed for %s (%s); "
+                "creating user under fallback OU %s",
+                ou_path,
                 email,
+                fallback,
             )
-            return
+            ou_path = fallback
         created = create_google_user(
             {
                 "primaryEmail": email,
                 "name": {"givenName": student.first_name, "familyName": student.last_name},
                 "password": initial_google_password or new_google_workspace_initial_password(),
-                "orgUnitPath": decision.target_ou_path,
+                "orgUnitPath": ou_path,
                 "changePasswordAtNextLogin": True,
             }
         )

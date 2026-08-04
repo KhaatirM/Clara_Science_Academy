@@ -194,6 +194,7 @@ def create_google_user(user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     Returns:
         Created user resource dict, or None on failure.
+        If the email already exists (409), returns the existing user resource when fetchable.
     """
     service = get_directory_service()
     if not service:
@@ -204,6 +205,15 @@ def create_google_user(user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         current_app.logger.info(f"Created Google user {created.get('primaryEmail')}")
         return created
     except HttpError as e:
+        status = int(getattr(getattr(e, "resp", None), "status", None) or 0)
+        email = (user_data.get("primaryEmail") or "").strip()
+        if status == 409 and email:
+            existing = get_google_user(email, quiet_404=True)
+            if existing:
+                current_app.logger.info(
+                    "Google user %s already exists; treating create as success", email
+                )
+                return existing
         current_app.logger.error(f"Directory API error creating user: {e}")
         return None
     except Exception as e:
@@ -378,6 +388,30 @@ def ensure_ou_exists(path: str, service: Any = None) -> bool:
         parent_full_path = current_path
 
     return True
+
+
+def deepest_existing_ou_ancestor(path: str, service: Any = None) -> Optional[str]:
+    """
+    Walk up from ``path`` and return the deepest OU that already exists.
+    Used when creating a user must not wait on a missing Class-of-year OU.
+    """
+    svc = service or get_directory_service()
+    if not svc:
+        return None
+    norm = _normalize_org_unit_path(path)
+    if norm == "/":
+        return "/"
+    segments = [p for p in norm.split("/") if p]
+    candidates: List[str] = []
+    cur = ""
+    for segment in segments:
+        cur = f"{cur}/{segment}"
+        candidates.append(cur)
+    for candidate in reversed(candidates):
+        status, _ = _lookup_org_unit(svc, candidate)
+        if status == "found":
+            return candidate
+    return "/Students" if segments and segments[0].lower() == "students" else "/"
 
 
 def move_user_to_ou(user_email: str, ou_path: str) -> Optional[bool]:

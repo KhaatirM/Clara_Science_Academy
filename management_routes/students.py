@@ -88,7 +88,7 @@ def _remove_uploaded_student_photo(filename: str) -> None:
             pass
 from utils.credential_modal import student_grade3_plus_modal_payload, student_k2_modal_payload
 from utils.parent_portal import parent_portal_status_for_student, sync_student_parent_portal
-from services.google_directory_service import create_google_user, suspend_user
+from services.google_directory_service import suspend_user
 from services.google_sync_tasks import sync_single_user_to_google
 from utils.google_workspace_passwords import new_google_workspace_initial_password
 from utils.student_login_policy import google_workspace_sync_should_skip_student
@@ -947,38 +947,28 @@ def add_student():
                     "Google Directory sync failed after save; the account may update on the next sync run."
                 )
 
-            try:
-                grad_year = None
-                if hasattr(student, "grad_year") and getattr(student, "grad_year"):
-                    grad_year = int(getattr(student, "grad_year"))
-                elif student.expected_grad_date and "/" in str(student.expected_grad_date):
-                    grad_year = int(str(student.expected_grad_date).split("/", 1)[1])
+            if generated_workspace_email:
+                try:
+                    from services.google_directory_service import get_google_user
 
-                ou_path = _student_ou_path(student.grade_level, grad_year)
-                if generated_workspace_email:
-                    created = create_google_user(
-                        {
-                            "primaryEmail": generated_workspace_email,
-                            "name": {"givenName": student.first_name, "familyName": student.last_name},
-                            "password": google_initial_password,
-                            "orgUnitPath": ou_path,
-                            "changePasswordAtNextLogin": True,
-                        }
+                    google_user_created = bool(
+                        get_google_user(generated_workspace_email, quiet_404=True)
                     )
-                    google_user_created = bool(created)
-                    if not created:
-                        google_warning = (
-                            f"Google account creation failed for {generated_workspace_email}. "
-                            "Verify the account does not already exist and that Directory permissions are configured."
-                        )
-                else:
+                except Exception as e:
+                    current_app.logger.warning(
+                        "Could not verify Google user %s after create: %s",
+                        generated_workspace_email,
+                        e,
+                    )
+                if not google_user_created and not google_warning:
                     google_warning = (
-                        "No Google Workspace email was generated, so no Google user was created."
+                        f"Google account was not created for {generated_workspace_email}. "
+                        "Check Directory API permissions / OU paths, then re-save the student "
+                        "or run: FLASK_ENV=production python ops/backfill_student_google_accounts.py"
                     )
-            except Exception as e:
-                current_app.logger.error(f"Failed to auto-create Google student account: {e}")
+            else:
                 google_warning = (
-                    "Google account creation encountered an error. Check server logs for details."
+                    "No Google Workspace email was generated, so no Google user was created."
                 )
 
             modal = student_grade3_plus_modal_payload(
@@ -2721,7 +2711,10 @@ def edit_student(student_id):
         # Google Directory sync immediately after commit (Save → Workspace updated in one step)
         if getattr(student, "user", None) and student.user.google_workspace_email:
             try:
-                sync_single_user_to_google(student.user.id)
+                sync_kw = {}
+                if new_creds and new_creds.get("google_initial_password"):
+                    sync_kw["initial_google_password"] = new_creds["google_initial_password"]
+                sync_single_user_to_google(student.user.id, **sync_kw)
             except Exception as e:
                 current_app.logger.warning(
                     "Google Directory sync after student edit failed for user %s: %s",

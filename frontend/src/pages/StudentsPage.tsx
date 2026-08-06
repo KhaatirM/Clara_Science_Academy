@@ -53,13 +53,15 @@ function resolveAccountBadgeKind(
     'account_badge_kind' | 'grade_level' | 'has_account' | 'is_deleted'
   >,
 ): StudentListItem['account_badge_kind'] {
-  if (student.account_badge_kind) {
+  if (student.is_deleted) return 'removed'
+  const young = student.grade_level != null && Number(student.grade_level) < 3
+  // K–2: always "no account yet" in the UI (even if a leftover User row exists).
+  if (young) return 'no_young'
+  if (student.account_badge_kind && student.account_badge_kind !== 'has_young') {
     return student.account_badge_kind
   }
-  const young = student.grade_level != null && Number(student.grade_level) < 3
-  if (student.is_deleted) return 'removed'
-  if (student.has_account) return young ? 'has_young' : 'has_active'
-  return young ? 'no_young' : 'no_active'
+  if (student.has_account) return 'has_active'
+  return 'no_active'
 }
 
 function accountBootstrapBadge(kind: StudentListItem['account_badge_kind']) {

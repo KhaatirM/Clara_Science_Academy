@@ -110,8 +110,26 @@ def build_management_home_payload():
             )
 
         year_classes = Class.query.filter_by(school_year_id=active_school_year.id).all()
+        year_class_ids = [c.id for c in year_classes]
+        # Active students in the current school year (not every Student row in the DB).
+        from utils.student_roster import active_roster_student_filters
+
+        if year_class_ids:
+            active_year_students = (
+                db.session.query(Student.id)
+                .filter(active_roster_student_filters())
+                .join(Enrollment, Enrollment.student_id == Student.id)
+                .filter(
+                    Enrollment.is_active.is_(True),
+                    Enrollment.class_id.in_(year_class_ids),
+                )
+                .distinct()
+                .count()
+            )
+        else:
+            active_year_students = 0
         stats = {
-            "students": Student.query.count(),
+            "students": active_year_students,
             "teachers": TeacherStaff.query.filter(TeacherStaff.is_deleted == False).count(),
             "classes": len(year_classes),
             "assignments": Assignment.query.filter_by(school_year_id=active_school_year.id).count(),

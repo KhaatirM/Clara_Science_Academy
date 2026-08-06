@@ -143,11 +143,13 @@ def _student_account_badge(student) -> tuple[str, str]:
     young = _grade_is_young(student.grade_level)
     if getattr(student, "is_deleted", False):
         return "Removed", "removed"
-    user = getattr(student, "user", None)
-    if user:
-        return user.username, "has_young" if young else "has_active"
+    # K–2 policy: no portal login. Always show "No account yet" even if a leftover
+    # User row exists (those get stripped when the students list is loaded).
     if young:
         return "No account yet", "no_young"
+    user = getattr(student, "user", None)
+    if user:
+        return user.username, "has_active"
     return "No Account", "no_active"
 
 
@@ -349,7 +351,10 @@ def serialize_student_list_item(student: Student) -> dict:
     academic_status, academic_tone = _student_academic_status(gpa)
     account_status, account_badge_kind = _student_account_badge(student)
     user = getattr(student, "user", None)
-    account_created_at = getattr(user, "created_at", None) if user else None
+    young = _grade_is_young(student.grade_level)
+    # K–2: never surface portal username / temp-password badges (policy: no login yet).
+    show_account = user is not None and not young
+    account_created_at = getattr(user, "created_at", None) if show_account else None
     initials = (
         f"{(student.first_name or '?')[:1]}{(student.last_name or '?')[:1]}".upper()
     )
@@ -376,13 +381,15 @@ def serialize_student_list_item(student: Student) -> dict:
         "is_repeating": bool(getattr(student, "is_repeating", False)),
         "year_end_intent": getattr(student, "year_end_intent", None) or "promote",
         "departure_status": getattr(student, "departure_status", None),
-        "has_account": user is not None,
-        "username": user.username if user else None,
+        "has_account": show_account,
+        "username": user.username if show_account else None,
         "account_status": account_status,
         "account_badge_kind": account_badge_kind,
         "account_created_at": account_created_at.isoformat() if account_created_at else None,
-        "is_new_account": _user_account_is_new(user),
-        "is_temporary_password": bool(getattr(user, "is_temporary_password", False)) if user else False,
+        "is_new_account": _user_account_is_new(user) if show_account else False,
+        "is_temporary_password": (
+            bool(getattr(user, "is_temporary_password", False)) if show_account else False
+        ),
         "dob": getattr(student, "dob", None),
     }
 
@@ -407,8 +414,13 @@ def query_students_list(args) -> dict:
         students_with_accounts = total_students
         students_without_accounts = 0
     else:
+        # Grade 3+ portal policy: K–2 User rows (if any) do not count as "with accounts".
+        from utils.student_login_policy import MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN
+
         students_with_accounts = stats_query.filter(
-            exists().where(User.student_id == Student.id)
+            exists().where(User.student_id == Student.id),
+            Student.grade_level.isnot(None),
+            Student.grade_level >= MIN_GRADE_LEVEL_FOR_ACTIVE_STUDENT_LOGIN,
         ).count()
         students_without_accounts = total_students - students_with_accounts
     high_gpa_count = stats_query.filter(Student.gpa.isnot(None), Student.gpa >= 3.5).count()
@@ -418,6 +430,25 @@ def query_students_list(args) -> dict:
         per_page=STUDENTS_PER_PAGE,
         error_out=False,
     )
+
+    # Self-heal: K–2 should not keep portal User rows (leftover from bad creates / demotions).
+    stripped = False
+    for s in pagination.items:
+        if _grade_is_young(s.grade_level) and getattr(s, "user", None):
+            try:
+                _strip_student_user_account(s)
+                stripped = True
+            except Exception as e:
+                current_app.logger.warning(
+                    "Could not strip leftover K–2 portal user for student %s: %s",
+                    getattr(s, "id", None),
+                    e,
+                )
+    if stripped:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     return {
         "students": pagination.items,

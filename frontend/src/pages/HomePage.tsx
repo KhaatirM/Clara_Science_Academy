@@ -224,7 +224,7 @@ function HomeDashboardBody({
               </div>
               <p className="mgmt-home-stat-number">{st.students}</p>
               <p className="mgmt-home-stat-label">Students</p>
-              <p className="mgmt-home-stat-meta">Enrolled in the system</p>
+              <p className="mgmt-home-stat-meta">Active this school year</p>
             </article>
             <article className="mgmt-home-stat mgmt-home-stat--staff">
               <div className="mgmt-home-stat-icon">

@@ -348,6 +348,12 @@ def create_app(config_class=None):
                         ))
                         conn.commit()
                         print("Added teacher_staff.portal_login column.")
+                    if 'google_workspace_email' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE teacher_staff ADD COLUMN google_workspace_email VARCHAR(120)"
+                        ))
+                        conn.commit()
+                        print("Added teacher_staff.google_workspace_email column.")
                 elif dialect == 'postgresql':
                     def _pg_has(col):
                         r = conn.execute(text(
@@ -383,6 +389,20 @@ def create_app(config_class=None):
                         ))
                         conn.commit()
                         print("Added teacher_staff.portal_login column.")
+                    if not _pg_has('google_workspace_email'):
+                        conn.execute(text(
+                            "ALTER TABLE teacher_staff ADD COLUMN google_workspace_email VARCHAR(120)"
+                        ))
+                        conn.commit()
+                        print("Added teacher_staff.google_workspace_email column.")
+                        try:
+                            conn.execute(text(
+                                "CREATE INDEX IF NOT EXISTS ix_teacher_staff_google_workspace_email "
+                                "ON teacher_staff (google_workspace_email)"
+                            ))
+                            conn.commit()
+                        except Exception:
+                            pass
         except Exception as e:
             print(f"Note: teacher_staff status columns check failed (may already exist): {e}")
 

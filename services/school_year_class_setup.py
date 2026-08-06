@@ -10,7 +10,7 @@ from __future__ import annotations
 from flask import Request
 
 from extensions import db
-from models import Class, Enrollment, Student, TeacherStaff
+from models import Class, Enrollment, SchoolYear, Student, TeacherStaff
 from utils.core_class_catalog import (
     SETUP_GRADE_LEVELS,
     all_catalog_entries,
@@ -233,6 +233,170 @@ def auto_enroll_students_by_grade(class_ids: list[int], school_year_id: int) -> 
         db.session.commit()
 
     return {'enrolled_count': enrolled_count, 'by_class': by_class}
+
+
+def _core_class_ids_for_grade(school_year_id: int, grade_level: int) -> set[int]:
+    """Active-year class IDs that match the core catalog for ``grade_level``."""
+    from utils.core_class_catalog import all_catalog_entries
+
+    grade = int(grade_level)
+    existing = (
+        Class.query.filter_by(school_year_id=school_year_id, is_active=True).all()
+    )
+    ids: set[int] = set()
+    for spec in all_catalog_entries([grade]):
+        entry = {
+            'subject': spec['subject'],
+            'match_tokens': spec['match_tokens'],
+        }
+        for c in existing:
+            if _entry_matches_class(c, grade, entry):
+                ids.add(int(c.id))
+                break
+    return ids
+
+
+def resync_student_core_enrollments_for_grade_change(
+    student: Student,
+    *,
+    old_grade: int | None,
+    new_grade: int | None,
+    school_year_id: int | None = None,
+) -> dict:
+    """
+    When a student's grade changes mid-year, move them between core classes.
+
+    - Drops active enrollments in core classes for the old grade (electives untouched)
+    - Enrolls into matching core classes for the new grade in the active school year
+    - Does not create missing classes; skips catalog rows with no matching Class
+
+    Caller commits.
+    """
+    out = {
+        'dropped': [],
+        'enrolled': [],
+        'missing_classes': [],
+        'skipped': False,
+        'reason': None,
+    }
+    if student is None or getattr(student, 'is_deleted', False):
+        out['skipped'] = True
+        out['reason'] = 'missing_or_deleted_student'
+        return out
+    if old_grade is None or new_grade is None:
+        out['skipped'] = True
+        out['reason'] = 'grade_missing'
+        return out
+    try:
+        old_g = int(old_grade)
+        new_g = int(new_grade)
+    except (TypeError, ValueError):
+        out['skipped'] = True
+        out['reason'] = 'grade_invalid'
+        return out
+    if old_g == new_g:
+        out['skipped'] = True
+        out['reason'] = 'unchanged'
+        return out
+
+    if school_year_id is None:
+        year = SchoolYear.query.filter_by(is_active=True).first()
+        school_year_id = year.id if year else None
+    if not school_year_id:
+        out['skipped'] = True
+        out['reason'] = 'no_active_school_year'
+        return out
+
+    old_core_ids = _core_class_ids_for_grade(school_year_id, old_g)
+    new_core_ids = _core_class_ids_for_grade(school_year_id, new_g)
+
+    from utils.core_class_catalog import class_name_for_grade, catalog_entries_for_grade
+
+    # Report catalog rows that have no Class yet for the new grade.
+    existing = Class.query.filter_by(school_year_id=school_year_id, is_active=True).all()
+    for entry in catalog_entries_for_grade(new_g):
+        matched = any(_entry_matches_class(c, new_g, entry) for c in existing)
+        if not matched:
+            out['missing_classes'].append(class_name_for_grade(new_g, entry))
+
+    # Drop old-grade core enrollments that are not also desired for the new grade.
+    to_drop = old_core_ids - new_core_ids
+    if to_drop:
+        enrollments = (
+            Enrollment.query.filter(
+                Enrollment.student_id == student.id,
+                Enrollment.class_id.in_(list(to_drop)),
+                Enrollment.is_active.is_(True),
+            ).all()
+        )
+        for enr in enrollments:
+            enr.is_active = False
+            if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
+                from datetime import datetime, timezone
+
+                enr.dropped_at = datetime.now(timezone.utc)
+            cls = db.session.get(Class, enr.class_id)
+            out['dropped'].append(
+                {
+                    'class_id': enr.class_id,
+                    'class_name': getattr(cls, 'name', None),
+                }
+            )
+
+    # Enroll into new-grade core classes.
+    for class_id in sorted(new_core_ids):
+        exists = Enrollment.query.filter_by(
+            student_id=student.id,
+            class_id=class_id,
+            is_active=True,
+        ).first()
+        if exists:
+            continue
+        # Reactivate a prior inactive row if present.
+        prior = Enrollment.query.filter_by(
+            student_id=student.id,
+            class_id=class_id,
+        ).first()
+        if prior:
+            prior.is_active = True
+            if hasattr(prior, 'dropped_at'):
+                prior.dropped_at = None
+        else:
+            db.session.add(
+                Enrollment(student_id=student.id, class_id=class_id, is_active=True)
+            )
+        cls = db.session.get(Class, class_id)
+        out['enrolled'].append(
+            {
+                'class_id': class_id,
+                'class_name': getattr(cls, 'name', None),
+            }
+        )
+
+    # Keep StudentSchoolYear in sync when present.
+    try:
+        from utils.report_card_school_year import upsert_student_school_year
+
+        upsert_student_school_year(student.id, school_year_id, new_g, enrolled=True)
+    except Exception:
+        pass
+
+    # Best-effort: refresh Google Classroom / Group membership for touched classes.
+    touched = {row['class_id'] for row in out['dropped'] + out['enrolled']}
+    for class_id in touched:
+        try:
+            from services.class_google_group import schedule_try_provision_class_google_groups
+
+            schedule_try_provision_class_google_groups([class_id])
+        except Exception:
+            try:
+                from services.class_google_group import try_provision_class_google_group
+
+                try_provision_class_google_group(class_id)
+            except Exception:
+                pass
+
+    return out
 
 
 def run_core_class_setup(

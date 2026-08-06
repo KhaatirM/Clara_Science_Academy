@@ -110,6 +110,8 @@ def promote_student_one_grade(student: Student) -> bool:
     student.year_end_intent = None
     student.is_repeating = False
     student.status_updated_at = datetime.now(timezone.utc)
+    old_grade = int(gl)
+    new_grade = int(student.grade_level)
     try:
         from models import SchoolYear
         from utils.report_card_school_year import upsert_student_school_year
@@ -119,6 +121,16 @@ def promote_student_one_grade(student: Student) -> bool:
             upsert_student_school_year(
                 student.id, active.id, int(student.grade_level), enrolled=True
             )
+    except Exception:
+        pass
+    try:
+        from services.school_year_class_setup import (
+            resync_student_core_enrollments_for_grade_change,
+        )
+
+        resync_student_core_enrollments_for_grade_change(
+            student, old_grade=old_grade, new_grade=new_grade
+        )
     except Exception:
         pass
     # Best-effort: move Workspace OU (e.g. Middle → High School) while login still exists.

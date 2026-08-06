@@ -33,6 +33,7 @@ def run_database_fix():
                 'fix_class_table_schema.py',
                 'fix_production_voided_fields.py',
                 'fix_production_teacher_staff_deleted_fields.py',
+                'fix_teacher_staff_google_workspace_email.py',
                 'fix_production_student_deleted_fields.py',
                 'add_quiz_sections.py',
                 'add_quiz_progress_timer_fields.py',  # timer_started_at, timer_remaining_seconds on quiz_progress

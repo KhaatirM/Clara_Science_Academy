@@ -2721,6 +2721,26 @@ def edit_student(student_id):
 
         parent_creds = sync_student_parent_portal(student)
 
+        grade_resync = None
+        if prev_grade is not None and student.grade_level is not None and int(prev_grade) != int(student.grade_level):
+            try:
+                from services.school_year_class_setup import (
+                    resync_student_core_enrollments_for_grade_change,
+                )
+
+                grade_resync = resync_student_core_enrollments_for_grade_change(
+                    student,
+                    old_grade=int(prev_grade),
+                    new_grade=int(student.grade_level),
+                )
+            except Exception as e:
+                current_app.logger.warning(
+                    "Core class resync after grade change failed for student %s: %s",
+                    student.id,
+                    e,
+                )
+                grade_resync = None
+
         db.session.commit()
         if pending_ws_suspend:
             _suspend_student_google_workspace(student, workspace_email=pending_ws_suspend)
@@ -2739,6 +2759,24 @@ def edit_student(student_id):
                 )
 
         response = {"success": True, "message": "Student updated successfully.", "redirect": _spa_students_list_url()}
+        if grade_resync and not grade_resync.get("skipped"):
+            dropped_n = len(grade_resync.get("dropped") or [])
+            enrolled_n = len(grade_resync.get("enrolled") or [])
+            missing = grade_resync.get("missing_classes") or []
+            bits = []
+            if dropped_n or enrolled_n:
+                bits.append(
+                    f"Core classes updated for new grade (left {dropped_n}, joined {enrolled_n})."
+                )
+            if missing:
+                bits.append(
+                    "Missing core class(es) for this grade: " + ", ".join(missing[:8])
+                    + ("" if len(missing) <= 8 else "…")
+                    + ". Create them in School Year Class Setup, then re-save."
+                )
+            if bits:
+                response["message"] = "Student updated successfully. " + " ".join(bits)
+            response["grade_core_resync"] = grade_resync
         if new_creds:
             promoted = (prev_grade is not None and not grade_may_have_login(prev_grade)) and grade_may_have_login(
                 student.grade_level

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import json
 from services.google_sync_tasks import sync_single_user_to_google
 from services.google_directory_service import suspend_user
+from services.google_workspace_offboard import offboard_staff_workspace_account
 from utils.google_workspace_passwords import new_google_workspace_initial_password
 from services.email_service import send_staff_welcome_email
 from utils.credential_modal import staff_directory_only_modal_payload, staff_full_modal_payload
@@ -19,6 +20,13 @@ from utils.spa_management_urls import react_spa_enabled
 import os
 import uuid
 from management_routes.utils import allowed_file
+
+
+def _remember_staff_workspace_email(teacher_staff, email: str | None) -> None:
+    addr = (email or "").strip()
+    if not addr or not teacher_staff:
+        return
+    teacher_staff.google_workspace_email = addr
 
 
 def _remove_staff_upload_photo(filename: str) -> None:
@@ -128,20 +136,37 @@ def _allocate_workspace_email(first_name: str, last_name: str):
         counter += 1
 
 
-def _suspend_staff_google_workspace(user) -> None:
-    """Best-effort suspend when portal access is removed or staff is offboarded."""
+def _suspend_staff_google_workspace(user, *, teacher_staff=None) -> None:
+    """Move to Terminated & Removed, suspend, and queue license removal (24h)."""
     email = (getattr(user, "google_workspace_email", None) or "").strip()
+    if not email and teacher_staff is not None:
+        email = (getattr(teacher_staff, "google_workspace_email", None) or "").strip()
     if not email:
         return
+    staff = teacher_staff
+    if staff is None and getattr(user, "teacher_staff_id", None):
+        staff = db.session.get(TeacherStaff, user.teacher_staff_id)
+    if staff is not None:
+        _remember_staff_workspace_email(staff, email)
     try:
-        suspend_user(email)
+        offboard_staff_workspace_account(
+            email,
+            staff_id=getattr(staff, "id", None) or getattr(user, "teacher_staff_id", None),
+            commit_queue=False,
+        )
     except Exception as e:
         current_app.logger.warning(
-            "Google Workspace suspend failed for staff user %s (%s): %s",
+            "Google Workspace offboard failed for staff user %s (%s): %s",
             getattr(user, "id", None),
             email,
             e,
         )
+        try:
+            suspend_user(email)
+        except Exception as suspend_err:
+            current_app.logger.warning(
+                "Fallback suspend also failed for %s: %s", email, suspend_err
+            )
 
 
 def _post_commit_staff_google_pipeline(
@@ -487,6 +512,7 @@ def add_teacher_staff():
             user.teacher_staff_id = teacher_staff.id
             user.email = email
             user.google_workspace_email = generated_workspace_email
+            _remember_staff_workspace_email(teacher_staff, generated_workspace_email)
             user.is_temporary_password = True
             user.password_changed_at = None
             user.permissions = permissions_json
@@ -758,6 +784,7 @@ def edit_teacher_staff(staff_id):
                                 "management/add_teacher_staff.html", **_edit_staff_form_context(teacher_staff)
                             )
                         user.google_workspace_email = gwe
+                        _remember_staff_workspace_email(teacher_staff, gwe)
                     else:
                         user.google_workspace_email = None
                 else:
@@ -770,6 +797,7 @@ def edit_teacher_staff(staff_id):
                     new_user.teacher_staff_id = staff_id
                     new_user.email = email
                     new_user.google_workspace_email = generated_workspace_email
+                    _remember_staff_workspace_email(teacher_staff, generated_workspace_email)
                     new_user.is_temporary_password = True
                     new_user.password_changed_at = None
                     new_user.permissions = permissions_json
@@ -784,7 +812,7 @@ def edit_teacher_staff(staff_id):
                     )
             else:
                 if user:
-                    _suspend_staff_google_workspace(user)
+                    _suspend_staff_google_workspace(user, teacher_staff=teacher_staff)
                     fallback_uid = _actor_user_id_for_staff_removal([user.id])
                     if not fallback_uid:
                         raise ValueError(
@@ -1173,7 +1201,7 @@ def remove_teacher_staff(staff_id):
         user_accounts = User.query.filter_by(teacher_staff_id=staff_id).all()
         if user_accounts:
             for user in user_accounts:
-                _suspend_staff_google_workspace(user)
+                _suspend_staff_google_workspace(user, teacher_staff=teacher_staff)
             uids = [u.id for u in user_accounts]
             fallback_uid = _actor_user_id_for_staff_removal(uids)
             if not fallback_uid:
@@ -1184,6 +1212,23 @@ def remove_teacher_staff(staff_id):
             for user in user_accounts:
                 _detach_user_references_before_delete(user.id, fallback_uid)
                 db.session.delete(user)
+        else:
+            # No portal User — still offboard any remembered Workspace address.
+            remembered = (getattr(teacher_staff, "google_workspace_email", None) or "").strip()
+            if remembered:
+                try:
+                    offboard_staff_workspace_account(
+                        remembered,
+                        staff_id=staff_id,
+                        commit_queue=False,
+                    )
+                except Exception as e:
+                    current_app.logger.warning(
+                        "Google Workspace offboard (no portal user) failed for staff %s (%s): %s",
+                        staff_id,
+                        remembered,
+                        e,
+                    )
         
         # Historical primary teacher_id on archived/closed-year classes is kept.
         # Assignments/grades FKs also remain intact.

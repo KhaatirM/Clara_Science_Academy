@@ -128,6 +128,11 @@ export interface CredentialModalPayload {
   title: string
   subtitle?: string
   fields: { label: string; value: string; mono?: boolean }[]
+  groups?: {
+    title: string
+    subtitle?: string
+    fields: { label: string; value: string; mono?: boolean }[]
+  }[]
   alerts?: { type: string; text: string }[]
   notes?: string[]
 }

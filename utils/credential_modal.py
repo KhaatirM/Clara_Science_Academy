@@ -241,11 +241,31 @@ def staff_directory_only_modal_payload(
 def parent_credentials_modal_payload(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Credential summary after parent portal accounts are created or temp passwords re-issued."""
     fields: List[Dict[str, Any]] = []
+    groups: List[Dict[str, Any]] = []
     for row in rows:
         if not row.get("portal_password"):
             continue
         label_prefix = (row.get("parent_name") or f"Parent {row.get('slot') or ''}").strip()
         child = (row.get("student_name") or "").strip()
+        status = "New account" if row.get("created_new") else "Password re-issued"
+        group_fields: List[Dict[str, Any]] = [
+            {"label": "Username", "value": row.get("username") or "—", "mono": True},
+            {
+                "label": "Temporary password",
+                "value": row.get("portal_password") or "—",
+                "mono": True,
+            },
+        ]
+        if row.get("email"):
+            group_fields.append({"label": "Email on file", "value": row["email"], "mono": True})
+        groups.append(
+            {
+                "title": label_prefix or "Parent",
+                "subtitle": (f"Child: {child} · {status}" if child else status),
+                "fields": group_fields,
+            }
+        )
+        # Flat fields kept for older clients / merged student+parent modals.
         fields.append(
             {
                 "label": f"{label_prefix} — username" + (f" (child: {child})" if child else ""),
@@ -272,8 +292,9 @@ def parent_credentials_modal_payload(rows: List[Dict[str, Any]]) -> Dict[str, An
     return {
         "variant": "parent_portal",
         "title": "Parent portal login ready",
-        "subtitle": "Copy these details before closing — share them securely with the family",
+        "subtitle": "Share these securely with the family — then close this window",
         "fields": fields,
+        "groups": groups,
         "alerts": [
             {
                 "type": "info",
@@ -287,7 +308,7 @@ def parent_credentials_modal_payload(rows: List[Dict[str, Any]]) -> Dict[str, An
         "notes": [
             "Parents sign in on the website login page with the username and temporary password above.",
             "They will be asked to set a new password on first login.",
-            "If you already provisioned earlier and see these again, temporary passwords were re-issued "
-            "because the parent had not finished changing their password yet.",
+            "This summary only appears when a parent account is newly created or you explicitly re-issue "
+            "credentials from Family Portal / Parents tools — not on every student edit.",
         ],
     }

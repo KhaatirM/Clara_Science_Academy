@@ -30,6 +30,7 @@ export function StudentEditModal({ studentId, onClose, onSaved }: StudentEditMod
   const [error, setError] = useState<string | null>(null)
   const [student, setStudent] = useState<StudentDetail | null>(null)
   const [credentialModal, setCredentialModal] = useState<CredentialModalPayload | null>(null)
+  const [pendingSaveMessage, setPendingSaveMessage] = useState('Student updated successfully.')
   const entranceYears = useMemo(() => buildEntranceSchoolYearOptions(), [])
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function StudentEditModal({ studentId, onClose, onSaved }: StudentEditMod
       const fd = new FormData(formRef.current)
       const result = await submitStudentEditForm(studentId, fd)
       if (result.credential_modal) {
+        setPendingSaveMessage(result.message || 'Student updated successfully.')
         setCredentialModal(result.credential_modal)
       } else {
         onSaved(result.message || 'Student updated successfully.')
@@ -63,7 +65,7 @@ export function StudentEditModal({ studentId, onClose, onSaved }: StudentEditMod
 
   const closeCredentialModal = () => {
     setCredentialModal(null)
-    onSaved('Student updated successfully.')
+    onSaved(pendingSaveMessage)
   }
 
   const gradeValue =

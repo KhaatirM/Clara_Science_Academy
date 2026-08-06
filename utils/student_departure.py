@@ -54,12 +54,13 @@ def _deactivate_enrollments(student_id: int) -> None:
 
 
 def _strip_and_suspend(student: Student) -> None:
-    """Best-effort Workspace OU move + suspend, then remove portal login."""
+    """Best-effort Workspace OU move + suspend + queue license removal, then remove portal login."""
     from management_routes.students import (
         _apply_student_google_ou_lifecycle,
         _strip_student_user_account,
         _student_workspace_email,
     )
+    from services.google_workspace_offboard import enqueue_workspace_license_removal
 
     # Capture email before portal User is deleted.
     ws_email = _student_workspace_email(student)
@@ -68,6 +69,24 @@ def _strip_and_suspend(student: Student) -> None:
         _apply_student_google_ou_lifecycle(
             student, workspace_email=ws_email, force_suspend=True
         )
+        try:
+            from services.google_directory_service import get_google_user
+
+            g = get_google_user(ws_email, quiet_404=True)
+            if g and bool(g.get("suspended", False)):
+                enqueue_workspace_license_removal(
+                    ws_email,
+                    kind="student",
+                    related_id=getattr(student, "id", None),
+                    commit=False,
+                )
+        except Exception:
+            enqueue_workspace_license_removal(
+                ws_email,
+                kind="student",
+                related_id=getattr(student, "id", None),
+                commit=False,
+            )
     _strip_student_user_account(student)
 
 

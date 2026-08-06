@@ -982,7 +982,23 @@ def add_student():
                 google_user_created=google_user_created,
                 google_warning=google_warning,
             )
-            msg = "Student saved. Use the credential summary popup to copy login details."
+            try:
+                from services.email_service import notify_school_admins_new_student_login
+
+                notify_school_admins_new_student_login(
+                    student_name=f"{first_name} {last_name}".strip(),
+                    student_id=student.student_id or "",
+                    username=username,
+                    portal_password=password,
+                    school_email=generated_workspace_email,
+                    google_initial_password=google_initial_password,
+                    context_note="New student added (grade 3+): portal login and school email credentials.",
+                )
+            except Exception as e:
+                current_app.logger.warning(
+                    "Admin notification email for new student add failed: %s", e
+                )
+            msg = "Student saved. Use the credential summary popup to copy login details. Administrators were emailed a copy."
             if _students_wants_json():
                 return jsonify({
                     "success": True,

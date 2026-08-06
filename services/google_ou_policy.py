@@ -500,35 +500,58 @@ def sync_student_google_suspension(
     is_active: bool,
     marked_for_removal: bool,
     is_deleted: bool,
+    related_student_id: int | None = None,
 ) -> Optional[bool]:
     """
     Align Google suspension with student lifecycle policy.
 
     Active students stay unsuspended. Alumni departures get a 1-year grace period.
     Transferred & Removed departures suspend immediately.
+    When suspending, queues Workspace license removal for 24 hours later.
     """
     from services.google_directory_service import (
         set_user_suspended,
         suspend_user,
         sync_user_suspension_with_db_is_active,
     )
+    from services.google_workspace_offboard import enqueue_workspace_license_removal
 
     if not _is_departing(is_active=is_active, marked_for_removal=marked_for_removal, is_deleted=is_deleted):
         return sync_user_suspension_with_db_is_active(user_email, True)
 
+    def _suspend_and_queue() -> Optional[bool]:
+        ok = suspend_user(user_email)
+        if ok:
+            enqueue_workspace_license_removal(
+                user_email,
+                kind="student",
+                related_id=related_student_id,
+                commit=True,
+            )
+        return ok
+
     if decision.should_suspend_now:
-        return suspend_user(user_email)
+        return _suspend_and_queue()
     if decision.reason == "alumni_completed_level":
         return set_user_suspended(user_email, False)
-    return suspend_user(user_email)
+    return _suspend_and_queue()
 
 
 def sync_staff_google_suspension(user_email: str, staff: "TeacherStaffModel") -> Optional[bool]:
     """Staff marked for removal / inactive / deleted → suspend immediately in Google."""
     from services.google_directory_service import suspend_user, sync_user_suspension_with_db_is_active
+    from services.google_workspace_offboard import enqueue_workspace_license_removal
 
     if staff_should_suspend_immediately(staff):
-        return suspend_user(user_email)
+        ok = suspend_user(user_email)
+        if ok:
+            enqueue_workspace_license_removal(
+                user_email,
+                kind="staff",
+                related_id=getattr(staff, "id", None),
+                commit=True,
+            )
+        return ok
     return sync_user_suspension_with_db_is_active(user_email, True)
 
 

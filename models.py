@@ -329,6 +329,9 @@ class TeacherStaff(db.Model):
 
     # When False: directory/HR only — no User row, no generated website login or Workspace email.
     portal_login = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Last known Workspace address (kept after portal User is deleted so offboard / sync can find it).
+    google_workspace_email = db.Column(db.String(120), nullable=True, index=True)
     
     # File uploads
     resume_filename = db.Column(db.String(255), nullable=True)
@@ -3344,4 +3347,31 @@ class ClassNotesItem(db.Model):
 
     def __repr__(self):
         return f"ClassNotesItem(id={self.id}, class_id={self.class_id}, file={self.original_filename})"
+
+
+class GoogleWorkspaceOffboardJob(db.Model):
+    """
+    Queue: after a Workspace account is suspended, wait then revoke product licenses.
+
+    Policy: suspend first → wait 24h → remove licenses (students and staff).
+    """
+
+    __tablename__ = "google_workspace_offboard_job"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False, index=True)
+    kind = db.Column(db.String(20), nullable=False)  # student | staff
+    related_id = db.Column(db.Integer, nullable=True)
+    suspended_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    license_remove_after = db.Column(db.DateTime, nullable=False)
+    license_removed_at = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(40), nullable=False, default="pending")  # pending|done|failed|skipped
+    last_error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return (
+            f"GoogleWorkspaceOffboardJob(id={self.id}, email={self.email!r}, "
+            f"status={self.status!r})"
+        )
 

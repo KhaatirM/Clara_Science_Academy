@@ -138,13 +138,19 @@ def parent_portal_status_for_student(student: Student) -> dict[str, Any]:
     return out
 
 
-def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[dict[str, Any]]:
+def provision_parent_for_student_slot(
+    student: Student,
+    slot: int,
+    *,
+    reissue_temporary_password: bool = False,
+) -> Optional[dict[str, Any]]:
     """
     Create or reuse a Parent User and link them to ``student`` for slot 1 or 2.
     Caller must commit. Returns credential dict or None if slot has no email.
 
-    If a Parent account already exists with ``is_temporary_password`` still True,
-    a new temporary password is issued so staff can retrieve credentials again.
+    Temporary passwords are re-issued only when ``reissue_temporary_password`` is True
+    (Parents tools). Routine student edits leave existing temps alone so the login
+    popup does not appear on every save.
     """
     if getattr(student, "is_deleted", False):
         return None
@@ -180,8 +186,7 @@ def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[d
             db.session.add(user)
             db.session.flush()
             created_new = True
-    elif getattr(user, "is_temporary_password", False):
-        # Account exists but parent never finished setup — re-issue so staff can share again.
+    elif getattr(user, "is_temporary_password", False) and reissue_temporary_password:
         temp_password = _temporary_parent_password(info["phone"])
         user.password_hash = generate_password_hash(temp_password)
         user.is_temporary_password = True
@@ -217,11 +222,20 @@ def provision_parent_for_student_slot(student: Student, slot: int) -> Optional[d
     return result
 
 
-def provision_all_parents_for_student(student: Student) -> list[dict[str, Any]]:
+def provision_all_parents_for_student(
+    student: Student,
+    *,
+    reissue_temporary_password: bool = True,
+) -> list[dict[str, Any]]:
+    """Explicit Parents-tools provision: re-issues temps by default."""
     results = []
     for slot in (1, 2):
         try:
-            row = provision_parent_for_student_slot(student, slot)
+            row = provision_parent_for_student_slot(
+                student,
+                slot,
+                reissue_temporary_password=reissue_temporary_password,
+            )
             if row:
                 results.append(row)
         except ValueError:

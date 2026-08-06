@@ -333,6 +333,8 @@ def main() -> int:
             u = user_by_teacher_id.get(staff.id)
             email = (u.google_workspace_email or "").strip() if u else ""
             if not email:
+                email = (getattr(staff, "google_workspace_email", None) or "").strip()
+            if not email:
                 continue
 
             # Staff OU tiers require TeacherStaff + linked User (u may be None if no login row).
@@ -351,9 +353,27 @@ def main() -> int:
                 if apply_changes:
                     sync_staff_google_suspension(email, staff)
                     _sleep_ms(sleep_ms)
+                    # Still park the account under Terminated & Removed (do not skip OU move).
+                    g_user = get_google_user(email)
+                    _sleep_ms(sleep_ms)
+                    if g_user:
+                        current_ou = g_user.get("orgUnitPath")
+                        if current_ou != target_staff_ou:
+                            ou_res = move_user_to_ou(email, target_staff_ou)
+                            if ou_res is True:
+                                moved_ous += 1
+                                print(f"[MOVE] ineligible staff {email}: {current_ou} -> {target_staff_ou}")
+                            elif ou_res is False:
+                                errors += 1
+                                print(f"[ERROR] failed OU move for ineligible staff {email}")
+                    from services.google_workspace_offboard import enqueue_workspace_license_removal
+
+                    enqueue_workspace_license_removal(
+                        email, kind="staff", related_id=staff.id, commit=True
+                    )
                 print(
                     f"[SKIP] {email} — not eligible for active Directory sync "
-                    "(removed, inactive, or portal login off). Suspended if account exists."
+                    "(removed, inactive, or portal login off). Suspended / Terminated OU / license queue if account exists."
                 )
                 continue
 

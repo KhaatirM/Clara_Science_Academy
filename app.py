@@ -2182,6 +2182,23 @@ def create_app(config_class=None):
         result = run_closure_tick(actor_label='cron')
         return jsonify({'ok': True, 'result': result})
 
+    @app.route('/cron/google-license-offboard', methods=['POST'])
+    @csrf.exempt
+    def cron_google_license_offboard():
+        """
+        Process Workspace license revocations queued after suspension (24h delay).
+        Protect with CRON_SECRET: header X-Cron-Secret or query ?token=
+        """
+        secret = app.config.get('CRON_SECRET') or os.environ.get('CRON_SECRET')
+        if not secret:
+            return jsonify({'ok': False, 'error': 'CRON_SECRET is not configured'}), 503
+        received = request.headers.get('X-Cron-Secret') or request.args.get('token')
+        if received != secret:
+            return jsonify({'ok': False, 'error': 'invalid or missing secret'}), 403
+        from services.google_workspace_offboard import process_due_license_removals
+        result = process_due_license_removals()
+        return jsonify(result)
+
     # ------------------------------------------------------------------
     # Request access log via Flask (Werkzeug's own access log sometimes
     # doesn't propagate to the root logger under certain Windows setups).

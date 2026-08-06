@@ -861,6 +861,41 @@ def sync_user_suspension_with_db_is_active(user_email: str, db_is_active: bool) 
     return set_user_suspended(email, desired_suspended)
 
 
+def set_google_user_password(
+    user_email: str,
+    new_password: str,
+    *,
+    change_at_next_login: bool = True,
+) -> bool:
+    """
+    Reset a Workspace user's password (Directory API).
+    Returns True on success.
+    """
+    service = get_directory_service()
+    if not service:
+        return False
+    email = (user_email or "").strip()
+    pw = (new_password or "").strip()
+    if not email or not pw:
+        return False
+    try:
+        service.users().update(
+            userKey=email,
+            body={
+                "password": pw,
+                "changePasswordAtNextLogin": bool(change_at_next_login),
+            },
+        ).execute()
+        current_app.logger.info("Reset Google password for %s", email)
+        return True
+    except HttpError as e:
+        current_app.logger.error("Directory API error resetting password for %s: %s", email, e)
+        return False
+    except Exception as e:
+        current_app.logger.error("Failed to reset Google password for %s: %s", email, e)
+        return False
+
+
 def suspend_user(user_email: str) -> bool:
     """
     Suspend (disable login for) an existing Google Workspace user.

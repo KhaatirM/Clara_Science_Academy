@@ -287,6 +287,98 @@ Share these with the family through a secure channel. The website password and G
     return sent
 
 
+def notify_school_admins_student_credentials_digest(
+    credentials: list[dict],
+    *,
+    context_note: str | None = None,
+) -> int:
+    """
+    One email to Directors / School Administrators with many student portal (+ Google) temps.
+
+    Each item should include: student_name, student_id, username, portal_password,
+    and optionally school_email, google_initial_password, grade_level.
+    """
+    rows = [
+        r
+        for r in (credentials or [])
+        if r.get("username") and r.get("portal_password")
+    ]
+    if not rows:
+        return 0
+
+    recipients = _school_admin_recipient_emails()
+    if not recipients:
+        current_app.logger.warning(
+            "notify_school_admins_student_credentials_digest: no admin emails found"
+        )
+        return 0
+
+    esc = html.escape
+    subject = f"Student temporary logins ({len(rows)}) — Clara Science Academy"
+    note_block = f"\n\nNote: {context_note}" if context_note else ""
+
+    lines = []
+    html_rows = []
+    for r in rows:
+        name = (r.get("student_name") or "").strip() or "—"
+        sid = (r.get("student_id") or "—")
+        grade = r.get("grade_level")
+        grade_s = f"Grade {grade}" if grade is not None else "—"
+        user = r.get("username") or "—"
+        portal_pw = r.get("portal_password") or "—"
+        school = (r.get("school_email") or "").strip() or "—"
+        google_pw = (r.get("google_initial_password") or "").strip() or "— (unchanged / not reset)"
+        lines.append(
+            f"- {name} ({sid}, {grade_s})\n"
+            f"  Website username: {user}\n"
+            f"  Website temp password: {portal_pw}\n"
+            f"  School email: {school}\n"
+            f"  Google temp password: {google_pw}"
+        )
+        html_rows.append(
+            "<tr>"
+            f"<td>{esc(name)}</td>"
+            f"<td>{esc(str(sid))}</td>"
+            f"<td>{esc(grade_s)}</td>"
+            f"<td><code>{esc(user)}</code></td>"
+            f"<td><code>{esc(portal_pw)}</code></td>"
+            f"<td><code>{esc(school)}</code></td>"
+            f"<td><code>{esc(google_pw)}</code></td>"
+            "</tr>"
+        )
+
+    body_text = (
+        "Student website logins (temporary passwords) were re-issued so School Administrators "
+        "can share them with families.\n\n"
+        + "\n\n".join(lines)
+        + note_block
+        + "\n\nPortal and Google passwords are different. Students must change both on first sign-in."
+        "\n\n— Automated message from Clara Science Academy\n"
+    )
+    body_html = f"""<p>Student website logins (temporary passwords) were re-issued for handoff.</p>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
+<thead>
+<tr>
+<th>Student</th><th>ID</th><th>Grade</th><th>Website username</th>
+<th>Website temp password</th><th>School email</th><th>Google temp password</th>
+</tr>
+</thead>
+<tbody>
+{''.join(html_rows)}
+</tbody>
+</table>
+<p>Portal and Google passwords are <strong>different</strong>. Share securely with families.</p>
+{f"<p><em>{esc(context_note)}</em></p>" if context_note else ""}
+<p style="color:#666;font-size:0.9em;">— Clara Science Academy</p>
+"""
+
+    sent = 0
+    for to in recipients:
+        if send_email(to, subject, body_text, body_html=body_html):
+            sent += 1
+    return sent
+
+
 def notify_school_admins_parent_logins(
     credentials: list[dict],
     *,

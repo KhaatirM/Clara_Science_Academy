@@ -399,6 +399,112 @@ def resync_student_core_enrollments_for_grade_change(
     return out
 
 
+def _all_core_class_ids_for_year(school_year_id: int) -> set[int]:
+    from utils.core_class_catalog import SETUP_GRADE_LEVELS
+
+    ids: set[int] = set()
+    for g in SETUP_GRADE_LEVELS:
+        ids |= _core_class_ids_for_grade(school_year_id, g)
+    return ids
+
+
+def align_student_core_enrollments_to_current_grade(
+    student: Student,
+    *,
+    school_year_id: int | None = None,
+) -> dict:
+    """
+    Ensure the student is only in core classes for their *current* grade.
+
+    - Enrolls missing current-grade core classes
+    - Drops active enrollments in other-grade core classes
+    - Leaves electives / non-catalog classes alone
+
+    Caller commits.
+    """
+    out = {
+        'dropped': [],
+        'enrolled': [],
+        'missing_classes': [],
+        'skipped': False,
+        'reason': None,
+    }
+    if student is None or getattr(student, 'is_deleted', False):
+        out['skipped'] = True
+        out['reason'] = 'missing_or_deleted_student'
+        return out
+    if student.grade_level is None:
+        out['skipped'] = True
+        out['reason'] = 'grade_missing'
+        return out
+
+    if school_year_id is None:
+        year = SchoolYear.query.filter_by(is_active=True).first()
+        school_year_id = year.id if year else None
+    if not school_year_id:
+        out['skipped'] = True
+        out['reason'] = 'no_active_school_year'
+        return out
+
+    grade = int(student.grade_level)
+    desired = _core_class_ids_for_grade(school_year_id, grade)
+    all_core = _all_core_class_ids_for_year(school_year_id)
+
+    from utils.core_class_catalog import class_name_for_grade, catalog_entries_for_grade
+
+    existing = Class.query.filter_by(school_year_id=school_year_id, is_active=True).all()
+    for entry in catalog_entries_for_grade(grade):
+        if not any(_entry_matches_class(c, grade, entry) for c in existing):
+            out['missing_classes'].append(class_name_for_grade(grade, entry))
+
+    wrong = all_core - desired
+    if wrong:
+        enrollments = (
+            Enrollment.query.filter(
+                Enrollment.student_id == student.id,
+                Enrollment.class_id.in_(list(wrong)),
+                Enrollment.is_active.is_(True),
+            ).all()
+        )
+        for enr in enrollments:
+            enr.is_active = False
+            if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
+                from datetime import datetime, timezone
+
+                enr.dropped_at = datetime.now(timezone.utc)
+            cls = db.session.get(Class, enr.class_id)
+            out['dropped'].append(
+                {'class_id': enr.class_id, 'class_name': getattr(cls, 'name', None)}
+            )
+
+    for class_id in sorted(desired):
+        exists = Enrollment.query.filter_by(
+            student_id=student.id,
+            class_id=class_id,
+            is_active=True,
+        ).first()
+        if exists:
+            continue
+        prior = Enrollment.query.filter_by(
+            student_id=student.id,
+            class_id=class_id,
+        ).first()
+        if prior:
+            prior.is_active = True
+            if hasattr(prior, 'dropped_at'):
+                prior.dropped_at = None
+        else:
+            db.session.add(
+                Enrollment(student_id=student.id, class_id=class_id, is_active=True)
+            )
+        cls = db.session.get(Class, class_id)
+        out['enrolled'].append(
+            {'class_id': class_id, 'class_name': getattr(cls, 'name', None)}
+        )
+
+    return out
+
+
 def run_core_class_setup(
     school_year_id: int,
     grade_levels: list[int] | None,

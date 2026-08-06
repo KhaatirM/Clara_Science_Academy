@@ -57,6 +57,20 @@ def _student_email(student: Student) -> str | None:
     return None
 
 
+def _teacher_school_email(teacher: TeacherStaff) -> str | None:
+    """School / Google Workspace address only — never personal email on file."""
+    remembered = (getattr(teacher, "google_workspace_email", None) or "").strip()
+    if remembered:
+        return remembered
+    user = getattr(teacher, "user", None)
+    if user is None:
+        from models import User
+
+        user = User.query.filter_by(teacher_staff_id=teacher.id).first()
+    ws = (getattr(user, "google_workspace_email", None) or "").strip() if user else ""
+    return ws or None
+
+
 def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | None, str | None, int]:
     from .routes import (
         _get_points_earned,
@@ -230,7 +244,7 @@ def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | 
             "id": teacher.id,
             "name": f"{teacher.first_name or ''} {teacher.last_name or ''}".strip() or "Teacher",
             "position": teacher.position or "Teacher",
-            "email": teacher.email,
+            "email": _teacher_school_email(teacher),
             "phone": teacher.phone,
         }
 

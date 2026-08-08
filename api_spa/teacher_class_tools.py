@@ -220,7 +220,14 @@ def teacher_standards_get(class_id: int, grade: str):
     _, err = _require_class(class_id)
     if err:
         return err
-    grade_num = 1 if grade in ("grade1", "1") else 3
+    if grade in ("gradek", "kindergarten", "k", "0"):
+        grade_num = 0
+    elif grade in ("grade1", "1"):
+        grade_num = 1
+    elif grade in ("grade2", "2"):
+        grade_num = 2
+    else:
+        grade_num = 3
     student_raw = request.args.get("student_id")
     student_id = int(student_raw) if student_raw and str(student_raw).isdigit() else None
     return jsonify(
@@ -243,7 +250,14 @@ def teacher_standards_post(class_id: int, grade: str):
     _, err = _require_class(class_id)
     if err:
         return err
-    grade_num = 1 if grade in ("grade1", "1") else 3
+    if grade in ("gradek", "kindergarten", "k", "0"):
+        grade_num = 0
+    elif grade in ("grade1", "1"):
+        grade_num = 1
+    elif grade in ("grade2", "2"):
+        grade_num = 2
+    else:
+        grade_num = 3
     body = request.get_json(silent=True) or {}
     result = apply_grade_standards_changes(grade_num, class_id, body, current_user.id)
     status = 200 if result.get("success") else 400

@@ -114,7 +114,12 @@ export function ClassViewPage() {
   const pendingAssistantCount = data?.pending_assistant_count ?? 0
   const studentAssistantCount = data?.student_assistant_count ?? 0
   const hasStudentAssistants = studentAssistantCount > 0
-  const features = data?.features ?? { grade1_standards: false, grade3_standards: false, syllabus: false }
+  const features = data?.features ?? {
+    grade1_standards: false,
+    grade2_standards: false,
+    grade3_standards: false,
+    syllabus: false,
+  }
   const links: Partial<ClassManagementLinks> = data?.links ?? {}
 
   const cls = data?.class

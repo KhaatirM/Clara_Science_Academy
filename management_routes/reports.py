@@ -119,11 +119,53 @@ def _grade1_pdf_extras(student, school_year_id, selected_quarters, class_objects
     )
 
 
+def _grade2_pdf_extras(student, school_year_id, selected_quarters, class_objects, grades, include_attendance,
+                       report_card_data=None):
+    """Context variables for 2nd grade progress report (director layout)."""
+    if not student or getattr(student, 'grade_level', None) != 2:
+        return {}
+    from utils.report_card_grade2 import grade2_full_template_context
+    sid = student.id if hasattr(student, 'id') else student
+    return grade2_full_template_context(
+        sid,
+        school_year_id,
+        selected_quarters,
+        class_objects,
+        grades,
+        include_attendance=include_attendance,
+        report_card_data=report_card_data,
+    )
+
+
+def _kindergarten_pdf_extras(student, school_year_id, selected_quarters, class_objects, grades, include_attendance,
+                             report_card_data=None):
+    """Context variables for Kindergarten progress report."""
+    if not student or getattr(student, 'grade_level', None) != 0:
+        return {}
+    from utils.report_card_kindergarten import kindergarten_full_template_context
+    sid = student.id if hasattr(student, 'id') else student
+    return kindergarten_full_template_context(
+        sid,
+        school_year_id,
+        selected_quarters,
+        include_attendance=include_attendance,
+        report_card_data=report_card_data,
+    )
+
+
 def _elementary_pdf_extras(student, school_year_id, selected_quarters, class_objects, grades, include_attendance,
                            report_card_data=None):
-    """Merge grade-specific PDF context (1st and 3rd grade)."""
+    """Merge grade-specific PDF context (K, 1st, 2nd, and 3rd grade)."""
     ctx = {}
+    ctx.update(_kindergarten_pdf_extras(
+        student, school_year_id, selected_quarters, class_objects, grades,
+        include_attendance, report_card_data,
+    ))
     ctx.update(_grade1_pdf_extras(
+        student, school_year_id, selected_quarters, class_objects, grades,
+        include_attendance, report_card_data,
+    ))
+    ctx.update(_grade2_pdf_extras(
         student, school_year_id, selected_quarters, class_objects, grades,
         include_attendance, report_card_data,
     ))
@@ -136,12 +178,12 @@ def _elementary_pdf_extras(student, school_year_id, selected_quarters, class_obj
 
 def _report_card_template_name(grade_level, template_prefix):
     """Pick the PDF template for a student's grade level."""
+    if grade_level == 0:
+        return f'management/{template_prefix}_report_card_pdf_template_k.html'
     if grade_level == 1:
         return f'management/{template_prefix}_report_card_pdf_template_1.html'
     if grade_level == 2:
-        return f'management/{template_prefix}_report_card_pdf_template_1_2.html'
-    if grade_level == 0:
-        return f'management/{template_prefix}_report_card_pdf_template_1_2.html'
+        return f'management/{template_prefix}_report_card_pdf_template_2.html'
     if grade_level == 3:
         return f'management/{template_prefix}_report_card_pdf_template_3.html'
     return f'management/{template_prefix}_report_card_pdf_template_4_8.html'
@@ -1189,7 +1231,7 @@ def build_report_card_pdf_response(report_card):
         'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
         'ssn': getattr(student, 'ssn', None),
         'dob': _format_date_value(getattr(student, 'dob', None)),
-        'grade': pdf_grade,
+        'grade': 'K' if pdf_grade == 0 else pdf_grade,
         'gender': getattr(student, 'gender', 'N/A'),
         'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
         'phone': getattr(student, 'phone', ''),

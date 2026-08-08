@@ -306,19 +306,39 @@ export default function ReportCardsCategoryPage() {
         </div>
       </header>
 
-      {data.category.slug === 'elementary' && (data.urls.grade1_standards || data.urls.grade3_standards) ? (
+      {data.category.slug === 'elementary' &&
+      (data.urls.gradek_standards ||
+        data.urls.grade1_standards ||
+        data.urls.grade2_standards ||
+        data.urls.grade3_standards) ? (
         <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4">
           <p className="text-sm font-semibold text-hub-text">
             <i className="bi bi-check2-square mr-2 text-sky-700" aria-hidden />
             K–3 report cards use standards checklists on the PDF. Teachers fill marks in the checklist editors before you generate.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
+            {data.urls.gradek_standards ? (
+              <Link
+                to={spaRoute(data.urls.gradek_standards)}
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-300 bg-white px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-50"
+              >
+                Kindergarten standards editor
+              </Link>
+            ) : null}
             {data.urls.grade1_standards ? (
               <Link
                 to={spaRoute(data.urls.grade1_standards)}
                 className="inline-flex items-center gap-2 rounded-xl border border-sky-300 bg-white px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-50"
               >
                 1st grade standards editor
+              </Link>
+            ) : null}
+            {data.urls.grade2_standards ? (
+              <Link
+                to={spaRoute(data.urls.grade2_standards)}
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-300 bg-white px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-50"
+              >
+                2nd grade standards editor
               </Link>
             ) : null}
             {data.urls.grade3_standards ? (

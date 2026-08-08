@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated July 29, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated August 8, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,39 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – July 30, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 8, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>July 30</strong> (<strong>{{ app_version_display }}</strong>) makes <strong>promote / graduate / withdraw apply immediately</strong> (with an optional end-of-year intent checkbox), adds middle-school exit options, and improves closed-year report card grades.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 8</strong> (<strong>{{ app_version_display }}</strong>) ships <strong>Kindergarten and 2nd grade report cards</strong> with standards checklists, a fuller PDF logo, and 2nd grade pages that keep the header on page 1 only (with a full-page UNOFFICIAL watermark on later pages).</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 8, 2026 - K/2nd report cards -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Kindergarten &amp; 2nd Grade Report Cards – August 8, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Kindergarten &amp; 2nd grade PDFs:</strong> Official and unofficial progress reports for K and 2nd grade, with standards that print on the PDF.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Standards checklists:</strong> Report Cards quick actions and class tools include Kindergarten and 2nd grade standards entry (including Homeroom skills, habits, and writing for K).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>2nd grade page layout:</strong> The student/school header appears on page 1 only so Language Arts and Math standards can use the full page. Unofficial copies show a large greyed UNOFFICIAL stamp on continuation pages.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF header polish:</strong> Larger Clara logo, Entrance Year label, Kindergarten shown as K, and unofficial stamp clipped to the logo area.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Elementary report cards now cover K–3 with matching standards workflows for teachers and administrators.</p>
+                        </div>
+                    </div>
+
                     <!-- July 30, 2026 - MS exit + reports -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-mortarboard me-2"></i>Middle School Exit &amp; Reports – July 30, 2026</h6>
@@ -1856,11 +1882,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownJul30_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug8_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownJul30_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownAug8_2026_v1', 'true');
         }, 500);
     }
 });

@@ -160,10 +160,14 @@ def _standards_flags(class_info: Class) -> dict[str, bool]:
 
     levels = class_info.get_grade_levels() if hasattr(class_info, "get_grade_levels") else []
     eligible = _subject_has_standards(class_info.subject)
+    g_k = 0 in (levels or []) and eligible
     g1 = 1 in (levels or []) and eligible
+    g2 = 2 in (levels or []) and eligible
     g3 = 3 in (levels or []) and eligible
     return {
+        "gradek_standards": g_k,
         "grade1_standards": g1 and "teacher.grade1_standards.grade1_standards_editor" in current_app.view_functions,
+        "grade2_standards": g2,
         "grade3_standards": g3 and "teacher.grade3_standards.grade3_standards_editor" in current_app.view_functions,
         "syllabus": class_supports_syllabus(class_info),
     }
@@ -180,13 +184,17 @@ def _class_management_links(class_id: int) -> dict[str, str]:
     include_syllabus = class_supports_syllabus(class_info)
 
     if user_should_use_spa_management_shell():
+        gradek_standards = f"/app{grade_standards_editor_path(0, class_id)}"
         grade1_standards = f"/app{grade_standards_editor_path(1, class_id)}"
+        grade2_standards = f"/app{grade_standards_editor_path(2, class_id)}"
         grade3_standards = f"/app{grade_standards_editor_path(3, class_id)}"
         links = {
             "add_assignment": f"/app/management/assignments/create?class_id={class_id}",
             "attendance": "/app/management/attendance",
             "manage_roster": f"/app/management/classes/{class_id}/roster",
+            "gradek_standards": gradek_standards,
             "grade1_standards": grade1_standards,
+            "grade2_standards": grade2_standards,
             "grade3_standards": grade3_standards,
             "assistant_approvals": url_for("teacher.assignments.pending_assistant_assignments", class_id=class_id),
             "view_grades": f"/app/management/assignments/{class_id}",
@@ -205,13 +213,17 @@ def _class_management_links(class_id: int) -> dict[str, str]:
             links["syllabus"] = "modal:syllabus"
         return links
 
+    gradek_standards = f"/app{grade_standards_editor_path(0, class_id)}"
     grade1_standards = f"/app{grade_standards_editor_path(1, class_id)}"
+    grade2_standards = f"/app{grade_standards_editor_path(2, class_id)}"
     grade3_standards = f"/app{grade_standards_editor_path(3, class_id)}"
     links = {
         "add_assignment": url_for("management.assignment_type_selector", class_id=class_id),
         "attendance": url_for("management.unified_attendance"),
         "manage_roster": f"/app/management/classes/{class_id}/roster",
+        "gradek_standards": gradek_standards,
         "grade1_standards": grade1_standards,
+        "grade2_standards": grade2_standards,
         "grade3_standards": grade3_standards,
         "assistant_approvals": url_for("teacher.assignments.pending_assistant_assignments", class_id=class_id),
         "view_grades": f"/app/management/classes/{class_id}/grades",

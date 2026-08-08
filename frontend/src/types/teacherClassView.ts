@@ -58,7 +58,9 @@ export interface TeacherClassViewLinks {
   conflicts: string
   assistant_approvals: string
   announcements_legacy: string
+  gradek_standards?: string
   grade1_standards?: string
+  grade2_standards?: string
   grade3_standards?: string
 }
 

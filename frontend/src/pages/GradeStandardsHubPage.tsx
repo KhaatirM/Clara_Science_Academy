@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { fetchGradeStandardsHub } from '../api/gradeStandards'
+import { fetchGradeStandardsHub, gradeLevelLabel, resolveGradeLevelRoute } from '../api/gradeStandards'
 import type { GradeLevelRoute } from '../api/gradeStandards'
 import type { GradeStandardsClassCard, GradeStandardsHubResponse } from '../types/gradeStandards'
 import { spaRoute } from '../utils/spaRoute'
@@ -110,7 +110,7 @@ function ClassGroup({
 
 export default function GradeStandardsHubPage() {
   const { grade = 'grade1' } = useParams<{ grade: GradeLevelRoute }>()
-  const gradeRoute = grade === 'grade3' ? 'grade3' : 'grade1'
+  const gradeRoute = resolveGradeLevelRoute(grade)
 
   const [data, setData] = useState<GradeStandardsHubResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -212,10 +212,10 @@ export default function GradeStandardsHubPage() {
         </dl>
       </div>
 
-      {!groups.language_arts.length && !groups.math.length ? (
+      {!groups.language_arts.length && !groups.math.length && !(groups.homeroom?.length) ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-hub-muted shadow-sm">
-          No eligible {gradeRoute === 'grade1' ? '1st' : '3rd'} grade Language Arts or Math classes found for the
-          active school year.
+          No eligible {gradeRoute === 'gradek' ? 'Kindergarten' : `${gradeLevelLabel(gradeRoute)} grade`} checklist
+          classes found for this school year.
         </div>
       ) : (
         <div className="space-y-8">
@@ -233,6 +233,15 @@ export default function GradeStandardsHubPage() {
             quarterColumns={quarterColumns}
             currentQuarter={currentQuarter}
           />
+          {gradeRoute === 'gradek' ? (
+            <ClassGroup
+              title="Homeroom · Skills, Habits & Writing"
+              icon="bi-emoji-smile"
+              classes={groups.homeroom || []}
+              quarterColumns={quarterColumns}
+              currentQuarter={currentQuarter}
+            />
+          ) : null}
         </div>
       )}
     </div>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Kindergarten Progress Report - Clara Science Academy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='report_card_styles.css') }}">
+</head>
+<body class="grade3-report-card kindergarten-report-card">
+    {% from 'management/_report_card_kindergarten_tables.html' import render_k_standards_table %}
+
+    {# Page 1 — Header, attendance, foundational ELA #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+
+        <p class="report-period-line">
+            <strong>Report Period:</strong>
+            {{ report_period_label or (report_card.quarter ~ ' - ' ~ (generated_date.strftime('%B %d, %Y') if generated_date else 'N/A')) }}
+        </p>
+
+        <table class="rc-table rc-table--compact standards-legend-grid" style="margin-bottom: 0.35cm;">
+            <thead>
+                <tr class="rc-header-dark"><th colspan="2">Scoring Key</th></tr>
+            </thead>
+            <tbody>
+                {% for item in k_scoring_key|default([]) %}
+                <tr>
+                    <td><strong>{{ item.code }}</strong></td>
+                    <td>{{ item.label }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p style="font-size: 0.85em; margin: 0.15cm 0 0.35cm;">
+            *The following kindergarten standards are to be mastered by the end of the current school year.
+        </p>
+
+        <table class="rc-table rc-table--compact rc-table--attendance">
+            <thead>
+                <tr class="rc-header-dark">
+                    <th>ATTENDANCE</th>
+                    <th>1st Q</th>
+                    <th>2nd Q</th>
+                    <th>3rd Q</th>
+                    <th>4th Q</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in attendance_rows|default([]) %}
+                <tr>
+                    <td>{{ row.label }}</td>
+                    {% for val in row.quarter_counts %}
+                    <td class="rc-center">{{ val }}</td>
+                    {% endfor %}
+                </tr>
+                {% else %}
+                <tr><td>Excused Absences</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>Unexcused Absences</td><td></td><td></td><td></td><td></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="academic-standards-block">
+            <p><strong>Academic Standards:</strong> The Clara Science Academy (CSA) reports student performance quarterly. This progress report lists the skills outlined by the NC Department of Education Standards. This framework provides guidance about what a Kindergarten student should know or be able to do. The K12 curriculum is the core set of courses used by CSA to help Kindergarten students meet these standards. Individualized goals are set for each student. The teacher and learning coach determine the percentage of course completion necessary to meet the academic goals for the student based on the standards and anchors. The year-to-date course progress reflects the progress towards meeting standards as well as academic goals related to course completion. The decision to promote a student to the next level is determined by the teacher.</p>
+        </div>
+
+        {% set ela_page1 = {
+            'title': k_language_arts.title,
+            'sections': k_language_arts.sections[:5]
+        } %}
+        {{ render_k_standards_table(ela_page1, k_marks, k_quarter_columns, 'M / N / I / U') }}
+    </div>
+
+    {# Page 2 — Remaining ELA, writing continuum, writing standards, language, start of math #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+
+        {% set ela_page2 = {
+            'title': 'English Language Arts Cont.',
+            'sections': k_language_arts.sections[5:7]
+        } %}
+        {{ render_k_standards_table(ela_page2, k_marks, k_quarter_columns, 'M / N / I / U') }}
+
+        <table class="rc-table rc-table--compact" style="margin-top: 0.4cm;">
+            <thead>
+                <tr class="rc-header-dark">
+                    <th colspan="8">Developmental Stages of Writing</th>
+                </tr>
+                <tr class="rc-subheader">
+                    <th>Stage</th>
+                    {% for stage in k_writing_stages|default([]) %}
+                    <th class="rc-center">{{ stage.level }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Label</td>
+                    {% for stage in k_writing_stages|default([]) %}
+                    <td class="rc-center" style="font-size: 0.75em;">{{ stage.label }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>Developmental Writing Level</td>
+                    {% set wl = k_marks.get('k_writing_level', {}) %}
+                    {% for q in k_quarter_columns %}
+                    {% if loop.index0 < 4 %}
+                    {% endif %}
+                    {% endfor %}
+                    {% for stage in k_writing_stages|default([]) %}
+                    {% set matched = false %}
+                    {# Show which quarters selected this stage via compact Q labels #}
+                    <td class="rc-center">
+                        {% for q in k_quarter_columns %}
+                            {% if wl.get(q) == stage.level %}{{ q }} {% endif %}
+                        {% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+        <p style="font-size: 0.8em; margin: 0.2cm 0;">
+            *Note: When a child reaches the kid spelling stage, the following standards will apply. (X when proficient)
+        </p>
+
+        {% set writing_stds = {
+            'title': 'Text Types and Purposes',
+            'sections': k_language_arts.sections[7:8]
+        } %}
+        {{ render_k_standards_table(writing_stds, k_marks, k_quarter_columns, 'X when proficient') }}
+
+        {% set lang_stds = {
+            'title': 'Language Standards',
+            'sections': k_language_arts.sections[8:]
+        } %}
+        {{ render_k_standards_table(lang_stds, k_marks, k_quarter_columns, 'M / N / I / U') }}
+
+        {% set math_page1 = {
+            'title': k_math.title,
+            'sections': k_math.sections[:3]
+        } %}
+        {{ render_k_standards_table(math_page1, k_marks, k_quarter_columns, 'M / N / I / U') }}
+    </div>
+
+    {# Page 3 — Remaining math, skills, habits, interventions #}
+    <div class="grade3-page">
+        {% include 'management/_report_card_header.html' %}
+
+        {% set math_page2 = {
+            'title': 'Mathematics Cont.',
+            'sections': k_math.sections[3:]
+        } %}
+        {{ render_k_standards_table(math_page2, k_marks, k_quarter_columns, 'M / N / I / U') }}
+
+        {{ render_k_standards_table(k_skills, k_marks, k_quarter_columns, 'X when proficient') }}
+        {{ render_k_standards_table(k_work_habits, k_marks, k_quarter_columns, 'E / S / N / U') }}
+        {{ render_k_standards_table(k_interventions, k_marks, k_quarter_columns, 'X if notified') }}
+    </div>
+
+    {# Page 4 — Comments + quarterly parent signatures #}
+    <div class="grade3-page grade3-page-last">
+        {% include 'management/_report_card_header.html' %}
+
+        <div class="section-title">Teacher Comments:</div>
+        <div class="comments-box">
+            {% if include_comments and class_objects %}
+                {% set any_comment = false %}
+                {% for class_obj in class_objects %}
+                    {% set comment = (comments_by_class.get(class_obj.id|string, '') if comments_by_class else '') %}
+                    {% if comment %}
+                        {% set any_comment = true %}
+                        <p style="margin: 0 0 6px 0;"><strong>{{ class_obj.name }}:</strong> {{ comment|nl2br }}</p>
+                    {% endif %}
+                {% endfor %}
+                {% if not any_comment %}
+                    <p>N/A</p>
+                {% endif %}
+            {% else %}
+                <p>{% if additional_comments %}{{ additional_comments|nl2br }}{% else %}N/A{% endif %}</p>
+            {% endif %}
+        </div>
+
+        <div class="section-title" style="margin-top: 0.5cm;">Parent Signatures</div>
+        <table class="rc-table rc-table--compact">
+            <thead>
+                <tr class="rc-header-dark">
+                    <th>Quarter</th>
+                    <th>Parent Signature</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1st Quarter</td><td></td><td></td></tr>
+                <tr><td>2nd Quarter</td><td></td><td></td></tr>
+                <tr><td>3rd Quarter</td><td></td><td></td></tr>
+                <tr><td>4th Quarter</td><td></td><td></td></tr>
+            </tbody>
+        </table>
+
+        <div class="footer" style="margin-top: 0.8cm;">
+            <p>Academy Director: ___________________________________ Date: _________________</p>
+        </div>
+    </div>
+</body>
+</html>

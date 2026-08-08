@@ -11,7 +11,9 @@ import { spaRoute } from '../utils/spaRoute'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ReportCardCategoryCard, ReportCardItem, ReportCardsHubResponse } from '../types/reportCards'
 
+const GRADEK_STANDARDS_URL = '/management/report-cards/standards/gradek'
 const GRADE1_STANDARDS_URL = '/management/report-cards/standards/grade1'
+const GRADE2_STANDARDS_URL = '/management/report-cards/standards/grade2'
 const GRADE3_STANDARDS_URL = '/management/report-cards/standards/grade3'
 
 function QuickActionLink({
@@ -42,7 +44,9 @@ function QuickActionLink({
 }
 
 function QuickActionsPanel({ hub }: { hub: ReportCardsHubResponse }) {
+  const gradekUrl = hub.urls.gradek_standards || GRADEK_STANDARDS_URL
   const grade1Url = hub.urls.grade1_standards || GRADE1_STANDARDS_URL
+  const grade2Url = hub.urls.grade2_standards || GRADE2_STANDARDS_URL
   const grade3Url = hub.urls.grade3_standards || GRADE3_STANDARDS_URL
 
   return (
@@ -67,7 +71,9 @@ function QuickActionsPanel({ hub }: { hub: ReportCardsHubResponse }) {
                 label={`${category.title} roster`}
               />
             ))}
+            <QuickActionLink to={gradekUrl} icon="bi-check2-square" label="Kindergarten standards" />
             <QuickActionLink to={grade1Url} icon="bi-check2-square" label="1st grade standards" />
+            <QuickActionLink to={grade2Url} icon="bi-check2-square" label="2nd grade standards" />
             <QuickActionLink to={grade3Url} icon="bi-check2-square" label="3rd grade standards" />
           </div>
         </div>
@@ -683,7 +689,7 @@ export default function ReportCardsPage() {
 
               <ul className="mt-4 space-y-2 text-sm text-hub-text">
 
-                {['Custom class selection', 'Attendance statistics', 'Teacher comments', 'Official or unofficial copies', 'K–3 standards checklists on PDF (1st & 3rd grade)'].map(
+                {['Custom class selection', 'Attendance statistics', 'Teacher comments', 'Official or unofficial copies', 'K–3 standards checklists on PDF'].map(
 
                   (item) => (
 

@@ -371,9 +371,19 @@ function TeacherClassViewBody({
                     Assistant approvals
                   </ActionLink>
                 ) : null}
+                {data.features.gradek_standards && links.gradek_standards ? (
+                  <ActionLink href={links.gradek_standards} icon="bi-check2-square">
+                    Kindergarten standards
+                  </ActionLink>
+                ) : null}
                 {data.features.grade1_standards && links.grade1_standards ? (
                   <ActionLink href={links.grade1_standards} icon="bi-check2-square">
                     1st grade standards
+                  </ActionLink>
+                ) : null}
+                {data.features.grade2_standards && links.grade2_standards ? (
+                  <ActionLink href={links.grade2_standards} icon="bi-check2-square">
+                    2nd grade standards
                   </ActionLink>
                 ) : null}
                 {data.features.grade3_standards && links.grade3_standards ? (

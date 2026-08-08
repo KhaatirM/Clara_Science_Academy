@@ -1,5 +1,7 @@
 export interface TeacherClassFeatures {
+  gradek_standards?: boolean
   grade1_standards: boolean
+  grade2_standards?: boolean
   grade3_standards: boolean
   syllabus?: boolean
 }
@@ -11,7 +13,9 @@ export interface TeacherClassLinks {
   link_google: string
   create_google: string
   unlink_google: string
+  gradek_standards?: string
   grade1_standards?: string
+  grade2_standards?: string
   grade3_standards?: string
   open_google?: string
 }

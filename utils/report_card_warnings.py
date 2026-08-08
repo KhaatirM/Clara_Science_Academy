@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-# Grade integers (0 = Kindergarten).
-REPORT_CARD_UNFINALIZED_GRADE_LEVELS = frozenset({0, 2})
+# No unfinalized elementary bands once K and Grade 2 templates are live.
+REPORT_CARD_UNFINALIZED_GRADE_LEVELS = frozenset()
 
 _GRADE_LABELS = {
     0: 'Kindergarten',

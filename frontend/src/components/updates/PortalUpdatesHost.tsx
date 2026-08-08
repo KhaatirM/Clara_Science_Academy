@@ -1,32 +1,28 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownJul30_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownAug8_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
-    title: 'Year-end outcomes help',
-    body: 'A ? help control on Students and the closure dashboard explains that everyone is still promoted by default at finalize unless you graduate, withdraw, or mark repeating.',
+    title: 'Kindergarten & 2nd grade report cards',
+    body: 'Official and unofficial progress-report PDFs for Kindergarten and 2nd grade, with standards checklists on the Report Cards hub and class tools.',
   },
   {
-    title: 'Instant promote / graduate / withdraw',
-    body: 'Students bulk actions apply immediately by default. Check “Stage as end-of-year intent only” when you want the choice saved for year finalize instead.',
+    title: 'K & 2nd standards entry',
+    body: 'Teachers and admins can record Kindergarten (including Homeroom skills, habits, and writing) and 2nd grade Language Arts / Math standards that print on the PDF.',
   },
   {
-    title: 'Middle-school year-end outcomes',
-    body: 'Before year finalize, stage 8th graders to promote to 9th (default), graduate as alumni (off roster, keep records), withdraw as former, or repeat. Students list and closure dashboard include these controls.',
+    title: '2nd grade PDF layout',
+    body: 'The student/school header prints on page 1 only so Language Arts and Math standards use the full page. Unofficial copies stamp a large greyed UNOFFICIAL mark on continuation pages.',
   },
   {
-    title: 'Closed-year grade from class names',
-    body: 'When a class has no grade band saved (common for older classes like “Math [4th]”), report cards now read the grade from the class name so students are not pulled into the wrong grade by a single mis-tagged class.',
+    title: 'Larger report card logo',
+    body: 'The Clara logo in the report card PDF header is larger and easier to read on printed copies.',
   },
   {
-    title: 'Report card grades by school year',
-    body: 'Closed-year report cards use the grade from that year’s classes (not a year-offset guess). Regenerating a PDF for 2025–2026 no longer prints one grade too low when 2026–2027 is active.',
-  },
-  {
-    title: 'Auto sign-out when idle',
-    body: 'After 30 minutes without activity you are signed out for security. A short warning appears before logout; move the mouse or press a key to stay signed in.',
+    title: 'Report card header polish',
+    body: 'Entrance Year replaces Entrance Date, Kindergarten prints as K, and the unofficial stamp stays clipped inside the logo area.',
   },
 ]
 
@@ -34,10 +30,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.512.1'
-  const releaseLabel = version?.release_label || 'July 30, 2026'
+  const display = version?.display || 'v 2.513.0'
+  const releaseLabel = version?.release_label || 'August 8, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2604
+  const updatesEstimate = version?.updates_estimate ?? 2655
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

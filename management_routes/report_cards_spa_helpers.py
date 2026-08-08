@@ -65,7 +65,9 @@ def _standards_checklist_urls() -> dict[str, str]:
     urls: dict[str, str] = {}
     try:
         if user_should_use_spa_management_shell():
+            urls["gradek_standards"] = grade_standards_hub_path(0)
             urls["grade1_standards"] = grade_standards_hub_path(1)
+            urls["grade2_standards"] = grade_standards_hub_path(2)
             urls["grade3_standards"] = grade_standards_hub_path(3)
             return urls
         view_functions = current_app.view_functions
@@ -73,6 +75,8 @@ def _standards_checklist_urls() -> dict[str, str]:
             urls["grade1_standards"] = url_for("teacher.grade1_standards.grade1_standards_index")
         if "teacher.grade3_standards.grade3_standards_index" in view_functions:
             urls["grade3_standards"] = url_for("teacher.grade3_standards.grade3_standards_index")
+        urls.setdefault("gradek_standards", grade_standards_hub_path(0))
+        urls.setdefault("grade2_standards", grade_standards_hub_path(2))
     except RuntimeError:
         pass
     return urls
@@ -102,6 +106,25 @@ def _standards_checklist_info(grade_level: int | None) -> dict[str, Any] | None:
             "pdf_pages": ["Summary & course progress", "Language Arts checklist", "Math checklist", "Assignments & comments"],
         }
 
+    if grade_level == 2:
+        return {
+            **base,
+            "variant": "grade2",
+            "title": "2nd grade standards checklist",
+            "description": (
+                "Official 2nd grade report cards include a multi-page PDF with Language Arts and "
+                "Math standards checklists (pages 2–4). Marks are filled by teachers before generation."
+            ),
+            "editor_url": urls.get("grade2_standards"),
+            "pdf_pages": [
+                "Summary & course progress",
+                "Language Arts checklist",
+                "Language Arts continued",
+                "Math checklist",
+                "Assignments & comments",
+            ],
+        }
+
     if grade_level == 3:
         return {
             **base,
@@ -115,18 +138,28 @@ def _standards_checklist_info(grade_level: int | None) -> dict[str, Any] | None:
             "pdf_pages": ["Summary & course progress", "Language Arts checklist", "Math checklist", "Assignments & comments"],
         }
 
-    if grade_level in (0, 2):
-        label = "Kindergarten" if grade_level == 0 else "2nd grade"
+    if grade_level == 0:
         return {
             **base,
-            "variant": "k2",
-            "title": f"{label} progress report",
+            "variant": "gradek",
+            "title": "Kindergarten standards checklist",
             "description": (
-                f"{label} report cards use the K–2 progress report layout with a standards checklist "
-                "section on the PDF. Full data-driven checklist editors are available for 1st and 3rd grade."
+                "Kindergarten report cards use NC-coded ELA/Math standards (M/N/I/U), "
+                "developmental writing levels, life skills, work habits, and retention flags."
             ),
-            "editor_url": None,
-            "pdf_pages": ["Attendance, course progress, standards checklist, comments"],
+            "editor_url": urls.get("gradek_standards"),
+            "pdf_pages": [
+                "Scoring key, attendance & foundational ELA",
+                "ELA continued, writing continuum & language",
+                "Math, skills, habits & interventions",
+                "Comments & parent signatures",
+            ],
+            "legend": [
+                {"code": "M", "label": "Mastered the standard"},
+                {"code": "N", "label": "Nearing mastery"},
+                {"code": "I", "label": "Improvement needed"},
+                {"code": "U", "label": "Unable to demonstrate understanding"},
+            ],
         }
 
     return None
@@ -134,7 +167,17 @@ def _standards_checklist_info(grade_level: int | None) -> dict[str, Any] | None:
 
 def _standards_marks_summary(student_id: int, school_year_id: int, grade_level: int) -> dict[str, Any] | None:
     """Lightweight completion counts for generate wizard preview."""
-    if grade_level == 1:
+    if grade_level == 0:
+        from utils.report_card_kindergarten_standards import (
+            KINDERGARTEN_LANGUAGE_ARTS,
+            KINDERGARTEN_MATH,
+            get_marks_for_student,
+            subject_for_standard,
+        )
+
+        marks = get_marks_for_student(student_id, school_year_id)
+        la_catalog, math_catalog = KINDERGARTEN_LANGUAGE_ARTS, KINDERGARTEN_MATH
+    elif grade_level == 1:
         from utils.report_card_grade1_standards import (
             GRADE1_LANGUAGE_ARTS,
             GRADE1_MATH,
@@ -144,6 +187,16 @@ def _standards_marks_summary(student_id: int, school_year_id: int, grade_level: 
 
         marks = get_marks_for_student(student_id, school_year_id)
         la_catalog, math_catalog = GRADE1_LANGUAGE_ARTS, GRADE1_MATH
+    elif grade_level == 2:
+        from utils.report_card_grade2_standards import (
+            GRADE2_LANGUAGE_ARTS,
+            GRADE2_MATH,
+            get_marks_for_student,
+            subject_for_standard,
+        )
+
+        marks = get_marks_for_student(student_id, school_year_id)
+        la_catalog, math_catalog = GRADE2_LANGUAGE_ARTS, GRADE2_MATH
     elif grade_level == 3:
         from utils.report_card_grade3_standards import (
             GRADE3_LANGUAGE_ARTS,

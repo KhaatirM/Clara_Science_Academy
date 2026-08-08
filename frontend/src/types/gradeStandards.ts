@@ -22,7 +22,7 @@ export type GradeStandardsClassCard = {
   id: number
   name: string
   subject: string
-  subject_key: 'language_arts' | 'math'
+  subject_key: 'language_arts' | 'math' | 'homeroom'
   student_count: number
   stats: GradeStandardsClassStats
   editor_path: string
@@ -39,6 +39,7 @@ export type GradeStandardsHubResponse = {
   groups: {
     language_arts: GradeStandardsClassCard[]
     math: GradeStandardsClassCard[]
+    homeroom?: GradeStandardsClassCard[]
   }
   summary: {
     total_classes: number
@@ -58,6 +59,8 @@ export type GradeStandardsStandard = {
   id: string
   section: string
   text: string
+  mark_scale?: string
+  valid_marks?: string[]
 }
 
 export type GradeStandardsStudent = {

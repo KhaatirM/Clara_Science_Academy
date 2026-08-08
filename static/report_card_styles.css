@@ -74,10 +74,11 @@ body {
 
 .logo-overlay-container {
     position: relative;
-    width: 120px;
-    height: 120px;
+    width: 155px;
+    height: 155px;
     margin: 0 auto;
     display: block;
+    overflow: hidden;
 }
 
 .logo-overlay-container img {
@@ -90,18 +91,21 @@ body {
 
 .logo-text {
     position: absolute;
-    top: 50%;
+    top: 52%;
     left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 18pt;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    font-size: 13.5pt;
     font-weight: bold;
     color: #d9534f;
-    background-color: rgba(255, 255, 255, 0);
-    padding: 5px 10px;
-    border: 3px solid #d9534f;
-    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.55);
+    padding: 2px 7px;
+    border: 2px solid #d9534f;
+    border-radius: 6px;
     white-space: nowrap;
     z-index: 1;
+    max-width: 96%;
+    box-sizing: border-box;
+    line-height: 1.1;
 }
 
 /* Header: Student & School Info Grid Tables */
@@ -404,8 +408,8 @@ body.grade3-report-card .report-period-line {
 }
 
 /* Each grade-3 page wrapper forces a page break after itself,
-   except for the final page (.grade3-page-last). The student/school header
-   is rendered at the top of every page wrapper. */
+   except for the final page (.grade3-page-last). Grade 1/3 keep the
+   student/school header on every page; grade 2 prints it on page 1 only. */
 .grade3-page {
     page-break-after: always;
 }
@@ -413,6 +417,66 @@ body.grade3-report-card .report-period-line {
 .grade3-page:last-of-type,
 .grade3-page-last {
     page-break-after: auto;
+}
+
+/* Grade 2: continuation pages omit the header so Language Arts / Math
+   standards can use the full page. Unofficial copies stamp a large greyed
+   logo + UNOFFICIAL mark across those pages instead. */
+body.grade2-report-card .grade2-continuation-page {
+    position: relative;
+    min-height: 24cm;
+}
+
+body.grade2-report-card .grade2-continuation-page > *:not(.grade2-unofficial-page-watermark) {
+    position: relative;
+    z-index: 1;
+}
+
+.grade2-unofficial-page-watermark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.grade2-unofficial-page-watermark__badge {
+    position: relative;
+    width: 15cm;
+    height: 15cm;
+    transform: rotate(-32deg);
+    opacity: 0.16;
+}
+
+.grade2-unofficial-page-watermark__badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0.55;
+}
+
+.grade2-unofficial-page-watermark__text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 42pt;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    color: #6b6b6b;
+    background-color: rgba(255, 255, 255, 0.35);
+    padding: 8px 18px;
+    border: 5px solid #6b6b6b;
+    border-radius: 10px;
+    white-space: nowrap;
+    line-height: 1.1;
 }
 
 /* Slimmer pdf-header-table when reused as a per-page header */
@@ -427,8 +491,16 @@ body.grade3-report-card .report-period-line {
 }
 
 .grade3-report-card .pdf-header-table .logo-overlay-container {
-    width: 70px;
-    height: 70px;
+    width: 90px;
+    height: 90px;
+    overflow: hidden;
+}
+
+.grade3-report-card .pdf-header-table .logo-text {
+    font-size: 9pt;
+    padding: 1px 4px;
+    border-width: 1.5px;
+    transform: translate(-50%, -50%) rotate(-28deg);
 }
 
 .grade3-report-card .pdf-header-table .info-grid-table td {
@@ -583,8 +655,8 @@ body.grade1-report-card .grade1-standards-page .pdf-header-table .central-column
 }
 
 body.grade1-report-card .grade1-standards-page .pdf-header-table .logo-overlay-container {
-    width: 46px;
-    height: 46px;
+    width: 60px;
+    height: 60px;
 }
 
 body.grade1-report-card .grade1-standards-page .pdf-header-table .info-grid-table {

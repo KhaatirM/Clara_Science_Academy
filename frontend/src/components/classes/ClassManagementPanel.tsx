@@ -66,7 +66,9 @@ export interface ClassManagementLinks {
   add_assignment: string
   attendance: string
   manage_roster: string
+  gradek_standards?: string
   grade1_standards?: string
+  grade2_standards?: string
   grade3_standards?: string
   assistant_approvals: string
   view_grades: string
@@ -83,7 +85,13 @@ export interface ClassManagementLinks {
 
 export function ClassManagementPanel({
   links,
-  features = { grade1_standards: false, grade3_standards: false, syllabus: false },
+  features = {
+    gradek_standards: false,
+    grade1_standards: false,
+    grade2_standards: false,
+    grade3_standards: false,
+    syllabus: false,
+  },
   canAdminUi,
   onOpenAnalytics,
   onOpenDeadlineReminders,
@@ -92,7 +100,13 @@ export function ClassManagementPanel({
   onOpenSyllabus,
 }: {
   links: Partial<ClassManagementLinks>
-  features?: { grade1_standards: boolean; grade3_standards: boolean; syllabus?: boolean }
+  features?: {
+    gradek_standards?: boolean
+    grade1_standards: boolean
+    grade2_standards?: boolean
+    grade3_standards: boolean
+    syllabus?: boolean
+  }
   canAdminUi: boolean
   onOpenAnalytics?: () => void
   onOpenDeadlineReminders?: () => void
@@ -133,8 +147,14 @@ export function ClassManagementPanel({
           {onOpenAnnouncements ? (
             <ActionButton icon="bi-megaphone-fill" label="Announcements" onClick={onOpenAnnouncements} />
           ) : null}
+          {features.gradek_standards && links.gradek_standards ? (
+            <ActionLink href={links.gradek_standards} icon="bi-check2-square" label="Kindergarten Standards" />
+          ) : null}
           {features.grade1_standards && links.grade1_standards ? (
             <ActionLink href={links.grade1_standards} icon="bi-check2-square" label="1st Grade Standards" />
+          ) : null}
+          {features.grade2_standards && links.grade2_standards ? (
+            <ActionLink href={links.grade2_standards} icon="bi-check2-square" label="2nd Grade Standards" />
           ) : null}
           {features.grade3_standards && links.grade3_standards ? (
             <ActionLink href={links.grade3_standards} icon="bi-check2-square" label="3rd Grade Standards" />

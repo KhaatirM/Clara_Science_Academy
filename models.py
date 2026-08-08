@@ -1474,6 +1474,75 @@ class Grade1StandardMark(db.Model):
         return f"Grade1StandardMark(student={self.student_id}, std={self.standard_id}, {self.quarter}, mark={self.mark})"
 
 
+class Grade2StandardMark(db.Model):
+    """
+    Teacher-entered marks for the 2nd grade Language Arts / Math standards checklist.
+    Stored per-student, per-standard, per-school-year, per-quarter.
+    `standard_id` matches the catalog in utils/report_card_grade2_standards.py.
+    `mark` is one of: 'M', 'W', 'NA', 'UA'.
+    """
+    __tablename__ = 'grade2_standard_mark'
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    standard_id = db.Column(db.String(50), nullable=False, index=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False, index=True)
+    quarter = db.Column(db.String(4), nullable=False)  # 'Q1'..'Q4'
+    mark = db.Column(db.String(4), nullable=False)  # 'M' | 'W' | 'NA' | 'UA'
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    student = db.relationship('Student', backref='grade2_standard_marks', lazy=True)
+    school_year = db.relationship('SchoolYear', backref='grade2_standard_marks', lazy=True)
+    editor = db.relationship('User', backref='edited_grade2_standard_marks', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'student_id', 'standard_id', 'school_year_id', 'quarter',
+            name='uq_grade2_standard_mark_key',
+        ),
+    )
+
+    def __repr__(self):
+        return f"Grade2StandardMark(student={self.student_id}, std={self.standard_id}, {self.quarter}, mark={self.mark})"
+
+
+class GradeKStandardMark(db.Model):
+    """
+    Teacher-entered marks for Kindergarten progress report checklists.
+    `standard_id` matches utils/report_card_kindergarten_standards.py.
+    Mark scales vary by standard: M/N/I/U, X, E/S/N/U, or writing levels 1–7.
+    """
+    __tablename__ = 'grade_k_standard_mark'
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    standard_id = db.Column(db.String(50), nullable=False, index=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False, index=True)
+    quarter = db.Column(db.String(4), nullable=False)  # 'Q1'..'Q4'
+    mark = db.Column(db.String(4), nullable=False)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    student = db.relationship('Student', backref='grade_k_standard_marks', lazy=True)
+    school_year = db.relationship('SchoolYear', backref='grade_k_standard_marks', lazy=True)
+    editor = db.relationship('User', backref='edited_grade_k_standard_marks', lazy=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'student_id', 'standard_id', 'school_year_id', 'quarter',
+            name='uq_grade_k_standard_mark_key',
+        ),
+    )
+
+    def __repr__(self):
+        return f"GradeKStandardMark(student={self.student_id}, std={self.standard_id}, {self.quarter}, mark={self.mark})"
+
+
 class SubjectRequirement(db.Model):
     """
     Subject requirements per grade band for report cards.

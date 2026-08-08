@@ -1,4 +1,4 @@
-"""Grade 1 & 3 standards checklist data for the management React SPA."""
+"""Grade 1, 2 & 3 standards checklist data for the management React SPA."""
 
 from __future__ import annotations
 
@@ -10,11 +10,33 @@ from teacher_routes.utils import get_current_quarter
 
 _LA_TOKENS = ("language arts", "language", "reading", "english", "ela", "literacy")
 _MATH_TOKENS = ("math",)
+_HOMEROOM_TOKENS = ("homeroom", "skills", "work habit", "social skill")
+_SUPPORTED_STANDARDS_GRADES = (0, 1, 2, 3)
+
+_GRADE_TITLES = {
+    0: "Kindergarten Standards Checklist",
+    1: "1st Grade Standards Checklist",
+    2: "2nd Grade Standards Checklist",
+    3: "3rd Grade Standards Checklist",
+}
+
+def _grade_class_label(level: int) -> str:
+    if level == 0:
+        return "Kindergarten"
+    return f"{level}{_GRADE_ORDINAL.get(level, 'th')} grade"
 
 
 def _load_grade_utils(grade_level: int):
+    if grade_level == 0:
+        import utils.report_card_kindergarten_standards as mod
+
+        return mod
     if grade_level == 1:
         import utils.report_card_grade1_standards as mod
+
+        return mod
+    if grade_level == 2:
+        import utils.report_card_grade2_standards as mod
 
         return mod
     if grade_level == 3:
@@ -29,12 +51,15 @@ def _parse_grade_level(raw: str | int) -> int:
         level = raw
     else:
         text = str(raw or "").strip().lower()
-        if text.startswith("grade"):
-            text = text[5:]
-        if not text.isdigit():
-            raise ValueError("Invalid grade level")
-        level = int(text)
-    if level not in (1, 3):
+        if text in ("gradek", "kindergarten", "k"):
+            level = 0
+        else:
+            if text.startswith("grade"):
+                text = text[5:]
+            if not text.isdigit():
+                raise ValueError("Invalid grade level")
+            level = int(text)
+    if level not in _SUPPORTED_STANDARDS_GRADES:
         raise ValueError("Invalid grade level")
     return level
 
@@ -49,19 +74,29 @@ def _is_grade_class(class_obj: Class, grade_level: int) -> bool:
     return grade_level in [int(level) for level in levels if str(level).isdigit() or isinstance(level, int)]
 
 
-def _class_subject_key(class_obj: Class) -> str | None:
-    if not class_obj or not class_obj.subject:
+def _class_subject_key(class_obj: Class, grade_level: int | None = None) -> str | None:
+    if not class_obj:
         return None
-    subject = class_obj.subject.lower()
+    subject = (class_obj.subject or "").lower()
+    name = (class_obj.name or "").lower()
     if any(token in subject for token in _MATH_TOKENS):
         return "math"
     if any(token in subject for token in _LA_TOKENS):
         return "language_arts"
+    if grade_level == 0 and (
+        any(token in subject for token in _HOMEROOM_TOKENS)
+        or any(token in name for token in _HOMEROOM_TOKENS)
+    ):
+        return "homeroom"
     return None
 
 
 def _active_school_year() -> SchoolYear | None:
-    return SchoolYear.query.filter_by(is_active=True).first()
+    active = SchoolYear.query.filter_by(is_active=True).first()
+    if active:
+        return active
+    # Closed-year / demo environments: fall back to the most recent school year.
+    return SchoolYear.query.order_by(SchoolYear.id.desc()).first()
 
 
 def _normalize_quarter(raw: str | None, utils_mod) -> str:
@@ -81,15 +116,17 @@ def _normalize_quarter(raw: str | None, utils_mod) -> str:
 
 
 def _all_eligible_classes(school_year_id: int, grade_level: int) -> list[Class]:
-    candidates = Class.query.filter(
-        Class.school_year_id == school_year_id,
-        Class.is_active.is_(True),
-    ).all()
+    school_year = db.session.get(SchoolYear, school_year_id)
+    year_active = bool(getattr(school_year, "is_active", True)) if school_year else True
+    query = Class.query.filter(Class.school_year_id == school_year_id)
+    if year_active:
+        query = query.filter(Class.is_active.is_(True))
+    candidates = query.all()
     classes: list[Class] = []
     for class_obj in candidates:
         if not _is_grade_class(class_obj, grade_level):
             continue
-        if not _class_subject_key(class_obj):
+        if not _class_subject_key(class_obj, grade_level):
             continue
         classes.append(class_obj)
     classes.sort(key=lambda item: (item.subject or "", item.name or ""))
@@ -97,13 +134,15 @@ def _all_eligible_classes(school_year_id: int, grade_level: int) -> list[Class]:
 
 
 def _class_roster(class_obj: Class) -> list[Student]:
+    school_year = getattr(class_obj, "school_year", None)
+    year_active = bool(getattr(school_year, "is_active", True)) if school_year else True
+    filters = [Enrollment.class_id == class_obj.id]
+    if year_active:
+        filters.append(Enrollment.is_active.is_(True))
     students = (
         db.session.query(Student)
         .join(Enrollment, Enrollment.student_id == Student.id)
-        .filter(
-            Enrollment.class_id == class_obj.id,
-            Enrollment.is_active.is_(True),
-        )
+        .filter(*filters)
         .distinct()
         .all()
     )
@@ -136,7 +175,7 @@ def _serialize_class(
         "subject_key": subject_key,
         "student_count": len(students),
         "stats": stats,
-        "editor_path": f"/management/report-cards/standards/grade{grade_level}/{class_obj.id}",
+        "editor_path": f"/management/report-cards/standards/{_grade_route_slug(grade_level)}/{class_obj.id}",
     }
 
 
@@ -149,14 +188,20 @@ def _format_last_updated(value) -> str | None:
         return str(value)
 
 
+def _grade_route_slug(level: int) -> str:
+    if level == 0:
+        return "gradek"
+    return f"grade{level}"
+
+
 def grade_standards_hub_path(grade_level: int | str) -> str:
     level = _parse_grade_level(grade_level)
-    return f"/management/report-cards/standards/grade{level}"
+    return f"/management/report-cards/standards/{_grade_route_slug(level)}"
 
 
 def grade_standards_editor_path(grade_level: int | str, class_id: int) -> str:
     level = _parse_grade_level(grade_level)
-    return f"/management/report-cards/standards/grade{level}/{class_id}"
+    return f"/management/report-cards/standards/{_grade_route_slug(level)}/{class_id}"
 
 
 def query_grade_standards_hub(grade_level: int | str) -> dict[str, Any]:
@@ -176,7 +221,7 @@ def query_grade_standards_hub(grade_level: int | str) -> dict[str, Any]:
                 {"code": "W", "label": "Working towards meeting academic standard"},
                 {"code": "UA", "label": "Unable to assess during this semester"},
             ],
-            "groups": {"language_arts": [], "math": []},
+            "groups": {"language_arts": [], "math": [], "homeroom": []},
             "summary": {
                 "total_classes": 0,
                 "total_students": 0,
@@ -188,29 +233,43 @@ def query_grade_standards_hub(grade_level: int | str) -> dict[str, Any]:
                 "hub": grade_standards_hub_path(level),
                 "report_cards": "/management/report-cards",
             },
-            "error": "No active school year is configured.",
+            "error": "No school year is configured.",
         }
 
     classes = _all_eligible_classes(school_year.id, level)
-    grouped: dict[str, list[dict[str, Any]]] = {"language_arts": [], "math": []}
+    grouped: dict[str, list[dict[str, Any]]] = {"language_arts": [], "math": [], "homeroom": []}
     for class_obj in classes:
-        subject_key = _class_subject_key(class_obj)
+        subject_key = _class_subject_key(class_obj, level)
         if subject_key in grouped:
             grouped[subject_key].append(
                 _serialize_class(class_obj, subject_key, school_year.id, utils_mod, level)
             )
 
+    all_cards = grouped["language_arts"] + grouped["math"] + grouped["homeroom"]
     total_classes = len(classes)
-    total_students = sum(item["student_count"] for item in grouped["language_arts"] + grouped["math"])
-    overall_filled = sum(
-        item["stats"]["overall"]["filled"] for item in grouped["language_arts"] + grouped["math"]
-    )
-    overall_total = sum(
-        item["stats"]["overall"]["total"] for item in grouped["language_arts"] + grouped["math"]
-    )
+    total_students = sum(item["student_count"] for item in all_cards)
+    overall_filled = sum(item["stats"]["overall"]["filled"] for item in all_cards)
+    overall_total = sum(item["stats"]["overall"]["total"] for item in all_cards)
     overall_percent = int(round(100 * overall_filled / overall_total)) if overall_total else 0
 
-    title = "1st Grade Standards Checklist" if level == 1 else "3rd Grade Standards Checklist"
+    title = _GRADE_TITLES.get(level, f"Grade {level} Standards Checklist")
+    if level == 0:
+        legend = [
+            {"code": "M", "label": "Mastered the standard"},
+            {"code": "N", "label": "Nearing mastery"},
+            {"code": "I", "label": "Improvement needed"},
+            {"code": "U", "label": "Unable to demonstrate understanding of standard"},
+            {"code": "X", "label": "Proficient / parent notified (skills & interventions)"},
+            {"code": "E/S/N/U", "label": "Work habits: Excellent / Satisfactory / Needs Improvement / Unsatisfactory"},
+            {"code": "1–7", "label": "Developmental writing level"},
+        ]
+    else:
+        legend = [
+            {"code": "M", "label": "Met academic standard"},
+            {"code": "NA", "label": "Not assessed during this semester"},
+            {"code": "W", "label": "Working towards meeting academic standard"},
+            {"code": "UA", "label": "Unable to assess during this semester"},
+        ]
     return {
         "grade_level": level,
         "title": title,
@@ -218,12 +277,7 @@ def query_grade_standards_hub(grade_level: int | str) -> dict[str, Any]:
         "current_quarter": _normalize_quarter(None, utils_mod),
         "quarter_columns": utils_mod.QUARTER_COLUMNS,
         "valid_marks": utils_mod.VALID_MARKS,
-        "legend": [
-            {"code": "M", "label": "Met academic standard"},
-            {"code": "NA", "label": "Not assessed during this semester"},
-            {"code": "W", "label": "Working towards meeting academic standard"},
-            {"code": "UA", "label": "Unable to assess during this semester"},
-        ],
+        "legend": legend,
         "groups": grouped,
         "summary": {
             "total_classes": total_classes,
@@ -252,13 +306,17 @@ def query_grade_standards_editor(
     class_obj = Class.query.get_or_404(class_id)
 
     if not _is_grade_class(class_obj, level):
-        abort(400, description=f"This is not a {level}{'st' if level == 1 else 'rd'} grade class.")
+        abort(400, description=f"This is not a {_grade_class_label(level)} class.")
 
-    subject_key = _class_subject_key(class_obj)
+    subject_key = _class_subject_key(class_obj, level)
     if not subject_key:
         abort(
             400,
-            description="This class subject is not Language Arts or Math, so it cannot use the standards checklist.",
+            description=(
+                "This class subject cannot use the standards checklist. "
+                "Kindergarten needs Language Arts, Math, or Homeroom; "
+                "grades 1–3 need Language Arts or Math."
+            ),
         )
 
     school_year = class_obj.school_year or _active_school_year()
@@ -303,7 +361,13 @@ def query_grade_standards_editor(
     overall_stats = utils_mod.class_completeness(student_ids, school_year.id, subject_key)
     section_stats = utils_mod.section_completeness(student_ids, school_year.id, subject_key, quarter)
     other_classes = [
-        _serialize_class(item, _class_subject_key(item) or subject_key, school_year.id, utils_mod, level)
+        _serialize_class(
+            item,
+            _class_subject_key(item, level) or subject_key,
+            school_year.id,
+            utils_mod,
+            level,
+        )
         for item in _all_eligible_classes(school_year.id, level)
     ]
 
@@ -351,15 +415,15 @@ def apply_grade_standards_changes(
     class_obj = Class.query.get_or_404(class_id)
 
     if not _is_grade_class(class_obj, level):
-        abort(400, description=f"This is not a {level}{'st' if level == 1 else 'rd'} grade class.")
+        abort(400, description=f"This is not a {_grade_class_label(level)} class.")
 
-    subject_key = _class_subject_key(class_obj)
+    subject_key = _class_subject_key(class_obj, level)
     if not subject_key:
         abort(400, description="This class cannot use the standards checklist.")
 
     school_year = class_obj.school_year or _active_school_year()
     if not school_year:
-        abort(400, description="No active school year is configured.")
+        abort(400, description="No school year is configured.")
 
     quarter = _normalize_quarter(payload.get("quarter"), utils_mod)
     students = _class_roster(class_obj)

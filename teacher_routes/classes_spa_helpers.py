@@ -62,8 +62,12 @@ def _teacher_class_links(class_id: int, features: dict[str, bool], google_classr
         "create_google": "spa",
         "unlink_google": "spa",
     }
+    if features.get("gradek_standards"):
+        links["gradek_standards"] = f"/app/teacher/classes/{class_id}/standards/gradek"
     if features.get("grade1_standards"):
         links["grade1_standards"] = f"/app/teacher/classes/{class_id}/standards/grade1"
+    if features.get("grade2_standards"):
+        links["grade2_standards"] = f"/app/teacher/classes/{class_id}/standards/grade2"
     if features.get("grade3_standards"):
         links["grade3_standards"] = f"/app/teacher/classes/{class_id}/standards/grade3"
     if google_classroom_id:

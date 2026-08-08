@@ -84,7 +84,7 @@ export interface ReportCardStandardsLegendItem {
 }
 
 export interface ReportCardStandardsChecklist {
-  variant: 'grade1' | 'grade3' | 'k2'
+  variant: 'gradek' | 'grade1' | 'grade2' | 'grade3' | 'k2'
   title: string
   description: string
   editor_url: string | null
@@ -113,7 +113,9 @@ export interface ReportCardsHubResponse {
     grades: string
     attendance: string
     home: string
+    gradek_standards?: string
     grade1_standards?: string
+    grade2_standards?: string
     grade3_standards?: string
   }
 }
@@ -154,7 +156,9 @@ export interface ReportCardsCategoryResponse {
   urls: {
     hub: string
     generate_form?: string
+    gradek_standards?: string
     grade1_standards?: string
+    grade2_standards?: string
     grade3_standards?: string
   }
   warnings?: {
@@ -193,14 +197,18 @@ export interface ReportCardGenerateFormResponse {
   quarters: string[]
   standards_checklist_legend: ReportCardStandardsLegendItem[]
   standards_checklist_urls: {
+    gradek_standards?: string
     grade1_standards?: string
+    grade2_standards?: string
     grade3_standards?: string
   }
   preselected_standards_checklist: ReportCardStandardsChecklist | null
   urls: {
     hub: string
     students_profile: string
+    gradek_standards?: string
     grade1_standards?: string
+    grade2_standards?: string
     grade3_standards?: string
   }
   warnings: {

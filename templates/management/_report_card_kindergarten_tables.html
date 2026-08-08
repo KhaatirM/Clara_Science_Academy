@@ -1,0 +1,30 @@
+{# Shared Kindergarten standards table (quarter mark cells). #}
+{% macro render_k_standards_table(subject, marks, quarters, mark_hint='') %}
+  <table class="rc-table rc-table--compact grade3-standards-table">
+    <thead>
+      <tr class="rc-header-dark">
+        <th>{{ subject.title }}{% if mark_hint %} <span style="font-weight:normal;font-size:0.85em;">({{ mark_hint }})</span>{% endif %}</th>
+        <th class="rc-center">1st</th>
+        <th class="rc-center">2nd</th>
+        <th class="rc-center">3rd</th>
+        <th class="rc-center">4th</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for section in subject.sections %}
+        <tr class="sub-section-title">
+          <td colspan="5">{{ section.title }}</td>
+        </tr>
+        {% for std in section.standards %}
+        <tr>
+          <td>{{ std.text }}</td>
+          {% set per = marks.get(std.id, {}) %}
+          {% for q in quarters %}
+          <td class="rc-center">{{ per.get(q, '') }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+{% endmacro %}

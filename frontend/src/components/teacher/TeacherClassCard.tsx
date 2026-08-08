@@ -121,6 +121,17 @@ export function TeacherClassCard({ item }: { item: TeacherClassItem }) {
           </SpaLink>
         </div>
 
+        {item.features.gradek_standards && item.links.gradek_standards ? (
+          <div className="teacher-class-card__actions teacher-class-card__actions--pair">
+            <SpaLink
+              href={item.links.gradek_standards}
+              className="teacher-class-card__btn teacher-class-card__btn--standards"
+            >
+              <i className="bi bi-check2-square" aria-hidden />
+              Kindergarten Standards
+            </SpaLink>
+          </div>
+        ) : null}
         {item.features.grade1_standards && item.links.grade1_standards ? (
           <div className="teacher-class-card__actions teacher-class-card__actions--pair">
             <SpaLink
@@ -129,6 +140,17 @@ export function TeacherClassCard({ item }: { item: TeacherClassItem }) {
             >
               <i className="bi bi-check2-square" aria-hidden />
               1st Grade Standards
+            </SpaLink>
+          </div>
+        ) : null}
+        {item.features.grade2_standards && item.links.grade2_standards ? (
+          <div className="teacher-class-card__actions teacher-class-card__actions--pair">
+            <SpaLink
+              href={item.links.grade2_standards}
+              className="teacher-class-card__btn teacher-class-card__btn--standards"
+            >
+              <i className="bi bi-check2-square" aria-hidden />
+              2nd Grade Standards
             </SpaLink>
           </div>
         ) : null}

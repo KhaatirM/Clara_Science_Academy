@@ -34,6 +34,7 @@ export interface ClassManagementLinks {
   attendance: string
   manage_roster: string
   grade1_standards: string
+  grade2_standards?: string
   grade3_standards: string
   assistant_approvals: string
   view_grades: string
@@ -71,7 +72,12 @@ export interface ClassDetailResponse {
   }
   pending_assistant_count: number
   student_assistant_count: number
-  features: { grade1_standards: boolean; grade3_standards: boolean; syllabus?: boolean }
+  features: {
+    grade1_standards: boolean
+    grade2_standards?: boolean
+    grade3_standards: boolean
+    syllabus?: boolean
+  }
   links: ClassManagementLinks
   meta: ClassMeta
   announcements?: ClassAnnouncementBrief[]

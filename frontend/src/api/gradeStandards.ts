@@ -6,8 +6,22 @@ import type {
   GradeStandardsSaveResponse,
 } from '../types/gradeStandards'
 
-export type GradeLevelRoute = 'grade1' | 'grade3'
+export type GradeLevelRoute = 'gradek' | 'grade1' | 'grade2' | 'grade3'
 export type GradeStandardsScope = 'management' | 'teacher'
+
+export function resolveGradeLevelRoute(raw: string | undefined): GradeLevelRoute {
+  if (raw === 'gradek' || raw === 'kindergarten' || raw === 'k' || raw === '0') return 'gradek'
+  if (raw === 'grade2' || raw === '2') return 'grade2'
+  if (raw === 'grade3' || raw === '3') return 'grade3'
+  return 'grade1'
+}
+
+export function gradeLevelLabel(grade: GradeLevelRoute): string {
+  if (grade === 'gradek') return 'Kindergarten'
+  if (grade === 'grade2') return '2nd'
+  if (grade === 'grade3') return '3rd'
+  return '1st'
+}
 
 function editorPath(
   grade: GradeLevelRoute,

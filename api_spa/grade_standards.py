@@ -17,7 +17,7 @@ from . import spa_api_blueprint
 
 def _grade_from_route(raw: str) -> str:
     text = (raw or "").strip().lower()
-    if text not in ("grade1", "grade3", "1", "3"):
+    if text not in ("gradek", "kindergarten", "k", "grade1", "grade2", "grade3", "0", "1", "2", "3"):
         abort(404)
     return text
 

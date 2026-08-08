@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 
 import {
   fetchGradeStandardsEditor,
+  gradeLevelLabel,
+  resolveGradeLevelRoute,
   saveGradeStandardsMarks,
   type GradeLevelRoute,
   type GradeStandardsScope,
@@ -13,12 +15,19 @@ import { spaRoute } from '../utils/spaRoute'
 function markSelectClass(value: string): string {
   switch (value) {
     case 'M':
+    case 'E':
+    case 'X':
       return 'border-emerald-300 bg-emerald-50 text-emerald-900'
     case 'W':
+    case 'N':
+    case 'S':
       return 'border-amber-300 bg-amber-50 text-amber-900'
+    case 'I':
+      return 'border-orange-300 bg-orange-50 text-orange-900'
     case 'NA':
       return 'border-slate-300 bg-slate-50 text-slate-700'
     case 'UA':
+    case 'U':
       return 'border-violet-300 bg-violet-50 text-violet-900'
     default:
       return 'border-slate-200 bg-white text-hub-muted'
@@ -131,7 +140,7 @@ function groupStandardsBySection(standards: GradeStandardsStandard[]) {
 
 export default function GradeStandardsEditorPage() {
   const { grade = 'grade1', classId = '' } = useParams<{ grade: GradeLevelRoute; classId: string }>()
-  const gradeRoute = grade === 'grade3' ? 'grade3' : 'grade1'
+  const gradeRoute = resolveGradeLevelRoute(grade)
   const classIdNum = Number(classId)
   const navigate = useNavigate()
   const location = useLocation()
@@ -318,10 +327,10 @@ export default function GradeStandardsEditorPage() {
               className="inline-flex items-center gap-1 text-sm font-semibold text-violet-700 hover:text-violet-900"
             >
               <i className="bi bi-arrow-left" aria-hidden />
-              All {gradeRoute === 'grade1' ? '1st' : '3rd'} grade classes
+              All {gradeRoute === 'gradek' ? 'Kindergarten' : `${gradeLevelLabel(gradeRoute)} grade`} classes
             </Link>
             <p className="mt-2 text-xs font-bold uppercase tracking-wide text-violet-700">
-              {data.subject_catalog.subject} · {gradeRoute === 'grade1' ? '1st' : '3rd'} Grade Standards
+              {data.subject_catalog.subject} · {gradeRoute === 'gradek' ? 'Kindergarten' : `${gradeLevelLabel(gradeRoute)} Grade`} Standards
             </p>
             <h1 className="mt-1 text-2xl font-bold text-hub-text">{data.class.name}</h1>
             <p className="mt-2 text-sm text-hub-muted">
@@ -560,7 +569,7 @@ export default function GradeStandardsEditorPage() {
                             <td key={q} className="px-2 py-2">
                               <MarkSelect
                                 value={studentDraft[standard.id]?.[q] ?? ''}
-                                validMarks={data.valid_marks}
+                                validMarks={standard.valid_marks?.length ? standard.valid_marks : data.valid_marks}
                                 onChange={(value) =>
                                   setStudentDraft((prev) => ({
                                     ...prev,
@@ -615,7 +624,7 @@ export default function GradeStandardsEditorPage() {
                         <td key={student.id} className="px-2 py-2">
                           <MarkSelect
                             value={gridDraft[student.id]?.[standard.id] ?? ''}
-                            validMarks={data.valid_marks}
+                            validMarks={standard.valid_marks?.length ? standard.valid_marks : data.valid_marks}
                             onChange={(value) =>
                               setGridDraft((prev) => ({
                                 ...prev,

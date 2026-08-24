@@ -1420,7 +1420,8 @@ def set_students_year_end_intent():
             from utils.student_departure import schedule_pending_grade_resync_google
 
             for student in promoted_students:
-                schedule_pending_grade_resync_google(student)        if apply_now:
+                schedule_pending_grade_resync_google(student)
+        if apply_now:
             msg = (
                 f"Applied “{intent}” now for {updated} student(s) "
                 f"(promoted {counts['promoted']}, graduated {counts['graduated']}, "

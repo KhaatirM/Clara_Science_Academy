@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug8_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownAug24_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
-    title: 'Kindergarten & 2nd grade report cards',
-    body: 'Official and unofficial progress-report PDFs for Kindergarten and 2nd grade, with standards checklists on the Report Cards hub and class tools.',
+    title: 'Phone-friendly sidebar',
+    body: 'On phones the menu is a drawer that starts closed. Open it with the menu button; it closes when you navigate or tap outside.',
   },
   {
-    title: 'K & 2nd standards entry',
-    body: 'Teachers and admins can record Kindergarten (including Homeroom skills, habits, and writing) and 2nd grade Language Arts / Math standards that print on the PDF.',
+    title: 'Grade change remaps all classes',
+    body: 'Editing a student’s grade now moves grade-banded classes (including Art/PE/Music), and Google Groups refresh after the save so old-grade groups are cleared.',
   },
   {
-    title: '2nd grade PDF layout',
-    body: 'The student/school header prints on page 1 only so Language Arts and Math standards use the full page. Unofficial copies stamp a large greyed UNOFFICIAL mark on continuation pages.',
+    title: 'Archive student job teams',
+    body: 'Past cleaning / duty teams can be archived from Student Jobs so they leave the active list while inspection history stays on record.',
   },
   {
-    title: 'Larger report card logo',
-    body: 'The Clara logo in the report card PDF header is larger and easier to read on printed copies.',
+    title: 'Grading save fixes',
+    body: 'Teacher group grades hit the correct save URL, Save all no longer clears blank rows, zero scores stick, and school-year lockouts return a clear error instead of a silent failure.',
   },
   {
-    title: 'Report card header polish',
-    body: 'Entrance Year replaces Entrance Date, Kindergarten prints as K, and the unofficial stamp stays clipped inside the logo area.',
+    title: 'Tighter phone page layout',
+    body: 'Portal shells use less padding on small screens and keep wide tables scrolling inside the page.',
   },
 ]
 
@@ -30,10 +30,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.513.0'
-  const releaseLabel = version?.release_label || 'August 8, 2026'
+  const display = version?.display || 'v 2.514.0'
+  const releaseLabel = version?.release_label || 'August 24, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2655
+  const updatesEstimate = version?.updates_estimate ?? 2668
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

@@ -478,6 +478,14 @@ def grade_group_assignment(assignment_id):
     return admin_grade_group_assignment(assignment_id)
 
 
+@bp.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def grade_group_assignment_legacy_url(assignment_id):
+    """Backward-compatible URL used by older SPA builds."""
+    return grade_group_assignment(assignment_id)
+
+
 @bp.route('/grade/assignment/<int:assignment_id>/student/<int:student_id>', methods=['POST'])
 @login_required
 @teacher_required
@@ -536,7 +544,7 @@ def save_student_grade(assignment_id, student_id):
 
         existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
         if existing_grade and existing_grade.is_voided:
-            return jsonify({'success': True, 'message': 'Grade voided, not updated'})
+            return jsonify({'success': False, 'error': 'Grade is voided and cannot be updated.'}), 403
 
         # Empty score = not entered: remove grade row so 0 can stay distinct from blank
         if score_raw == '':

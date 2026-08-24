@@ -167,7 +167,7 @@ def create_cleaning_team(
     if normalized_type not in VALID_TEAM_TYPES:
         return {"success": False, "error": f"Invalid team type. Choose one of: {', '.join(sorted(VALID_TEAM_TYPES))}."}
 
-    existing = CleaningTeam.query.filter_by(team_name=team_name).first()
+    existing = CleaningTeam.query.filter_by(team_name=team_name, is_active=True).first()
     if existing:
         return {"success": False, "error": "A team with this name already exists."}
 
@@ -290,4 +290,25 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             "deduction_levels": "-10 / -5 / -2",
         },
         "urls": {"home": "/management"},
+    }
+
+
+def archive_cleaning_team(*, team_id: int) -> dict[str, Any]:
+    """Soft-archive a team so it no longer appears in the active hub."""
+    team = CleaningTeam.query.filter_by(id=team_id, is_active=True).first()
+    if not team:
+        return {"success": False, "error": "Team not found or already archived."}
+
+    team.is_active = False
+    team.updated_at = datetime.utcnow()
+
+    CleaningTeamMember.query.filter_by(team_id=team.id, is_active=True).update(
+        {"is_active": False},
+        synchronize_session=False,
+    )
+
+    db.session.commit()
+    return {
+        "success": True,
+        "message": f'Team "{team.team_name}" archived. Inspection history is preserved.',
     }

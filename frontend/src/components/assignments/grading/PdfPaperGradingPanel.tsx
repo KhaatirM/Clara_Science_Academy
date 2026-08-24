@@ -192,9 +192,16 @@ export function PdfPaperGradingPanel({
 
   const saveAll = async () => {
     setMessage(null)
-    const targets = selectableRows.map((r) => r.student.id)
-    for (const id of targets) {
-      await saveStudent(id, true)
+    const targets = selectableRows.filter((row) => {
+      const draft = drafts[rowKey(row.student.id)]
+      return draft && draft.score.trim() !== ''
+    })
+    if (!targets.length) {
+      setMessage('Enter at least one score before saving.')
+      return
+    }
+    for (const row of targets) {
+      await saveStudent(row.student.id, true)
     }
     setMessage(`Saved grades for ${targets.length} student(s)`)
   }

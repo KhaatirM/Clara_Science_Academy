@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated August 8, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated August 24, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,39 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 8, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 24, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 8</strong> (<strong>{{ app_version_display }}</strong>) ships <strong>Kindergarten and 2nd grade report cards</strong> with standards checklists, a fuller PDF logo, and 2nd grade pages that keep the header on page 1 only (with a full-page UNOFFICIAL watermark on later pages).</p>
+                        <p class="updates-intro-text mb-0"><strong>August 24</strong> (<strong>{{ app_version_display }}</strong>) improves <strong>phone navigation</strong>, lets you <strong>archive student job teams</strong>, fixes <strong>teacher grading saves</strong>, and remaps <strong>all grade-banded classes</strong> (including Art) when a student’s grade changes—with Google Groups refreshing after save.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 24, 2026 - mobile + grading + grade remap -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-phone me-2"></i>Phone, Grading &amp; Grade Changes – August 24, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Phone sidebar drawer:</strong> On phones the menu starts closed. Open it with the menu button; it closes when you navigate or tap outside so pages use the full screen.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grade change remaps all classes:</strong> Editing a student’s grade moves grade-banded classes (including Art / PE / Music). Google Groups refresh after the save so old-grade groups are cleared.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Archive student job teams:</strong> Past cleaning / duty teams can be archived from Student Jobs; inspection history stays on record.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grading save fixes:</strong> Teacher group grades save on the correct URL, Save all no longer clears blank rows, zero scores stick, and school-year lockouts return a clear error.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Phones are usable again in the portal, teachers can save grades reliably, and mid-year grade edits keep classes and Google Groups in sync.</p>
+                        </div>
+                    </div>
+
                     <!-- August 8, 2026 - K/2nd report cards -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Kindergarten &amp; 2nd Grade Report Cards – August 8, 2026</h6>
@@ -1882,11 +1908,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug8_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug24_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug8_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownAug24_2026_v1', 'true');
         }, 500);
     }
 });

@@ -66,6 +66,8 @@ TEACHER_WRITE_ENDPOINTS = {
     'teacher.grading.grade_assignment':           ('assignment', 'assignment_id'),
     # Per-student grade save (POST /teacher/grade/assignment/<id>/student/<sid>)
     'teacher.grading.save_student_grade':         ('assignment', 'assignment_id'),
+    # Group assignment bulk grade save
+    'teacher.grading.grade_group_assignment':     ('group_assignment', 'assignment_id'),
     # Void/unvoid an assignment (POST /teacher/assignment/<id>/void & /unvoid-assignment/<id>)
     'teacher.assignments.void_assignment':                ('assignment', 'assignment_id'),
     'teacher.assignments.unvoid_assignment_for_students': ('assignment', 'assignment_id'),
@@ -270,11 +272,19 @@ def _student_locked_response(endpoint: str):
 
 
 def _teacher_locked_response(endpoint: str):
-    flash(
+    message = (
         "The teacher window for this school year has ended. Contact the Director or School "
-        "Administrator to request an extension if you still need to update grades.",
-        "warning",
+        "Administrator to request an extension if you still need to update grades."
     )
+    wants_json = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.accept_mimetypes.accept_json
+        or 'application/json' in request.headers.get('Accept', '')
+    )
+    if wants_json:
+        from flask import jsonify
+        return jsonify({'success': False, 'error': message}), 403
+    flash(message, "warning")
     try:
         return redirect(request.referrer or url_for('teacher.dashboard.my_classes'))
     except Exception:

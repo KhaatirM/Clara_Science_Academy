@@ -25,7 +25,7 @@ export function draftFromGradeRow(row: GradeStudentRow): GradeRowDraft {
   }
 
   return {
-    score: score != null && Number(score) > 0 ? String(score) : '',
+    score: score != null ? String(score) : '',
     comment: row.grade.comment || '',
     submission_type: sub?.submission_type || row.submission_type || 'not_submitted',
     submission_notes_type: submissionNotesType,

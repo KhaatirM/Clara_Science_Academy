@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import {
   addTeamMembers,
+  archiveStudentJobsTeam,
   createStudentJobsTeam,
   fetchAllInspectionsForExport,
   fetchInspectionDetail,
@@ -333,6 +334,31 @@ export default function StudentJobsPage() {
     }
   }
 
+  async function handleArchiveTeam(teamId: number, teamName: string) {
+    if (
+      !window.confirm(
+        `Archive "${teamName}"? The team will leave the active list but inspection history stays on record.`,
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    try {
+      const result = await archiveStudentJobsTeam(teamId)
+      if (!result.success) {
+        setMessage(result.error || 'Could not archive team.')
+        return
+      }
+      setMessage(result.message || 'Team archived.')
+      setExpandedTeamId((id) => (id === teamId ? null : id))
+      await load()
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not archive team.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleEditMember(memberId: number, role: string) {
     const nextRole = window.prompt('Member role', role)
     if (nextRole === null) return
@@ -512,6 +538,14 @@ export default function StudentJobsPage() {
                   className="spa-mgmt-btn-primary px-3 py-1.5 text-xs"
                 >
                   Inspect team
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleArchiveTeam(team.id, team.name)}
+                  disabled={busy}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  Archive team
                 </button>
               </div>
 

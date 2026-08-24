@@ -1104,8 +1104,6 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
         if existing_grade and existing_grade.is_voided:
             continue
         sub = Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
-        if sub is None and existing_grade is None:
-            continue
 
         earned_points = 0.0
         question_scores = entry.get("questions") or {}
@@ -1172,6 +1170,16 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
                     late_penalty_applied=adjusted["late_penalty_applied"],
                 )
             )
+        if sub is None and adjusted["points_earned"] > 0:
+            sub = Submission(
+                student_id=student.id,
+                assignment_id=assignment_id,
+                submission_type="in_person",
+                submission_notes="Auto-marked: quiz grade entered",
+                submitted_at=datetime.utcnow(),
+                marked_at=datetime.utcnow(),
+            )
+            db.session.add(sub)
         saved += 1
 
     if not saved:

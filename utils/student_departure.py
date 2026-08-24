@@ -128,11 +128,14 @@ def promote_student_one_grade(student: Student) -> bool:
             resync_student_core_enrollments_for_grade_change,
         )
 
-        resync_student_core_enrollments_for_grade_change(
+        grade_resync = resync_student_core_enrollments_for_grade_change(
             student, old_grade=old_grade, new_grade=new_grade
         )
+        # Stash for callers that commit afterward so they can sync Google Groups
+        # after the enrollment changes are durable.
+        student._pending_grade_resync = grade_resync  # type: ignore[attr-defined]
     except Exception:
-        pass
+        student._pending_grade_resync = None  # type: ignore[attr-defined]
     # Best-effort: move Workspace OU (e.g. Middle → High School) while login still exists.
     try:
         from management_routes.students import _apply_student_google_ou_lifecycle
@@ -141,6 +144,32 @@ def promote_student_one_grade(student: Student) -> bool:
     except Exception:
         pass
     return True
+
+
+def schedule_pending_grade_resync_google(student: Student) -> None:
+    """After commit, sync class Google Groups for a promote/edit grade remapping."""
+    grade_resync = getattr(student, "_pending_grade_resync", None)
+    if not grade_resync or grade_resync.get("skipped"):
+        return
+    touched_ids = list(grade_resync.get("touched_class_ids") or [])
+    if not touched_ids:
+        touched_ids = [
+            int(row["class_id"])
+            for row in (grade_resync.get("dropped") or []) + (grade_resync.get("enrolled") or [])
+            if row.get("class_id") is not None
+        ]
+    if not touched_ids:
+        return
+    try:
+        from services.class_google_group import schedule_try_provision_class_google_groups
+
+        schedule_try_provision_class_google_groups(touched_ids)
+    except Exception:
+        pass
+    try:
+        delattr(student, "_pending_grade_resync")
+    except Exception:
+        pass
 
 
 def apply_outcome_now(student: Student, action: str) -> str:

@@ -15,12 +15,102 @@ from utils.core_class_catalog import (
     SETUP_GRADE_LEVELS,
     all_catalog_entries,
     catalog_entries_for_grade,
+    is_elective_subject,
     setup_key_for_entry,
 )
 
 
 def _normalize(text: str | None) -> str:
     return (text or '').strip().lower()
+
+
+def _inferred_grade_from_class_name(name: str | None) -> int | None:
+    """
+    Best-effort grade from names like "Art 6", "Art 6th", "Language Arts 7".
+    Used when Class.grade_levels is empty so remaps still work.
+    """
+    import re
+
+    text = (name or '').strip().lower()
+    if not text:
+        return None
+    # Prefer an explicit trailing grade token.
+    patterns = (
+        r'(?:^|[\s\-\[(])k(?:indergarten)?(?:[\s\-\])]|$)',
+        r'(?:^|[\s\-\[(])(\d{1,2})(?:st|nd|rd|th)?(?:\s*grade)?(?:[\s\-\])]|$)',
+    )
+    if re.search(patterns[0], text):
+        return 0
+    matches = list(re.finditer(patterns[1], text))
+    if not matches:
+        return None
+    try:
+        grade = int(matches[-1].group(1))
+    except (TypeError, ValueError):
+        return None
+    if 0 <= grade <= 12:
+        return grade
+    return None
+
+
+def _class_grade_levels(class_obj: Class) -> list[int]:
+    levels = class_obj.get_grade_levels() if hasattr(class_obj, 'get_grade_levels') else []
+    if levels:
+        return [int(g) for g in levels]
+    inferred = _inferred_grade_from_class_name(getattr(class_obj, 'name', None))
+    return [inferred] if inferred is not None else []
+
+
+def _entry_matches_class(class_obj: Class, grade_level: int, entry: dict) -> bool:
+    levels = _class_grade_levels(class_obj)
+    if int(grade_level) not in (levels or []):
+        return False
+    subject = _normalize(getattr(class_obj, 'subject', None))
+    entry_subject = _normalize(entry.get('subject'))
+    if entry_subject and subject == entry_subject:
+        return True
+    haystack = f'{_normalize(class_obj.name)} {subject}'
+    tokens = entry.get('match_tokens') or (entry.get('subject', '').lower(),)
+    return any(_normalize(tok) in haystack for tok in tokens if tok)
+
+
+def _deactivate_enrollment(enr: Enrollment, out_list: list[dict]) -> None:
+    enr.is_active = False
+    if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
+        from datetime import datetime, timezone
+
+        enr.dropped_at = datetime.now(timezone.utc)
+    cls = db.session.get(Class, enr.class_id)
+    out_list.append(
+        {
+            'class_id': enr.class_id,
+            'class_name': getattr(cls, 'name', None),
+        }
+    )
+
+
+def _should_drop_enrollment_for_grade_change(
+    class_obj: Class | None,
+    *,
+    old_grade: int,
+    new_grade: int,
+) -> bool:
+    """
+    Drop grade-banded classes that belong to the old grade but not the new one.
+
+    Keeps true electives (islamic/quran/arabic) and multi-grade bands that still
+    include the new grade.
+    """
+    if class_obj is None:
+        return False
+    if is_elective_subject(getattr(class_obj, 'subject', None)):
+        return False
+    levels = _class_grade_levels(class_obj)
+    if not levels:
+        return False
+    if new_grade in levels:
+        return False
+    return old_grade in levels
 
 
 def teacher_assignment_key(grade_level: int, setup_key: str) -> str:
@@ -80,15 +170,6 @@ def _validate_teacher_assignments(
                 f'Invalid or unavailable teacher for {row["name"]}.'
             )
     return errors
-
-
-def _entry_matches_class(class_obj: Class, grade_level: int, entry: dict) -> bool:
-    levels = class_obj.get_grade_levels() if hasattr(class_obj, 'get_grade_levels') else []
-    if int(grade_level) not in (levels or []):
-        return False
-    haystack = f'{_normalize(class_obj.name)} {_normalize(class_obj.subject)}'
-    tokens = entry.get('match_tokens') or (entry.get('subject', '').lower(),)
-    return any(_normalize(tok) in haystack for tok in tokens if tok)
 
 
 def _existing_for_school_year(school_year_id: int) -> list[Class]:
@@ -264,11 +345,15 @@ def resync_student_core_enrollments_for_grade_change(
     school_year_id: int | None = None,
 ) -> dict:
     """
-    When a student's grade changes mid-year, move them between core classes.
+    When a student's grade changes mid-year, move them between grade-banded classes.
 
-    - Drops active enrollments in core classes for the old grade (electives untouched)
+    - Drops active enrollments in old-grade classes (catalog cores + any other
+      grade-banded class that does not include the new grade)
+    - Leaves true electives (islamic/quran/arabic) alone
     - Enrolls into matching core classes for the new grade in the active school year
-    - Does not create missing classes; skips catalog rows with no matching Class
+    - Does not create missing classes; reports catalog rows with no matching Class
+    - Does NOT schedule Google sync (caller must do that AFTER commit via
+      ``touched_class_ids``)
 
     Caller commits.
     """
@@ -276,6 +361,7 @@ def resync_student_core_enrollments_for_grade_change(
         'dropped': [],
         'enrolled': [],
         'missing_classes': [],
+        'touched_class_ids': [],
         'skipped': False,
         'reason': None,
     }
@@ -319,7 +405,9 @@ def resync_student_core_enrollments_for_grade_change(
         if not matched:
             out['missing_classes'].append(class_name_for_grade(new_g, entry))
 
-    # Drop old-grade core enrollments that are not also desired for the new grade.
+    already_dropped: set[int] = set()
+
+    # 1) Drop catalog-matched old-grade cores that are not also new-grade cores.
     to_drop = old_core_ids - new_core_ids
     if to_drop:
         enrollments = (
@@ -330,18 +418,27 @@ def resync_student_core_enrollments_for_grade_change(
             ).all()
         )
         for enr in enrollments:
-            enr.is_active = False
-            if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
-                from datetime import datetime, timezone
+            _deactivate_enrollment(enr, out['dropped'])
+            already_dropped.add(int(enr.class_id))
 
-                enr.dropped_at = datetime.now(timezone.utc)
-            cls = db.session.get(Class, enr.class_id)
-            out['dropped'].append(
-                {
-                    'class_id': enr.class_id,
-                    'class_name': getattr(cls, 'name', None),
-                }
-            )
+    # 2) Sweep ALL active enrollments in this school year: drop any grade-banded
+    # class that belongs to the old grade but not the new one (covers Art/PE/Music
+    # when grade_levels or naming prevented catalog matching).
+    active_enrollments = (
+        Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
+    )
+    for enr in active_enrollments:
+        if int(enr.class_id) in already_dropped:
+            continue
+        cls = db.session.get(Class, enr.class_id)
+        if cls is None:
+            continue
+        if getattr(cls, 'school_year_id', None) != school_year_id:
+            continue
+        if not _should_drop_enrollment_for_grade_change(cls, old_grade=old_g, new_grade=new_g):
+            continue
+        _deactivate_enrollment(enr, out['dropped'])
+        already_dropped.add(int(enr.class_id))
 
     # Enroll into new-grade core classes.
     for class_id in sorted(new_core_ids):
@@ -381,20 +478,9 @@ def resync_student_core_enrollments_for_grade_change(
     except Exception:
         pass
 
-    # Best-effort: refresh Google Classroom / Group membership for touched classes.
-    touched = {row['class_id'] for row in out['dropped'] + out['enrolled']}
-    for class_id in touched:
-        try:
-            from services.class_google_group import schedule_try_provision_class_google_groups
-
-            schedule_try_provision_class_google_groups([class_id])
-        except Exception:
-            try:
-                from services.class_google_group import try_provision_class_google_group
-
-                try_provision_class_google_group(class_id)
-            except Exception:
-                pass
+    # Caller schedules Google sync AFTER commit using these IDs.
+    touched = {int(row['class_id']) for row in out['dropped'] + out['enrolled'] if row.get('class_id')}
+    out['touched_class_ids'] = sorted(touched)
 
     return out
 
@@ -467,15 +553,27 @@ def align_student_core_enrollments_to_current_grade(
             ).all()
         )
         for enr in enrollments:
-            enr.is_active = False
-            if hasattr(enr, 'dropped_at') and enr.dropped_at is None:
-                from datetime import datetime, timezone
+            _deactivate_enrollment(enr, out['dropped'])
 
-                enr.dropped_at = datetime.now(timezone.utc)
-            cls = db.session.get(Class, enr.class_id)
-            out['dropped'].append(
-                {'class_id': enr.class_id, 'class_name': getattr(cls, 'name', None)}
-            )
+    # Also drop leftover grade-banded enrollments that failed catalog matching
+    # (e.g. Art with empty grade_levels or odd naming).
+    already_dropped = {int(row['class_id']) for row in out['dropped'] if row.get('class_id')}
+    for enr in Enrollment.query.filter_by(student_id=student.id, is_active=True).all():
+        if int(enr.class_id) in already_dropped or int(enr.class_id) in desired:
+            continue
+        cls = db.session.get(Class, enr.class_id)
+        if cls is None or getattr(cls, 'school_year_id', None) != school_year_id:
+            continue
+        if is_elective_subject(getattr(cls, 'subject', None)):
+            continue
+        levels = _class_grade_levels(cls)
+        if not levels:
+            continue
+        if grade in levels:
+            continue
+        # Class is grade-banded to some other grade(s) only → drop.
+        _deactivate_enrollment(enr, out['dropped'])
+        already_dropped.add(int(enr.class_id))
 
     for class_id in sorted(desired):
         exists = Enrollment.query.filter_by(

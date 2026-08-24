@@ -2116,7 +2116,7 @@ def _save_single_student_grade(assignment_id, student_id):
 
     existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
     if existing_grade and existing_grade.is_voided:
-        return True, 'Voided'
+        return False, 'Grade is voided and cannot be updated.'
 
     if score_raw == '':
         if existing_grade:
@@ -5532,6 +5532,12 @@ def admin_grade_group_assignment(assignment_id):
                             'application/json' in request.headers.get('Accept', '')
                 
                 if wants_json:
+                    if saved_count == 0:
+                        return jsonify({
+                            'success': False,
+                            'message': 'No grades were saved. Check group membership and scores.',
+                            'graded_count': 0,
+                        }), 400
                     return jsonify({
                         'success': True,
                         'message': 'Grades saved successfully!',

@@ -363,13 +363,17 @@ export async function saveIndividualStudentGrade(
   scope: AssignmentWorkspaceScope = 'management',
 ) {
   const base = scope === 'teacher' ? '/teacher' : '/management'
-  return apiFetch<{ success: boolean; message: string }>(
+  const data = await apiFetch<{ success: boolean; message: string; error?: string }>(
     `${base}/grade/assignment/${assignmentId}/student/${studentId}`,
     {
       method: 'POST',
       body: JSON.stringify(payload),
     },
   )
+  if (data.success === false) {
+    throw new Error(data.error || data.message || 'Save failed')
+  }
+  return data
 }
 
 export async function saveGroupAssignmentGrades(
@@ -380,15 +384,22 @@ export async function saveGroupAssignmentGrades(
   const token = getCsrfToken()
   if (token) formData.append('csrf_token', token)
   const base = scope === 'teacher' ? '/teacher' : '/management'
-  const response = await fetch(`${base}/group-assignment/${assignmentId}/grade`, {
+  const path =
+    scope === 'teacher'
+      ? `${base}/grade/group-assignment/${assignmentId}`
+      : `${base}/group-assignment/${assignmentId}/grade`
+  const response = await fetch(path, {
     method: 'POST',
     credentials: 'same-origin',
     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     body: formData,
   })
-  const data = (await response.json()) as { success?: boolean; message?: string }
+  const data = (await response.json()) as { success?: boolean; message?: string; error?: string; graded_count?: number }
   if (!response.ok || data.success === false) {
-    throw new Error(data.message || `Save failed (${response.status})`)
+    throw new Error(data.error || data.message || `Save failed (${response.status})`)
+  }
+  if (typeof data.graded_count === 'number' && data.graded_count === 0) {
+    throw new Error('No grades were saved. Check group membership and score fields.')
   }
   return data
 }

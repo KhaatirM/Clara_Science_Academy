@@ -1385,6 +1385,7 @@ def set_students_year_end_intent():
 
     updated = 0
     counts = {"promoted": 0, "graduated": 0, "withdrawn": 0, "repeating": 0, "skipped": 0, "staged": 0}
+    promoted_students: list = []
     try:
         for sid in student_ids:
             student = Student.query.get(int(sid))
@@ -1396,6 +1397,8 @@ def set_students_year_end_intent():
                 counts[result] = counts.get(result, 0) + 1
                 if result != "skipped":
                     updated += 1
+                if result == "promoted":
+                    promoted_students.append(student)
             else:
                 if getattr(student, "is_deleted", False) or getattr(student, "departure_status", None):
                     counts["skipped"] += 1
@@ -1413,7 +1416,11 @@ def set_students_year_end_intent():
                 counts["staged"] += 1
                 updated += 1
         db.session.commit()
-        if apply_now:
+        if promoted_students:
+            from utils.student_departure import schedule_pending_grade_resync_google
+
+            for student in promoted_students:
+                schedule_pending_grade_resync_google(student)        if apply_now:
             msg = (
                 f"Applied “{intent}” now for {updated} student(s) "
                 f"(promoted {counts['promoted']}, graduated {counts['graduated']}, "
@@ -2789,6 +2796,29 @@ def edit_student(student_id):
                     e,
                 )
 
+        # Refresh per-class Google Groups / Classrooms AFTER commit so membership
+        # matches the new enrollments (pre-commit sync was racing and leaving
+        # students in old grade groups).
+        if grade_resync and not grade_resync.get("skipped"):
+            touched_ids = list(grade_resync.get("touched_class_ids") or [])
+            if not touched_ids:
+                touched_ids = [
+                    int(row["class_id"])
+                    for row in (grade_resync.get("dropped") or []) + (grade_resync.get("enrolled") or [])
+                    if row.get("class_id") is not None
+                ]
+            if touched_ids:
+                try:
+                    from services.class_google_group import schedule_try_provision_class_google_groups
+
+                    schedule_try_provision_class_google_groups(touched_ids)
+                except Exception as e:
+                    current_app.logger.warning(
+                        "Class Google sync after grade change failed for student %s: %s",
+                        student.id,
+                        e,
+                    )
+
         response = {"success": True, "message": "Student updated successfully.", "redirect": _spa_students_list_url()}
         if grade_resync and not grade_resync.get("skipped"):
             dropped_n = len(grade_resync.get("dropped") or [])
@@ -2797,7 +2827,7 @@ def edit_student(student_id):
             bits = []
             if dropped_n or enrolled_n:
                 bits.append(
-                    f"Core classes updated for new grade (left {dropped_n}, joined {enrolled_n})."
+                    f"Classes updated for new grade (left {dropped_n}, joined {enrolled_n})."
                 )
             if missing:
                 bits.append(

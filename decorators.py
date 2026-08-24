@@ -289,6 +289,7 @@ def management_required(f):
                 'spa_api.billing_record_payment': ['billing:manage'],
                 'spa_api.student_jobs_hub': [],
                 'spa_api.student_jobs_create_team': [],
+                'spa_api.student_jobs_archive_team': [],
                 'spa_api.student_jobs_inspections_list': [],
                 'spa_api.student_jobs_students': [],
                 'spa_api.student_jobs_add_members': [],

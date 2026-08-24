@@ -38,8 +38,8 @@ export function AppLayout({
       <main
         className={
           legacyShell
-            ? 'spa-main min-h-0 min-w-0 flex-1 overflow-y-auto p-2 md:p-4'
-            : 'spa-main min-h-0 min-w-0 flex-1 overflow-y-auto p-4 md:p-8'
+            ? 'spa-main min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-2 pt-14 min-[576px]:p-2 min-[576px]:pt-2 md:p-4 md:pt-4'
+            : 'spa-main min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-2 pt-14 min-[576px]:p-3 min-[576px]:pt-3 md:p-6 md:pt-6 lg:p-8 lg:pt-8'
         }
       >
         <Outlet context={outletContext} />

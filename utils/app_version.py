@@ -10,18 +10,18 @@ from __future__ import annotations
 # Where the portal started (first internal builds).
 VERSION_ORIGIN = "0.0.0"
 
-# Current public portal version (2 = mature era; 513 = K/2nd report cards).
+# Current public portal version (2 = mature era; 514 = mobile + grading + grade remap).
 VERSION_MAJOR = 2
-VERSION_MINOR = 513
+VERSION_MINOR = 514
 VERSION_PATCH = 0
 
 APP_VERSION = f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
 APP_VERSION_DISPLAY = f"v {APP_VERSION}"
 
 # Rough count of changelog entries / shipped improvements across project history.
-ESTIMATED_UPDATE_COUNT = 2655
+ESTIMATED_UPDATE_COUNT = 2668
 
-RELEASE_LABEL = "August 8, 2026"
+RELEASE_LABEL = "August 24, 2026"
 PRODUCT_NAME = "Clara Science Academy Portal"
 
 

@@ -102,9 +102,11 @@ aside.sidebar.spa-sidebar {
 
 .spa-mgmt-shell {
   background: var(--spa-mgmt-bg);
-  border-radius: 1.5rem;
-  padding: clamp(1.25rem, 3vw, 1.5rem);
+  border-radius: clamp(0.75rem, 2vw, 1.5rem);
+  padding: clamp(0.75rem, 2.5vw, 1.5rem);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* Pages that already paint their own rounded shell (cal/students/home) — avoid double frame */
@@ -113,10 +115,11 @@ aside.sidebar.spa-sidebar {
   border-radius: 0;
   padding: 0;
   box-shadow: none;
+  overflow-x: visible;
 }
 
 .spa-mgmt-hero {
-  border-radius: 1.5rem;
+  border-radius: clamp(1rem, 2vw, 1.5rem);
   border: 1px solid color-mix(in srgb, var(--spa-mgmt-accent) 28%, transparent);
   background: linear-gradient(
     135deg,
@@ -125,8 +128,18 @@ aside.sidebar.spa-sidebar {
     color-mix(in srgb, var(--spa-mgmt-accent-deep) 88%, #0f172a) 100%
   );
   color: var(--spa-mgmt-hero-text);
-  padding: 1.5rem 2rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem) clamp(1.1rem, 3vw, 2rem);
   box-shadow: 0 12px 32px color-mix(in srgb, var(--spa-mgmt-accent) 22%, transparent);
+}
+
+/* Wide tables scroll inside the page instead of blowing the phone viewport */
+.spa-mgmt table {
+  max-width: 100%;
+}
+
+.spa-mgmt .overflow-x-auto,
+.spa-main .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
 }
 
 .spa-mgmt-hero .text-hub-muted,

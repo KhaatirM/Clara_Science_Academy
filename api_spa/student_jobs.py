@@ -7,6 +7,7 @@ from flask_login import current_user, login_required
 
 from decorators import management_required, permissions_required
 from management_routes.student_jobs_spa_helpers import (
+    archive_cleaning_team,
     create_cleaning_team,
     query_inspection_history,
     query_student_jobs_hub,
@@ -43,6 +44,18 @@ def student_jobs_create_team():
             team_type=data.get("team_type", "other"),
             student_ids=data.get("student_ids") or data.get("members") or [],
         )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/teams/<int:team_id>/archive", methods=["POST"])
+@login_required
+@management_required
+def student_jobs_archive_team(team_id: int):
+    try:
+        result = archive_cleaning_team(team_id=team_id)
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
     status = 200 if result.get("success") else 400

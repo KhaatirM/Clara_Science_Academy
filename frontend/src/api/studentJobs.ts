@@ -18,6 +18,13 @@ export async function createStudentJobsTeam(payload: CreateStudentJobsTeamPayloa
   )
 }
 
+export async function archiveStudentJobsTeam(teamId: number) {
+  return apiFetch<{ success: boolean; message?: string; error?: string }>(
+    `/api/spa/student-jobs/teams/${teamId}/archive`,
+    { method: 'POST' },
+  )
+}
+
 export async function fetchInspectionHistory(page = 1, perPage = 10) {
   return apiFetch<StudentJobsInspectionHistoryResponse>(
     `/api/spa/student-jobs/inspections?page=${page}&per_page=${perPage}`,

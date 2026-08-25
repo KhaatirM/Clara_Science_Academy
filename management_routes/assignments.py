@@ -499,13 +499,15 @@ def create_quiz_assignment():
                 flash(draft_msg, 'success')
                 return redirect(url_for('management.create_quiz_assignment') + f'?edit={new_assignment.id}')
             success_msg = 'Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!'
+            from utils.spa_assignment_create_urls import (
+                assignment_create_hub_redirect,
+                assignment_create_success_redirect,
+            )
+
             if class_id:
-                success_url = f'/app/management/assignments/{class_id}'
+                success_url = assignment_create_success_redirect(class_id)
             else:
-                success_url = '/app/management/assignments'
-            from utils.spa_management_urls import user_should_use_spa_management_shell
-            if not user_should_use_spa_management_shell():
-                success_url = url_for('management.assignments_and_grades')
+                success_url = assignment_create_hub_redirect()
             return create_form_ok(success_msg, redirect_url=success_url)
             
         except Exception as e:
@@ -2022,15 +2024,20 @@ def add_assignment():
 
             db.session.commit()
             success_msg = f'Assignment created successfully for {created_count} class{"es" if created_count > 1 else ""}.'
-            from utils.spa_management_urls import user_should_use_spa_management_shell
-            if user_should_use_spa_management_shell() and created_count == 1 and len(class_ids) == 1:
-                return create_form_ok(success_msg, redirect_url=f"/app/management/assignments/{class_ids[0]}")
+            from utils.spa_assignment_create_urls import (
+                assignment_create_hub_redirect,
+                assignment_create_success_redirect,
+            )
+
             if len(class_ids) == 1:
                 return create_form_ok(
                     success_msg,
-                    redirect_url=url_for('management.assignments_and_grades', class_id=class_ids[0]),
+                    redirect_url=assignment_create_success_redirect(class_ids[0]),
                 )
-            return create_form_ok(success_msg, redirect_url=url_for('management.assignments_and_grades'))
+            return create_form_ok(
+                success_msg,
+                redirect_url=assignment_create_hub_redirect(),
+            )
         except Exception as e:
             print(f"ERROR: Failed to create assignment: {e}")
             db.session.rollback()

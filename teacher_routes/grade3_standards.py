@@ -37,6 +37,7 @@ from utils.report_card_grade3_standards import (
     class_completeness,
     section_completeness,
 )
+from utils.student_roster import active_roster_student_filters
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 
 
@@ -131,13 +132,14 @@ def _classes_for_user(school_year_id: int):
 
 
 def _class_roster(class_obj: Class):
-    """Return students enrolled in the class, sorted by name."""
+    """Return active-roster students enrolled in the class, sorted by name."""
     q = (
         db.session.query(Student)
         .join(Enrollment, Enrollment.student_id == Student.id)
         .filter(
             Enrollment.class_id == class_obj.id,
             Enrollment.is_active.is_(True),
+            active_roster_student_filters(),
         )
         .distinct()
     )

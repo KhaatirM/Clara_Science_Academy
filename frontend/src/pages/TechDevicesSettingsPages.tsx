@@ -431,6 +431,9 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
                     Student
                   </th>
                   <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    Color
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
                     Cord #
                   </th>
                   <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
@@ -470,6 +473,11 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
                           Unassigned
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 align-top text-hub-muted">
+                      {String(row.device_type).toLowerCase() === 'laptop'
+                        ? row.color_label || row.color || '—'
+                        : '—'}
                     </td>
                     <td className="px-4 py-3 align-top text-hub-muted">{row.cord_number || '—'}</td>
                     <td className="px-4 py-3 align-top text-hub-muted">
@@ -984,6 +992,7 @@ export function TechDeviceFormPage() {
     device_type: 'laptop',
     asset_name: '',
     device_name: '',
+    color: 'black',
     cord_number: '',
     operating_system: 'ChromeOS',
     student_id: prefillStudentId,
@@ -996,10 +1005,12 @@ export function TechDeviceFormPage() {
       .then((data) => {
         setFormMeta(data)
         if (data.device) {
+          const dtype = data.device.device_type || 'laptop'
           setForm({
-            device_type: data.device.device_type || 'laptop',
+            device_type: dtype,
             asset_name: data.device.asset_name || '',
             device_name: data.device.device_name || '',
+            color: dtype === 'laptop' ? data.device.color || 'black' : '',
             cord_number: data.device.cord_number || '',
             operating_system: data.device.operating_system || 'ChromeOS',
             student_id: String(data.device.student_id || ''),
@@ -1008,10 +1019,12 @@ export function TechDeviceFormPage() {
           const match = (data.students || []).find(
             (s: any) => String(s.id) === String(prefillStudentId),
           )
+          const nextType = match?.expected_device_type || 'laptop'
           setForm((prev) => ({
             ...prev,
             student_id: prefillStudentId,
-            device_type: match?.expected_device_type || prev.device_type,
+            device_type: nextType,
+            color: nextType === 'laptop' ? prev.color || 'black' : '',
           }))
         }
       })
@@ -1056,17 +1069,18 @@ export function TechDeviceFormPage() {
             setError(null)
             try {
               const studentId = form.student_id ? Number(form.student_id) : null
-              await saveTechDevice(
-                {
-                  device_type: form.device_type,
-                  asset_name: form.asset_name,
-                  device_name: form.device_name,
-                  cord_number: form.cord_number,
-                  operating_system: form.operating_system,
-                  student_id: studentId,
-                },
-                id,
-              )
+              const payload: Record<string, unknown> = {
+                device_type: form.device_type,
+                asset_name: form.asset_name,
+                device_name: form.device_name,
+                cord_number: form.cord_number,
+                operating_system: form.operating_system,
+                student_id: studentId,
+              }
+              if (form.device_type === 'laptop') {
+                payload.color = form.color
+              }
+              await saveTechDevice(payload, id)
               navigate('/tech/devices')
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Save failed')
@@ -1081,7 +1095,14 @@ export function TechDeviceFormPage() {
               <select
                 className={`${fieldClass} capitalize`}
                 value={form.device_type}
-                onChange={(e) => setForm((f) => ({ ...f, device_type: e.target.value }))}
+                onChange={(e) => {
+                  const nextType = e.target.value
+                  setForm((f) => ({
+                    ...f,
+                    device_type: nextType,
+                    color: nextType === 'laptop' ? f.color || 'black' : '',
+                  }))
+                }}
               >
                 {(formMeta.device_types || ['laptop', 'tablet']).map((t: string) => (
                   <option key={t} value={t}>
@@ -1090,6 +1111,28 @@ export function TechDeviceFormPage() {
                 ))}
               </select>
             </label>
+            {form.device_type === 'laptop' ? (
+              <label className="flex flex-col gap-1.5">
+                <span className={labelClass}>Color</span>
+                <select
+                  className={fieldClass}
+                  required
+                  value={form.color}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                >
+                  <option value="">Select color…</option>
+                  {(formMeta.device_colors || [
+                    { value: 'black', label: 'Black' },
+                    { value: 'silver', label: 'Silver' },
+                    { value: 'black_carbon', label: 'Black Carbon' },
+                  ]).map((opt: { value: string; label: string }) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="flex flex-col gap-1.5">
               <span className={labelClass}>Asset name</span>
               <input
@@ -1148,6 +1191,10 @@ export function TechDeviceFormPage() {
                     ...f,
                     student_id: nextId,
                     device_type: match?.expected_device_type || f.device_type,
+                    color:
+                      (match?.expected_device_type || f.device_type) === 'laptop'
+                        ? f.color || 'black'
+                        : '',
                   }))
                 }}
               >

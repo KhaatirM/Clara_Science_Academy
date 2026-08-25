@@ -187,10 +187,12 @@ def build_teacher_class_view_payload(class_id: int) -> tuple[dict[str, Any] | No
             .limit(5)
             .all()
         )
+        from utils.student_roster import student_is_archived
+
         student_assistants = [
             sa.student
             for sa in StudentAssistant.query.filter_by(class_id=class_id).all()
-            if sa.student
+            if sa.student and not student_is_archived(sa.student)
         ]
         assistant_logs = (
             StudentAssistantActionLog.query.filter_by(class_id=class_id)

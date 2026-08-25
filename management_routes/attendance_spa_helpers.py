@@ -476,8 +476,7 @@ def mark_class_all_present(class_id: int, date_str: str) -> dict[str, Any]:
     except ValueError:
         return {"success": False, "message": "Invalid date format."}
 
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    students = active_class_roster_students_query(class_id).all()
     teacher_id = getattr(current_user, "teacher_staff_id", None)
 
     for student in students:
@@ -698,15 +697,13 @@ def query_class_attendance_records(
         query = query.filter(Attendance.status.ilike(f"%{status_filter}%"))
 
     records = query.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all()
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     students = [
         {
-            "id": e.student.id,
-            "display_name": f"{e.student.first_name or ''} {e.student.last_name or ''}".strip(),
-            "student_id": getattr(e.student, "student_id", None),
+            "id": s.id,
+            "display_name": f"{s.first_name or ''} {s.last_name or ''}".strip(),
+            "student_id": getattr(s, "student_id", None),
         }
-        for e in enrollments
-        if e.student is not None
+        for s in active_class_roster_students_query(class_id).all()
     ]
 
     records_by_date: dict[str, list[dict[str, Any]]] = {}
@@ -770,11 +767,10 @@ def process_attendance_csv_upload(class_id: int, file_storage, teacher_id: int |
 
     stream = io.StringIO(file_storage.stream.read().decode("UTF-8"), newline=None)
     csv_reader = csv.DictReader(stream)
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     student_id_map = {
-        enrollment.student.student_id: enrollment.student.id
-        for enrollment in enrollments
-        if enrollment.student and enrollment.student.student_id
+        s.student_id: s.id
+        for s in active_class_roster_students_query(class_id).all()
+        if s.student_id
     }
     valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
     records_added = 0

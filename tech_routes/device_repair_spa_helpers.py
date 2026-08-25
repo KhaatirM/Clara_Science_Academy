@@ -47,11 +47,16 @@ def _student_brief(student: Student | None) -> dict[str, Any] | None:
 def _device_brief(device: StudentDevice | None) -> dict[str, Any] | None:
     if not device:
         return None
+    from tech_routes.spa_helpers import DEVICE_COLOR_LABELS
+
+    color = getattr(device, "color", None)
     return {
         "id": device.id,
         "device_type": device.device_type,
         "asset_name": device.asset_name,
         "device_name": device.device_name,
+        "color": color,
+        "color_label": DEVICE_COLOR_LABELS.get(color or "") if color else None,
         "student": _student_brief(device.student),
     }
 

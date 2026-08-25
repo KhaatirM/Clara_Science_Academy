@@ -59,6 +59,8 @@ def query_parents_hub() -> dict:
 
     students_with_parent_email = Student.query.filter(
         Student.is_deleted.is_(False),
+        Student.marked_for_removal.is_(False),
+        Student.is_active.is_(True),
         db.or_(
             Student.parent1_email.isnot(None),
             Student.parent2_email.isnot(None),
@@ -70,6 +72,7 @@ def query_parents_hub() -> dict:
     }
     students_pending_link = Student.query.filter(
         Student.is_deleted.is_(False),
+        Student.marked_for_removal.is_(False),
         Student.is_active.is_(True),
         db.or_(
             Student.parent1_email.isnot(None),
@@ -211,6 +214,7 @@ def provision_parent_login(student_id: int):
 def _run_bulk_parent_provision() -> dict:
     students = Student.query.filter(
         Student.is_deleted.is_(False),
+        Student.marked_for_removal.is_(False),
         Student.is_active.is_(True),
         db.or_(
             Student.parent1_email.isnot(None),

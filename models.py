@@ -357,7 +357,13 @@ class TeacherStaff(db.Model):
     user = db.relationship('User', backref='teacher_staff_profile', uselist=False)
 
     def generate_staff_id(self):
-        """Generate Staff ID based on department abbreviation and hire date"""
+        """
+        Generate Staff ID based on department abbreviation and hire date.
+
+        Format: ``{DEPT}{MM}{DD}{YY}`` (e.g. MATH010526). If that value is
+        already taken (same department + hire day), append ``-2``, ``-3``, …
+        so new staff can always be saved.
+        """
         if not self.department or not self.hire_date:
             return None
         
@@ -388,9 +394,30 @@ class TeacherStaff(db.Model):
             month = str(dt.month).zfill(2)
             day = str(dt.day).zfill(2)
             year = str(dt.year)[-2:]
-            return f"{dept_abbr}{month}{day}{year}"
-        except Exception as e:
+            base = f"{dept_abbr}{month}{day}{year}"
+        except Exception:
             return None
+
+        # Avoid UniqueViolation when multiple staff share department + hire day.
+        # no_autoflush: assigning staff_id on a pending row must not flush before
+        # we finish checking collisions.
+        self_id = getattr(self, "id", None)
+        candidate = base
+        suffix = 2
+        with db.session.no_autoflush:
+            while True:
+                q = TeacherStaff.query.filter(TeacherStaff.staff_id == candidate)
+                if self_id is not None:
+                    q = q.filter(TeacherStaff.id != self_id)
+                if q.first() is None:
+                    return candidate
+                candidate = f"{base}-{suffix}"
+                suffix += 1
+                if suffix > 999:
+                    # Extremely unlikely; fall back to include DB id if available.
+                    if self_id is not None:
+                        return f"{base}-{self_id}"
+                    return f"{base}-{suffix}"
 
     def __repr__(self):
         return f"TeacherStaff('{self.first_name} {self.last_name}')"
@@ -1890,6 +1917,7 @@ class StudentDevice(db.Model):
     device_type = db.Column(db.String(20), nullable=False)  # 'laptop' or 'tablet'
     asset_name = db.Column(db.String(120), nullable=False, unique=True)  # e.g. CSA-Laptop-#
     device_name = db.Column(db.String(200), nullable=True)  # manufacturer / model label
+    color = db.Column(db.String(40), nullable=True)  # black | silver | black_carbon
     cord_number = db.Column(db.String(80), nullable=True)  # often matches device # in asset_name
     operating_system = db.Column(db.String(120), nullable=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True, unique=True)

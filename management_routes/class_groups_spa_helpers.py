@@ -14,7 +14,6 @@ from models import (
     ConflictResolution,
     DraftFeedback,
     DraftSubmission,
-    Enrollment,
     GroupAssignment,
     GroupConflict,
     GroupContract,
@@ -26,20 +25,20 @@ from models import (
     PeerEvaluation,
     PeerReview,
     ReflectionJournal,
-    Student,
     StudentGroup,
     StudentGroupMember,
     TimeTracking,
 )
 
 from management_routes.class_spa_helpers import serialize_student_brief
+from utils.student_roster import active_class_roster_students_query, student_is_archived
 
 
 def _group_member_rows(group_id: int) -> list[dict[str, Any]]:
     members = StudentGroupMember.query.filter_by(group_id=group_id).all()
     rows = []
     for m in members:
-        if not m.student:
+        if not m.student or student_is_archived(m.student):
             continue
         rows.append(
             {
@@ -54,13 +53,7 @@ def _group_member_rows(group_id: int) -> list[dict[str, Any]]:
 def query_class_groups(class_id: int) -> dict[str, Any]:
     class_obj = Class.query.get_or_404(class_id)
     groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).order_by(StudentGroup.name).all()
-    enrolled = (
-        db.session.query(Student)
-        .join(Enrollment)
-        .filter(Enrollment.class_id == class_id, Enrollment.is_active.is_(True), Student.is_deleted.is_(False))
-        .order_by(Student.last_name, Student.first_name)
-        .all()
-    )
+    enrolled = active_class_roster_students_query(class_id).all()
     payload_groups = []
     member_counts = []
     for group in groups:
@@ -193,6 +186,10 @@ def mutate_class_groups(class_id: int, body: dict[str, Any]) -> dict[str, Any]:
         student_ids = [int(x) for x in (body.get("student_ids") or []) if str(x).isdigit()]
         if not student_ids:
             return {"success": False, "message": "Select at least one student."}
+        roster_ids = {s.id for s in active_class_roster_students_query(class_id).all()}
+        student_ids = [sid for sid in student_ids if sid in roster_ids]
+        if not student_ids:
+            return {"success": False, "message": "Selected students are not on the active class roster."}
         current_members = StudentGroupMember.query.filter_by(group_id=group.id).all()
         current_member_ids = {m.student_id for m in current_members}
         max_allowed = _max_group_size(class_id)

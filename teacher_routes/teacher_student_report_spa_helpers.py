@@ -8,15 +8,27 @@ from typing import Any
 from models import Attendance, Class, Enrollment, SchoolYear, Student
 from teacher_routes.utils import get_teacher_or_admin, is_admin
 from utils.quarter_grade_calculator import get_quarter_grades_for_report
+from utils.school_year_filters import get_active_school_year
+from utils.student_roster import student_is_archived
 
 
 def _teacher_can_access_student(student_id: int) -> bool:
+    student = Student.query.get(student_id)
+    if not student or student_is_archived(student):
+        return False
     if is_admin():
         return True
     teacher = get_teacher_or_admin()
     if teacher is None:
         return False
-    teacher_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    active_year = get_active_school_year()
+    if not active_year:
+        return False
+    teacher_classes = Class.query.filter_by(
+        teacher_id=teacher.id,
+        is_active=True,
+        school_year_id=active_year.id,
+    ).all()
     class_ids = [c.id for c in teacher_classes]
     if not class_ids:
         return False
@@ -50,7 +62,7 @@ def _student_brief(student: Student) -> dict[str, Any]:
 
 def build_teacher_student_grades_report(student_id: int) -> tuple[dict[str, Any] | None, str | None]:
     student = Student.query.get(student_id)
-    if not student:
+    if not student or student_is_archived(student):
         return None, "Student not found"
     if not _teacher_can_access_student(student_id):
         return None, "Forbidden"
@@ -120,7 +132,7 @@ def build_teacher_student_attendance_report(
     student_id: int,
 ) -> tuple[dict[str, Any] | None, str | None]:
     student = Student.query.get(student_id)
-    if not student:
+    if not student or student_is_archived(student):
         return None, "Student not found"
     if not _teacher_can_access_student(student_id):
         return None, "Forbidden"

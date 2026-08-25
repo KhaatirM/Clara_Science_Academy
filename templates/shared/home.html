@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) improves <strong>Tech User Management</strong>, <strong>Devices</strong> inventory, and keeps class pickers on the <strong>active school year</strong> only.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>laptop color</strong> on Devices, keeps <strong>archived students</strong> off day-to-day class lists, and tightens <strong>student assistant</strong> limits to the active school year.</p>
                     </div>
                 </div>
                 
@@ -176,6 +176,22 @@
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-people me-2"></i>Tech Users &amp; Devices – August 25, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Laptop color:</strong> Add/edit laptops with Black, Silver, or Black Carbon. Tablets skip color. Inventory and CSV import support the field for laptops only.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Archived students filtered:</strong> Graduated/withdrawn/removed students no longer show in grading, attendance, groups, assistants, and related class tools.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assistants (active year):</strong> Each student may assist at most two classes in the active school year; closed-year history does not count.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment create redirect:</strong> After creating an assignment, staff return to Assignments (not Home); PDF create file dropzone is clearer.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Former students &amp; staff:</strong> Tech User Management lists graduated/withdrawn students and inactive staff even when their portal login was removed.
@@ -1949,11 +1965,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v6')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v7')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug25_2026_v6', 'true');
+            sessionStorage.setItem('updateModalShownAug25_2026_v7', 'true');
         }, 500);
     }
 });

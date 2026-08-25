@@ -190,10 +190,17 @@ def build_teacher_home_payload() -> tuple[dict[str, Any] | None, str | None]:
     )
 
     if class_ids:
-        enrollments = Enrollment.query.filter(
-            Enrollment.class_id.in_(class_ids),
-            Enrollment.is_active.is_(True),
-        ).all()
+        from utils.student_roster import active_roster_student_filters
+
+        enrollments = (
+            Enrollment.query.join(Student, Student.id == Enrollment.student_id)
+            .filter(
+                Enrollment.class_id.in_(class_ids),
+                Enrollment.is_active.is_(True),
+                active_roster_student_filters(),
+            )
+            .all()
+        )
         total_students = len({e.student_id for e in enrollments})
         active_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
         total_assignments = active_assignments

@@ -8,15 +8,14 @@ from extensions import db
 from models import (
     Class,
     DeadlineReminder,
-    Enrollment,
     Feedback360,
     GroupAssignment,
     GroupConflict,
     ReflectionJournal,
-    Student,
     StudentGroup,
     StudentGroupMember,
 )
+from utils.student_roster import active_class_roster_students_query, student_is_archived
 
 
 def _load_deadline_reminders_for_class(class_id: int) -> list:
@@ -76,13 +75,7 @@ def _class_header(class_obj: Class) -> dict[str, Any]:
 
 
 def _enrolled_students(class_id: int) -> list[dict[str, Any]]:
-    rows = (
-        db.session.query(Student)
-        .join(Enrollment)
-        .filter(Enrollment.class_id == class_id, Enrollment.is_active.is_(True))
-        .order_by(Student.last_name, Student.first_name)
-        .all()
-    )
+    rows = active_class_roster_students_query(class_id).all()
     return [
         {
             "id": s.id,
@@ -91,7 +84,6 @@ def _enrolled_students(class_id: int) -> list[dict[str, Any]]:
             "view_url": f"/app/management/students?edit={s.id}",
         }
         for s in rows
-        if s and not getattr(s, "is_deleted", False)
     ]
 
 
@@ -103,6 +95,14 @@ def query_class_tool(class_id: int, tool: str) -> dict[str, Any]:
     if tool == "analytics":
         groups = StudentGroup.query.filter_by(class_id=class_id).all()
         group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+
+        def _active_member_count(group: StudentGroup) -> int:
+            return sum(
+                1
+                for m in (group.members or [])
+                if getattr(m, "student", None) and not student_is_archived(m.student)
+            )
+
         return {
             **header,
             "tool": tool,
@@ -112,7 +112,10 @@ def query_class_tool(class_id: int, tool: str) -> dict[str, Any]:
                 "group_assignments": len(group_assignments),
                 "students": len(students),
             },
-            "groups": [{"id": g.id, "name": g.name, "member_count": len(g.members or [])} for g in groups],
+            "groups": [
+                {"id": g.id, "name": g.name, "member_count": _active_member_count(g)}
+                for g in groups
+            ],
             "group_assignments": [
                 {"id": ga.id, "title": ga.title, "status": ga.status, "due_date": ga.due_date.isoformat() if ga.due_date else None}
                 for ga in group_assignments
@@ -124,24 +127,25 @@ def query_class_tool(class_id: int, tool: str) -> dict[str, Any]:
         payload_groups = []
         for group in groups:
             members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+            member_rows = [
+                {
+                    "student_id": m.student_id,
+                    "display_name": (
+                        f"{m.student.first_name} {m.student.last_name}".strip()
+                        if m.student
+                        else "Unknown"
+                    ),
+                    "is_leader": bool(m.is_leader),
+                }
+                for m in members
+                if m.student and not student_is_archived(m.student)
+            ]
             payload_groups.append(
                 {
                     "id": group.id,
                     "name": group.name,
-                    "member_count": len(members),
-                    "members": [
-                        {
-                            "student_id": m.student_id,
-                            "display_name": (
-                                f"{m.student.first_name} {m.student.last_name}".strip()
-                                if m.student
-                                else "Unknown"
-                            ),
-                            "is_leader": bool(m.is_leader),
-                        }
-                        for m in members
-                        if m.student
-                    ],
+                    "member_count": len(member_rows),
+                    "members": member_rows,
                 }
             )
         return {

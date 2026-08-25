@@ -438,7 +438,8 @@ export function ClassEditPage() {
                 <ClassEditPanel icon="bi-person-badge-fill" title="Student assistants">
                   <p className="mb-3 text-xs text-hub-muted">
                     Up to {data.max_assistants_per_class} per class. Each student may assist at most{' '}
-                    <strong>2 classes</strong>.
+                    <strong>2 classes</strong> in the active school year. Graduated or removed
+                    students are not eligible.
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {([1, 2] as const).map((slot, idx) => (

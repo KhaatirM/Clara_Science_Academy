@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_teacher_accessible_classes
 from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, GroupGrade, Enrollment, Student, SchoolYear, GroupAssignmentMemberSnapshot
+from utils.student_roster import active_class_roster_students_query, student_is_archived
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import json
@@ -47,7 +48,7 @@ def class_groups(class_id):
         members = StudentGroupMember.query.filter_by(group_id=group.id).all()
         group.members_list = []
         for m in members:
-            if m.student:
+            if m.student and not student_is_archived(m.student):
                 member_data = {
                     'student': m.student,
                     'is_leader': m.is_leader
@@ -55,9 +56,8 @@ def class_groups(class_id):
                 group.members_list.append(member_data)
         group.member_count = len(group.members_list)
     
-    # Get enrolled students
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [e.student for e in enrollments if e.student]
+    # Active roster only (exclude graduated / withdrawn / transferred)
+    students = active_class_roster_students_query(class_id).all()
     
     return render_template('teachers/teacher_class_groups.html',
                          class_obj=class_obj,

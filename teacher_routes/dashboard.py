@@ -414,11 +414,9 @@ def view_class(class_id):
         db.session.refresh(class_obj)
 
     # Get only actively enrolled students for this class (exclude archived student records)
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [
-        e.student for e in enrollments
-        if e.student is not None and not getattr(e.student, 'is_deleted', False)
-    ]
+    from utils.student_roster import active_class_roster_students_query, student_is_archived
+
+    enrolled_students = active_class_roster_students_query(class_id).all()
 
     assignment_count = Assignment.query.filter_by(class_id=class_id).count()
 
@@ -428,7 +426,7 @@ def view_class(class_id):
     # Student assistants and activity log (teacher can view for their class)
     student_assistants = []
     for sa in StudentAssistant.query.filter_by(class_id=class_id).all():
-        if sa.student:
+        if sa.student and not student_is_archived(sa.student):
             student_assistants.append(sa.student)
     assistant_action_logs = StudentAssistantActionLog.query.filter_by(class_id=class_id).order_by(
         StudentAssistantActionLog.created_at.desc()

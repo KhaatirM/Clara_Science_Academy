@@ -1,28 +1,24 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v6'
+const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v7'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
-    title: 'Tech user lists cleaned up',
-    body: 'Students (former) and Staff (former) now show departed people even without a portal login. Parents have their own category instead of appearing under Staff.',
+    title: 'Laptop color on devices',
+    body: 'When adding or editing a laptop, choose Black, Silver, or Black Carbon. Tablets do not use a color field. Inventory lists show color for laptops, and CSV import includes color for laptops only.',
   },
   {
-    title: 'Device inventory without assignment',
-    body: 'Devices can be unassigned stock. Inventory shows students still pending a device, and the CSV template supports blank student columns plus Upload CSV.',
+    title: 'Archived students stay off class lists',
+    body: 'Graduated, withdrawn, and removed students no longer appear when grading, taking attendance, managing groups, picking assistants, or other day-to-day class work.',
   },
   {
-    title: 'Active-year classes only in pickers',
-    body: 'Collaborate conflict/journal options and assignment create class lists (including PDF multi-class) no longer mix in closed school-year classes.',
+    title: 'Student assistants: 2 per active year',
+    body: 'A student may assist at most two classes in the active school year. Closed-year assignments do not count, and archived students cannot be selected.',
   },
   {
-    title: 'Device repair tickets',
-    body: 'Tech → Devices has Inventory and Repair tickets. File Hardware or Software issues, set severity, and track open → in progress → repaired → closed.',
-  },
-  {
-    title: 'Forced password change in the app',
-    body: 'After a tech password reset (or first login), the portal now shows a required change-password dialog in the React app—not only on old pages.',
+    title: 'Assignment create returns to Assignments',
+    body: 'After creating an assignment (including multi-class), staff land on the Assignments hub instead of Home. PDF create also has clearer file drag-and-drop.',
   },
 ]
 
@@ -30,10 +26,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.516.0'
+  const display = version?.display || 'v 2.516.1'
   const releaseLabel = version?.release_label || 'August 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2682
+  const updatesEstimate = version?.updates_estimate ?? 2685
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

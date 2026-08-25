@@ -47,14 +47,18 @@ def _absolute_url(path: str) -> str:
 
 
 def _student_user_ids_active_year(school_year_id: int) -> list[int]:
+    from utils.student_roster import active_roster_student_filters
+
     rows = (
-        db.session.query(Student.user_id)
+        db.session.query(User.id)
+        .join(Student, Student.id == User.student_id)
         .join(Enrollment, Enrollment.student_id == Student.id)
         .join(Class, Class.id == Enrollment.class_id)
         .filter(
             Enrollment.is_active.is_(True),
             Class.school_year_id == school_year_id,
-            Student.user_id.isnot(None),
+            Class.is_active.is_(True),
+            active_roster_student_filters(),
         )
         .distinct()
         .all()

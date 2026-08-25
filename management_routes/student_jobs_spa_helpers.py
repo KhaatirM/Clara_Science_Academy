@@ -78,7 +78,9 @@ def _team_current_score(team_id: int, recent_inspections: list[CleaningInspectio
 
 
 def _serialize_member(member: CleaningTeamMember) -> dict[str, Any] | None:
-    if not member.student:
+    from utils.student_roster import student_is_archived
+
+    if not member.student or student_is_archived(member.student):
         return None
     assignment_desc = ""
     try:
@@ -181,10 +183,20 @@ def create_cleaning_team(
     db.session.flush()
 
     added = 0
+    from utils.student_roster import filter_student_ids_on_roster
+
+    allowed_ids = set(
+        filter_student_ids_on_roster(
+            [int(x) for x in (student_ids or []) if str(x).isdigit() or isinstance(x, int)],
+            require_active_enrollment=False,
+        )
+    )
     for raw_id in student_ids or []:
         try:
             sid = int(raw_id)
         except (TypeError, ValueError):
+            continue
+        if sid not in allowed_ids:
             continue
         already = CleaningTeamMember.query.filter_by(
             team_id=team.id, student_id=sid, is_active=True

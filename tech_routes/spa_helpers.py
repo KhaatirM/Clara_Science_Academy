@@ -31,6 +31,33 @@ from utils.tech_user_management import (
 )
 
 DEVICE_TYPES = ("laptop", "tablet")
+DEVICE_COLORS = (
+    ("black", "Black"),
+    ("silver", "Silver"),
+    ("black_carbon", "Black Carbon"),
+)
+DEVICE_COLOR_VALUES = {value for value, _label in DEVICE_COLORS}
+DEVICE_COLOR_LABELS = {value: label for value, label in DEVICE_COLORS}
+
+
+def _normalize_device_color(raw) -> str | None:
+    value = (raw or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "black": "black",
+        "silver": "silver",
+        "black_carbon": "black_carbon",
+        "blackcarbon": "black_carbon",
+        "carbon": "black_carbon",
+        "carbon_black": "black_carbon",
+    }
+    normalized = aliases.get(value)
+    if normalized in DEVICE_COLOR_VALUES:
+        return normalized
+    return None
+
+
+def _device_color_options() -> list[dict[str, str]]:
+    return [{"value": value, "label": label} for value, label in DEVICE_COLORS]
 
 
 def _fmt(value) -> str | None:
@@ -162,11 +189,14 @@ def _serialize_student_option(s: Student) -> dict[str, Any]:
 
 def _serialize_device(d: StudentDevice) -> dict[str, Any]:
     stu = d.student
+    color = getattr(d, "color", None)
     return {
         "id": d.id,
         "device_type": d.device_type,
         "asset_name": d.asset_name,
         "device_name": d.device_name,
+        "color": color,
+        "color_label": DEVICE_COLOR_LABELS.get(color or "", None),
         "cord_number": d.cord_number,
         "operating_system": d.operating_system,
         "student_id": d.student_id,
@@ -205,6 +235,7 @@ def build_devices_list_payload(
                 StudentDevice.asset_name.ilike(like),
                 StudentDevice.device_name.ilike(like),
                 StudentDevice.cord_number.ilike(like),
+                StudentDevice.color.ilike(like),
             )
         )
     records = q.order_by(StudentDevice.device_type, StudentDevice.asset_name).all()
@@ -225,6 +256,7 @@ def build_devices_list_payload(
         },
         "filters": {"type": device_type, "q": search, "assignment": assignment},
         "device_types": list(DEVICE_TYPES),
+        "device_colors": _device_color_options(),
     }
 
 
@@ -242,6 +274,7 @@ def build_device_form_payload(device_id: int | None = None) -> tuple[dict[str, A
         "device": _serialize_device(device) if device else None,
         "students": [_serialize_student_option(s) for s in students],
         "device_types": list(DEVICE_TYPES),
+        "device_colors": _device_color_options(),
     }, None, 200
 
 
@@ -249,6 +282,7 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
     device_type = _normalize_device_type(body.get("device_type"))
     asset_name = (body.get("asset_name") or "").strip()
     device_name = (body.get("device_name") or "").strip() or None
+    raw_color = body.get("color")
     cord_number = (body.get("cord_number") or "").strip() or None
     operating_system = (body.get("operating_system") or "").strip() or None
     raw_student = body.get("student_id")
@@ -263,6 +297,14 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
         return None, "Select a valid device type (laptop or tablet).", 400
     if not asset_name:
         return None, "Asset name is required.", 400
+
+    # Color applies to laptops only; tablets clear/ignore color.
+    if device_type == "laptop":
+        color = _normalize_device_color(raw_color)
+        if not color:
+            return None, "Select a laptop color (Black, Silver, or Black Carbon).", 400
+    else:
+        color = None
 
     stu = None
     if student_id is not None:
@@ -291,6 +333,7 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
         device.device_type = device_type
         device.asset_name = asset_name
         device.device_name = device_name
+        device.color = color
         device.cord_number = cord_number
         device.operating_system = operating_system
         device.student_id = student_id
@@ -301,6 +344,7 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
             device_type=device_type,
             asset_name=asset_name,
             device_name=device_name,
+            color=color,
             cord_number=cord_number,
             operating_system=operating_system,
             student_id=student_id,

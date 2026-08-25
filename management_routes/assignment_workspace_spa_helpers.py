@@ -14,7 +14,6 @@ from extensions import db
 from models import (
     Assignment,
     AssignmentExtension,
-    Enrollment,
     Grade,
     GroupAssignment,
     GroupAssignmentExtension,
@@ -28,6 +27,7 @@ from models import (
     TeacherStaff,
 )
 from teacher_routes.assignment_utils import compute_assignment_void_scope
+from utils.student_roster import active_class_roster_students_query
 
 
 def _iso(dt: Any) -> str | None:
@@ -184,9 +184,11 @@ def _discussion_view_payload(assignment: Assignment) -> dict[str, Any]:
         participant_ids.add(post.student_id)
 
     participants = []
+    from utils.student_roster import student_is_archived
+
     for student_id in participant_ids:
         student = Student.query.get(student_id)
-        if not student:
+        if not student or student_is_archived(student):
             continue
         threads_count = sum(1 for t in threads if t.student_id == student_id)
         replies_count = sum(1 for p in all_posts if p.student_id == student_id)
@@ -495,13 +497,8 @@ def _actions_meta_individual(assignment: Assignment, flags: dict[str, Any], void
 
 
 def _class_students(class_id: int) -> list[Student]:
-    return (
-        db.session.query(Student)
-        .join(Enrollment)
-        .filter(Enrollment.class_id == class_id, Enrollment.is_active.is_(True))
-        .order_by(Student.last_name, Student.first_name)
-        .all()
-    )
+    """Active-roster students only (exclude graduated / withdrawn / transferred)."""
+    return active_class_roster_students_query(class_id).all()
 
 
 def _roster_students(class_id: int) -> list[dict[str, Any]]:
@@ -514,12 +511,7 @@ def query_individual_assignment_view(assignment_id: int) -> dict[str, Any]:
     teacher = TeacherStaff.query.get(class_info.teacher_id) if class_info and class_info.teacher_id else None
     flags = _individual_legacy_flags(assignment)
 
-    enrolled_ids = [
-        sid
-        for (sid,) in db.session.query(Enrollment.student_id)
-        .filter_by(class_id=assignment.class_id, is_active=True)
-        .all()
-    ]
+    enrolled_ids = [s.id for s in _class_students(assignment.class_id)]
     voided_ids = {
         sid
         for (sid,) in db.session.query(Grade.student_id)
@@ -830,6 +822,8 @@ def query_individual_assignment_grade_statistics(assignment_id: int) -> dict[str
 def _group_roster(group_assignment: GroupAssignment) -> tuple[list[dict[str, Any]], int]:
     from types import SimpleNamespace
 
+    from utils.student_roster import student_is_archived
+
     snap_rows = GroupAssignmentMemberSnapshot.query.filter_by(group_assignment_id=group_assignment.id).all()
     snapshot: dict[int | None, list[int]] = {}
     for r in snap_rows:
@@ -841,7 +835,13 @@ def _group_roster(group_assignment: GroupAssignment) -> tuple[list[dict[str, Any
         group_objs = StudentGroup.query.filter(StudentGroup.id.in_(group_ids)).all() if group_ids else []
         by_id = {g.id: g for g in group_objs}
         student_ids = sorted({sid for sids in snapshot.values() for sid in sids})
-        students_by_id = {s.id: s for s in Student.query.filter(Student.id.in_(student_ids)).all()} if student_ids else {}
+        students_by_id = {
+            s.id: s
+            for s in (
+                Student.query.filter(Student.id.in_(student_ids)).all() if student_ids else []
+            )
+            if not student_is_archived(s)
+        }
         for gid in group_ids:
             members = [_student_brief(students_by_id.get(sid)) for sid in snapshot.get(gid, []) if sid in students_by_id]
             groups.append({"id": gid, "name": by_id[gid].name if gid in by_id else f"Group #{gid}", "members": members})
@@ -862,7 +862,11 @@ def _group_roster(group_assignment: GroupAssignment) -> tuple[list[dict[str, Any
         else:
             q = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True)
         for g in q.all():
-            members = [_student_brief(m.student) for m in getattr(g, "members", []) if getattr(m, "student", None)]
+            members = [
+                _student_brief(m.student)
+                for m in getattr(g, "members", [])
+                if getattr(m, "student", None) and not student_is_archived(m.student)
+            ]
             groups.append({"id": g.id, "name": g.name, "members": members})
 
     total_students = sum(len(g["members"]) for g in groups)

@@ -8,7 +8,7 @@ appear in day-to-day UI: academic concerns, attendance, class rosters, comms, et
 
 from __future__ import annotations
 
-from sqlalchemy import and_, exists, select
+from sqlalchemy import and_, or_, select
 
 from models import Enrollment, Student, db
 
@@ -114,3 +114,28 @@ def filter_student_ids_on_roster(student_ids, *, require_active_enrollment: bool
         Student.id.in_(student_ids)
     )
     return [row[0] for row in q.with_entities(Student.id).all()]
+
+
+def deactivate_stale_enrollments_for_archived_students() -> int:
+    """
+    Mark active enrollments inactive when the student is off the active roster.
+
+    Graduates/transfers sometimes keep ``Enrollment.is_active=True`` if departure
+    was applied without clearing enrollments. Returns number of rows updated.
+    """
+    archived = or_(
+        Student.is_deleted.is_(True),
+        Student.marked_for_removal.is_(True),
+        Student.is_active.is_(False),
+    )
+    rows = (
+        db.session.query(Enrollment)
+        .join(Student, Student.id == Enrollment.student_id)
+        .filter(Enrollment.is_active.is_(True), archived)
+        .all()
+    )
+    for enr in rows:
+        enr.is_active = False
+    if rows:
+        db.session.commit()
+    return len(rows)

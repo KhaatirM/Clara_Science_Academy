@@ -72,16 +72,23 @@ def get_user_channels(user_id, user_role):
                 })
     
     elif user_role in ['Director', 'School Administrator'] or 'Teacher' in user_role:
-        # Teachers/Admins see all class channels they teach/administer
+        # Teachers/Admins see class channels for the active school year only
+        from utils.school_year_filters import classes_for_active_school_year, get_active_school_year
+
+        active_year = get_active_school_year()
         if user_role in ['Director', 'School Administrator']:
-            classes = Class.query.filter_by(is_active=True).all()
+            classes = classes_for_active_school_year() if active_year else []
         else:
             # Find TeacherStaff record by user_id - User has teacher_staff_id
             user = User.query.get(user_id)
-            if user and user.teacher_staff_id:
+            if user and user.teacher_staff_id and active_year:
                 teacher = TeacherStaff.query.get(user.teacher_staff_id)
                 if teacher:
-                    classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).all()
+                    classes = Class.query.filter_by(
+                        teacher_id=teacher.id,
+                        is_active=True,
+                        school_year_id=active_year.id,
+                    ).all()
                 else:
                     classes = []
             else:
@@ -322,16 +329,13 @@ def ensure_class_channel_exists(class_id):
     db.session.flush()
     
     # Add all enrolled students and teacher
-    enrollments = Enrollment.query.filter_by(
-        class_id=class_id,
-        is_active=True
-    ).all()
-    
-    for enrollment in enrollments:
-        if enrollment.student and enrollment.student.user:
+    from utils.student_roster import active_class_roster_students_query
+
+    for student in active_class_roster_students_query(class_id).all():
+        if student.user:
             member = MessageGroupMember(
                 group_id=new_group.id,
-                user_id=enrollment.student.user.id,
+                user_id=student.user.id,
                 is_admin=False
             )
             db.session.add(member)
@@ -513,12 +517,17 @@ def announcement_target_label(announcement):
 
 
 def get_broadcast_classes_for_user(user):
-    """Classes this user may send announcements to."""
+    """Classes this user may send announcements to (active school year only)."""
     from models import class_additional_teachers, class_substitute_teachers
+    from utils.school_year_filters import classes_for_active_school_year, get_active_school_year
     from utils.user_roles import user_primary_role_is_teaching_staff
 
+    active_year = get_active_school_year()
+    if not active_year:
+        return []
+
     if user.role in ['Director', 'School Administrator']:
-        return Class.query.order_by(Class.name).all()
+        return classes_for_active_school_year()
 
     if not user_primary_role_is_teaching_staff(user):
         return []
@@ -529,21 +538,27 @@ def get_broadcast_classes_for_user(user):
     if not teacher:
         return []
 
-    return Class.query.filter(
-        or_(
-            Class.teacher_id == teacher.id,
-            Class.id.in_(
-                db.session.query(class_additional_teachers.c.class_id).filter(
-                    class_additional_teachers.c.teacher_id == teacher.id
-                )
-            ),
-            Class.id.in_(
-                db.session.query(class_substitute_teachers.c.class_id).filter(
-                    class_substitute_teachers.c.teacher_id == teacher.id
-                )
+    return (
+        Class.query.filter(
+            Class.is_active.is_(True),
+            Class.school_year_id == active_year.id,
+            or_(
+                Class.teacher_id == teacher.id,
+                Class.id.in_(
+                    db.session.query(class_additional_teachers.c.class_id).filter(
+                        class_additional_teachers.c.teacher_id == teacher.id
+                    )
+                ),
+                Class.id.in_(
+                    db.session.query(class_substitute_teachers.c.class_id).filter(
+                        class_substitute_teachers.c.teacher_id == teacher.id
+                    )
+                ),
             ),
         )
-    ).order_by(Class.name).all()
+        .order_by(Class.name)
+        .all()
+    )
 
 
 def get_past_announcements_for_class_page(class_id, limit=25):

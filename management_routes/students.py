@@ -27,6 +27,7 @@ from utils.student_login_policy import grade_may_have_login, parse_grade_level_f
 from utils.user_roles import user_has_management_entry_access
 from utils.spa_management_urls import react_spa_enabled
 from utils.school_year_filters import get_school_year_for_display, student_classes_for_school_year
+from utils.student_roster import student_is_archived
 
 # School-admin “New accounts” filter: student portal logins created within this window.
 NEW_STUDENT_ACCOUNT_DAYS = 7
@@ -55,6 +56,10 @@ def enrolled_students_payload_for_class(class_id, *, include_archived_fallback=T
     for enrollment in rows:
         student = enrollment.student
         if not student or getattr(student, 'is_deleted', False):
+            continue
+        # Active-year operational lists must not include graduates / withdrawn /
+        # transferred students even if an enrollment row is still marked active.
+        if not used_archived_fallback and student_is_archived(student):
             continue
         if student.id in seen_ids:
             continue
@@ -2483,13 +2488,11 @@ def unvoid_assignment_for_students(assignment_id):
 @login_required
 @management_required
 def get_class_students(class_id):
-    """Get students for a specific class"""
+    """Get active-roster students for a specific class"""
     try:
-        # Get students enrolled in this class
-        students = db.session.query(Student).join(Enrollment).filter(
-            Enrollment.class_id == class_id,
-            Enrollment.is_active == True
-        ).order_by(Student.last_name, Student.first_name).all()
+        from utils.student_roster import active_class_roster_students_query
+
+        students = active_class_roster_students_query(class_id).all()
         
         students_data = []
         for student in students:
@@ -3329,10 +3332,15 @@ def student_jobs():
 @login_required
 @management_required
 def api_get_students():
-    """API endpoint to get all students (Student Jobs / Add Members)."""
+    """API endpoint to get active-roster students (Student Jobs / Add Members)."""
     try:
-        # Get all students (no is_active filter since Student model doesn't have that column)
-        students = Student.query.all()
+        from utils.student_roster import active_roster_students_query
+
+        students = (
+            active_roster_students_query(require_active_enrollment=False)
+            .order_by(Student.last_name, Student.first_name)
+            .all()
+        )
         student_list = []
         for student in students:
             student_list.append({

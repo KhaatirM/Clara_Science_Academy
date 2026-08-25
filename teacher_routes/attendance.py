@@ -84,8 +84,9 @@ def take_attendance(class_id):
         return redirect(url_for('teacher.attendance.attendance_hub'))
     
     # Get enrolled students for this class
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    from utils.student_roster import active_class_roster_students_query
+
+    students = active_class_roster_students_query(class_id).all()
     
     if request.method == 'POST':
         # Handle attendance submission
@@ -237,8 +238,9 @@ def view_attendance_records(class_id):
         attendance_records = query.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all()
         
         # Get enrolled students for filter dropdown
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        from utils.student_roster import active_class_roster_students_query
+
+        students = active_class_roster_students_query(class_id).all()
         
         # Group records by date
         records_by_date = {}
@@ -297,8 +299,9 @@ def mark_all_present(class_id):
     try:
         attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        from utils.student_roster import active_class_roster_students_query
+
+        students = active_class_roster_students_query(class_id).all()
         
         for student in students:
             existing_attendance = Attendance.query.filter_by(
@@ -341,8 +344,9 @@ def download_attendance_template(class_id):
             flash("You are not authorized to access this class.", "danger")
             return redirect(url_for('teacher.attendance.attendance_hub'))
         
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        from utils.student_roster import active_class_roster_students_query
+
+        students = active_class_roster_students_query(class_id).all()
         
         output = io.StringIO()
         writer = csv.writer(output)
@@ -407,9 +411,13 @@ def upload_attendance_csv(class_id):
         stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
         csv_reader = csv.DictReader(stream)
         
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        student_id_map = {enrollment.student.student_id: enrollment.student.id 
-                          for enrollment in enrollments if enrollment.student and enrollment.student.student_id}
+        from utils.student_roster import active_class_roster_students_query
+
+        student_id_map = {
+            s.student_id: s.id
+            for s in active_class_roster_students_query(class_id).all()
+            if s.student_id
+        }
         
         valid_statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
         

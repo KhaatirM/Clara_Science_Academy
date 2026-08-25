@@ -39,8 +39,9 @@ def class_reflection_journals(class_id):
     ).order_by(ReflectionJournal.submitted_at.desc()).all()
     
     # Get students in the class
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    from utils.student_roster import active_class_roster_students_query
+
+    students = active_class_roster_students_query(class_id).all()
     
     # Calculate statistics
     total_journals = len(journals)

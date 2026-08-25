@@ -106,7 +106,11 @@ def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | 
         .options(joinedload(Enrollment.student).joinedload(Student.user))
         .all()
     )
-    enrolled_students = [e.student for e in enrollments if e.student]
+    from utils.student_roster import student_is_archived
+
+    enrolled_students = [
+        e.student for e in enrollments if e.student and not student_is_archived(e.student)
+    ]
     enrolled_students.sort(
         key=lambda s: ((s.last_name or "").lower(), (s.first_name or "").lower())
     )

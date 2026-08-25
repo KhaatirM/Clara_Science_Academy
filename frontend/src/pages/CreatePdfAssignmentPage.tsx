@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   AssignmentCreateHeader,
@@ -47,6 +47,9 @@ export function CreatePdfAssignmentPage() {
   const [latePenaltyPerDay, setLatePenaltyPerDay] = useState('0')
   const [latePenaltyMaxDays, setLatePenaltyMaxDays] = useState('0')
   const [files, setFiles] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragDepthRef = useRef(0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -123,9 +126,28 @@ export function CreatePdfAssignmentPage() {
   }
 
   const onFileChange = (list: FileList | null) => {
-    if (!list) return
-    setFiles(Array.from(list))
+    if (!list?.length) return
+    setFiles((prev) => {
+      const next = [...prev]
+      for (const file of Array.from(list)) {
+        const exists = next.some(
+          (f) =>
+            f.name === file.name &&
+            f.size === file.size &&
+            f.lastModified === file.lastModified,
+        )
+        if (!exists) next.push(file)
+      }
+      return next
+    })
   }
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const openFilePicker = () => fileInputRef.current?.click()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -368,30 +390,103 @@ export function CreatePdfAssignmentPage() {
 
           <FormSection title="Assignment Files" icon="bi-cloud-upload" tone="success">
             <div
-              className="cursor-pointer rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-6 text-center"
-              onDragOver={(e) => e.preventDefault()}
+              role="button"
+              tabIndex={0}
+              aria-label="Add assignment files"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openFilePicker()
+                }
+              }}
+              onClick={openFilePicker}
+              onDragEnter={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                dragDepthRef.current += 1
+                setDragOver(true)
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                e.dataTransfer.dropEffect = 'copy'
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+                if (dragDepthRef.current === 0) setDragOver(false)
+              }}
               onDrop={(e) => {
                 e.preventDefault()
+                e.stopPropagation()
+                dragDepthRef.current = 0
+                setDragOver(false)
                 onFileChange(e.dataTransfer.files)
               }}
+              className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition duration-150 ${
+                dragOver
+                  ? 'scale-[1.01] border-emerald-500 bg-emerald-100 shadow-inner ring-2 ring-emerald-300/60'
+                  : 'border-emerald-300 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50'
+              }`}
             >
-              <i className="bi bi-cloud-upload mb-2 block text-3xl text-emerald-600" aria-hidden />
-              <p className="font-semibold text-slate-700">Click or drag files here</p>
-              <p className="mt-1 text-xs text-slate-500">PDF, Word, images, and more — up to 16 MB each</p>
               <input
+                ref={fileInputRef}
                 type="file"
                 multiple
-                className="mt-3 text-sm"
+                className="sr-only"
                 accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
-                onChange={(e) => onFileChange(e.target.files)}
+                onChange={(e) => {
+                  onFileChange(e.target.files)
+                  e.target.value = ''
+                }}
               />
+              <div
+                className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm ring-1 transition ${
+                  dragOver
+                    ? 'bg-emerald-500 text-white ring-emerald-400'
+                    : 'bg-white text-emerald-700 ring-emerald-200'
+                }`}
+              >
+                <i
+                  className={`bi text-2xl ${dragOver ? 'bi-download' : 'bi-cloud-arrow-up'}`}
+                  aria-hidden
+                />
+              </div>
+              <p className="font-semibold text-slate-700">
+                {dragOver ? 'Drop files to attach' : 'Drag & drop files here, or click to browse'}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                PDF, Word, images, and more — up to 16 MB each
+              </p>
+              <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm">
+                <i className="bi bi-folder2-open" aria-hidden />
+                Choose files
+              </span>
             </div>
             {files.length > 0 ? (
-              <ul className="mt-3 space-y-1 text-sm text-slate-600">
-                {files.map((f) => (
-                  <li key={`${f.name}-${f.size}`} className="flex items-center gap-2">
-                    <i className="bi bi-file-earmark text-emerald-600" aria-hidden />
-                    {f.name}
+              <ul className="mt-3 space-y-2">
+                {files.map((f, index) => (
+                  <li
+                    key={`${f.name}-${f.size}-${f.lastModified}`}
+                    className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
+                  >
+                    <i className="bi bi-file-earmark-check text-lg text-emerald-600" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate font-medium">{f.name}</span>
+                    <span className="shrink-0 text-xs text-slate-500">
+                      {f.size < 1024
+                        ? `${f.size} B`
+                        : f.size < 1024 * 1024
+                          ? `${(f.size / 1024).toFixed(1)} KB`
+                          : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      onClick={() => removeFile(index)}
+                    >
+                      Remove
+                    </button>
                   </li>
                 ))}
               </ul>

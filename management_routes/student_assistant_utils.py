@@ -1,11 +1,11 @@
 """
 Rules for Student Assistant assignments:
 - Max 2 assistants per class.
-- A student may be assistant for at most 2 classes total.
-- Eligible students: enrolled in this class, OR not enrolled but their grade level
-  is at or above the minimum grade configured for the class (when the class has
-  grade levels set). If the class has no grade levels, only enrolled students
-  may be assistants.
+- A student may be assistant for at most 2 classes in the *active* school year
+  (closed-year / archived-class assignments do not count toward the limit).
+- Eligible students: on the active school roster, and either enrolled in this
+  class OR (when the class has grade levels) at or above the class minimum grade.
+  Graduated / withdrawn / transferred / removed students are never eligible.
 """
 
 MAX_ASSISTANTS_PER_CLASS = 2
@@ -34,24 +34,32 @@ def student_meets_class_grade_band(class_obj, student):
 
 def is_eligible_student_assistant_candidate(class_obj, student, enrolled_in_class_ids):
     """
-    Eligible if enrolled in this class, OR (class has grade bands and student
-    meets minimum grade). If not enrolled and class has no grade levels, not eligible.
+    Eligible if on the active roster and either enrolled in this class, OR
+    (class has grade bands and student meets minimum grade).
     """
-    if not student:
+    from utils.student_roster import student_is_archived
+
+    if not student or student_is_archived(student):
         return False
-    eid = getattr(student, 'id', None)
-    if eid is not None and eid in enrolled_in_class_ids:
+    eid = getattr(student, "id", None)
+    if eid is not None and eid in (enrolled_in_class_ids or set()):
         return True
     return student_meets_class_grade_band(class_obj, student)
 
 
 def students_in_school_year_for_assistant_pool(school_year_id):
-    """Students with any active enrollment in a class for this school year."""
+    """
+    Active-roster students with an active enrollment in an *active* class for
+    this school year (excludes archived / graduated / withdrawn students).
+    """
     from models import Student, Enrollment, Class
+    from utils.student_roster import active_roster_student_filters
 
+    if not school_year_id:
+        return []
     class_ids = [
         c.id
-        for c in Class.query.filter_by(school_year_id=school_year_id).all()
+        for c in Class.query.filter_by(school_year_id=school_year_id, is_active=True).all()
     ]
     if not class_ids:
         return []
@@ -59,7 +67,8 @@ def students_in_school_year_for_assistant_pool(school_year_id):
         Student.query.join(Enrollment)
         .filter(
             Enrollment.class_id.in_(class_ids),
-            Enrollment.is_active == True,
+            Enrollment.is_active.is_(True),
+            active_roster_student_filters(),
         )
         .distinct()
     )
@@ -76,16 +85,42 @@ def filter_eligible_assistant_candidates(class_obj, candidate_students, enrolled
     ]
     return sorted(
         out,
-        key=lambda x: ((x.last_name or '').lower(), (x.first_name or '').lower()),
+        key=lambda x: ((x.last_name or "").lower(), (x.first_name or "").lower()),
     )
 
 
-def count_assistant_classes_for_student_excluding(student_id, exclude_class_id=None):
-    """How many classes this student is already an assistant for (optionally excluding one class)."""
-    from models import StudentAssistant
-    q = StudentAssistant.query.filter_by(student_id=student_id)
+def count_assistant_classes_for_student_excluding(
+    student_id,
+    exclude_class_id=None,
+    *,
+    school_year_id=None,
+    active_school_year_only=True,
+):
+    """
+    How many classes this student is already an assistant for.
+
+    By default counts only active classes on the active school year so closed-year
+    history does not block new assignments. Pass ``school_year_id`` to scope to a
+    specific year; set ``active_school_year_only=False`` only for admin audits.
+    """
+    from models import Class, SchoolYear, StudentAssistant
+
+    q = (
+        StudentAssistant.query.filter_by(student_id=student_id)
+        .join(Class, StudentAssistant.class_id == Class.id)
+        .filter(Class.is_active.is_(True))
+    )
     if exclude_class_id is not None:
         q = q.filter(StudentAssistant.class_id != exclude_class_id)
+
+    if school_year_id is not None:
+        q = q.filter(Class.school_year_id == int(school_year_id))
+    elif active_school_year_only:
+        active = SchoolYear.query.filter_by(is_active=True).first()
+        if not active:
+            return 0
+        q = q.filter(Class.school_year_id == active.id)
+
     return q.count()
 
 
@@ -147,14 +182,14 @@ def student_is_active_assistant_for_class(student_id, class_id, active_school_ye
 
 # --- Assistant-proposed assignments (teacher/admin approval before students see them) ---
 
-ASSISTANT_APPROVAL_PENDING = 'pending'
-ASSISTANT_APPROVAL_APPROVED = 'approved'
-ASSISTANT_APPROVAL_REJECTED = 'rejected'
+ASSISTANT_APPROVAL_PENDING = "pending"
+ASSISTANT_APPROVAL_APPROVED = "approved"
+ASSISTANT_APPROVAL_REJECTED = "rejected"
 
 
 def assignment_visible_to_students(assignment_or_group_assignment):
     """False while pending or rejected; True for normal assignments and approved proposals."""
-    s = getattr(assignment_or_group_assignment, 'assistant_approval_status', None)
+    s = getattr(assignment_or_group_assignment, "assistant_approval_status", None)
     return s is None or s == ASSISTANT_APPROVAL_APPROVED
 
 
@@ -169,7 +204,7 @@ def assignment_student_visibility_filter():
     )
     # Quizzes saved as in-progress drafts are staff-only until published
     not_quiz_draft = or_(
-        Assignment.assignment_type != 'quiz',
+        Assignment.assignment_type != "quiz",
         Assignment.quiz_authoring_is_draft.isnot(True),
     )
     return and_(approved, not_quiz_draft)

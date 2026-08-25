@@ -7,6 +7,7 @@ from typing import Any
 from flask import abort
 from models import Class, Enrollment, SchoolYear, Student, db
 from teacher_routes.utils import get_current_quarter
+from utils.student_roster import active_roster_student_filters
 
 _LA_TOKENS = ("language arts", "language", "reading", "english", "ela", "literacy")
 _MATH_TOKENS = ("math",)
@@ -139,6 +140,7 @@ def _class_roster(class_obj: Class) -> list[Student]:
     filters = [Enrollment.class_id == class_obj.id]
     if year_active:
         filters.append(Enrollment.is_active.is_(True))
+        filters.append(active_roster_student_filters())
     students = (
         db.session.query(Student)
         .join(Enrollment, Enrollment.student_id == Student.id)

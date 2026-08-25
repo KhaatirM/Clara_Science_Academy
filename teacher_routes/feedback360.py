@@ -37,8 +37,9 @@ def class_feedback360(class_id):
     feedback_sessions = Feedback360.query.filter_by(class_id=class_id).order_by(Feedback360.created_at.desc()).all()
     
     # Get enrolled students
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [e.student for e in enrollments if e.student]
+    from utils.student_roster import active_class_roster_students_query
+
+    students = active_class_roster_students_query(class_id).all()
     
     # Calculate statistics
     total_sessions = len(feedback_sessions)
@@ -66,8 +67,9 @@ def create_360_feedback(class_id):
         return redirect(url_for('teacher.dashboard.view_class', class_id=class_id))
     
     # Get students in the class
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    from utils.student_roster import active_class_roster_students_query
+
+    students = active_class_roster_students_query(class_id).all()
     
     if request.method == 'POST':
         try:
@@ -139,8 +141,9 @@ def view_360_feedback(session_id):
     criteria = Feedback360Criteria.query.filter_by(feedback360_id=session_id).order_by(Feedback360Criteria.order_index).all()
     
     # Get students in the class for potential respondents
-    enrollments = Enrollment.query.filter_by(class_id=feedback_session.class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    from utils.student_roster import active_class_roster_students_query
+
+    students = active_class_roster_students_query(feedback_session.class_id).all()
     
     return render_template('teachers/teacher_view_360_feedback.html',
                          feedback_session=feedback_session,

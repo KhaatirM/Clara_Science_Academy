@@ -11,5 +11,18 @@ export function spaRoute(path: string): string {
     return '/management/assignments/create/group'
   }
 
+  // Legacy Flask assignments hub → SPA Assignments tab (not Home).
+  const legacyMgmtHub = normalized.match(/^\/management\/assignments-and-grades(?:\/(\d+))?(?:\?.*)?$/)
+  if (legacyMgmtHub) {
+    return legacyMgmtHub[1]
+      ? `/management/assignments/${legacyMgmtHub[1]}`
+      : '/management/assignments'
+  }
+  if (normalized.startsWith('/management/assignments-and-grades')) {
+    const params = new URLSearchParams(normalized.split('?')[1] || '')
+    const classId = params.get('class_id')
+    return classId ? `/management/assignments/${classId}` : '/management/assignments'
+  }
+
   return normalized || '/'
 }

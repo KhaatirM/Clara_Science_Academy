@@ -465,11 +465,12 @@ def create_announcement():
                     db.session.add(notification)
         elif target_group == 'class' and class_id:
             class_obj = Class.query.get(class_id)
-            enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-            for enrollment in enrollments:
-                if enrollment.student and enrollment.student.user:
+            from utils.student_roster import active_class_roster_students_query
+
+            for student in active_class_roster_students_query(class_id).all():
+                if student.user:
                     notification = Notification(
-                        user_id=enrollment.student.user.id,
+                        user_id=student.user.id,
                         type='announcement',
                         title=title,
                         message=message_text,
@@ -842,13 +843,18 @@ def get_available_students():
         # Get current user's student record to exclude it
         current_student_id = current_user.student_id
         
-        # Get all students that have a User account, excluding current user
-        # Join with User to filter only students with accounts
-        students = Student.query.join(User, Student.id == User.student_id).filter(
-            User.role == 'Student',
-            Student.id != current_student_id
-        ).all()
-        
+        from utils.student_roster import active_roster_student_filters
+
+        # Active-roster students with a User account, excluding current user
+        students = (
+            Student.query.join(User, Student.id == User.student_id)
+            .filter(
+                User.role == "Student",
+                Student.id != current_student_id,
+                active_roster_student_filters(),
+            )
+            .all()
+        )        
         student_list = []
         for student in students:
             if student.user:

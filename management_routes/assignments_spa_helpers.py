@@ -16,7 +16,6 @@ from management_routes.student_assistant_utils import count_pending_assistant_pr
 from models import (
     Assignment,
     Class,
-    Enrollment,
     Grade,
     GroupAssignment,
     GroupGrade,
@@ -27,6 +26,7 @@ from models import (
 )
 from utils.grade_helpers import get_points_earned
 from utils.school_year_filters import count_pending_extension_requests, count_pending_redo_requests
+from utils.student_roster import active_class_roster_students_query, student_is_archived
 
 
 def _due_ts(d: Any) -> float:
@@ -155,7 +155,11 @@ def _group_assignment_stats(group_assignment: GroupAssignment) -> dict[str, Any]
                 )
                 .all()
             )
-        applicable_student_ids = {m.student_id for m in members if m.student_id}
+        applicable_student_ids = {
+            m.student_id
+            for m in members
+            if m.student_id and m.student and not student_is_archived(m.student)
+        }
     except Exception:
         applicable_student_ids = {g.student_id for g in group_grades if g.student_id}
     ga_voided_student_ids = {g.student_id for g in group_grades if g.is_voided}
@@ -261,10 +265,7 @@ def query_assignments_class(
 ) -> dict[str, Any]:
     """Per-class assignments & grades workspace."""
     class_obj = Class.query.get_or_404(class_id)
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_ids = {
-        e.student_id for e in enrollments if e.student_id and not getattr(e.student, "is_deleted", False)
-    }
+    enrolled_ids = {s.id for s in active_class_roster_students_query(class_id).all()}
     enrollment_count = len(enrolled_ids)
 
     assignments_q = Assignment.query.filter_by(class_id=class_id)

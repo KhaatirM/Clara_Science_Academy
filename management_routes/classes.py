@@ -117,9 +117,15 @@ def query_classes_list(args) -> dict:
     """Shared class list payload for legacy hub and SPA API."""
     params = _parse_classes_list_args(args)
 
+    from utils.student_roster import active_roster_student_filters
+
     enrollment_counts = dict(
         db.session.query(Enrollment.class_id, func.count(Enrollment.id))
-        .filter(Enrollment.is_active.is_(True))
+        .join(Student, Student.id == Enrollment.student_id)
+        .filter(
+            Enrollment.is_active.is_(True),
+            active_roster_student_filters(),
+        )
         .group_by(Enrollment.class_id)
         .all()
     )
@@ -641,23 +647,24 @@ def manage_class(class_id):
         class_roster_grade_levels,
         student_matches_class_grades,
     )
+    from utils.student_roster import (
+        active_class_roster_students_query,
+        active_roster_student_filters,
+    )
+
     grade_levels = class_roster_grade_levels(class_obj)
     all_students = [
         s
         for s in (
-            Student.query.filter(Student.is_deleted == False)
+            Student.query.filter(active_roster_student_filters())
             .order_by(Student.last_name, Student.first_name)
             .all()
         )
         if student_matches_class_grades(s, grade_levels)
     ]
     
-    # Get currently enrolled students
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [
-        e.student for e in enrollments
-        if e.student and not getattr(e.student, 'is_deleted', False)
-    ]
+    # Get currently enrolled students (active roster only)
+    enrolled_students = active_class_roster_students_query(class_id).all()
     
     # Get available teachers for assignment
     available_teachers = [
@@ -844,12 +851,9 @@ def edit_class(class_id):
                     flash(f'At most {MAX_ASSISTANTS_PER_CLASS} student assistants per class.', 'danger')
                     return redirect(url_for('management.edit_class', class_id=class_id))
 
-                enrollments_map = {
-                    e.student_id: e for e in Enrollment.query.filter_by(
-                        class_id=class_id, is_active=True
-                    ).all()
-                }
-                enrolled_ids = set(enrollments_map.keys())
+                from utils.student_roster import active_class_roster_students_query
+
+                enrolled_ids = {s.id for s in active_class_roster_students_query(class_id).all()}
 
                 for sid in new_ids:
                     stu = Student.query.get(sid)
@@ -863,10 +867,15 @@ def edit_class(class_id):
                             'danger',
                         )
                         return redirect(url_for('management.edit_class', class_id=class_id))
-                    other_classes = count_assistant_classes_for_student_excluding(sid, exclude_class_id=class_id)
+                    other_classes = count_assistant_classes_for_student_excluding(
+                        sid,
+                        exclude_class_id=class_id,
+                        school_year_id=class_obj.school_year_id,
+                    )
                     if other_classes >= MAX_CLASSES_PER_ASSISTANT:
                         flash(
-                            f'{stu.first_name} {stu.last_name} is already a student assistant for {MAX_CLASSES_PER_ASSISTANT} other classes.',
+                            f'{stu.first_name} {stu.last_name} is already a student assistant for '
+                            f'{MAX_CLASSES_PER_ASSISTANT} other classes this school year.',
                             'danger',
                         )
                         return redirect(url_for('management.edit_class', class_id=class_id))
@@ -896,14 +905,19 @@ def edit_class(class_id):
     current_student_assistants = []
     max_assistants_per_class = MAX_ASSISTANTS_PER_CLASS
     if user_can_manage_student_assistants(current_user):
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        enrolled_students = [e.student for e in enrollments if e.student]
-        enrolled_ids = {e.student_id for e in enrollments}
+        from utils.student_roster import active_class_roster_students_query, student_is_archived
+
+        enrolled_students = active_class_roster_students_query(class_id).all()
+        enrolled_ids = {s.id for s in enrolled_students}
         pool = students_in_school_year_for_assistant_pool(class_obj.school_year_id)
         eligible_assistant_students = filter_eligible_assistant_candidates(
             class_obj, pool, enrolled_ids
         )
-        current_student_assistants = [sa.student for sa in StudentAssistant.query.filter_by(class_id=class_id).all() if sa.student]
+        current_student_assistants = [
+            sa.student
+            for sa in StudentAssistant.query.filter_by(class_id=class_id).all()
+            if sa.student and not student_is_archived(sa.student)
+        ]
     return render_template('management/edit_class.html',
                            class_info=class_obj,
                            available_teachers=teachers,
@@ -1023,11 +1037,16 @@ def class_roster(class_id):
         class_roster_grade_levels,
         student_matches_class_grades,
     )
+    from utils.student_roster import (
+        active_class_roster_students_query,
+        active_roster_student_filters,
+    )
+
     grade_levels = class_roster_grade_levels(class_obj)
     all_students = [
         s
         for s in (
-            Student.query.filter(Student.is_deleted == False)
+            Student.query.filter(active_roster_student_filters())
             .order_by(Student.last_name, Student.first_name)
             .all()
         )
@@ -1035,12 +1054,8 @@ def class_roster(class_id):
     ]
     
     # Get currently enrolled students (ACTIVE enrollments only)
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = []
-    for enrollment in enrollments:
-        student = Student.query.get(enrollment.student_id)
-        if not student or getattr(student, 'is_deleted', False):
-            continue
+    for student in active_class_roster_students_query(class_id).all():
         # Convert dob string to date object for age calculation
         if isinstance(student.dob, str):
             try:
@@ -1570,12 +1585,10 @@ def class_grades(class_id):
     # Get view mode (table or student_cards)
     view_mode = request.args.get('view', 'table')
     
-    # Get enrolled students (exclude soft-deleted student records)
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [
-        e.student for e in enrollments
-        if e.student and not getattr(e.student, 'is_deleted', False)
-    ]
+    # Get enrolled students (active roster only)
+    from utils.student_roster import active_class_roster_students_query
+
+    enrolled_students = active_class_roster_students_query(class_id).all()
     
     # Get individual assignments for this class (exclude voided assignments from grade calculations)
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
@@ -2598,11 +2611,16 @@ def manage_class_roster(class_id):
         student_matches_class_grades,
     )
 
+    from utils.student_roster import (
+        active_class_roster_students_query,
+        active_roster_student_filters,
+    )
+
     grade_levels = class_roster_grade_levels(class_info)
     all_students = [
         s
         for s in (
-            Student.query.filter(Student.is_deleted == False)
+            Student.query.filter(active_roster_student_filters())
             .order_by(Student.last_name, Student.first_name)
             .all()
         )
@@ -2624,12 +2642,8 @@ def manage_class_roster(class_id):
                     student.dob = None
     
     # Get currently enrolled students
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = []
-    for enrollment in enrollments:
-        student = Student.query.get(enrollment.student_id)
-        if not student or getattr(student, 'is_deleted', False):
-            continue
+    for student in active_class_roster_students_query(class_id).all():
         # Convert dob string to date object for age calculation
         if isinstance(student.dob, str):
             try:

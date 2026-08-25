@@ -85,9 +85,10 @@ def grade_assignment(assignment_id):
         try:
             grades_saved = 0
 
-            # Get enrolled students for this class
-            enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
-            student_ids = [e.student_id for e in enrollments if e.student_id]
+            # Get enrolled students for this class (active roster only)
+            from utils.student_roster import active_class_roster_students_query
+
+            student_ids = [s.id for s in active_class_roster_students_query(assignment.class_id).all()]
             
             # Check if this is quiz grading with per-question scores
             if assignment.assignment_type == 'quiz' and request.form.get('grading_mode') == 'per_question':
@@ -315,14 +316,10 @@ def grade_assignment(assignment_id):
             flash(f'Error saving grades: {str(e)}', 'danger')
             return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
     
-    # GET request - show grading interface
-    # Get enrolled students for this class
-    enrollments = Enrollment.query.filter_by(
-        class_id=assignment.class_id,
-        is_active=True
-    ).all()
-    
-    students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    # GET request - show grading interface (active roster only)
+    from utils.student_roster import active_class_roster_students_query
+
+    students = active_class_roster_students_query(assignment.class_id).all()
     
     # Get total points from assignment (default to 100 if not set)
     assignment_total_points = assignment.total_points if assignment.total_points else 100.0

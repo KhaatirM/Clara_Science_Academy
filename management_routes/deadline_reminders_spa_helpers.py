@@ -310,8 +310,9 @@ def delete_deadline_reminder(class_id: int, reminder_id: int) -> dict[str, Any]:
 
 
 def _enrolled_student_ids(class_id: int) -> list[int]:
-    rows = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    return [int(e.student_id) for e in rows if e.student_id]
+    from utils.student_roster import active_class_roster_students_query
+
+    return [int(s.id) for s in active_class_roster_students_query(class_id).all()]
 
 
 def _target_student_ids(reminder: DeadlineReminder) -> list[int]:
@@ -373,9 +374,10 @@ def send_deadline_reminder_now(class_id: int, reminder_id: int) -> dict[str, Any
 
 
 def query_students_needing_reminder(assignment_id: int) -> dict[str, Any]:
+    from utils.student_roster import active_class_roster_students_query
+
     assignment = Assignment.query.get_or_404(assignment_id)
-    enrolled = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
-    enrolled_student_ids = [e.student_id for e in enrolled]
+    enrolled_student_ids = [s.id for s in active_class_roster_students_query(assignment.class_id).all()]
 
     submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
     graded_students = Grade.query.filter_by(assignment_id=assignment.id).all()

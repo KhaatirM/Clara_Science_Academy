@@ -102,6 +102,8 @@ def collect_class_group_member_emails(class_obj: Class) -> list[str]:
             Enrollment.class_id == class_obj.id,
             Enrollment.is_active == True,
             Student.is_deleted == False,
+            Student.marked_for_removal == False,
+            Student.is_active == True,
             User.google_workspace_email.isnot(None),
         )
         .all()

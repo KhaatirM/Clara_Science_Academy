@@ -1491,14 +1491,17 @@ def _students_selectable_for_device(exclude_device_id=None):
 
 
 def _parse_device_form():
+    from tech_routes.spa_helpers import _normalize_device_color
+
     device_type = _normalize_device_type(request.form.get('device_type'))
     asset_name = (request.form.get('asset_name') or '').strip()
     device_name = (request.form.get('device_name') or '').strip() or None
+    color = _normalize_device_color(request.form.get('color'))
     cord_number = (request.form.get('cord_number') or '').strip() or None
     operating_system = (request.form.get('operating_system') or '').strip() or None
     student_id_raw = request.form.get('student_id')
     student_id = int(student_id_raw) if student_id_raw and str(student_id_raw).isdigit() else None
-    return device_type, asset_name, device_name, cord_number, operating_system, student_id
+    return device_type, asset_name, device_name, color, cord_number, operating_system, student_id
 
 
 def _norm_csv_header(h):
@@ -1535,14 +1538,29 @@ def _student_from_csv_row(row):
     return None
 
 
-def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_number, operating_system, stu, row_num):
+def _upsert_device_from_csv_row(
+    device_type, asset_name, device_name, color, cord_number, operating_system, stu, row_num
+):
     """
     Create or update by asset_name. Reassigns student on that asset if needed.
     ``stu`` may be None for unassigned inventory stock.
+    Color is required for laptops and cleared for tablets.
     Returns (success: bool, message: str).
     """
+    from tech_routes.spa_helpers import _normalize_device_color
+
     if not device_type or not asset_name:
         return False, f'Row {row_num}: missing device type or asset name'
+
+    if device_type == 'laptop':
+        color = _normalize_device_color(color)
+        if not color:
+            return (
+                False,
+                f'Row {row_num}: laptop color required (Black, Silver, or Black Carbon)',
+            )
+    else:
+        color = None
 
     if stu is not None and not _device_type_fits_grade(device_type, stu.grade_level):
         exp = _expected_device_label(stu.grade_level)
@@ -1575,6 +1593,7 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
                 )
         by_asset.device_type = device_type
         by_asset.device_name = device_name
+        by_asset.color = color
         by_asset.cord_number = cord_number
         by_asset.operating_system = operating_system
         by_asset.student_id = stu.id if stu is not None else None
@@ -1588,6 +1607,7 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
             )
         by_student.device_type = device_type
         by_student.device_name = device_name
+        by_student.color = color
         by_student.cord_number = cord_number
         by_student.operating_system = operating_system
         return True, 'updated'
@@ -1597,6 +1617,7 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
             device_type=device_type,
             asset_name=asset_name,
             device_name=device_name,
+            color=color,
             cord_number=cord_number,
             operating_system=operating_system,
             student_id=stu.id if stu is not None else None,
@@ -1611,10 +1632,10 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
 def devices_csv_template():
     """Download a blank CSV with headers and example rows."""
     lines = [
-        'device_type,asset_name,device_name,cord_number,operating_system,student_db_id,school_student_id',
-        'laptop,CSA-Laptop-1,Dell Latitude,1,Windows 11,42,',
-        'tablet,CSA-Tablet-2,,2,iPadOS 17,,ABC12345',
-        'laptop,CSA-Laptop-99,Stock Chromebook,99,ChromeOS,,',
+        'device_type,asset_name,device_name,color,cord_number,operating_system,student_db_id,school_student_id',
+        'laptop,CSA-Laptop-1,Dell Latitude,Black,1,Windows 11,42,',
+        'tablet,CSA-Tablet-2,,,2,iPadOS 17,,ABC12345',
+        'laptop,CSA-Laptop-99,Stock Chromebook,Silver,99,ChromeOS,,',
     ]
     body = '\r\n'.join(lines) + '\r\n'
     return Response(
@@ -1678,6 +1699,7 @@ def devices_bulk_upload():
         device_type = _normalize_device_type(_csv_cell(row, 'device_type', 'type'))
         asset_name = _csv_cell(row, 'asset_name', 'laptop_name', 'tablet_name', 'inventory_name')
         device_name = _csv_cell(row, 'device_name') or None
+        color = _csv_cell(row, 'color', 'device_color') or None
         cord_number = _csv_cell(row, 'cord_number', 'cord', 'cord_#') or None
         operating_system = _csv_cell(row, 'operating_system', 'os') or None
 
@@ -1711,7 +1733,14 @@ def devices_bulk_upload():
 
         try:
             ok, action = _upsert_device_from_csv_row(
-                device_type, asset_name, device_name, cord_number, operating_system, stu, row_num
+                device_type,
+                asset_name,
+                device_name,
+                color,
+                cord_number,
+                operating_system,
+                stu,
+                row_num,
             )
             if not ok:
                 errors.append(action)
@@ -1792,13 +1821,19 @@ def device_new():
         if spa:
             return spa
     if request.method == 'POST':
-        device_type, asset_name, device_name, cord_number, operating_system, student_id = _parse_device_form()
+        device_type, asset_name, device_name, color, cord_number, operating_system, student_id = _parse_device_form()
         if not device_type:
             flash('Select a valid device type (laptop or tablet).', 'danger')
             return redirect(url_for('tech.device_new'))
         if not asset_name:
             flash('Asset name is required (e.g. CSA-Laptop-12 or CSA-Tablet-5).', 'danger')
             return redirect(url_for('tech.device_new'))
+        if device_type == 'laptop':
+            if not color:
+                flash('Select a laptop color (Black, Silver, or Black Carbon).', 'danger')
+                return redirect(url_for('tech.device_new'))
+        else:
+            color = None
         if not student_id:
             flash('Select a student to attach this device to.', 'danger')
             return redirect(url_for('tech.device_new'))
@@ -1823,6 +1858,7 @@ def device_new():
             device_type=device_type,
             asset_name=asset_name,
             device_name=device_name,
+            color=color,
             cord_number=cord_number,
             operating_system=operating_system,
             student_id=student_id,
@@ -1853,13 +1889,19 @@ def device_edit(device_id):
             return spa
     device = StudentDevice.query.get_or_404(device_id)
     if request.method == 'POST':
-        device_type, asset_name, device_name, cord_number, operating_system, student_id = _parse_device_form()
+        device_type, asset_name, device_name, color, cord_number, operating_system, student_id = _parse_device_form()
         if not device_type:
             flash('Select a valid device type (laptop or tablet).', 'danger')
             return redirect(url_for('tech.device_edit', device_id=device_id))
         if not asset_name:
             flash('Asset name is required.', 'danger')
             return redirect(url_for('tech.device_edit', device_id=device_id))
+        if device_type == 'laptop':
+            if not color:
+                flash('Select a laptop color (Black, Silver, or Black Carbon).', 'danger')
+                return redirect(url_for('tech.device_edit', device_id=device_id))
+        else:
+            color = None
         if not student_id:
             flash('Select a student.', 'danger')
             return redirect(url_for('tech.device_edit', device_id=device_id))
@@ -1884,6 +1926,7 @@ def device_edit(device_id):
         device.device_type = device_type
         device.asset_name = asset_name
         device.device_name = device_name
+        device.color = color
         device.cord_number = cord_number
         device.operating_system = operating_system
         device.student_id = student_id

@@ -282,6 +282,29 @@ def create_app(config_class=None):
                         print("Rebuilt student_device with nullable student_id.")
         except Exception as e:
             print(f"Note: student_device.student_id nullability check failed: {e}")
+
+        # student_device.color (Black / Silver / Black Carbon)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(student_device)"))
+                    columns = [row[1] for row in r]
+                    if 'color' not in columns:
+                        conn.execute(text("ALTER TABLE student_device ADD COLUMN color VARCHAR(40)"))
+                        conn.commit()
+                        print("Added student_device.color column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'student_device' AND column_name = 'color'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text("ALTER TABLE student_device ADD COLUMN color VARCHAR(40)"))
+                        conn.commit()
+                        print("Added student_device.color column.")
+        except Exception as e:
+            print(f"Note: student_device.color column check failed (may already exist): {e}")
         
         # Add user.theme_preference column if missing (one-off migration for themes feature)
         try:

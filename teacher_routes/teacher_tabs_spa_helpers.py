@@ -26,7 +26,7 @@ from utils.school_year_filters import (
     count_pending_redo_requests,
     get_active_school_year,
 )
-from utils.student_roster import active_roster_student_filters
+from utils.student_roster import active_roster_student_filters, student_is_archived
 from utils.user_roles import canonical_role_label
 from utils.user_theme import get_effective_theme, get_site_theme_override
 
@@ -224,7 +224,7 @@ def build_teacher_assignments_hub_payload() -> tuple[dict[str, Any] | None, str 
             )
             enrollments = Enrollment.query.filter_by(class_id=cls.id, is_active=True).all()
             for e in enrollments:
-                if e.student_id:
+                if e.student_id and e.student and not student_is_archived(e.student):
                     unique_students.add(e.student_id)
             items.append(
                 {
@@ -335,7 +335,9 @@ def build_teacher_attendance_payload() -> tuple[dict[str, Any] | None, str | Non
             )
             if taken:
                 completed += 1
-            enrollment_count = Enrollment.query.filter_by(class_id=cls.id, is_active=True).count()
+            from utils.student_roster import active_class_roster_students_query
+
+            enrollment_count = active_class_roster_students_query(cls.id).count()
             items.append(
                 {
                     "id": cls.id,

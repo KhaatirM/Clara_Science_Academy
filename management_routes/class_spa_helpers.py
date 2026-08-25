@@ -11,7 +11,7 @@ from flask_login import current_user
 
 from decorators import user_can_manage_student_assistants
 from extensions import db
-from utils.student_roster import active_class_roster_students_query
+from utils.student_roster import active_class_roster_students_query, active_roster_student_filters, student_is_archived
 from management_routes.student_assistant_utils import (
     MAX_ASSISTANTS_PER_CLASS,
     MAX_CLASSES_PER_ASSISTANT,
@@ -74,7 +74,7 @@ def assignable_teachers() -> list[dict[str, Any]]:
 
 
 def _enrollment_count(class_id: int) -> int:
-    return Enrollment.query.filter_by(class_id=class_id, is_active=True).count()
+    return active_class_roster_students_query(class_id).count()
 
 
 def _assignment_count(class_id: int) -> int:
@@ -296,7 +296,11 @@ def query_class_detail(class_id: int) -> dict[str, Any]:
             "grade_levels_display": class_info.get_grade_levels_display() or "All",
         },
         "pending_assistant_count": count_pending_assistant_proposals_for_class(class_id),
-        "student_assistant_count": StudentAssistant.query.filter_by(class_id=class_id).count(),
+        "student_assistant_count": sum(
+            1
+            for sa in StudentAssistant.query.filter_by(class_id=class_id).all()
+            if sa.student and not student_is_archived(sa.student)
+        ),
         "features": _standards_flags(class_info),
         "links": _class_management_links(class_id),
         "announcements": past_announcements,
@@ -311,12 +315,12 @@ def query_class_edit_form(class_id: int) -> dict[str, Any]:
     assistant_ids = [
         sa.student_id
         for sa in StudentAssistant.query.filter_by(class_id=class_id).all()
-        if sa.student_id
+        if sa.student_id and sa.student and not student_is_archived(sa.student)
     ]
     eligible_assistants = []
     if user_can_manage_student_assistants(current_user):
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        enrolled_ids = {e.student_id for e in enrollments}
+        enrolled = active_class_roster_students_query(class_id).all()
+        enrolled_ids = {s.id for s in enrolled}
         pool = students_in_school_year_for_assistant_pool(class_info.school_year_id)
         eligible_assistants = [
             serialize_student_brief(s)
@@ -339,17 +343,14 @@ def query_class_edit_form(class_id: int) -> dict[str, Any]:
 
 def query_class_roster(class_id: int) -> dict[str, Any]:
     class_info = Class.query.get_or_404(class_id)
-    enrolled_ids = {
-        e.student_id
-        for e in Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    }
+    enrolled = active_class_roster_students_query(class_id).all()
+    enrolled_ids = {s.id for s in enrolled}
     all_students = (
-        Student.query.filter(Student.is_deleted.is_(False))
+        Student.query.filter(active_roster_student_filters())
         .order_by(Student.last_name, Student.first_name)
         .all()
     )
     grade_levels = class_roster_grade_levels(class_info)
-    enrolled = [s for s in all_students if s.id in enrolled_ids]
     available = [
         s
         for s in all_students
@@ -405,7 +406,7 @@ def mutate_class_roster(class_id: int, action: str, student_ids: list[int]) -> d
         skipped_grade = 0
         for sid in student_ids:
             stu = Student.query.get(sid)
-            if not stu or getattr(stu, "is_deleted", False):
+            if not stu or student_is_archived(stu):
                 continue
             if not student_matches_class_grades(stu, grade_levels):
                 skipped_grade += 1
@@ -602,14 +603,27 @@ def update_class_from_body(class_id: int, body: dict[str, Any]) -> dict[str, Any
                         new_ids.append(sid)
             if len(new_ids) > MAX_ASSISTANTS_PER_CLASS:
                 return {"success": False, "message": f"At most {MAX_ASSISTANTS_PER_CLASS} student assistants per class."}
-            enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-            enrolled_ids = {e.student_id for e in enrollments}
+            enrolled_ids = {s.id for s in active_class_roster_students_query(class_id).all()}
+            year_id = class_obj.school_year_id
             for sid in new_ids:
                 stu = Student.query.get(sid)
                 if not stu or not is_eligible_student_assistant_candidate(class_obj, stu, enrolled_ids):
                     return {"success": False, "message": "Invalid student selected for assistant."}
-                if count_assistant_classes_for_student_excluding(sid, exclude_class_id=class_id) >= MAX_CLASSES_PER_ASSISTANT:
-                    return {"success": False, "message": "Student assistant is already assigned to the maximum number of classes."}
+                if (
+                    count_assistant_classes_for_student_excluding(
+                        sid,
+                        exclude_class_id=class_id,
+                        school_year_id=year_id,
+                    )
+                    >= MAX_CLASSES_PER_ASSISTANT
+                ):
+                    return {
+                        "success": False,
+                        "message": (
+                            f"Student assistant is already assigned to the maximum of "
+                            f"{MAX_CLASSES_PER_ASSISTANT} classes this school year."
+                        ),
+                    }
             StudentAssistant.query.filter_by(class_id=class_id).delete()
             for sid in new_ids:
                 db.session.add(
@@ -851,10 +865,7 @@ def _build_student_grades_for_class(
 
 def query_class_grades(class_id: int, view_mode: str = "table") -> dict[str, Any]:
     class_obj = Class.query.get_or_404(class_id)
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [
-        e.student for e in enrollments if e.student and not getattr(e.student, "is_deleted", False)
-    ]
+    enrolled_students = active_class_roster_students_query(class_id).all()
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     try:
         group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()

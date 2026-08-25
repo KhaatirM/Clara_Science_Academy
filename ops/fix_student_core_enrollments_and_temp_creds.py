@@ -121,6 +121,13 @@ def main() -> int:
             school_year = db.session.get(SchoolYear, args.school_year_id)
         else:
             school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not school_year:
+                school_year = SchoolYear.query.order_by(SchoolYear.id.desc()).first()
+                if school_year:
+                    print(
+                        f"[WARN] No active school year; using latest: "
+                        f"{school_year.name} (id={school_year.id})"
+                    )
         if not school_year:
             print("[ERROR] No school year found.")
             return 1

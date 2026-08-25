@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug24_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Teacher grading auto-save fix',
+    body: 'Paper/PDF grading no longer loses scores while you type other students. Auto-save always uses the latest score, and in-progress drafts stay put when the page refreshes.',
+  },
   {
     title: 'Phone-friendly sidebar',
     body: 'On phones the menu is a drawer that starts closed. Open it with the menu button; it closes when you navigate or tap outside.',
@@ -20,20 +24,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Grading save fixes',
     body: 'Teacher group grades hit the correct save URL, Save all no longer clears blank rows, zero scores stick, and school-year lockouts return a clear error instead of a silent failure.',
   },
-  {
-    title: 'Tighter phone page layout',
-    body: 'Portal shells use less padding on small screens and keep wide tables scrolling inside the page.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.514.0'
-  const releaseLabel = version?.release_label || 'August 24, 2026'
+  const display = version?.display || 'v 2.514.2'
+  const releaseLabel = version?.release_label || 'August 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2668
+  const updatesEstimate = version?.updates_estimate ?? 2670
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

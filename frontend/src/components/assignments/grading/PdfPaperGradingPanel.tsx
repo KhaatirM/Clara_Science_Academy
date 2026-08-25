@@ -27,6 +27,16 @@ function rowKey(studentId: number) {
   return String(studentId)
 }
 
+function draftsEqual(a: GradeRowDraft, b: GradeRowDraft): boolean {
+  return (
+    a.score === b.score &&
+    a.comment === b.comment &&
+    a.submission_type === b.submission_type &&
+    a.submission_notes_type === b.submission_notes_type &&
+    a.submission_notes === b.submission_notes
+  )
+}
+
 export function PdfPaperGradingPanel({
   assignmentId,
   rows,
@@ -52,14 +62,38 @@ export function PdfPaperGradingPanel({
   const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
   const rowsRef = useRef(rows)
   rowsRef.current = rows
+  const draftsRef = useRef(drafts)
+  draftsRef.current = drafts
+  /** Students with local edits that haven't finished saving yet — preserve across row reloads. */
+  const dirtyIdsRef = useRef<Set<number>>(new Set())
+  const onSavedRef = useRef(onSaved)
+  onSavedRef.current = onSaved
+  const saveStudentRef = useRef<
+    (studentId: number, silent?: boolean, reload?: boolean) => Promise<void>
+  >(async () => undefined)
 
   useEffect(() => {
-    const next: Record<string, GradeRowDraft> = {}
-    for (const row of rows) {
-      next[rowKey(row.student.id)] = draftFromGradeRow(row)
-    }
-    setDrafts(next)
-    setSelected(new Set())
+    setDrafts((prev) => {
+      const next: Record<string, GradeRowDraft> = {}
+      for (const row of rows) {
+        const key = rowKey(row.student.id)
+        const incoming = draftFromGradeRow(row)
+        const existing = prev[key]
+        if (
+          existing &&
+          dirtyIdsRef.current.has(row.student.id) &&
+          !draftsEqual(existing, incoming)
+        ) {
+          // Keep in-progress typing while another row's save reloads the roster.
+          next[key] = existing
+        } else {
+          next[key] = incoming
+          dirtyIdsRef.current.delete(row.student.id)
+        }
+      }
+      draftsRef.current = next
+      return next
+    })
   }, [rows])
 
   const selectableRows = useMemo(
@@ -78,28 +112,46 @@ export function PdfPaperGradingPanel({
   }, [drafts, rows])
 
   const visibleRows = useMemo(() => {
-    return rows.filter((row) => {
-      const key = rowKey(row.student.id)
-      const draft = drafts[key] || draftFromGradeRow(row)
+    return selectableRows.filter((row) => {
+      const draft = drafts[rowKey(row.student.id)] || draftFromGradeRow(row)
       const bucket = bucketFromDraft(draft.score, totalPoints, row.grade.is_voided)
       return matchesSpreadFilter(bucket, spreadFilter, draft.score, row.grade.is_voided)
     })
-  }, [drafts, rows, spreadFilter, totalPoints])
+  }, [drafts, selectableRows, spreadFilter, totalPoints])
 
   const updateDraft = useCallback((studentId: number, patch: Partial<GradeRowDraft>) => {
     const key = rowKey(studentId)
-    setDrafts((prev) => ({
-      ...prev,
-      [key]: { ...(prev[key] || draftFromGradeRow(rowsRef.current.find((r) => r.student.id === studentId)!)), ...patch },
-    }))
+    setDrafts((prev) => {
+      const base =
+        prev[key] ||
+        draftFromGradeRow(rowsRef.current.find((r) => r.student.id === studentId)!)
+      const nextDraft = { ...base, ...patch }
+      const next = { ...prev, [key]: nextDraft }
+      // Keep ref in sync immediately so auto-save timers never read a stale draft.
+      draftsRef.current = next
+      dirtyIdsRef.current.add(studentId)
+      return next
+    })
+  }, [])
+
+  const scheduleAutoSave = useCallback((studentId: number) => {
+    const row = rowsRef.current.find((r) => r.student.id === studentId)
+    if (!row || row.grade.is_voided) return
+    const existing = saveTimers.current[studentId]
+    if (existing) clearTimeout(existing)
+    saveTimers.current[studentId] = setTimeout(() => {
+      void saveStudentRef.current(studentId, true)
+    }, 2000)
   }, [])
 
   const saveStudent = useCallback(
-    async (studentId: number, silent = false) => {
+    async (studentId: number, silent = false, reload?: boolean) => {
       const row = rowsRef.current.find((r) => r.student.id === studentId)
-      const draft = drafts[rowKey(studentId)]
+      const draft = draftsRef.current[rowKey(studentId)]
       if (!row || !draft || row.grade.is_voided) return
 
+      const shouldReload = reload ?? !silent
+      const snapshot: GradeRowDraft = { ...draft }
       setSavingIds((prev) => new Set(prev).add(studentId))
       if (!silent) setMessage(null)
       try {
@@ -107,18 +159,26 @@ export function PdfPaperGradingPanel({
           assignmentId,
           studentId,
           {
-            score: draft.score,
-            comment: draft.comment,
-            submission_type: draft.submission_type,
-            submission_notes_type: draft.submission_notes_type,
-            submission_notes: draft.submission_notes,
+            score: snapshot.score,
+            comment: snapshot.comment,
+            submission_type: snapshot.submission_type,
+            submission_notes_type: snapshot.submission_notes_type,
+            submission_notes: snapshot.submission_notes,
           },
           workspaceScope,
         )
+        const current = draftsRef.current[rowKey(studentId)]
+        if (current && draftsEqual(current, snapshot)) {
+          dirtyIdsRef.current.delete(studentId)
+        } else if (current) {
+          // User kept typing during the request — save again with the latest draft.
+          scheduleAutoSave(studentId)
+        }
         if (!silent) {
           setMessage(`Saved grade for ${row.student.display_name}`)
         }
-        onSaved?.()
+        // Full reload only when requested; dirty drafts are preserved across reloads.
+        if (shouldReload) onSavedRef.current?.()
       } catch (e) {
         setMessage(e instanceof Error ? e.message : 'Save failed')
       } finally {
@@ -129,21 +189,9 @@ export function PdfPaperGradingPanel({
         })
       }
     },
-    [assignmentId, drafts, onSaved, workspaceScope],
+    [assignmentId, scheduleAutoSave, workspaceScope],
   )
-
-  const scheduleAutoSave = useCallback(
-    (studentId: number) => {
-      const row = rowsRef.current.find((r) => r.student.id === studentId)
-      if (!row || row.grade.is_voided) return
-      const existing = saveTimers.current[studentId]
-      if (existing) clearTimeout(existing)
-      saveTimers.current[studentId] = setTimeout(() => {
-        void saveStudent(studentId, true)
-      }, 2000)
-    },
-    [saveStudent],
-  )
+  saveStudentRef.current = saveStudent
 
   useEffect(() => {
     return () => {
@@ -184,16 +232,24 @@ export function PdfPaperGradingPanel({
         const row = rowsRef.current.find((r) => r.student.id === id)
         if (!row) continue
         next[key] = { ...(next[key] || draftFromGradeRow(row)), ...patch }
+        dirtyIdsRef.current.add(id)
         scheduleAutoSave(id)
       }
+      draftsRef.current = next
       return next
     })
   }
 
   const saveAll = async () => {
     setMessage(null)
+    // Flush any pending auto-save timers so we save the latest drafts once.
+    for (const timer of Object.values(saveTimers.current)) {
+      clearTimeout(timer)
+    }
+    saveTimers.current = {}
+
     const targets = selectableRows.filter((row) => {
-      const draft = drafts[rowKey(row.student.id)]
+      const draft = draftsRef.current[rowKey(row.student.id)]
       return draft && draft.score.trim() !== ''
     })
     if (!targets.length) {
@@ -201,9 +257,11 @@ export function PdfPaperGradingPanel({
       return
     }
     for (const row of targets) {
-      await saveStudent(row.student.id, true)
+      // Skip per-row reload; refresh once after the batch.
+      await saveStudent(row.student.id, true, false)
     }
     setMessage(`Saved grades for ${targets.length} student(s)`)
+    onSavedRef.current?.()
   }
 
   return (

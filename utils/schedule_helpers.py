@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from models import ClassSchedule, Enrollment
+from utils.school_timezone import get_school_now
 
 DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -121,7 +122,7 @@ def build_schedule_grid(weekly_schedule: dict) -> list:
 
 
 def finalize_schedule_view(weekly_schedule: dict) -> tuple[dict, int, dict, list]:
-    today_weekday = datetime.now().weekday()
+    today_weekday = get_school_now().weekday()
     insights = compute_schedule_insights(weekly_schedule, today_weekday)
     mark_schedule_timing(weekly_schedule, today_weekday)
     schedule_grid = build_schedule_grid(weekly_schedule)

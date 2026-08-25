@@ -59,6 +59,8 @@ from models import (
     User,
 )
 
+from utils.school_timezone import get_school_now, get_school_today
+
 
 # ---------------------------------------------------------------------------
 # Phase constants
@@ -115,7 +117,7 @@ def _log_event(closure: SchoolYearClosure, event_type: str, *,
 
 
 def _today() -> date:
-    return date.today()
+    return get_school_today()
 
 
 def _now() -> datetime:

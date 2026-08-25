@@ -16,6 +16,7 @@ from models import Assignment, Class, Enrollment, Grade, SchoolYear, Student, Us
 from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
 from utils.school_year_filters import get_active_school_year, student_classes_for_school_year
 from utils.user_theme import get_effective_theme, get_site_theme_override
+from utils.school_timezone import get_school_now, get_school_today
 
 
 def _serialize_schedule_block(class_obj: Class, item: dict[str, Any]) -> dict[str, Any]:
@@ -77,7 +78,7 @@ def build_student_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
             "days": days,
             "grid_rows": grid_rows,
             "today_weekday": today_weekday,
-            "today_display": datetime.now().strftime("%A, %B %d, %Y"),
+            "today_display": get_school_now().strftime("%A, %B %d, %Y"),
             "stats": {
                 "today_blocks": insights.get("today_blocks", 0),
                 "total_blocks": insights.get("total_blocks", 0),
@@ -94,7 +95,7 @@ def build_student_calendar_payload(
     *, month: int | None, year: int | None
 ) -> tuple[dict[str, Any] | None, str | None]:
     try:
-        today = date.today()
+        today = get_school_today()
         month = month or today.month
         year = year or today.year
         grid = build_calendar_month(year, month)

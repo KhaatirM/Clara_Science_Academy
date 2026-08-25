@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Optional, Tuple
+from utils.school_timezone import get_school_now, get_school_today
 
 if TYPE_CHECKING:
     from models import TeacherStaff as TeacherStaffModel
@@ -90,7 +91,7 @@ def _infer_grad_year_from_grade(grade_level: Optional[int], reference_year: int)
     try:
         ry = int(reference_year)
     except (TypeError, ValueError):
-        ry = date.today().year
+        ry = get_school_today().year
     return ry + (12 - g)
 
 
@@ -130,7 +131,7 @@ def effective_graduation_year(
     reference_year: Optional[int] = None,
 ) -> Optional[int]:
     """Public helper for sync scripts (groups, reporting): same calendar year source as OU policy."""
-    ref = reference_year if reference_year is not None else date.today().year
+    ref = reference_year if reference_year is not None else get_school_today().year
     return _effective_grad_year(grade_level, expected_graduation_year, grad_year, expected_grad_date, ref)
 
 
@@ -411,7 +412,7 @@ def get_student_ou_path(
         marked_for_removal=marked_for_removal,
         is_deleted=is_deleted,
         status_updated_at=None,
-        today=today or date.today(),
+        today=today or get_school_today(),
         prior_school_year_end=None,
         next_school_year_start=None,
         departure_status=departure_status,
@@ -442,7 +443,7 @@ def resolve_student_ou(
     - **Alumni** (completed division) — 1 year after ``status_updated_at``, then suspend
     - **Active** — never suspended via this policy
     """
-    today = today or date.today()
+    today = today or get_school_today()
     target_ou_path, reason = _compute_ou_path_and_reason(
         grade_level=grade_level,
         expected_graduation_year=expected_graduation_year,

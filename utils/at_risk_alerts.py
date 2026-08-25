@@ -23,7 +23,7 @@ ACADEMIC_CONCERN_GPA_THRESHOLD = 2.0
 # request fans out into 1k+ queries. 5 min is short enough that fresh grades show up
 # quickly; callers that mutate grades can use invalidate_at_risk_alerts_cache(user_id).
 _ALERTS_CACHE_TTL_SECONDS = 300
-_ALERTS_CACHE_VERSION = 5  # bump when alert payload shape / scope changes
+_ALERTS_CACHE_VERSION = 6  # bump when alert payload shape / scope / Q1 gate changes
 _alerts_cache_lock = threading.Lock()
 _alerts_cache = {}  # (user_id, version) -> (expires_at_epoch, payload_tuple)
 
@@ -374,6 +374,13 @@ def get_at_risk_alerts_for_user(force_scope=None):
 
     active_school_year = get_active_school_year()
     if not active_school_year:
+        return empty
+
+    from utils.gpa_period_visibility import roster_gpa_unlocked
+
+    # Year GPA / concerns unlock only after official Q1 release (same calendar gate
+    # as student-facing Q1 GPA). Prevents one early assignment from opening the toast.
+    if not roster_gpa_unlocked(active_school_year.id):
         return empty
 
     year_class_ids = active_school_year_class_ids()

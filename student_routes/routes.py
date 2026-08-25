@@ -29,6 +29,8 @@ from models import (
     DiscussionThread, DiscussionPost, DiscussionAttachment
 )
 
+from utils.school_timezone import get_school_now, get_school_today
+
 # Authentication and decorators
 from decorators import student_required
 from teacher_routes.assignment_utils import (
@@ -162,7 +164,7 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
             # Check if extension deadline has passed and assignment is not graded
             if not grade:
                 extension_due_date = extension.extended_due_date.date() if hasattr(extension.extended_due_date, 'date') else extension.extended_due_date
-                today = datetime.now().date()
+                today = get_school_today()
                 
                 if extension_due_date >= today:
                     # Extension is still active
@@ -216,7 +218,7 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
     if assignment.due_date:
         # Convert due_date to date if it's a datetime for comparison
         due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
-        today = datetime.now().date()
+        today = get_school_today()
         if due_date < today:
             return 'Past Due'
     
@@ -332,7 +334,7 @@ def get_student_group_assignment_status(group_assignment, group_submission, grou
         return 'Submitted or Awaiting Grade'
     if group_assignment.due_date:
         due_date = group_assignment.due_date.date() if hasattr(group_assignment.due_date, 'date') else group_assignment.due_date
-        today = datetime.now().date()
+        today = get_school_today()
         if due_date < today:
             return 'Past Due'
     return 'Un-Submitted'
@@ -737,7 +739,7 @@ def student_dashboard():
     goals_dict = {goal.class_id: goal for goal in goals}
     
     # Get today's schedule using real ClassSchedule data
-    today = datetime.now()
+    today = get_school_now()
     today_weekday = today.weekday()  # 0=Monday, 1=Tuesday, etc.
     today_schedule = []
     
@@ -900,7 +902,7 @@ def student_dashboard():
                              my_classes=classes,
                              failing_classes=failing_classes,
                              missing_assignments=missing_assignments,
-                             today=datetime.now().date(),
+                             today=get_school_today(),
                              assistant_for_classes=assistant_for_classes,
                              up_next_items=up_next_items))
 
@@ -1023,7 +1025,7 @@ def student_assignments():
     inactive_assignments = []  # Effective Inactive and not open for this student (no extension/redo/reopen)
     active_assignments = []  # Effective Active, or Inactive/Upcoming but still open for this student
     upcoming_assignments = []  # Effective Upcoming and not yet open for this student
-    today = datetime.now().date()
+    today = get_school_today()
 
     for assignment in assignments:
         submission = submissions_dict.get(assignment.id)
@@ -1265,7 +1267,7 @@ def class_assignments(class_id):
                              assignments_with_status=assignments_with_status,
                              redo_requests_by_assignment=redo_requests_by_assignment,
                              class_student_group=class_student_group,
-                             today=datetime.now().date()))
+                             today=get_school_today()))
 
 @student_blueprint.route('/classes')
 @login_required
@@ -2059,7 +2061,7 @@ def student_schedule():
 
     weekly_schedule = build_weekly_schedule(classes, role='student')
     weekly_schedule, today_weekday, schedule_insights, schedule_grid = finalize_schedule_view(weekly_schedule)
-    today = datetime.now()
+    today = get_school_now()
 
     return render_template(
         'shared/schedule.html',
@@ -2089,8 +2091,8 @@ def student_school_calendar():
     from models import SchoolYear
     
     # Get current month/year from query params or use current date
-    month = request.args.get('month', datetime.now().month, type=int)
-    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', get_school_now().month, type=int)
+    year = request.args.get('year', get_school_now().year, type=int)
     
     # Calculate previous and next month
     current_date = datetime(year, month, 1)
@@ -2119,7 +2121,7 @@ def student_school_calendar():
             if day == 0:
                 week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
             else:
-                is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
+                is_today = (day == get_school_now().day and month == get_school_now().month and year == get_school_now().year)
                 
                 # Get events for this day (include type and description for badge colors and modal)
                 day_events = []
@@ -2334,7 +2336,7 @@ def view_class(class_id):
     
     # Get current date for assignment status
     from datetime import datetime
-    today = datetime.now().date()
+    today = get_school_today()
 
     # Template lookup: Jinja {% set %} inside nested loops does not update outer scope — use a dict
     class_assignment_status_by_id = {a.id: st for a, _s, st in assignments_with_status}
@@ -2428,7 +2430,7 @@ def get_class_assignments_api(class_id):
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
     from datetime import datetime
-    today = datetime.now()
+    today = get_school_now()
     
     # Format assignments for JSON response
     assignments_data = []
@@ -3301,7 +3303,7 @@ def request_extension():
         try:
             requested_due_date = datetime.strptime(requested_due_date_str, '%Y-%m-%d')
             # Ensure the requested date is not in the past
-            if requested_due_date.date() < datetime.now().date():
+            if requested_due_date.date() < get_school_today():
                 return jsonify({'success': False, 'message': 'Requested due date cannot be in the past.'}), 400
         except ValueError:
             return jsonify({'success': False, 'message': 'Invalid date format.'}), 400

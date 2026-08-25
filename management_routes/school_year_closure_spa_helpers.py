@@ -12,6 +12,7 @@ from models import Class, SchoolYear, SchoolYearClosure, SchoolYearClosureExtens
 from services import school_year_closure as syc
 
 from management_routes.school_year_closure import _build_next_year_suggestion
+from utils.school_timezone import get_school_now, get_school_today
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -62,7 +63,7 @@ def _serialize_event(ev) -> dict[str, Any]:
 
 
 def query_closure_schedule_form() -> dict[str, Any]:
-    today = date.today()
+    today = get_school_today()
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     active = SchoolYear.query.filter_by(is_active=True).first()
     suggested_date = active.end_date if active and active.end_date else today
@@ -104,7 +105,7 @@ def create_closure_from_body(body: dict[str, Any], actor: User) -> dict[str, Any
     closure_date = _parse_date(body.get("closure_date"))
     notes = (body.get("notes") or "").strip() or None
     confirm = (body.get("confirm") or "").strip()
-    today = date.today()
+    today = get_school_today()
 
     if not school_year_id:
         raise ValueError("Select a school year.")
@@ -160,7 +161,7 @@ def query_closure_dashboard(closure_id: int) -> dict[str, Any]:
         except Exception:
             current_app.logger.exception("Dashboard tick for closure %s failed", closure_id)
 
-    today = date.today()
+    today = get_school_today()
     days_to = {
         "student_lockout": (closure.student_lockout_at - today).days,
         "teacher_lockout": (closure.teacher_lockout_at - today).days,

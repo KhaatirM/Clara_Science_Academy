@@ -13,6 +13,7 @@ from management_routes.student_assistant_utils import (
     active_assistant_classes_for_student,
     assignment_student_visibility_filter,
 )
+from utils.school_timezone import get_school_now, get_school_today
 from models import (
     Announcement,
     Assignment,
@@ -50,7 +51,7 @@ def _empty_payload(student: Student, *, has_active_school_year: bool, latest_lab
     return {
         "has_active_school_year": has_active_school_year,
         "latest_school_year_label": latest_label,
-        "home_display_date": datetime.now().strftime("%A, %B %d, %Y"),
+        "home_display_date": get_school_now().strftime("%A, %B %d, %Y"),
         "profile": {
             "id": student.id,
             "first_name": student.first_name,
@@ -185,7 +186,7 @@ def build_student_home_payload(student_id: int | None = None) -> tuple[dict[str,
     goals_rows = StudentGoal.query.filter_by(student_id=student.id).all()
     goals_by_class = {goal.class_id: goal for goal in goals_rows}
 
-    today = datetime.now()
+    today = get_school_now()
     today_weekday = today.weekday()
     today_schedule = []
     for c in classes:
@@ -334,7 +335,7 @@ def build_student_home_payload(student_id: int | None = None) -> tuple[dict[str,
             "has_active_school_year": True,
             "latest_school_year_label": latest_label,
             "school_year_name": current_school_year.name,
-            "home_display_date": datetime.now().strftime("%A, %B %d, %Y"),
+            "home_display_date": get_school_now().strftime("%A, %B %d, %Y"),
             "profile": {
                 "id": student.id,
                 "first_name": student.first_name,

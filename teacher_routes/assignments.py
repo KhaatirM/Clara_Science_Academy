@@ -14,6 +14,8 @@ from models import (
     class_additional_teachers, class_substitute_teachers, AssignmentReopening, Submission,
     DiscussionThread, DiscussionPost
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from sqlalchemy import or_
 from datetime import datetime, time
 from utils.quarter_grade_calculator import update_quarter_grade
@@ -724,7 +726,7 @@ def view_assignment(assignment_id):
                              role_prefix='teacher')
     
     teacher = get_teacher_or_admin()
-    today = date.today()
+    today = get_school_today()
     
     # Calculate statistics
     enrolled_student_ids = [

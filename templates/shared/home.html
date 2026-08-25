@@ -167,11 +167,25 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>laptop color</strong> on Devices, keeps <strong>archived students</strong> off day-to-day class lists, and tightens <strong>student assistant</strong> limits to the active school year.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) fixes <strong>school timezone</strong> on attendance and calendars, gates <strong>year GPA and academic concerns</strong> until Q1 grades release, and includes recent device and roster improvements.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 25, 2026 - timezone + Q1 GPA -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clock me-2"></i>Timezone &amp; Academic Concerns – August 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School timezone:</strong> Attendance, dashboards, schedules, and calendar “today” use Eastern school time so evening records match the sidebar clock.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Q1 GPA gate:</strong> Roster GPA and academic-concerns alerts wait until official Q1 grades are released; staff see a note when year GPA is still locked.
+                            </li>
+                        </ul>
+                    </div>
                     <!-- August 25, 2026 - tech users + devices -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-people me-2"></i>Tech Users &amp; Devices – August 25, 2026</h6>
@@ -1965,11 +1979,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v7')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v8')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug25_2026_v7', 'true');
+            sessionStorage.setItem('updateModalShownAug25_2026_v8', 'true');
         }, 500);
     }
 });

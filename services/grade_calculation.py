@@ -9,6 +9,7 @@ from sqlalchemy import func
 from flask import current_app
 from extensions import db
 from models import Grade, Assignment, ReportCard, Student, AcademicPeriod, SubjectRequirement
+from utils.school_timezone import get_school_now, get_school_today
 
 # Fallback subject lists (used when SubjectRequirement table is empty).
 # Mirrors utils/core_class_catalog.py broad subjects.
@@ -110,7 +111,7 @@ def calculate_and_get_grade_for_student(student_id, school_year_id, quarter):
     ).first()
 
     if quarter_period:
-        today = date.today()
+        today = get_school_today()
         if today < quarter_period.end_date:
             current_app.logger.info(
                 f"Quarter Q{quarter} has not ended yet (ends {quarter_period.end_date}). Grade calculation skipped."

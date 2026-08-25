@@ -64,7 +64,14 @@ def get_school_timezone_name():
         resolved = _resolve_school_timezone_string(current_app)
         g._school_timezone_name = resolved
         return resolved
-    return _resolve_school_timezone_string(current_app)
+    try:
+        from flask import has_app_context
+
+        if has_app_context():
+            return _resolve_school_timezone_string(current_app)
+    except Exception:
+        pass
+    return DEFAULT_SCHOOL_TIMEZONE
 
 
 def _school_now_in_tz(tz_name: str):
@@ -101,3 +108,31 @@ def get_school_timezone_sidebar_payload() -> dict[str, str]:
         "school_timezone_zone": zone,
         "school_timezone_display": display,
     }
+
+
+def get_school_now():
+    """
+    Current datetime in the effective school timezone (timezone-aware when possible).
+
+    Use instead of ``datetime.now()`` / ``datetime.utcnow()`` for attendance dates,
+    due-date comparisons, and any calendar-day logic tied to the school day.
+    """
+    from datetime import datetime
+
+    tz_name = get_school_timezone_name()
+    try:
+        from zoneinfo import ZoneInfo
+
+        return datetime.now(ZoneInfo(tz_name))
+    except Exception:
+        try:
+            import pytz
+
+            return datetime.now(pytz.timezone(tz_name))
+        except Exception:
+            return datetime.now()
+
+
+def get_school_today():
+    """Today's calendar date in the effective school timezone."""
+    return get_school_now().date()

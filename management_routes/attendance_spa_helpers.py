@@ -10,6 +10,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import Attendance, Class, Enrollment, SchoolDayAttendance, Student
+from utils.school_timezone import get_school_today
 from utils.school_year_filters import classes_for_active_school_year, get_active_school_year
 from utils.student_roster import active_class_roster_students_query
 
@@ -42,7 +43,7 @@ def query_unified_attendance_hub(
     from flask import current_app
     from utils.student_roster import active_roster_students_query
 
-    today = datetime.now().date()
+    today = get_school_today()
     selected_date, selected_date_str = _parse_date_arg(school_date_str, today)
 
     students = (
@@ -252,7 +253,7 @@ def _analytics_date_presets(today) -> list[dict[str, str]]:
 def serialize_attendance_reports(ctx: dict[str, Any]) -> dict[str, Any]:
     from datetime import datetime
 
-    today = datetime.now().date()
+    today = get_school_today()
     pagination = ctx["pagination"]
     records = []
     for record in ctx["records"]:
@@ -322,7 +323,7 @@ def serialize_attendance_reports(ctx: dict[str, Any]) -> dict[str, Any]:
 def serialize_attendance_analytics(ctx: dict[str, Any]) -> dict[str, Any]:
     from datetime import datetime
 
-    today = datetime.now().date()
+    today = get_school_today()
     at_risk_students = []
     for item in ctx["at_risk_students"]:
         student = item["student"]
@@ -529,7 +530,7 @@ def query_take_class_attendance(class_id: int, date_str: str | None = None) -> d
     if not enrolled:
         raise ValueError("No students are enrolled in this class.")
 
-    today = datetime.now().date()
+    today = get_school_today()
     attendance_date, attendance_date_str = _parse_date_arg(date_str, today)
     if attendance_date > today:
         attendance_date = today
@@ -595,7 +596,7 @@ def save_take_class_attendance(
     except ValueError:
         return {"success": False, "message": "Invalid date. Use YYYY-MM-DD."}
 
-    if attendance_date > datetime.now().date():
+    if attendance_date > get_school_today():
         return {"success": False, "message": "Cannot record attendance for a future date."}
 
     teacher_id = getattr(current_user, "teacher_staff_id", None)
@@ -665,7 +666,7 @@ def query_class_attendance_records(
     from sqlalchemy.orm import joinedload
 
     class_obj = Class.query.get_or_404(class_id)
-    today = datetime.now().date()
+    today = get_school_today()
     if not start_date_str:
         start_date = today - timedelta(days=30)
     else:

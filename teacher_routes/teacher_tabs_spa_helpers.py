@@ -19,6 +19,7 @@ from teacher_routes.classes_spa_helpers import (
     _teacher_accessible_classes,
     _teacher_classes_for_active_school_year,
 )
+from utils.school_timezone import get_school_now, get_school_today
 from teacher_routes.utils import get_teacher_or_admin, is_admin
 from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
 from utils.school_year_filters import (
@@ -326,7 +327,7 @@ def build_teacher_assignments_class_payload(
 def build_teacher_attendance_payload() -> tuple[dict[str, Any] | None, str | None]:
     try:
         classes = _teacher_classes_for_active_school_year(get_teacher_or_admin())
-        today = date.today()
+        today = get_school_today()
         items: list[dict[str, Any]] = []
         completed = 0
         for cls in classes:
@@ -431,7 +432,7 @@ def build_teacher_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
                 "days": days,
                 "grid_rows": grid_rows,
                 "today_weekday": today_weekday,
-                "today_display": datetime.now().strftime("%A, %B %d, %Y"),
+                "today_display": get_school_now().strftime("%A, %B %d, %Y"),
                 "stats": {
                     "today_blocks": insights.get("today_blocks", 0),
                     "total_blocks": insights.get("total_blocks", 0),
@@ -447,7 +448,7 @@ def build_teacher_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
 
 def build_teacher_calendar_payload(*, month: int | None, year: int | None) -> tuple[dict[str, Any] | None, str | None]:
     try:
-        today = date.today()
+        today = get_school_today()
         month = month or today.month
         year = year or today.year
         grid = build_calendar_month(year, month)

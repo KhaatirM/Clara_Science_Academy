@@ -30,6 +30,8 @@ from models import (
     class_additional_teachers,
     class_substitute_teachers,
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from management_routes.student_assistant_utils import (
     MAX_ASSISTANTS_PER_CLASS,
     MAX_CLASSES_PER_ASSISTANT,
@@ -673,7 +675,7 @@ def manage_class(class_id):
     ]
     
     # Get today's date for age calculations
-    today = date.today()
+    today = get_school_today()
     
     return render_template('management/manage_class_roster.html', 
                          class_info=class_obj,
@@ -1074,7 +1076,7 @@ def class_roster(class_id):
     ]
     
     # Get today's date for age calculations
-    today = date.today()
+    today = get_school_today()
     
     return render_template('management/manage_class_roster.html', 
                          class_info=class_obj,
@@ -1388,7 +1390,7 @@ def admin_class_deadline_reminders(class_id):
                 raise db_error
         
         # Get upcoming reminders (next 7 days)
-        now = datetime.now()
+        now = get_school_now()
         upcoming_date = now + timedelta(days=7)
         upcoming_reminders = []
         for r in reminders:
@@ -1859,7 +1861,7 @@ def class_grades(class_id):
                          all_assignments=all_assignments,
                          student_grades=student_grades,
                          student_averages=student_averages,
-                         today=date.today(),
+                         today=get_school_today(),
                          view_mode=view_mode,
                          recent_assignments=recent_assignments)
 
@@ -2186,7 +2188,7 @@ def class_assignments(class_id):
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
     # Get current date for status updates
-    today = datetime.now().date()
+    today = get_school_today()
     
     # Update assignment statuses (and auto-zeros for past-due ungraded)
     update_assignment_statuses()
@@ -2262,7 +2264,7 @@ def take_class_attendance(class_id):
         # Get date from form (POST) or query params (GET)
         attendance_date_str = request.form.get('date') or request.args.get('date') or request.form.get('attendance_date')
         if not attendance_date_str:
-            attendance_date_str = datetime.now().strftime('%Y-%m-%d')
+            attendance_date_str = get_school_now().strftime('%Y-%m-%d')
         
         try:
             attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
@@ -2271,10 +2273,10 @@ def take_class_attendance(class_id):
             return redirect(url_for('management.take_class_attendance', class_id=class_id))
         
         # Check if date is not in the future
-        if attendance_date > datetime.now().date():
+        if attendance_date > get_school_today():
             flash("Cannot take attendance for future dates.", "warning")
-            attendance_date_str = datetime.now().strftime('%Y-%m-%d')
-            attendance_date = datetime.now().date()
+            attendance_date_str = get_school_now().strftime('%Y-%m-%d')
+            attendance_date = get_school_today()
 
         # Load existing records for this class/date
         existing_records = {rec.student_id: rec for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
@@ -2669,7 +2671,7 @@ def manage_class_roster(class_id):
                          all_students=all_students,
                          enrolled_students=enrolled_students,
                          available_teachers=available_teachers,
-                         today=datetime.now().date())
+                         today=get_school_today())
 
 
 

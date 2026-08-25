@@ -6,6 +6,7 @@ from flask import current_app
 from flask_login import current_user
 from models import TeacherStaff, Class, SchoolYear, AcademicPeriod
 from datetime import datetime, date, timedelta
+from utils.school_timezone import get_school_now, get_school_today
 
 # File upload configuration
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'}
@@ -265,7 +266,7 @@ def get_current_quarter():
             return "1"  # Default to Q1 if no quarters defined
         
         # Get today's date
-        today = date.today()
+        today = get_school_today()
         
         # Find which quarter we're currently in
         for quarter in quarters:

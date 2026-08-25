@@ -23,6 +23,7 @@ import json
 from flask import (
     Blueprint, flash, redirect, render_template, request, url_for, abort, current_app
 )
+from utils.school_timezone import get_school_now, get_school_today
 from flask_login import current_user, login_required
 
 from decorators import management_required
@@ -86,7 +87,7 @@ def schedule():
         return spa_redirect
 
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
-    today = date.today()
+    today = get_school_today()
 
     if request.method == 'GET':
         # Suggest a sensible default date if there's a single active year.
@@ -190,7 +191,7 @@ def dashboard(closure_id: int):
     if next_year_suggestion:
         next_year_exists = SchoolYear.query.filter_by(name=next_year_suggestion['name']).first() is not None
 
-    today = date.today()
+    today = get_school_today()
     extensions = syc.list_active_extensions(closure)
 
     # Days-to-next-phase calculations for the dashboard
@@ -298,7 +299,7 @@ def _build_next_year_suggestion(closure: SchoolYearClosure) -> dict:
             # Feb 29 in a non-leap year — slide back to Feb 28
             return d.replace(month=2, day=28, year=d.year + 1)
 
-    today = _date.today()
+    today = _get_school_today()
     start = _add_one_year(sy.start_date) if sy.start_date else None
     end = _add_one_year(sy.end_date) if sy.end_date else None
 

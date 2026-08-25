@@ -8,6 +8,7 @@ from flask_login import login_required
 from decorators import management_required
 from utils.auto_refresh_quarter_grades import refresh_all_quarter_grades, refresh_quarter_grades_for_ended_quarters
 from models import SchoolYear
+from utils.school_timezone import get_school_now, get_school_today
 
 bp = Blueprint('quarter_grades_mgmt', __name__)
 
@@ -49,7 +50,7 @@ def refresh_status():
     from models import QuarterGrade, AcademicPeriod
     from datetime import date, timedelta
     
-    today = date.today()
+    today = get_school_today()
     
     # Get statistics
     total_records = QuarterGrade.query.count()

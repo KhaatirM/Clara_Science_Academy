@@ -13,6 +13,8 @@ from models import (
     StudentAssistant, StudentAssistantActionLog, ExtensionRequest, RedoRequest,
     StudentGroup, StudentGroupMember, GroupSubmission
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from sqlalchemy import or_, and_
 import json
 import calendar as cal
@@ -318,7 +320,7 @@ def teacher_dashboard():
         grades_entered = 0
     
     # Calculate monthly and weekly stats
-    now = datetime.now()
+    now = get_school_now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     week_start = now - timedelta(days=now.weekday())
     week_end = week_start + timedelta(days=7)
@@ -549,7 +551,7 @@ def deadline_reminders():
     # Categorize assignments by deadline
     # New logic: Only show assignments that are due today, this week, or later
     # AND assignments where students haven't turned them in
-    now = datetime.now()
+    now = get_school_now()
     overdue = []  # Keep for backwards compatibility but will be empty or filtered
     today = []
     this_week = []
@@ -1235,7 +1237,7 @@ def assignments_and_grades():
         
         # Get today's date for template
         from datetime import date
-        today = date.today()
+        today = get_school_today()
         
         # For table view, calculate student grades and averages
         table_student_grades = {}
@@ -1550,8 +1552,8 @@ def calendar():
     from management_routes.calendar import get_academic_dates_for_calendar
     from models import SchoolYear
 
-    month = request.args.get('month', datetime.now().month, type=int)
-    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', get_school_now().month, type=int)
+    year = request.args.get('year', get_school_now().year, type=int)
 
     current_date = datetime(year, month, 1)
     prev_month = (current_date - timedelta(days=1)).replace(day=1)
@@ -1575,7 +1577,7 @@ def calendar():
             if day == 0:
                 week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
             else:
-                is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
+                is_today = (day == get_school_now().day and month == get_school_now().month and year == get_school_now().year)
                 day_events = []
                 for academic_date in academic_dates:
                     if academic_date['day'] == day:
@@ -1623,7 +1625,7 @@ def teacher_schedule():
 
     weekly_schedule = build_weekly_schedule(classes, role='teacher')
     weekly_schedule, today_weekday, schedule_insights, schedule_grid = finalize_schedule_view(weekly_schedule)
-    today = datetime.now()
+    today = get_school_now()
 
     return render_template(
         'shared/schedule.html',

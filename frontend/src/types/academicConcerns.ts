@@ -19,6 +19,8 @@ export interface AcademicConcernsHubResponse {
   schoolwide: boolean
   has_active_school_year: boolean
   school_year: { id: number; name: string } | null
+  /** False until active-year Q1 official GPA release. */
+  roster_gpa_unlocked?: boolean
   alerts: AcademicConcernAlert[]
   failing_count: number
   overdue_count: number

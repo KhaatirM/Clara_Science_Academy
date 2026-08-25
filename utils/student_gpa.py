@@ -119,15 +119,31 @@ def compute_scoped_gpa(
 
 def compute_active_year_gpa(student_id: int) -> float | None:
     """GPA scoped to the active school year (all-time if no active year exists)."""
+    from utils.gpa_period_visibility import roster_gpa_unlocked
+
     year_id = get_active_school_year_id()
+    if year_id is not None and not roster_gpa_unlocked(year_id):
+        return None
     return compute_scoped_gpa(student_id, school_year_id=year_id)
 
 
 def compute_high_school_tenure_gpa(student: Student) -> float | None:
-    """Cumulative GPA across school years the student was in grades 9–12."""
+    """
+    Cumulative GPA across school years the student was in grades 9–12.
+
+    Until the active year's Q1 GPA is released, exclude the active year so
+    early assignments do not drag tenure GPA / academic concerns.
+    """
+    from utils.gpa_period_visibility import roster_gpa_unlocked
+
     year_ids = high_school_year_ids_for_student(student)
     if not year_ids:
         return None
+    active_id = get_active_school_year_id()
+    if active_id is not None and not roster_gpa_unlocked(active_id):
+        year_ids = [y for y in year_ids if int(y) != int(active_id)]
+        if not year_ids:
+            return None
     return compute_scoped_gpa(int(student.id), school_year_ids=year_ids)
 
 
@@ -136,6 +152,7 @@ def compute_roster_gpa(student: Student) -> float | None:
     Roster GPA used for Students list / Academic Status.
 
     High school (9–12): high-school tenure. Everyone else: active school year.
+    Gated until active-year Q1 official GPA release.
     """
     if is_high_school_grade(getattr(student, "grade_level", None)):
         return compute_high_school_tenure_gpa(student)
@@ -181,6 +198,8 @@ def sync_active_year_gpas(*, commit: bool = True, force: bool = False) -> dict:
 
     K–8: active school year. High school (9–12): cumulative HS tenure years.
     Students with no qualifying grades get gpa=None (No Data).
+    Until active-year Q1 GPA is officially released, K–8 stay None and HS
+    exclude the active year's grades.
     Throttled (~45s) unless force=True (scheduler / ops).
     """
     global _last_sync_at
@@ -192,7 +211,10 @@ def sync_active_year_gpas(*, commit: bool = True, force: bool = False) -> dict:
             "school_year_id": get_active_school_year_id(),
         }
 
+    from utils.gpa_period_visibility import roster_gpa_unlocked
+
     year_id = get_active_school_year_id()
+    year_unlocked = True if year_id is None else roster_gpa_unlocked(year_id)
     students = Student.query.all()
 
     hs_years_by_student: dict[int, set[int]] = defaultdict(set)
@@ -205,16 +227,18 @@ def sync_active_year_gpas(*, commit: bool = True, force: bool = False) -> dict:
     for student in students:
         sid = int(student.id)
         if is_high_school_grade(student.grade_level):
-            # Always include active year for current HS students (even if SSY incomplete).
-            if year_id is not None:
+            # Include active year for current HS students only after Q1 release.
+            if year_id is not None and year_unlocked:
                 hs_years_by_student[sid].add(year_id)
+            elif year_id is not None and not year_unlocked:
+                hs_years_by_student[sid].discard(year_id)
 
     all_hs_year_ids = set()
     for ids in hs_years_by_student.values():
         all_hs_year_ids |= ids
 
     active_by_student: dict[int, list] = defaultdict(list)
-    if year_id is not None:
+    if year_id is not None and year_unlocked:
         for grade in (
             Grade.query.join(Assignment)
             .filter(
@@ -225,7 +249,7 @@ def sync_active_year_gpas(*, commit: bool = True, force: bool = False) -> dict:
             .all()
         ):
             active_by_student[int(grade.student_id)].append(grade)
-    else:
+    elif year_id is None:
         for grade in (
             Grade.query.join(Assignment)
             .filter(
@@ -264,7 +288,10 @@ def sync_active_year_gpas(*, commit: bool = True, force: bool = False) -> dict:
                 grades.extend(hs_by_student_year.get((sid, yid), []))
             gpa = _gpa_from_grades(grades)
         else:
-            gpa = _gpa_from_grades(active_by_student.get(sid, []))
+            if year_id is not None and not year_unlocked:
+                gpa = None
+            else:
+                gpa = _gpa_from_grades(active_by_student.get(sid, []))
 
         if gpa is not None:
             student.gpa = gpa
@@ -281,6 +308,7 @@ def sync_active_year_gpas(*, commit: bool = True, force: bool = False) -> dict:
     return {
         "skipped": False,
         "school_year_id": year_id,
+        "roster_gpa_unlocked": year_unlocked,
         "updated": updated,
         "cleared": cleared,
         "high_school_students": hs_count,

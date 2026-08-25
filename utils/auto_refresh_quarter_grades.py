@@ -9,6 +9,7 @@ from datetime import datetime, date
 from flask import current_app
 from models import db, Student, SchoolYear, AcademicPeriod, Enrollment, Class
 from utils.quarter_grade_calculator import update_quarter_grade
+from utils.school_timezone import get_school_now, get_school_today
 
 
 def should_calculate_quarter_grade(quarter_period, enrollment):
@@ -23,7 +24,7 @@ def should_calculate_quarter_grade(quarter_period, enrollment):
     if not quarter_period:
         return False
     
-    today = date.today()
+    today = get_school_today()
     
     # Only calculate for ended quarters
     if today < quarter_period.end_date:
@@ -144,7 +145,7 @@ def refresh_quarter_grades_for_ended_quarters():
     """
     from datetime import timedelta
     
-    today = date.today()
+    today = get_school_today()
     thirty_days_ago = today - timedelta(days=30)
     
     # Get recently ended quarters

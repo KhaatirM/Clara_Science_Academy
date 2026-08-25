@@ -8,6 +8,7 @@ from datetime import date, datetime
 
 from flask import Response
 from models import Class, Enrollment
+from utils.school_timezone import get_school_now, get_school_today
 
 
 def build_attendance_csv_template_response(class_id: int) -> Response:
@@ -26,7 +27,7 @@ def build_attendance_csv_template_response(class_id: int) -> Response:
             "Notes (Optional)",
         ]
     )
-    example_date = date.today().strftime("%m/%d/%Y")
+    example_date = get_school_today().strftime("%m/%d/%Y")
     for student in students[:3]:
         writer.writerow(
             [
@@ -39,7 +40,7 @@ def build_attendance_csv_template_response(class_id: int) -> Response:
         )
     output.seek(0)
     safe_name = (class_obj.name or "class").replace(" ", "_")
-    filename = f"attendance_template_{safe_name}_{datetime.now().strftime('%Y%m%d')}.csv"
+    filename = f"attendance_template_{safe_name}_{get_school_now().strftime('%Y%m%d')}.csv"
     return Response(
         output.getvalue(),
         mimetype="text/csv",

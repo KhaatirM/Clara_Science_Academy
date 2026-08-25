@@ -11,6 +11,8 @@ from datetime import datetime, timedelta, date
 import csv
 import io
 
+from utils.school_timezone import get_school_now, get_school_today
+
 from utils.attendance_status import (
     VALID_ATTENDANCE_STATUSES,
     normalize_attendance_status,
@@ -46,7 +48,7 @@ def attendance_hub():
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     # Check attendance status for each class
-    today = date.today()
+    today = get_school_today()
     completed_today = 0
     pending_count = 0
     
@@ -143,14 +145,14 @@ def take_attendance(class_id):
         try:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            selected_date = datetime.now().date()
+            selected_date = get_school_today()
     else:
-        selected_date = datetime.now().date()
+        selected_date = get_school_today()
     
     # Get recent attendance records for context
     recent_attendance = Attendance.query.filter(
         Attendance.class_id == class_id,
-        Attendance.date >= datetime.now().date() - timedelta(days=7)
+        Attendance.date >= get_school_today() - timedelta(days=7)
     ).order_by(Attendance.date.desc()).all()
     
     # Get attendance for the selected date
@@ -204,20 +206,20 @@ def view_attendance_records(class_id):
         
         # Default to last 30 days if no dates provided
         if not start_date_str:
-            start_date = date.today() - timedelta(days=30)
+            start_date = get_school_today() - timedelta(days=30)
         else:
             try:
                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
             except ValueError:
-                start_date = date.today() - timedelta(days=30)
+                start_date = get_school_today() - timedelta(days=30)
         
         if not end_date_str:
-            end_date = date.today()
+            end_date = get_school_today()
         else:
             try:
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
             except ValueError:
-                end_date = date.today()
+                end_date = get_school_today()
         
         # Build query with join to Student table for ordering
         # Use joinedload to ensure student relationship is loaded
@@ -359,7 +361,7 @@ def download_attendance_template(class_id):
             'Notes (Optional)'
         ])
         
-        example_date = date.today().strftime('%m/%d/%Y')
+        example_date = get_school_today().strftime('%m/%d/%Y')
         for student in students[:3]:
             writer.writerow([
                 example_date,
@@ -370,7 +372,7 @@ def download_attendance_template(class_id):
             ])
         
         output.seek(0)
-        filename = f'attendance_template_{class_obj.name.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d")}.csv'
+        filename = f'attendance_template_{class_obj.name.replace(" ", "_")}_{get_school_now().strftime("%Y%m%d")}.csv'
         return Response(
             output.getvalue(),
             mimetype='text/csv',
@@ -454,7 +456,7 @@ def upload_attendance_csv(class_id):
                         records_skipped += 1
                         continue
                 
-                if attendance_date > date.today():
+                if attendance_date > get_school_today():
                     errors.append(f'Row {row_num}: Cannot upload attendance for future date {date_str}')
                     records_skipped += 1
                     continue

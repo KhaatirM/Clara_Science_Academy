@@ -11,6 +11,8 @@ from models import (
     DiscussionPost, GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest, RedoRequest,
     QuestionBank, QuestionBankQuestion, QuestionBankOption, Notification, User
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, func
 from datetime import datetime, timedelta, timezone, time
@@ -1645,7 +1647,7 @@ def assignments_and_grades():
                              view_mode=view_mode,
                              user_role=user_role,
                              show_class_selection=False,
-                             today=date.today(),
+                             today=get_school_today(),
                              extension_request_count=pending_extension_count,
                              redo_request_count=pending_redo_count,
                              pending_assistant_count=pending_assistant_count,
@@ -1736,7 +1738,7 @@ def assignments_legacy():
     assignments = assignments_query.all()
     
     # Get current date for status updates
-    today = datetime.now().date()
+    today = get_school_today()
     
     # Update assignment statuses (past due assignments become inactive)
     update_assignment_statuses()
@@ -3170,7 +3172,7 @@ def view_assignment(assignment_id):
         void_scope = compute_assignment_void_scope(assignment, enrolled_student_ids, voided_student_ids)
         
         # Get current date for status calculations
-        today = datetime.now().date()
+        today = get_school_today()
         
         # For quiz assignments, check if there are open-ended questions that need manual grading
         has_open_ended_questions = False
@@ -5585,7 +5587,7 @@ def admin_grade_group_assignment(assignment_id):
                              average_score=average_score,
                              total_points=assignment_total_points,
                              group_submission_status=group_submission_status,
-                             today=datetime.now().date())
+                             today=get_school_today())
     except Exception as e:
         print(f"Error grading group assignment: {e}")
         flash('Error accessing group assignment grading.', 'error')

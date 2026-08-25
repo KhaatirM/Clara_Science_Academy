@@ -14,6 +14,8 @@ from models import (
     TeacherWorkDay,
     db,
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from services import school_year_closure as syc
 
 from .calendar import get_academic_dates_for_calendar
@@ -51,7 +53,7 @@ def build_calendar_month(year: int, month: int) -> dict[str, Any]:
     next_month = (current_date + timedelta(days=32)).replace(day=1)
     month_name = current_date.strftime("%B")
     academic_dates = get_academic_dates_for_calendar(year, month)
-    today = date.today()
+    today = get_school_today()
 
     weeks: list[list[dict[str, Any]]] = []
     for week in cal.monthcalendar(year, month):
@@ -107,7 +109,7 @@ def build_calendar_month(year: int, month: int) -> dict[str, Any]:
 
 
 def query_calendar_page(year: int | None = None, month: int | None = None) -> dict[str, Any]:
-    today = date.today()
+    today = get_school_today()
     month = month or today.month
     year = year or today.year
 

@@ -8,6 +8,8 @@ from decorators import management_required
 from models import (
     db, CalendarEvent, TeacherWorkDay, SchoolBreak, SchoolYear, AcademicPeriod
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from datetime import datetime, timedelta, date
 import os
 import json
@@ -213,8 +215,8 @@ def calendar():
     import calendar as cal
     
     # Get current month/year from query params or use current date
-    month = request.args.get('month', datetime.now().month, type=int)
-    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', get_school_now().month, type=int)
+    year = request.args.get('year', get_school_now().year, type=int)
     
     # Calculate previous and next month
     current_date = datetime(year, month, 1)
@@ -243,7 +245,7 @@ def calendar():
             if day == 0:
                 week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
             else:
-                is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
+                is_today = (day == get_school_now().day and month == get_school_now().month and year == get_school_now().year)
                 
                 # Get events for this day (include 'type' so badge color matches event category)
                 day_events = []

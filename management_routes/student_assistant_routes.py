@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 import os
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
+from utils.school_timezone import get_school_now, get_school_today
 from models import (
     db, Class, Student, Enrollment, Assignment, AssignmentAttachment, Attendance, Grade,
     StudentAssistant, StudentAssistantActionLog, Notification, User, TeacherStaff,
@@ -123,17 +124,17 @@ def take_attendance(class_id):
         return redirect(url_for('student.student_dashboard'))
 
     statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
-    date_str = request.form.get('date') or request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
+    date_str = request.form.get('date') or request.args.get('date') or get_school_now().strftime('%Y-%m-%d')
     try:
         attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
-        attendance_date = datetime.now().date()
+        attendance_date = get_school_today()
         date_str = attendance_date.strftime('%Y-%m-%d')
 
-    if attendance_date > datetime.now().date():
+    if attendance_date > get_school_today():
         flash('Cannot take attendance for future dates.', 'warning')
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        attendance_date = datetime.now().date()
+        date_str = get_school_now().strftime('%Y-%m-%d')
+        attendance_date = get_school_today()
 
     existing_records = {r.student_id: r for r in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
     school_day_records = {}
@@ -189,7 +190,7 @@ def take_attendance(class_id):
                 db.session.add(rec)
                 changes.append((student.id, student.first_name, student.last_name, None, status))
 
-        is_past = attendance_date < datetime.now().date()
+        is_past = attendance_date < get_school_today()
         action_type = 'past_attendance' if is_past else 'attendance'
         details = {
             'date': date_str,
@@ -694,7 +695,7 @@ def grade_group_assignment(class_id, assignment_id):
         average_score=average_score,
         total_points=assignment_total_points,
         group_submission_status=group_submission_status,
-        today=datetime.now().date(),
+        today=get_school_today(),
         is_student_assistant=True,
         back_url=url_for('student_assistant.class_hub', class_id=class_id),
         cancel_url=url_for('student_assistant.class_hub', class_id=class_id),

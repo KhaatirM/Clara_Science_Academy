@@ -8,6 +8,7 @@ from utils.spa_management_urls import react_spa_enabled
 from decorators import management_required
 from models import db, Student, SchoolDayAttendance, Class, Enrollment, Attendance
 from sqlalchemy.orm import joinedload
+from utils.school_timezone import get_school_now, get_school_today
 
 
 bp = Blueprint('attendance', __name__)
@@ -18,7 +19,7 @@ def attendance_template_context():
     """Quick links for attendance reports (used in dashboard sidebars)."""
     from datetime import datetime, timedelta
 
-    today = datetime.now().date()
+    today = get_school_today()
 
     def _reports_url(start, end):
         return url_for(
@@ -48,7 +49,7 @@ def _attendance_analytics_date_range(request):
     """Parse analytics date range (default last 30 days)."""
     from datetime import datetime, timedelta
 
-    today = datetime.now().date()
+    today = get_school_today()
     start_str = (request.args.get('start_date') or '').strip()
     end_str = (request.args.get('end_date') or '').strip()
 
@@ -90,7 +91,7 @@ def _attendance_analytics_context(request):
     from urllib.parse import urlencode
 
     start_date, end_date = _attendance_analytics_date_range(request)
-    today = datetime.now().date()
+    today = get_school_today()
     days_analyzed = (end_date - start_date).days + 1
 
     risk_filter = (request.args.get('risk') or 'all').strip().lower()
@@ -467,11 +468,11 @@ def unified_attendance():
     reports_tab_active = _reports_tab_active(request)
 
     # School Day Attendance Data
-    selected_date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    selected_date_str = request.args.get('date', get_school_now().strftime('%Y-%m-%d'))
     try:
         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except ValueError:
-        selected_date = datetime.now().date()
+        selected_date = get_school_today()
         selected_date_str = selected_date.strftime('%Y-%m-%d')
     
     from utils.student_roster import active_roster_students_query
@@ -519,11 +520,11 @@ def unified_attendance():
     # If class_date is not provided, use today's date (not the School Day date)
     class_date_str = request.args.get('class_date')
     if not class_date_str:
-        class_date_str = datetime.now().strftime('%Y-%m-%d')
+        class_date_str = get_school_now().strftime('%Y-%m-%d')
     try:
         class_date = datetime.strptime(class_date_str, '%Y-%m-%d').date()
     except ValueError:
-        class_date = datetime.now().date()
+        class_date = get_school_today()
         class_date_str = class_date.strftime('%Y-%m-%d')
     
     from utils.school_year_filters import classes_for_active_school_year
@@ -683,11 +684,11 @@ def school_day_attendance():
         return redirect(url_for('management.school_day_attendance', date=attendance_date_str))
     
     # GET request - show attendance form
-    selected_date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    selected_date_str = request.args.get('date', get_school_now().strftime('%Y-%m-%d'))
     try:
         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except ValueError:
-        selected_date = datetime.now().date()
+        selected_date = get_school_today()
         selected_date_str = selected_date.strftime('%Y-%m-%d')
     
     from utils.student_roster import active_roster_students_query
@@ -743,7 +744,7 @@ def attendance():
     
     # Get today's date
     from datetime import datetime
-    today_date = datetime.now().strftime('%Y-%m-%d')
+    today_date = get_school_now().strftime('%Y-%m-%d')
     
     # Calculate attendance stats for each class
     for class_obj in classes:
@@ -756,7 +757,7 @@ def attendance():
         # Check if attendance was taken today
         today_attendance = Attendance.query.filter_by(
             class_id=class_obj.id,
-            date=datetime.now().date()
+            date=get_school_today()
         ).count()
         class_obj.attendance_taken_today = today_attendance > 0
         
@@ -764,12 +765,12 @@ def attendance():
         if class_obj.attendance_taken_today:
             present_count = Attendance.query.filter_by(
                 class_id=class_obj.id,
-                date=datetime.now().date(),
+                date=get_school_today(),
                 status='Present'
             ).count()
             absent_count = Attendance.query.filter(
                 Attendance.class_id == class_obj.id,
-                Attendance.date == datetime.now().date(),
+                Attendance.date == get_school_today(),
                 Attendance.status.in_(['Unexcused Absence', 'Excused Absence'])
             ).count()
             class_obj.today_present = present_count
@@ -783,8 +784,8 @@ def attendance():
     pending_classes_count = len(classes) - today_attendance_count
     
     # Calculate overall attendance rate
-    total_attendance_records = Attendance.query.filter_by(date=datetime.now().date()).count()
-    present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
+    total_attendance_records = Attendance.query.filter_by(date=get_school_today()).count()
+    present_records = Attendance.query.filter_by(date=get_school_today(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
     return render_template('shared/attendance_hub.html',
@@ -866,7 +867,7 @@ def _attendance_reports_context(request, form_action=None, embed_tab=False):
     from datetime import datetime, timedelta
     from urllib.parse import urlencode
 
-    today = datetime.now().date()
+    today = get_school_today()
     start_str = (request.args.get('start_date') or '').strip()
     end_str = (request.args.get('end_date') or '').strip()
 

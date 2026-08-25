@@ -19,6 +19,8 @@ from models import (
     SchoolYear,
     Submission,
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from management_routes.utils import update_assignment_statuses
 from teacher_routes.utils import get_teacher_or_admin, is_admin
 
@@ -30,7 +32,7 @@ def _serialize_feed_timestamp(value) -> str | None:
 
 
 def _home_display_date() -> str:
-    return datetime.now().strftime("%A, %B %d, %Y")
+    return get_school_now().strftime("%A, %B %d, %Y")
 
 
 def build_teacher_home_payload() -> tuple[dict[str, Any] | None, str | None]:
@@ -209,7 +211,7 @@ def build_teacher_home_payload() -> tuple[dict[str, Any] | None, str | None]:
         active_assignments = 0
         total_assignments = 0
 
-    now = datetime.now()
+    now = get_school_now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     week_start = now - timedelta(days=now.weekday())
     week_end = week_start + timedelta(days=7)

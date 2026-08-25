@@ -12,6 +12,8 @@ from models import (
     QuizAnswer, QuizProgress, DiscussionPost, GroupQuizAnswer, CleaningTeamMember,
     CleaningTeam, CleaningInspection, GradeHistory
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, text, exists
@@ -661,7 +663,7 @@ def _ensure_student_google_workspace_email(student):
 
 def _build_entrance_school_year_options(start_year=2020):
     """Return school-year labels from current year back to start_year."""
-    today = date.today()
+    today = get_school_today()
     current_start_year = today.year if today.month >= 7 else today.year - 1
     return [f"{year}-{year + 1}" for year in range(current_start_year, start_year - 1, -1)]
 

@@ -9,6 +9,8 @@ from models import (
     db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo, AssignmentReopening,
     User, ExtensionRequest, SchoolYear
 )
+
+from utils.school_timezone import get_school_now, get_school_today
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
@@ -61,7 +63,7 @@ def build_management_home_payload():
         }
         empty_monthly = {"new_students": 0, "attendance_rate": 0, "average_grade": 0}
         empty_weekly = {"due_assignments": 0}
-        now = datetime.now()
+        now = get_school_now()
         home_display_date = now.strftime("%A, %B %d, %Y")
 
         latest_school_year_label = None
@@ -370,7 +372,7 @@ def management_dashboard():
         if error:
             flash(f"Error loading dashboard: {error}", "danger")
             payload = {
-                "home_display_date": datetime.now().strftime("%A, %B %d, %Y"),
+                "home_display_date": get_school_now().strftime("%A, %B %d, %Y"),
                 "stats": {
                     "students": 0,
                     "teachers": 0,
@@ -409,7 +411,7 @@ def management_dashboard():
                              monthly_stats={},
                              weekly_stats={},
                              pending_extension_count=0,
-                             home_display_date=datetime.now().strftime('%A, %B %d, %Y'),
+                             home_display_date=get_school_now().strftime('%A, %B %d, %Y'),
                              section='home',
                              active_tab='home',
                              notifications=[],

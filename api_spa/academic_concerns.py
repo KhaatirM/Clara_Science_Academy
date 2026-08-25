@@ -36,6 +36,7 @@ def spa_academic_concerns():
 
     from utils.school_year_filters import get_active_school_year
     from utils.at_risk_alerts import get_at_risk_alerts_for_user
+    from utils.gpa_period_visibility import roster_gpa_unlocked
 
     active_year = get_active_school_year()
     if not active_year:
@@ -45,6 +46,7 @@ def spa_academic_concerns():
                 "schoolwide": scope == "management",
                 "has_active_school_year": False,
                 "school_year": None,
+                "roster_gpa_unlocked": False,
                 "alerts": [],
                 "failing_count": 0,
                 "overdue_count": 0,
@@ -58,6 +60,7 @@ def spa_academic_concerns():
             }
         )
 
+    gpa_unlocked = roster_gpa_unlocked(active_year.id)
     alerts, failing, overdue, not_submitted = get_at_risk_alerts_for_user(force_scope=scope)
     return jsonify(
         {
@@ -68,6 +71,7 @@ def spa_academic_concerns():
                 "id": active_year.id,
                 "name": active_year.name,
             },
+            "roster_gpa_unlocked": gpa_unlocked,
             "alerts": alerts or [],
             "failing_count": failing or 0,
             "overdue_count": overdue or 0,

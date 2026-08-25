@@ -12,12 +12,6 @@ environment / config (see utils.school_timezone).
 
 from datetime import datetime
 
-try:
-    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-except ImportError:
-    ZoneInfo = None  # type: ignore
-    ZoneInfoNotFoundError = Exception  # type: ignore
-
 
 def _now_in_school_tz(app):
     """Return (date, hour) for 'now' in school timezone (or server local)."""
@@ -27,25 +21,10 @@ def _now_in_school_tz(app):
 
 def _now_in_school_tz_full(app):
     """Return (date, hour, minute) for 'now' in the effective school timezone."""
-    from utils.school_timezone import get_school_timezone_name
+    from utils.school_timezone import get_school_now
 
-    tz_name = get_school_timezone_name()
-    if ZoneInfo is None:
-        now = datetime.now()
-        return now.date(), now.hour, now.minute
-    try:
-        tz = ZoneInfo(tz_name)
-        now = datetime.now(tz)
-        return now.date(), now.hour, now.minute
-    except ZoneInfoNotFoundError:
-        # Common on Windows when system tzdata isn't available.
-        # Fall back to server-local time rather than failing attendance pages.
-        now = datetime.now()
-        return now.date(), now.hour, now.minute
-    except Exception:
-        # If the stored timezone name is malformed, use server-local time.
-        now = datetime.now()
-        return now.date(), now.hour, now.minute
+    now = get_school_now()
+    return now.date(), now.hour, now.minute
 
 
 def is_past_end_of_day_cutoff(app):

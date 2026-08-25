@@ -58,6 +58,7 @@ export function AcademicConcernsHost({ scope }: Props) {
   const [schoolwide, setSchoolwide] = useState(scope === 'management')
   const [schoolYearName, setSchoolYearName] = useState<string | null>(null)
   const [yearActive, setYearActive] = useState(true)
+  const [rosterGpaUnlocked, setRosterGpaUnlocked] = useState(true)
   const [toastVisible, setToastVisible] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -75,18 +76,21 @@ export function AcademicConcernsHost({ scope }: Props) {
     try {
       const data = await fetchAcademicConcerns(scope)
       const active = Boolean(data.has_active_school_year)
+      const unlocked = data.roster_gpa_unlocked !== false
       setYearActive(active)
+      setRosterGpaUnlocked(unlocked)
       setSchoolYearName(data.school_year?.name || null)
       setAlerts(active ? data.alerts || [] : [])
       setFailingCount(active ? data.failing_count || 0 : 0)
       setOverdueCount(active ? data.overdue_count || 0 : 0)
       setSchoolwide(Boolean(data.schoolwide))
-      const hasAlerts = active && (data.alerts || []).length > 0
+      const hasAlerts = active && unlocked && (data.alerts || []).length > 0
       setToastVisible(hasAlerts && !isSnoozed() && !disabled)
       if (!active) setModalOpen(false)
     } catch {
       setAlerts([])
       setYearActive(false)
+      setRosterGpaUnlocked(true)
       setToastVisible(false)
       setModalOpen(false)
     } finally {
@@ -293,7 +297,11 @@ export function AcademicConcernsHost({ scope }: Props) {
 
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
               {filtered.length === 0 ? (
-                <p className="py-10 text-center text-sm text-hub-muted">No matching concerns.</p>
+                <p className="py-10 text-center text-sm text-hub-muted">
+                  {!rosterGpaUnlocked
+                    ? 'Year GPA unlocks after Q1 grades are released.'
+                    : 'No matching concerns.'}
+                </p>
               ) : (
                 filtered.map((alert) => {
                   const open = expandedId === alert.student_user_id

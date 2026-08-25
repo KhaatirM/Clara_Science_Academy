@@ -1194,7 +1194,7 @@ function StudentTable({
               <th>Name</th>
               <th>Grade Level</th>
               <th>Student ID</th>
-              <th title="K–8: active school year. High school (9–12): cumulative high-school GPA.">
+              <th title="K–8: active school year. High school (9–12): cumulative high-school GPA. Year GPA unlocks after Q1 grades are released.">
                 GPA
               </th>
               <th title="Derived from GPA (same year/tenure scope).">Academic Status</th>

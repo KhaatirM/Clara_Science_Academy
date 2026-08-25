@@ -974,13 +974,16 @@ def reset_user_password_spa(user_id: int) -> tuple[dict[str, Any] | None, str | 
     import secrets
     import string
 
+    from werkzeug.security import generate_password_hash
+
     user = User.query.get(user_id)
     if not user:
         return None, "User not found", 404
     alphabet = string.ascii_letters + string.digits
     temp = "".join(secrets.choice(alphabet) for _ in range(12))
-    user.set_password(temp)
+    user.password_hash = generate_password_hash(temp)
     user.is_temporary_password = True
+    user.password_changed_at = None
     db.session.commit()
     return {
         "success": True,

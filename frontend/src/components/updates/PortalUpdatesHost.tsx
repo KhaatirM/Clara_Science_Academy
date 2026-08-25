@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Device repair tickets',
+    body: 'Tech → Devices now has Inventory and Repair tickets. File Hardware or Software issues, set severity, and track open → in progress → repaired → closed.',
+  },
   {
     title: 'Forced password change in the app',
     body: 'After a tech password reset (or first login), the portal now shows a required change-password dialog in the React app—not only on old pages.',
@@ -20,20 +24,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Grade change updates Google Classroom',
     body: 'Changing a student’s grade level remaps portal classes and now syncs Google Groups and Classroom memberships for those classes right after save.',
   },
-  {
-    title: 'Tech password reset',
-    body: 'Resetting a user’s password from Tech → Users works again and returns the temporary password.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.514.4'
+  const display = version?.display || 'v 2.515.0'
   const releaseLabel = version?.release_label || 'August 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2675
+  const updatesEstimate = version?.updates_estimate ?? 2676
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

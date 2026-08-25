@@ -167,38 +167,30 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) adds a <strong>required password-change dialog</strong> in the app, refreshes <strong>academic alerts</strong> after grading, hides <strong>graduated/transferred students</strong> from teacher attendance, and syncs <strong>Google Classroom</strong> when a student’s grade level changes.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>device repair tickets</strong> (Hardware / Software) under Tech → Devices, plus earlier fixes for password change, academic alerts, departed-student rosters, and Google Classroom grade remaps.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- August 25, 2026 - roster / alerts / password / classroom -->
+                    <!-- August 25, 2026 - device repair tickets -->
                     <div class="update-section mb-4">
-                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Hotfixes – August 25, 2026</h6>
+                        <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Device Repair Tickets – August 25, 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Forced password change in the app:</strong> After a tech password reset (or first login), users must change their password in a blocking dialog inside the React portal.
+                                <strong>Repair tickets under Devices:</strong> Tech → Devices includes Inventory and Repair tickets tabs. Create tickets linked to a device, choose Hardware or Software Issues, set severity, and track status through open, in progress, repaired, and closed.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Academic alerts refresh after grading:</strong> Saving a grade clears the failing-student cache; opening Academic alerts reloads live data.
+                                <strong>File repair from inventory:</strong> Each device row has a File repair action that opens a new ticket with that device selected.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Departed students leave teacher rosters:</strong> Graduated, withdrawn, and transferred students no longer appear in attendance or class rosters.
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Grade change updates Google Classroom:</strong> Remapping a student’s grade level syncs Google Groups and Classroom memberships for the touched classes after save.
-                            </li>
-                            <li class="mb-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Tech password reset &amp; grading auto-save:</strong> Earlier August 25 fixes for password reset and paper/PDF grading auto-save remain in place.
+                                <strong>Earlier August 25 hotfixes:</strong> Forced password-change dialog, academic alert refresh after grading, departed students off teacher attendance, and Google Classroom sync on grade change.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Safer first login, accurate academic alerts, cleaner teacher attendance, and Classroom rosters that match grade changes.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Tech can track which school devices need repair without leaving the Devices area.</p>
                         </div>
                     </div>
 
@@ -1938,11 +1930,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug25_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownAug25_2026_v4', 'true');
         }, 500);
     }
 });

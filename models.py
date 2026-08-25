@@ -1897,9 +1897,41 @@ class StudentDevice(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     student = db.relationship('Student', backref=db.backref('assigned_school_device', uselist=False))
+    repair_tickets = db.relationship(
+        'DeviceRepairTicket',
+        back_populates='device',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+    )
 
     def __repr__(self):
         return f"StudentDevice({self.device_type!r}, {self.asset_name!r}, student={self.student_id})"
+
+
+class DeviceRepairTicket(db.Model):
+    """Tech-created repair / work-order ticket for a school-issued device."""
+
+    __tablename__ = 'device_repair_ticket'
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('student_device.id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(20), default='hardware', nullable=False)  # hardware|software
+    severity = db.Column(db.String(20), default='medium', nullable=False)  # low|medium|high|critical
+    status = db.Column(db.String(20), default='open', nullable=False)  # open|in_progress|repaired|closed
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    resolved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    resolution_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+    device = db.relationship('StudentDevice', back_populates='repair_tickets')
+    creator = db.relationship('User', foreign_keys=[created_by], backref='device_repair_tickets_created')
+    resolver = db.relationship('User', foreign_keys=[resolved_by], backref='device_repair_tickets_resolved')
+
+    def __repr__(self):
+        return f"DeviceRepairTicket({self.id}, device={self.device_id}, status={self.status!r})"
 
 
 class BugReport(db.Model):

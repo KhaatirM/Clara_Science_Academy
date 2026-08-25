@@ -8,6 +8,11 @@ from flask_login import login_required
 from decorators import tech_required
 from management_routes.bug_reports_spa_helpers import query_bug_reports
 from models import BugReport, db
+from tech_routes.device_repair_spa_helpers import (
+    build_repair_tickets_list_payload,
+    create_repair_ticket,
+    update_repair_ticket_status,
+)
 from tech_routes.spa_helpers import (
     build_activity_log_payload,
     build_audit_logs_payload,
@@ -70,6 +75,49 @@ def tech_spa_devices_list():
             search=request.args.get("q", ""),
         )
     )
+
+
+@spa_api_blueprint.route("/tech/devices/repair-tickets")
+@login_required
+@tech_required
+def tech_spa_repair_tickets_list():
+    device_id_raw = (request.args.get("device_id") or "").strip()
+    device_id = None
+    if device_id_raw:
+        try:
+            device_id = int(device_id_raw)
+        except ValueError:
+            return jsonify({"error": "Invalid device_id."}), 400
+    return jsonify(
+        build_repair_tickets_list_payload(
+            status=request.args.get("status", ""),
+            category=request.args.get("category", ""),
+            search=request.args.get("q", ""),
+            device_id=device_id,
+        )
+    )
+
+
+@spa_api_blueprint.route("/tech/devices/repair-tickets", methods=["POST"])
+@login_required
+@tech_required
+def tech_spa_repair_tickets_create():
+    payload, error, status = create_repair_ticket(request.get_json(silent=True) or {})
+    if error:
+        return jsonify({"error": error}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route("/tech/devices/repair-tickets/<int:ticket_id>/status", methods=["POST"])
+@login_required
+@tech_required
+def tech_spa_repair_ticket_status(ticket_id: int):
+    payload, error, status = update_repair_ticket_status(
+        ticket_id, request.get_json(silent=True) or {}
+    )
+    if error:
+        return jsonify({"error": error}), status
+    return jsonify(payload)
 
 
 @spa_api_blueprint.route("/tech/devices/form")

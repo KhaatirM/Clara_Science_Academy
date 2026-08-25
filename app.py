@@ -185,6 +185,43 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"FATAL DATABASE ERROR DURING INITIALIZATION: {e}")
             raise e
+
+        # device_repair_ticket.category (hardware|software) for tech repair tickets
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(device_repair_ticket)"))
+                    columns = [row[1] for row in r]
+                    if columns and 'category' not in columns:
+                        conn.execute(
+                            text(
+                                "ALTER TABLE device_repair_ticket "
+                                "ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'hardware'"
+                            )
+                        )
+                        conn.commit()
+                        print("Added device_repair_ticket.category column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'device_repair_ticket' AND column_name = 'category'"
+                    ))
+                    if r.fetchone() is None:
+                        # Table may not exist yet on first boot before create_all; only alter if table exists
+                        t = conn.execute(text(
+                            "SELECT 1 FROM information_schema.tables "
+                            "WHERE table_name = 'device_repair_ticket'"
+                        ))
+                        if t.fetchone() is not None:
+                            conn.execute(text(
+                                "ALTER TABLE device_repair_ticket "
+                                "ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'hardware'"
+                            ))
+                            conn.commit()
+                            print("Added device_repair_ticket.category column.")
+        except Exception as e:
+            print(f"Note: device_repair_ticket.category column check failed (may already exist): {e}")
         
         # Add user.theme_preference column if missing (one-off migration for themes feature)
         try:

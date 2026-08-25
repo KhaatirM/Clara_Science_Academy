@@ -45,6 +45,44 @@ export async function deleteTechDevice(deviceId: number) {
   return apiFetch<any>(`/api/spa/tech/devices/${deviceId}`, { method: 'DELETE' })
 }
 
+export async function fetchTechRepairTickets(query: {
+  status?: string
+  category?: string
+  q?: string
+  device_id?: number
+} = {}) {
+  const params = new URLSearchParams()
+  if (query.status) params.set('status', query.status)
+  if (query.category) params.set('category', query.category)
+  if (query.q) params.set('q', query.q)
+  if (query.device_id != null) params.set('device_id', String(query.device_id))
+  const qs = params.toString()
+  return apiFetch<any>(`/api/spa/tech/devices/repair-tickets${qs ? `?${qs}` : ''}`)
+}
+
+export async function createTechRepairTicket(payload: {
+  device_id: number
+  title: string
+  description: string
+  category: string
+  severity: string
+}) {
+  return apiFetch<any>('/api/spa/tech/devices/repair-tickets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateTechRepairTicketStatus(
+  ticketId: number,
+  payload: { status: string; resolution_notes?: string },
+) {
+  return apiFetch<any>(`/api/spa/tech/devices/repair-tickets/${ticketId}/status`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export async function fetchTechActivityLog(query: Record<string, string | number | undefined>) {
   const params = new URLSearchParams()
   Object.entries(query).forEach(([k, v]) => {

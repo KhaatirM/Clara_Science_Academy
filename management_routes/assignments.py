@@ -5525,6 +5525,9 @@ def admin_grade_group_assignment(assignment_id):
                 except Exception:
                     pass
                 db.session.commit()
+                from utils.grade_mutation_hooks import notify_grades_changed
+
+                notify_grades_changed()
                 
                 # Check if this is an AJAX request
                 wants_json = request.accept_mimetypes.accept_json or \

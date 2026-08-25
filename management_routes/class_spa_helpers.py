@@ -11,6 +11,7 @@ from flask_login import current_user
 
 from decorators import user_can_manage_student_assistants
 from extensions import db
+from utils.student_roster import active_class_roster_students_query
 from management_routes.student_assistant_utils import (
     MAX_ASSISTANTS_PER_CLASS,
     MAX_CLASSES_PER_ASSISTANT,
@@ -250,11 +251,7 @@ def query_class_detail(class_id: int) -> dict[str, Any]:
     class_info = Class.query.get_or_404(class_id)
     teacher = TeacherStaff.query.get(class_info.teacher_id) if class_info.teacher_id else None
     enrolled = (
-        db.session.query(Student)
-        .join(Enrollment)
-        .filter(Enrollment.class_id == class_id, Enrollment.is_active.is_(True), Student.is_deleted.is_(False))
-        .order_by(Student.last_name, Student.first_name)
-        .all()
+        active_class_roster_students_query(class_id).all()
     )
     assignment_count = _assignment_count(class_id)
     school_year = class_info.school_year

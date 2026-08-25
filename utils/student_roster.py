@@ -57,6 +57,26 @@ def active_roster_student_filters():
     )
 
 
+def active_class_roster_students_query(class_id: int):
+    """
+    Students enrolled in ``class_id`` who belong on the active school roster.
+
+    Use this for teacher/management attendance and class roster UIs so graduated /
+    withdrawn / transferred students do not appear even if an enrollment row is
+    still marked active.
+    """
+    return (
+        db.session.query(Student)
+        .join(Enrollment, Enrollment.student_id == Student.id)
+        .filter(
+            Enrollment.class_id == int(class_id),
+            Enrollment.is_active.is_(True),
+            active_roster_student_filters(),
+        )
+        .order_by(Student.last_name, Student.first_name)
+    )
+
+
 def active_roster_students_query(*, require_active_enrollment: bool = True):
     """
     Query students on the active roster.

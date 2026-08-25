@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
+    title: 'Forced password change in the app',
+    body: 'After a tech password reset (or first login), the portal now shows a required change-password dialog in the React app—not only on old pages.',
+  },
+  {
+    title: 'Academic alerts refresh after grading',
+    body: 'Saving or raising a grade clears the failing-student alert cache, and opening Academic alerts reloads live data so fixed grades drop off promptly.',
+  },
+  {
+    title: 'Departed students leave teacher rosters',
+    body: 'Graduated, withdrawn, and transferred students no longer appear in teacher attendance or class rosters, even if an old enrollment row was still active.',
+  },
+  {
+    title: 'Grade change updates Google Classroom',
+    body: 'Changing a student’s grade level remaps portal classes and now syncs Google Groups and Classroom memberships for those classes right after save.',
+  },
+  {
     title: 'Tech password reset',
-    body: 'Resetting a user’s password from Tech → Users works again (the SPA path now sets the password hash correctly and returns the temporary password).',
-  },
-  {
-    title: 'Teacher grading auto-save fix',
-    body: 'Paper/PDF grading no longer loses scores while you type other students. Auto-save always uses the latest score, and in-progress drafts stay put when the page refreshes.',
-  },
-  {
-    title: 'Phone-friendly sidebar',
-    body: 'On phones the menu is a drawer that starts closed. Open it with the menu button; it closes when you navigate or tap outside.',
-  },
-  {
-    title: 'Grade change remaps all classes',
-    body: 'Editing a student’s grade now moves grade-banded classes (including Art/PE/Music), and Google Groups refresh after the save so old-grade groups are cleared.',
-  },
-  {
-    title: 'Archive student job teams',
-    body: 'Past cleaning / duty teams can be archived from Student Jobs so they leave the active list while inspection history stays on record.',
+    body: 'Resetting a user’s password from Tech → Users works again and returns the temporary password.',
   },
 ]
 
@@ -30,10 +30,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.514.3'
+  const display = version?.display || 'v 2.514.4'
   const releaseLabel = version?.release_label || 'August 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2671
+  const updatesEstimate = version?.updates_estimate ?? 2675
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

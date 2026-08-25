@@ -298,6 +298,9 @@ def grade_assignment(assignment_id):
                     grades_saved += 1
             
             db.session.commit()
+            from utils.grade_mutation_hooks import notify_grades_changed
+
+            notify_grades_changed()
 
             if grades_saved > 0:
                 flash(f'{grades_saved} grade(s) saved successfully!', 'success')
@@ -551,6 +554,9 @@ def save_student_grade(assignment_id, student_id):
             if existing_grade:
                 db.session.delete(existing_grade)
             db.session.commit()
+            from utils.grade_mutation_hooks import notify_grades_changed
+
+            notify_grades_changed()
             return jsonify({'success': True, 'message': 'Cleared'})
 
         try:
@@ -604,6 +610,9 @@ def save_student_grade(assignment_id, student_id):
                 db.session.add(sub)
 
         db.session.commit()
+        from utils.grade_mutation_hooks import notify_grades_changed
+
+        notify_grades_changed()
         return jsonify({'success': True, 'message': 'Saved'})
     except Exception as e:
         db.session.rollback()

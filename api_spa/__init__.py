@@ -130,6 +130,16 @@ def spa_me():
                 "sidebar_title": _sidebar_title(current_user),
                 "csrf_token": generate_csrf(),
                 "theme": get_effective_theme(current_user),
+                "is_temporary_password": bool(
+                    getattr(current_user, "is_temporary_password", False)
+                ),
+                "must_change_password": bool(
+                    getattr(current_user, "is_temporary_password", False)
+                    or (
+                        int(getattr(current_user, "login_count", 0) or 0) == 1
+                        and not getattr(current_user, "password_changed_at", None)
+                    )
+                ),
             },
         }
     )

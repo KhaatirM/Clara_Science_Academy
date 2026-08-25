@@ -225,6 +225,46 @@ def try_provision_class_google_group(class_id: int) -> None:
         )
 
 
+def try_provision_class_google_groups_now(class_ids: list[int]) -> None:
+    """
+    Sync Groups + Classroom memberships in-process (after commit).
+
+    Prefer this for single-student grade remaps (a handful of classes) so Classroom
+    roster updates are not lost when a daemon background thread is killed with the
+    request worker.
+    """
+    ids: list[int] = []
+    seen: set[int] = set()
+    for raw in class_ids or []:
+        try:
+            cid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if cid in seen:
+            continue
+        seen.add(cid)
+        ids.append(cid)
+    if not ids:
+        return
+    current_app.logger.info(
+        "In-request Google provision starting for %s class(es)",
+        len(ids),
+    )
+    for cid in ids:
+        try:
+            try_provision_class_google_group(cid)
+        except Exception as exc:
+            current_app.logger.warning(
+                "In-request class Google provision failed for class_id=%s: %s",
+                cid,
+                exc,
+            )
+    current_app.logger.info(
+        "In-request Google provision finished for %s class(es)",
+        len(ids),
+    )
+
+
 def schedule_try_provision_class_google_groups(class_ids: list[int]) -> None:
     """
     Provision Google Groups + Classrooms after the HTTP response returns.

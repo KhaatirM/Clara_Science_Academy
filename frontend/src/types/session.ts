@@ -23,6 +23,9 @@ export interface SessionUser {
   sidebar_title: string
   csrf_token: string
   theme: string
+  /** True when tech/admin reset the password or first login requires a change. */
+  is_temporary_password?: boolean
+  must_change_password?: boolean
 }
 
 export interface AppVersionInfo {

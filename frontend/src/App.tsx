@@ -141,7 +141,7 @@ function ErrorScreen({ message }: { message: string }) {
 }
 
 export default function App() {
-  const { user, schoolTimezone, appVersion, idleTimeoutMinutes, loading, error } = useSession()
+  const { user, schoolTimezone, appVersion, idleTimeoutMinutes, loading, error, refresh } = useSession()
 
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
@@ -176,6 +176,7 @@ export default function App() {
               schoolTimezone={schoolTimezone}
               appVersion={appVersion}
               idleTimeoutMinutes={idleTimeoutMinutes}
+              onSessionRefresh={refresh}
             />
           }
         >

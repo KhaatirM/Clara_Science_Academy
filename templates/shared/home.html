@@ -167,30 +167,38 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) fixes <strong>tech password reset</strong> and <strong>teacher paper/PDF grading</strong> so scores stop disappearing while you grade.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) adds a <strong>required password-change dialog</strong> in the app, refreshes <strong>academic alerts</strong> after grading, hides <strong>graduated/transferred students</strong> from teacher attendance, and syncs <strong>Google Classroom</strong> when a student’s grade level changes.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- August 25, 2026 - tech password + grading hotfixes -->
+                    <!-- August 25, 2026 - roster / alerts / password / classroom -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Hotfixes – August 25, 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Tech password reset:</strong> Resetting a user’s password from Tech → Users works again and shows the temporary password.
+                                <strong>Forced password change in the app:</strong> After a tech password reset (or first login), users must change their password in a blocking dialog inside the React portal.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Auto-save uses the latest score:</strong> Debounced saves no longer post a stale empty score that cleared a grade you just entered.
+                                <strong>Academic alerts refresh after grading:</strong> Saving a grade clears the failing-student cache; opening Academic alerts reloads live data.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>In-progress drafts stay put:</strong> Typing scores for several students no longer gets wiped when one row finishes saving and the roster reloads.
+                                <strong>Departed students leave teacher rosters:</strong> Graduated, withdrawn, and transferred students no longer appear in attendance or class rosters.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grade change updates Google Classroom:</strong> Remapping a student’s grade level syncs Google Groups and Classroom memberships for the touched classes after save.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Tech password reset &amp; grading auto-save:</strong> Earlier August 25 fixes for password reset and paper/PDF grading auto-save remain in place.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Tech can reset passwords again; teachers can enter grades for a whole class without scores vanishing mid-session.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Safer first login, accurate academic alerts, cleaner teacher attendance, and Classroom rosters that match grade changes.</p>
                         </div>
                     </div>
 
@@ -1930,11 +1938,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug25_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownAug25_2026_v3', 'true');
         }, 500);
     }
 });

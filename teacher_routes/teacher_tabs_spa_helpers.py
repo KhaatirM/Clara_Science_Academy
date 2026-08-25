@@ -26,6 +26,7 @@ from utils.school_year_filters import (
     count_pending_redo_requests,
     get_active_school_year,
 )
+from utils.student_roster import active_roster_student_filters
 from utils.user_roles import canonical_role_label
 from utils.user_theme import get_effective_theme, get_site_theme_override
 
@@ -58,9 +59,11 @@ def _teacher_student_class_names(class_ids: list[int]) -> dict[int, list[str]]:
     rows = (
         db.session.query(Enrollment.student_id, Class.name)
         .join(Class, Enrollment.class_id == Class.id)
+        .join(Student, Student.id == Enrollment.student_id)
         .filter(
             Enrollment.class_id.in_(class_ids),
             Enrollment.is_active.is_(True),
+            active_roster_student_filters(),
         )
         .order_by(Class.name)
         .all()
@@ -91,8 +94,7 @@ def _teacher_students() -> list[Student]:
     students = (
         Student.query.filter(
             Student.id.in_(student_ids),
-            Student.is_deleted.is_(False),
-            Student.is_active.is_(True),
+            active_roster_student_filters(),
         )
         .all()
     )
@@ -179,7 +181,12 @@ def build_teacher_assignments_hub_payload() -> tuple[dict[str, Any] | None, str 
         enrollment_counts = (
             dict(
                 db.session.query(Enrollment.class_id, func.count(Enrollment.id))
-                .filter(Enrollment.is_active.is_(True), Enrollment.class_id.in_(class_ids))
+                .join(Student, Student.id == Enrollment.student_id)
+                .filter(
+                    Enrollment.is_active.is_(True),
+                    Enrollment.class_id.in_(class_ids),
+                    active_roster_student_filters(),
+                )
                 .group_by(Enrollment.class_id)
                 .all()
             )

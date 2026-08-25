@@ -10,6 +10,7 @@ import { AcademicConcernsHost } from '../academic/AcademicConcernsHost'
 import { AppToastHost } from '../toasts/AppToastHost'
 import { PortalUpdatesHost } from '../updates/PortalUpdatesHost'
 import { IdleSessionGuard } from '../session/IdleSessionGuard'
+import { ForcePasswordChangeHost } from '../session/ForcePasswordChangeHost'
 import { Sidebar } from './Sidebar'
 
 interface AppLayoutProps {
@@ -17,6 +18,7 @@ interface AppLayoutProps {
   schoolTimezone: SchoolTimezone | null
   appVersion?: AppVersionInfo | null
   idleTimeoutMinutes?: number
+  onSessionRefresh?: () => Promise<void> | void
 }
 
 export function AppLayout({
@@ -24,6 +26,7 @@ export function AppLayout({
   schoolTimezone,
   appVersion,
   idleTimeoutMinutes = 30,
+  onSessionRefresh,
 }: AppLayoutProps) {
   const legacyShell = useLegacyMgmtShell()
   const outletContext: ManagementOutletContext = { user, schoolTimezone }
@@ -47,6 +50,12 @@ export function AppLayout({
       <AppToastHost />
       <PortalUpdatesHost version={appVersion} />
       {showAcademicConcerns ? <AcademicConcernsHost scope={academicScope} /> : null}
+      <ForcePasswordChangeHost
+        user={user}
+        onChanged={async () => {
+          await onSessionRefresh?.()
+        }}
+      />
     </div>
   )
 }

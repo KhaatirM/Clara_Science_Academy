@@ -110,13 +110,22 @@ export function AcademicConcernsHost({ scope }: Props) {
 
   useEffect(() => {
     const onOpen = () => {
-      if (!yearActive || alerts.length === 0) return
+      if (!yearActive) return
       setModalOpen(true)
       setToastVisible(false)
+      setDetailsById({})
+      void load()
     }
     window.addEventListener(ACADEMIC_CONCERNS_OPEN_EVENT, onOpen)
     return () => window.removeEventListener(ACADEMIC_CONCERNS_OPEN_EVENT, onOpen)
-  }, [yearActive, alerts.length])
+  }, [yearActive, load])
+
+  // Refetch hub list whenever the modal opens so grade fixes show up immediately.
+  useEffect(() => {
+    if (!modalOpen || !yearActive) return
+    setDetailsById({})
+    void load()
+  }, [modalOpen, yearActive, load])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -139,7 +148,6 @@ export function AcademicConcernsHost({ scope }: Props) {
       return
     }
     setExpandedId(studentId)
-    if (detailsById[studentId] && detailsById[studentId] !== 'error') return
     setDetailsById((prev) => ({ ...prev, [studentId]: 'loading' }))
     try {
       const res = await fetchAcademicConcernStudent(studentId, scope)
@@ -196,6 +204,7 @@ export function AcademicConcernsHost({ scope }: Props) {
                 onClick={() => {
                   setModalOpen(true)
                   setToastVisible(false)
+                  setDetailsById({})
                 }}
               >
                 <i className="bi bi-clipboard-data" aria-hidden />

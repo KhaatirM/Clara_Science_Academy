@@ -23,6 +23,7 @@ from models import (
 )
 from services.class_google_group import class_needs_google_integration
 from teacher_routes.utils import is_authorized_for_class
+from utils.student_roster import active_class_roster_students_query
 
 
 def _assignment_count(class_id: int) -> int:
@@ -177,15 +178,7 @@ def build_teacher_class_view_payload(class_id: int) -> tuple[dict[str, Any] | No
             db.session.refresh(class_obj)
 
         enrolled = (
-            db.session.query(Student)
-            .join(Enrollment)
-            .filter(
-                Enrollment.class_id == class_id,
-                Enrollment.is_active.is_(True),
-                Student.is_deleted.is_(False),
-            )
-            .order_by(Student.last_name, Student.first_name)
-            .all()
+            active_class_roster_students_query(class_id).all()
         )
         assignment_count = _assignment_count(class_id)
         announcements = (

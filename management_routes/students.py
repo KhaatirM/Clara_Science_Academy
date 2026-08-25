@@ -2810,9 +2810,11 @@ def edit_student(student_id):
                 ]
             if touched_ids:
                 try:
-                    from services.class_google_group import schedule_try_provision_class_google_groups
+                    from services.class_google_group import try_provision_class_google_groups_now
 
-                    schedule_try_provision_class_google_groups(touched_ids)
+                    # Grade remaps touch a small set of classes — sync in-request so
+                    # Google Classroom membership updates are not lost on worker recycle.
+                    try_provision_class_google_groups_now(touched_ids)
                 except Exception as e:
                     current_app.logger.warning(
                         "Class Google sync after grade change failed for student %s: %s",

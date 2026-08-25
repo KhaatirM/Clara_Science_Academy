@@ -11,6 +11,7 @@ from flask_login import current_user
 from extensions import db
 from models import Attendance, Class, Enrollment, SchoolDayAttendance, Student
 from utils.school_year_filters import classes_for_active_school_year, get_active_school_year
+from utils.student_roster import active_class_roster_students_query
 
 
 SCHOOL_DAY_STATUSES = ("Present", "Unexcused Absence", "Late", "Excused Absence")
@@ -109,12 +110,7 @@ def query_unified_attendance_hub(
     classes_completed = 0
 
     for class_obj in classes:
-        student_count = (
-            db.session.query(Student)
-            .join(Enrollment)
-            .filter(Enrollment.class_id == class_obj.id, Enrollment.is_active.is_(True))
-            .count()
-        )
+        student_count = active_class_roster_students_query(class_obj.id).count()
 
         date_attendance = Attendance.query.filter_by(
             class_id=class_obj.id,
@@ -529,11 +525,7 @@ def query_take_class_attendance(class_id: int, date_str: str | None = None) -> d
         raise ValueError("This class is archived or inactive.")
 
     enrolled = (
-        db.session.query(Student)
-        .join(Enrollment)
-        .filter(Enrollment.class_id == class_id, Enrollment.is_active.is_(True))
-        .order_by(Student.last_name, Student.first_name)
-        .all()
+        active_class_roster_students_query(class_id).all()
     )
     if not enrolled:
         raise ValueError("No students are enrolled in this class.")

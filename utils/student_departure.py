@@ -161,9 +161,9 @@ def schedule_pending_grade_resync_google(student: Student) -> None:
     if not touched_ids:
         return
     try:
-        from services.class_google_group import schedule_try_provision_class_google_groups
+        from services.class_google_group import try_provision_class_google_groups_now
 
-        schedule_try_provision_class_google_groups(touched_ids)
+        try_provision_class_google_groups_now(touched_ids)
     except Exception:
         pass
     try:

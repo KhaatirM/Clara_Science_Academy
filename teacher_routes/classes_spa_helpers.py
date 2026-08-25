@@ -10,9 +10,10 @@ from sqlalchemy import func, or_
 from extensions import db
 from management_routes.class_spa_helpers import _standards_flags
 from management_routes.classes import serialize_class_list_item
-from models import Assignment, Class, Enrollment, class_additional_teachers, class_substitute_teachers
+from models import Assignment, Class, Enrollment, Student, class_additional_teachers, class_substitute_teachers
 from teacher_routes.utils import get_teacher_or_admin, is_admin
 from utils.school_year_filters import get_active_school_year
+from utils.student_roster import active_roster_student_filters
 
 
 def _teacher_accessible_classes(teacher) -> list[Class]:
@@ -87,7 +88,12 @@ def build_teacher_classes_payload() -> tuple[dict[str, Any] | None, str | None]:
         enrollment_counts = (
             dict(
                 db.session.query(Enrollment.class_id, func.count(Enrollment.id))
-                .filter(Enrollment.is_active.is_(True), Enrollment.class_id.in_(class_ids))
+                .join(Student, Student.id == Enrollment.student_id)
+                .filter(
+                    Enrollment.is_active.is_(True),
+                    Enrollment.class_id.in_(class_ids),
+                    active_roster_student_filters(),
+                )
                 .group_by(Enrollment.class_id)
                 .all()
             )

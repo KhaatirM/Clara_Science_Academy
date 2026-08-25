@@ -18,6 +18,7 @@ from utils.core_class_catalog import (
     is_elective_subject,
     setup_key_for_entry,
 )
+from utils.student_roster import active_roster_student_filters, student_is_archived
 
 
 def _normalize(text: str | None) -> str:
@@ -281,7 +282,7 @@ def auto_enroll_students_by_grade(class_ids: list[int], school_year_id: int) -> 
         students = (
             Student.query.filter(
                 Student.grade_level.in_(grade_levels),
-                Student.is_deleted.is_(False),
+                active_roster_student_filters(),
             ).all()
         )
         added = 0
@@ -365,7 +366,7 @@ def resync_student_core_enrollments_for_grade_change(
         'skipped': False,
         'reason': None,
     }
-    if student is None or getattr(student, 'is_deleted', False):
+    if student is None or student_is_archived(student):
         out['skipped'] = True
         out['reason'] = 'missing_or_deleted_student'
         return out
@@ -515,7 +516,7 @@ def align_student_core_enrollments_to_current_grade(
         'skipped': False,
         'reason': None,
     }
-    if student is None or getattr(student, 'is_deleted', False):
+    if student is None or student_is_archived(student):
         out['skipped'] = True
         out['reason'] = 'missing_or_deleted_student'
         return out

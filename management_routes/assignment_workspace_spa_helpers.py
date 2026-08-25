@@ -1189,6 +1189,9 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
     except Exception as exc:
         db.session.rollback()
         return {"success": False, "message": str(exc)}
+    from utils.grade_mutation_hooks import notify_grades_changed
+
+    notify_grades_changed()
     return {"success": True, "message": f"Saved {saved} quiz grade(s)."}
 
 

@@ -167,31 +167,50 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) adds <strong>device repair tickets</strong> (Hardware / Software) under Tech → Devices, plus earlier fixes for password change, academic alerts, departed-student rosters, and Google Classroom grade remaps.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 25</strong> (<strong>{{ app_version_display }}</strong>) improves <strong>Tech User Management</strong>, <strong>Devices</strong> inventory, and keeps class pickers on the <strong>active school year</strong> only.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- August 25, 2026 - device repair tickets -->
+                    <!-- August 25, 2026 - tech users + devices -->
                     <div class="update-section mb-4">
-                        <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Device Repair Tickets – August 25, 2026</h6>
+                        <h6 class="mb-3"><i class="bi bi-people me-2"></i>Tech Users &amp; Devices – August 25, 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Repair tickets under Devices:</strong> Tech → Devices includes Inventory and Repair tickets tabs. Create tickets linked to a device, choose Hardware or Software Issues, set severity, and track status through open, in progress, repaired, and closed.
+                                <strong>Former students &amp; staff:</strong> Tech User Management lists graduated/withdrawn students and inactive staff even when their portal login was removed.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>File repair from inventory:</strong> Each device row has a File repair action that opens a new ticket with that device selected.
+                                <strong>Parents category:</strong> Parent accounts are no longer mixed into Staff (current); they have their own section.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Earlier August 25 hotfixes:</strong> Forced password-change dialog, academic alert refresh after grading, departed students off teacher attendance, and Google Classroom sync on grade change.
+                                <strong>Unassigned devices &amp; pending students:</strong> Inventory can hold stock without a student, shows who still needs a device, and the CSV template/upload supports blank student columns.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Active-year class pickers:</strong> Collaborate conflict/journal options and assignment create forms (including PDF multi-class) only list classes from the current school year.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Repair tickets:</strong> Hardware/Software categories under Tech → Devices with status tracking.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Tech can track which school devices need repair without leaving the Devices area.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Tech can manage people and device stock more accurately without leaving the tech portal.</p>
                         </div>
+                    </div>
+
+                    <!-- August 25, 2026 - device repair tickets (kept for context) -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Earlier August 25 Hotfixes</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Password change, alerts, rosters, Classroom:</strong> Forced password-change dialog, academic alert refresh after grading, departed students off teacher attendance, and Google Classroom sync on grade change.
+                            </li>
+                        </ul>
                     </div>
 
                     <!-- August 24, 2026 - mobile + grading + grade remap -->
@@ -1930,11 +1949,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug25_2026_v6')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug25_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownAug25_2026_v6', 'true');
         }, 500);
     }
 });

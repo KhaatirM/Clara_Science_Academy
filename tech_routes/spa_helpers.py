@@ -26,7 +26,7 @@ from models import (
     db,
 )
 from utils.tech_user_management import (
-    partition_users_for_tech_management,
+    build_tech_user_management_lists,
     user_portal_status_label,
 )
 
@@ -139,9 +139,12 @@ def _students_selectable_for_device(exclude_device_id=None):
     assigned_ids = {
         d.student_id
         for d in StudentDevice.query.all()
-        if exclude_device_id is None or d.id != exclude_device_id
+        if d.student_id is not None
+        and (exclude_device_id is None or d.id != exclude_device_id)
     }
-    q = Student.query.filter(Student.is_active.is_(True))
+    from utils.student_roster import active_roster_student_filters
+
+    q = Student.query.filter(active_roster_student_filters())
     if assigned_ids:
         q = q.filter(~Student.id.in_(assigned_ids))
     return q.order_by(Student.last_name, Student.first_name).all()
@@ -153,6 +156,7 @@ def _serialize_student_option(s: Student) -> dict[str, Any]:
         "name": f"{s.first_name or ''} {s.last_name or ''}".strip(),
         "student_id": s.student_id,
         "grade_level": s.grade_level,
+        "expected_device_type": _expected_device_label(s.grade_level),
     }
 
 
@@ -166,20 +170,31 @@ def _serialize_device(d: StudentDevice) -> dict[str, Any]:
         "cord_number": d.cord_number,
         "operating_system": d.operating_system,
         "student_id": d.student_id,
+        "assigned": d.student_id is not None,
         "created_display": _fmt(d.created_at),
         "updated_display": _fmt(d.updated_at),
         "student": _serialize_student_option(stu) if stu else None,
     }
 
 
-def build_devices_list_payload(*, device_type: str = "", search: str = "") -> dict[str, Any]:
+def build_devices_list_payload(
+    *,
+    device_type: str = "",
+    search: str = "",
+    assignment: str = "",
+) -> dict[str, Any]:
     from sqlalchemy import or_
 
     device_type = (device_type or "").strip().lower()
     search = (search or "").strip()
-    q = StudentDevice.query.join(Student, StudentDevice.student_id == Student.id)
+    assignment = (assignment or "").strip().lower()
+    q = StudentDevice.query.outerjoin(Student, StudentDevice.student_id == Student.id)
     if device_type in DEVICE_TYPES:
         q = q.filter(StudentDevice.device_type == device_type)
+    if assignment == "unassigned":
+        q = q.filter(StudentDevice.student_id.is_(None))
+    elif assignment == "assigned":
+        q = q.filter(StudentDevice.student_id.isnot(None))
     if search:
         like = f"%{search}%"
         q = q.filter(
@@ -193,9 +208,22 @@ def build_devices_list_payload(*, device_type: str = "", search: str = "") -> di
             )
         )
     records = q.order_by(StudentDevice.device_type, StudentDevice.asset_name).all()
+    pending_students = [
+        {
+            **_serialize_student_option(s),
+        }
+        for s in _students_selectable_for_device()
+    ]
+    unassigned_count = StudentDevice.query.filter(StudentDevice.student_id.is_(None)).count()
     return {
         "records": [_serialize_device(d) for d in records],
-        "filters": {"type": device_type, "q": search},
+        "pending_students": pending_students,
+        "counts": {
+            "shown": len(records),
+            "unassigned": unassigned_count,
+            "pending_students": len(pending_students),
+        },
+        "filters": {"type": device_type, "q": search, "assignment": assignment},
         "device_types": list(DEVICE_TYPES),
     }
 
@@ -223,38 +251,43 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
     device_name = (body.get("device_name") or "").strip() or None
     cord_number = (body.get("cord_number") or "").strip() or None
     operating_system = (body.get("operating_system") or "").strip() or None
-    try:
-        student_id = int(body.get("student_id"))
-    except (TypeError, ValueError):
-        student_id = None
+    raw_student = body.get("student_id")
+    student_id = None
+    if raw_student not in (None, "", "null"):
+        try:
+            student_id = int(raw_student)
+        except (TypeError, ValueError):
+            return None, "Invalid student selection.", 400
 
     if not device_type:
         return None, "Select a valid device type (laptop or tablet).", 400
     if not asset_name:
         return None, "Asset name is required.", 400
-    if not student_id:
-        return None, "Select a student to attach this device to.", 400
-    stu = Student.query.get(student_id)
-    if not stu:
-        return None, "Student not found.", 404
-    if not _device_type_fits_grade(device_type, stu.grade_level):
-        exp = _expected_device_label(stu.grade_level)
-        return (
-            None,
-            f"Device type does not match grade policy (expected {exp or 'appropriate type'}).",
-            400,
-        )
+
+    stu = None
+    if student_id is not None:
+        stu = Student.query.get(student_id)
+        if not stu:
+            return None, "Student not found.", 404
+        if not _device_type_fits_grade(device_type, stu.grade_level):
+            exp = _expected_device_label(stu.grade_level)
+            return (
+                None,
+                f"Device type does not match grade policy (expected {exp or 'appropriate type'}).",
+                400,
+            )
 
     if device_id:
         device = StudentDevice.query.get(device_id)
         if not device:
             return None, "Device not found", 404
-        other = StudentDevice.query.filter(
-            StudentDevice.student_id == student_id,
-            StudentDevice.id != device.id,
-        ).first()
-        if other:
-            return None, "That student already has a different device assigned.", 400
+        if student_id is not None:
+            other = StudentDevice.query.filter(
+                StudentDevice.student_id == student_id,
+                StudentDevice.id != device.id,
+            ).first()
+            if other:
+                return None, "That student already has a different device assigned.", 400
         device.device_type = device_type
         device.asset_name = asset_name
         device.device_name = device_name
@@ -262,7 +295,7 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
         device.operating_system = operating_system
         device.student_id = student_id
     else:
-        if stu.assigned_school_device:
+        if stu is not None and stu.assigned_school_device:
             return None, "That student already has a device assigned.", 400
         device = StudentDevice(
             device_type=device_type,
@@ -280,9 +313,12 @@ def save_device(*, device_id: int | None, body: dict[str, Any]) -> tuple[dict[st
         db.session.rollback()
         return None, "Could not save: duplicate asset name or conflicting assignment.", 400
 
+    msg = "Device updated." if device_id else (
+        "Device assigned successfully." if student_id else "Unassigned device added to inventory."
+    )
     return {
         "success": True,
-        "message": "Device updated." if device_id else "Device assigned successfully.",
+        "message": msg,
         "device": _serialize_device(device),
         "redirect": "/app/tech/devices",
     }, None, 200
@@ -298,7 +334,121 @@ def delete_device(device_id: int) -> tuple[dict[str, Any] | None, str | None, in
     except Exception as exc:
         db.session.rollback()
         return None, f"Could not remove device: {exc}", 500
-    return {"success": True, "message": "Device assignment removed."}, None, 200
+    return {"success": True, "message": "Device removed from inventory."}, None, 200
+
+
+def bulk_upload_devices_from_csv(raw: bytes) -> tuple[dict[str, Any] | None, str | None, int]:
+    """Import devices from CSV bytes. Blank student columns = unassigned stock."""
+    import csv
+    import io
+
+    from tech_routes.routes import (
+        _csv_cell,
+        _norm_csv_header,
+        _normalize_device_type as legacy_normalize_device_type,
+        _student_from_csv_row,
+        _upsert_device_from_csv_row,
+    )
+
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return None, "Could not read file as UTF-8. Save the spreadsheet as CSV UTF-8.", 400
+
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        return None, "CSV has no header.", 400
+
+    headers = [_norm_csv_header(h) for h in reader.fieldnames]
+    if "device_type" not in headers or "asset_name" not in headers:
+        return None, "CSV must include columns: device_type, asset_name (see Download template).", 400
+
+    created = updated = 0
+    errors: list[str] = []
+    row_num = 1
+
+    for raw_row in reader:
+        row_num += 1
+        if not raw_row or not any((v and str(v).strip()) for v in raw_row.values()):
+            continue
+        row: dict[str, str] = {}
+        for k, v in raw_row.items():
+            if k is None:
+                continue
+            nk = _norm_csv_header(k)
+            row[nk] = "" if v is None or v == "" else str(v).strip()
+
+        device_type = legacy_normalize_device_type(_csv_cell(row, "device_type", "type"))
+        asset_name = _csv_cell(row, "asset_name", "laptop_name", "tablet_name", "inventory_name")
+        device_name = _csv_cell(row, "device_name") or None
+        cord_number = _csv_cell(row, "cord_number", "cord", "cord_#") or None
+        operating_system = _csv_cell(row, "operating_system", "os") or None
+
+        if not device_type:
+            errors.append(f"Row {row_num}: invalid or missing device_type")
+            continue
+        if not asset_name:
+            errors.append(f"Row {row_num}: missing asset_name")
+            continue
+
+        has_student_hint = bool(
+            _csv_cell(
+                row,
+                "student_db_id",
+                "student_pk",
+                "db_student_id",
+                "internal_student_id",
+                "school_student_id",
+                "school_id",
+                "state_student_id",
+                "student_id_number",
+                "student_id",
+            )
+        )
+        stu = _student_from_csv_row(row)
+        if has_student_hint and not stu:
+            errors.append(
+                f"Row {row_num}: student not found (set student_db_id or school_student_id / student_id)"
+            )
+            continue
+
+        try:
+            ok, action = _upsert_device_from_csv_row(
+                device_type, asset_name, device_name, cord_number, operating_system, stu, row_num
+            )
+            if not ok:
+                errors.append(action)
+                db.session.rollback()
+                continue
+            db.session.commit()
+            if action == "created":
+                created += 1
+            else:
+                updated += 1
+        except IntegrityError:
+            db.session.rollback()
+            errors.append(f"Row {row_num}: database conflict (duplicate asset or student)")
+        except Exception as exc:
+            db.session.rollback()
+            errors.append(f"Row {row_num}: {exc}")
+
+    if not created and not updated:
+        detail = "No rows were imported."
+        if errors:
+            detail += " " + "; ".join(errors[:5])
+        return None, detail, 400
+
+    return {
+        "success": True,
+        "message": f"Bulk import finished: {created} created, {updated} updated."
+        + (f" {len(errors)} row(s) skipped." if errors else ""),
+        "created": created,
+        "updated": updated,
+        "errors": errors[:25],
+    }, None, 200
 
 
 # --- Logs --------------------------------------------------------------------
@@ -899,38 +1049,8 @@ def set_site_theme_spa(body: dict[str, Any]) -> tuple[dict[str, Any] | None, str
 # --- Users -------------------------------------------------------------------
 
 
-def _serialize_user_row(u: User) -> dict[str, Any]:
-    login_id = None
-    if u.student_profile and u.student_profile.student_id:
-        login_id = u.student_profile.student_id
-    elif u.teacher_staff_profile and getattr(u.teacher_staff_profile, "staff_id", None):
-        login_id = u.teacher_staff_profile.staff_id
-    return {
-        "id": u.id,
-        "username": u.username,
-        "role": u.role,
-        "login_id": login_id,
-        "portal_status": user_portal_status_label(u),
-        "email": getattr(u, "email", None),
-    }
-
-
 def build_user_management_payload() -> dict[str, Any]:
-    users = (
-        User.query.options(
-            joinedload(User.student_profile),
-            joinedload(User.teacher_staff_profile),
-        )
-        .order_by(User.username.asc())
-        .all()
-    )
-    parts = partition_users_for_tech_management(users)
-    return {
-        "students_current": [_serialize_user_row(u) for u in parts["students_current"]],
-        "students_former": [_serialize_user_row(u) for u in parts["students_former"]],
-        "staff_current": [_serialize_user_row(u) for u in parts["staff_current"]],
-        "staff_former": [_serialize_user_row(u) for u in parts["staff_former"]],
-    }
+    return build_tech_user_management_lists()
 
 
 def build_user_detail_payload(user_id: int) -> tuple[dict[str, Any] | None, str | None, int]:
@@ -963,8 +1083,10 @@ def build_user_detail_payload(user_id: int) -> tuple[dict[str, Any] | None, str 
             "email": tp.email,
             "is_active": tp.is_active,
         }
+    from utils.tech_user_management import serialize_tech_mgmt_user_row
+
     return {
-        "user": _serialize_user_row(user),
+        "user": serialize_tech_mgmt_user_row(user),
         "profile": profile,
         "can_impersonate": user.id != current_user.id,
     }, None, 200

@@ -596,23 +596,33 @@ def student_submissions():
         from models import ReflectionJournal, StudentGroupMember, GroupAssignment
         journal_submissions = ReflectionJournal.query.filter_by(student_id=student.id).order_by(ReflectionJournal.submitted_at.desc()).all()
         
-        # Get student's group assignments
+        # Get student's group assignments (active school year only)
+        active_year = SchoolYear.query.filter_by(is_active=True).first()
         group_memberships = StudentGroupMember.query.filter_by(student_id=student.id).all()
         for membership in group_memberships:
             group = membership.group
-            if group and group.class_id:
-                # Get group assignments for this group's class
-                assignments = GroupAssignment.query.filter(
-                    GroupAssignment.class_id == group.class_id,
-                    group_assignment_student_visibility_filter(),
-                ).all()
-                for assignment in assignments:
-                    student_group_assignments.append({
-                        'id': assignment.id,
-                        'title': assignment.title,
-                        'class_name': group.class_info.name if group.class_info else 'Unknown Class',
-                        'group_id': group.id
-                    })
+            if not group or not group.class_id:
+                continue
+            class_obj = group.class_info
+            if (
+                not active_year
+                or not class_obj
+                or class_obj.school_year_id != active_year.id
+                or not getattr(class_obj, "is_active", True)
+            ):
+                continue
+            assignments = GroupAssignment.query.filter(
+                GroupAssignment.class_id == group.class_id,
+                GroupAssignment.school_year_id == active_year.id,
+                group_assignment_student_visibility_filter(),
+            ).all()
+            for assignment in assignments:
+                student_group_assignments.append({
+                    'id': assignment.id,
+                    'title': assignment.title,
+                    'class_name': class_obj.name if class_obj else 'Unknown Class',
+                    'group_id': group.id
+                })
     except Exception as e:
         current_app.logger.warning(f"Could not load reflection journals: {e}")
     

@@ -63,7 +63,7 @@ function UserBucket({ title, users }: { title: string; users: any[] }) {
             <tbody>
               {users.map((u) => (
                 <tr
-                  key={u.id}
+                  key={u.row_key || u.id}
                   className="border-b border-slate-100 last:border-b-0 hover:bg-teal-50/40"
                 >
                   <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
@@ -81,9 +81,13 @@ function UserBucket({ title, users }: { title: string; users: any[] }) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-end">
-                    <Link to={`/tech/users/${u.id}`} className={btnMuted}>
-                      View
-                    </Link>
+                    {u.can_view !== false && u.id != null ? (
+                      <Link to={`/tech/users/${u.id}`} className={btnMuted}>
+                        View
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-hub-muted">No portal login</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -119,6 +123,10 @@ export function TechUserManagementPage() {
         {
           title: 'Students (former)',
           users: (data.students_former || []).filter((u: any) => userMatchesQuery(u, query)),
+        },
+        {
+          title: 'Parents',
+          users: (data.parents || []).filter((u: any) => userMatchesQuery(u, query)),
         },
         {
           title: 'Staff (current)',

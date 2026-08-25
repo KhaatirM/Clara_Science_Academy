@@ -30,18 +30,20 @@ def _class_brief(class_obj: Class | None) -> dict[str, Any] | None:
 
 
 def _classes_payload(scope: CreateScope = "management") -> list[dict[str, Any]]:
+    """Classes available on assignment create forms — active school year only."""
     if scope == "teacher":
-        from teacher_routes.classes_spa_helpers import _teacher_accessible_classes
+        from teacher_routes.classes_spa_helpers import _teacher_classes_for_active_school_year
         from teacher_routes.utils import get_teacher_or_admin
 
-        classes = _teacher_accessible_classes(get_teacher_or_admin())
+        classes = _teacher_classes_for_active_school_year(get_teacher_or_admin())
         return [
             {"id": c.id, "name": c.name, "subject": getattr(c, "subject", None)}
             for c in classes
-            if getattr(c, "is_active", True)
         ]
 
-    classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
     return [{"id": c.id, "name": c.name, "subject": getattr(c, "subject", None)} for c in classes]
 
 

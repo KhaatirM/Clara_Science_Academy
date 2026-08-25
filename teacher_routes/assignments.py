@@ -65,27 +65,15 @@ def add_assignment():
     
     teacher = get_teacher_or_admin()
     
-    # Get accessible classes for the current teacher/admin
+    # Get accessible classes for the current teacher/admin (active school year only)
     if is_admin():
-        classes = Class.query.all()
+        from utils.school_year_filters import classes_for_active_school_year
+
+        classes = classes_for_active_school_year()
     elif teacher is not None:
-        # Query classes where teacher is:
-        # 1. Primary teacher (teacher_id == teacher.id)
-        # 2. Additional teacher (in class_additional_teachers table)
-        # 3. Substitute teacher (in class_substitute_teachers table)
-        classes = Class.query.filter(
-            or_(
-                Class.teacher_id == teacher.id,
-                Class.id.in_(
-                    db.session.query(class_additional_teachers.c.class_id)
-                    .filter(class_additional_teachers.c.teacher_id == teacher.id)
-                ),
-                Class.id.in_(
-                    db.session.query(class_substitute_teachers.c.class_id)
-                    .filter(class_substitute_teachers.c.teacher_id == teacher.id)
-                )
-            )
-        ).all()
+        from teacher_routes.classes_spa_helpers import _teacher_classes_for_active_school_year
+
+        classes = _teacher_classes_for_active_school_year(teacher)
     else:
         classes = []
     

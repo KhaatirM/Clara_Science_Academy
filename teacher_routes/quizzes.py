@@ -616,9 +616,13 @@ def create_quiz_assignment():
     # GET request - show the form (create or edit)
     teacher = get_teacher_or_admin()
     if is_admin():
-        classes = Class.query.all()
+        from utils.school_year_filters import classes_for_active_school_year
+
+        classes = classes_for_active_school_year()
     else:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all() if teacher else []
+        from teacher_routes.classes_spa_helpers import _teacher_classes_for_active_school_year
+
+        classes = _teacher_classes_for_active_school_year(teacher) if teacher else []
     
     assignment = None
     quiz_data = None
@@ -743,9 +747,13 @@ def create_discussion_assignment():
 
     teacher = get_teacher_or_admin()
     if is_admin():
-        classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+        from utils.school_year_filters import classes_for_active_school_year
+
+        classes = classes_for_active_school_year()
     elif teacher:
-        classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).order_by(Class.name).all()
+        from teacher_routes.classes_spa_helpers import _teacher_classes_for_active_school_year
+
+        classes = _teacher_classes_for_active_school_year(teacher)
     else:
         classes = []
 

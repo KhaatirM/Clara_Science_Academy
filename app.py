@@ -222,6 +222,66 @@ def create_app(config_class=None):
                             print("Added device_repair_ticket.category column.")
         except Exception as e:
             print(f"Note: device_repair_ticket.category column check failed (may already exist): {e}")
+
+        # student_device.student_id nullable (unassigned inventory stock)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'postgresql':
+                    t = conn.execute(text(
+                        "SELECT 1 FROM information_schema.tables "
+                        "WHERE table_name = 'student_device'"
+                    ))
+                    if t.fetchone() is not None:
+                        r = conn.execute(text(
+                            "SELECT is_nullable FROM information_schema.columns "
+                            "WHERE table_name = 'student_device' AND column_name = 'student_id'"
+                        ))
+                        row = r.fetchone()
+                        if row is not None and str(row[0]).upper() == 'NO':
+                            conn.execute(text(
+                                "ALTER TABLE student_device ALTER COLUMN student_id DROP NOT NULL"
+                            ))
+                            conn.commit()
+                            print("Made student_device.student_id nullable.")
+                elif dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(student_device)"))
+                    cols = list(r)
+                    student_col = next((c for c in cols if c[1] == 'student_id'), None)
+                    if student_col is not None and int(student_col[3]) == 1:
+                        # Rebuild table without NOT NULL on student_id (SQLite limitation).
+                        conn.execute(text("PRAGMA foreign_keys=OFF"))
+                        conn.execute(text(
+                            "CREATE TABLE student_device_new ("
+                            "id INTEGER NOT NULL PRIMARY KEY, "
+                            "device_type VARCHAR(20) NOT NULL, "
+                            "asset_name VARCHAR(120) NOT NULL, "
+                            "device_name VARCHAR(200), "
+                            "cord_number VARCHAR(80), "
+                            "operating_system VARCHAR(120), "
+                            "student_id INTEGER, "
+                            "created_at DATETIME, "
+                            "updated_at DATETIME, "
+                            "UNIQUE (asset_name), "
+                            "UNIQUE (student_id), "
+                            "FOREIGN KEY(student_id) REFERENCES student (id)"
+                            ")"
+                        ))
+                        conn.execute(text(
+                            "INSERT INTO student_device_new "
+                            "(id, device_type, asset_name, device_name, cord_number, "
+                            "operating_system, student_id, created_at, updated_at) "
+                            "SELECT id, device_type, asset_name, device_name, cord_number, "
+                            "operating_system, student_id, created_at, updated_at "
+                            "FROM student_device"
+                        ))
+                        conn.execute(text("DROP TABLE student_device"))
+                        conn.execute(text("ALTER TABLE student_device_new RENAME TO student_device"))
+                        conn.execute(text("PRAGMA foreign_keys=ON"))
+                        conn.commit()
+                        print("Rebuilt student_device with nullable student_id.")
+        except Exception as e:
+            print(f"Note: student_device.student_id nullability check failed: {e}")
         
         # Add user.theme_preference column if missing (one-off migration for themes feature)
         try:

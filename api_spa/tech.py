@@ -24,6 +24,7 @@ from tech_routes.spa_helpers import (
     build_tech_settings_payload,
     build_user_detail_payload,
     build_user_management_payload,
+    bulk_upload_devices_from_csv,
     clear_app_cache,
     delete_device,
     impersonate_user_spa,
@@ -73,6 +74,7 @@ def tech_spa_devices_list():
         build_devices_list_payload(
             device_type=request.args.get("type", ""),
             search=request.args.get("q", ""),
+            assignment=request.args.get("assignment", ""),
         )
     )
 
@@ -148,6 +150,21 @@ def tech_spa_device_create():
     if error:
         return jsonify({"error": error}), status
     return jsonify(payload)
+
+
+@spa_api_blueprint.route("/tech/devices/bulk-upload", methods=["POST"])
+@login_required
+@tech_required
+def tech_spa_devices_bulk_upload():
+    upload = request.files.get("csv_file")
+    if not upload or not upload.filename:
+        return jsonify({"error": "Choose a CSV file to upload."}), 400
+    if not upload.filename.lower().endswith(".csv"):
+        return jsonify({"error": "Please upload a .csv file."}), 400
+    payload, error, status = bulk_upload_devices_from_csv(upload.read())
+    if error:
+        return jsonify({"error": error}), status
+    return jsonify(payload), status
 
 
 @spa_api_blueprint.route("/tech/devices/<int:device_id>", methods=["PATCH"])

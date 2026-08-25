@@ -10,7 +10,6 @@ from sqlalchemy.orm import joinedload
 
 from management_routes.student_assistant_utils import group_assignment_student_visibility_filter
 from models import (
-    Enrollment,
     Feedback360,
     Feedback360Response,
     GroupAssignment,
@@ -151,8 +150,10 @@ def build_student_collaborate_payload() -> tuple[dict[str, Any] | None, str | No
 
     available_sessions: list[dict[str, Any]] = []
     if school_year:
-        enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
-        class_ids = [e.class_id for e in enrollments]
+        from utils.school_year_filters import student_classes_for_school_year
+
+        year_classes = student_classes_for_school_year(student.id, school_year)
+        class_ids = [c.id for c in year_classes]
         if class_ids:
             sessions = (
                 Feedback360.query.filter(
@@ -238,34 +239,47 @@ def build_student_collaborate_payload() -> tuple[dict[str, Any] | None, str | No
 
     group_assignments: list[dict[str, Any]] = []
     seen_keys: set[tuple[int, int]] = set()
-    memberships = (
-        StudentGroupMember.query.filter_by(student_id=student.id)
-        .options(joinedload(StudentGroupMember.group))
-        .all()
-    )
-    for membership in memberships:
-        group = membership.group
-        if not group or not group.class_id or not getattr(group, "is_active", True):
-            continue
-        assignments = GroupAssignment.query.filter(
-            GroupAssignment.class_id == group.class_id,
-            group_assignment_student_visibility_filter(),
-        ).all()
-        for assignment in assignments:
-            key = (assignment.id, group.id)
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            group_assignments.append(
-                {
-                    "id": assignment.id,
-                    "title": assignment.title,
-                    "class_name": group.class_info.name if group.class_info else "Class",
-                    "group_id": group.id,
-                    "group_name": group.name,
-                    "label": f"{assignment.title} · {group.class_info.name if group.class_info else 'Class'} ({group.name})",
-                }
+    if school_year:
+        from models import StudentGroup
+
+        memberships = (
+            StudentGroupMember.query.filter_by(student_id=student.id)
+            .options(
+                joinedload(StudentGroupMember.group).joinedload(StudentGroup.class_info),
             )
+            .all()
+        )
+        for membership in memberships:
+            group = membership.group
+            if not group or not group.class_id or not getattr(group, "is_active", True):
+                continue
+            class_obj = group.class_info
+            if (
+                not class_obj
+                or class_obj.school_year_id != school_year.id
+                or not getattr(class_obj, "is_active", True)
+            ):
+                continue
+            assignments = GroupAssignment.query.filter(
+                GroupAssignment.class_id == group.class_id,
+                GroupAssignment.school_year_id == school_year.id,
+                group_assignment_student_visibility_filter(),
+            ).all()
+            for assignment in assignments:
+                key = (assignment.id, group.id)
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                group_assignments.append(
+                    {
+                        "id": assignment.id,
+                        "title": assignment.title,
+                        "class_name": class_obj.name if class_obj else "Class",
+                        "group_id": group.id,
+                        "group_name": group.name,
+                        "label": f"{assignment.title} · {class_obj.name if class_obj else 'Class'} ({group.name})",
+                    }
+                )
     group_assignments.sort(key=lambda x: (x["class_name"] or "", x["title"] or ""))
 
     return {

@@ -1882,8 +1882,8 @@ class StudentAssistantActionLog(db.Model):
 
 class StudentDevice(db.Model):
     """
-    School-issued device: laptop (typically grade 3+) or tablet (grade 2 and below),
-    assigned to exactly one student.
+    School-issued device: laptop (typically grade 3+) or tablet (grade 2 and below).
+    May be unassigned stock or assigned to at most one student.
     """
     __tablename__ = 'student_device'
     id = db.Column(db.Integer, primary_key=True)
@@ -1892,7 +1892,7 @@ class StudentDevice(db.Model):
     device_name = db.Column(db.String(200), nullable=True)  # manufacturer / model label
     cord_number = db.Column(db.String(80), nullable=True)  # often matches device # in asset_name
     operating_system = db.Column(db.String(120), nullable=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, unique=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

@@ -1259,7 +1259,11 @@ def user_management():
     parts = partition_users_for_tech_management(users)
     return render_template(
         'management/user_management.html',
-        **parts,
+        students_current=parts.get('students_current', []),
+        students_former=parts.get('students_former', []),
+        parents=parts.get('parents', []),
+        staff_current=parts.get('staff_current', []),
+        staff_former=parts.get('staff_former', []),
     )
 
 @tech_blueprint.route('/maintenance')
@@ -1534,12 +1538,13 @@ def _student_from_csv_row(row):
 def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_number, operating_system, stu, row_num):
     """
     Create or update by asset_name. Reassigns student on that asset if needed.
+    ``stu`` may be None for unassigned inventory stock.
     Returns (success: bool, message: str).
     """
-    if not device_type or not asset_name or not stu:
-        return False, f'Row {row_num}: missing device type, asset name, or student'
+    if not device_type or not asset_name:
+        return False, f'Row {row_num}: missing device type or asset name'
 
-    if not _device_type_fits_grade(device_type, stu.grade_level):
+    if stu is not None and not _device_type_fits_grade(device_type, stu.grade_level):
         exp = _expected_device_label(stu.grade_level)
         return (
             False,
@@ -1548,9 +1553,9 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
         )
 
     by_asset = StudentDevice.query.filter_by(asset_name=asset_name).first()
-    by_student = stu.assigned_school_device
+    by_student = stu.assigned_school_device if stu is not None else None
 
-    if by_asset and by_student and by_asset.id != by_student.id:
+    if stu is not None and by_asset and by_student and by_asset.id != by_student.id:
         return (
             False,
             f'Row {row_num}: asset "{asset_name}" is assigned elsewhere and student '
@@ -1558,20 +1563,21 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
         )
 
     if by_asset:
-        conflict = StudentDevice.query.filter(
-            StudentDevice.student_id == stu.id,
-            StudentDevice.id != by_asset.id,
-        ).first()
-        if conflict:
-            return (
-                False,
-                f'Row {row_num}: student already has device "{conflict.asset_name}"',
-            )
+        if stu is not None:
+            conflict = StudentDevice.query.filter(
+                StudentDevice.student_id == stu.id,
+                StudentDevice.id != by_asset.id,
+            ).first()
+            if conflict:
+                return (
+                    False,
+                    f'Row {row_num}: student already has device "{conflict.asset_name}"',
+                )
         by_asset.device_type = device_type
         by_asset.device_name = device_name
         by_asset.cord_number = cord_number
         by_asset.operating_system = operating_system
-        by_asset.student_id = stu.id
+        by_asset.student_id = stu.id if stu is not None else None
         return True, 'updated'
 
     if by_student:
@@ -1593,7 +1599,7 @@ def _upsert_device_from_csv_row(device_type, asset_name, device_name, cord_numbe
             device_name=device_name,
             cord_number=cord_number,
             operating_system=operating_system,
-            student_id=stu.id,
+            student_id=stu.id if stu is not None else None,
         )
     )
     return True, 'created'
@@ -1608,6 +1614,7 @@ def devices_csv_template():
         'device_type,asset_name,device_name,cord_number,operating_system,student_db_id,school_student_id',
         'laptop,CSA-Laptop-1,Dell Latitude,1,Windows 11,42,',
         'tablet,CSA-Tablet-2,,2,iPadOS 17,,ABC12345',
+        'laptop,CSA-Laptop-99,Stock Chromebook,99,ChromeOS,,',
     ]
     body = '\r\n'.join(lines) + '\r\n'
     return Response(
@@ -1681,9 +1688,25 @@ def devices_bulk_upload():
             errors.append(f'Row {row_num}: missing asset_name')
             continue
 
+        has_student_hint = bool(
+            _csv_cell(
+                row,
+                'student_db_id',
+                'student_pk',
+                'db_student_id',
+                'internal_student_id',
+                'school_student_id',
+                'school_id',
+                'state_student_id',
+                'student_id_number',
+                'student_id',
+            )
+        )
         stu = _student_from_csv_row(row)
-        if not stu:
-            errors.append(f'Row {row_num}: student not found (set student_db_id or school_student_id / student_id)')
+        if has_student_hint and not stu:
+            errors.append(
+                f'Row {row_num}: student not found (set student_db_id or school_student_id / student_id)'
+            )
             continue
 
         try:

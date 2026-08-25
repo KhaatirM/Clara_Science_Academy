@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v6'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
+    title: 'Tech user lists cleaned up',
+    body: 'Students (former) and Staff (former) now show departed people even without a portal login. Parents have their own category instead of appearing under Staff.',
+  },
+  {
+    title: 'Device inventory without assignment',
+    body: 'Devices can be unassigned stock. Inventory shows students still pending a device, and the CSV template supports blank student columns plus Upload CSV.',
+  },
+  {
+    title: 'Active-year classes only in pickers',
+    body: 'Collaborate conflict/journal options and assignment create class lists (including PDF multi-class) no longer mix in closed school-year classes.',
+  },
+  {
     title: 'Device repair tickets',
-    body: 'Tech → Devices now has Inventory and Repair tickets. File Hardware or Software issues, set severity, and track open → in progress → repaired → closed.',
+    body: 'Tech → Devices has Inventory and Repair tickets. File Hardware or Software issues, set severity, and track open → in progress → repaired → closed.',
   },
   {
     title: 'Forced password change in the app',
     body: 'After a tech password reset (or first login), the portal now shows a required change-password dialog in the React app—not only on old pages.',
-  },
-  {
-    title: 'Academic alerts refresh after grading',
-    body: 'Saving or raising a grade clears the failing-student alert cache, and opening Academic alerts reloads live data so fixed grades drop off promptly.',
-  },
-  {
-    title: 'Departed students leave teacher rosters',
-    body: 'Graduated, withdrawn, and transferred students no longer appear in teacher attendance or class rosters, even if an old enrollment row was still active.',
-  },
-  {
-    title: 'Grade change updates Google Classroom',
-    body: 'Changing a student’s grade level remaps portal classes and now syncs Google Groups and Classroom memberships for those classes right after save.',
   },
 ]
 
@@ -30,10 +30,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.515.0'
+  const display = version?.display || 'v 2.516.0'
   const releaseLabel = version?.release_label || 'August 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2676
+  const updatesEstimate = version?.updates_estimate ?? 2682
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

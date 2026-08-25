@@ -128,7 +128,9 @@ def group_assignment_type_selector():
     if spa_redirect is not None:
         return spa_redirect
 
-    classes = Class.query.all()
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
     return render_template('management/group_assignment_class_selector.html', classes=classes)
 
 
@@ -511,7 +513,9 @@ def create_quiz_assignment():
             return create_form_err(f'Error creating quiz assignment: {str(e)}')
     
     # GET request - show form (create or edit)
-    classes = Class.query.all()
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
     current_quarter = get_current_quarter()
     assignment = None
     quiz_data = None
@@ -631,7 +635,9 @@ def create_discussion_assignment():
             flash("Discussion assignment not found.", "danger")
             return redirect(url_for('management.assignments_and_grades'))
 
-    classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
 
     if request.method == 'POST':
         edit_id_form = request.form.get('edit_id', type=int)
@@ -2030,8 +2036,10 @@ def add_assignment():
             db.session.rollback()
             return create_form_err(f'Error creating assignment: {str(e)}')
 
-    # For GET request, get all classes for the dropdown and current quarter
-    classes = Class.query.all()
+    # For GET request, active school year classes only for the dropdown
+    from utils.school_year_filters import classes_for_active_school_year
+
+    classes = classes_for_active_school_year()
     current_quarter = get_current_quarter()
     # Get assignment context from query parameter (in-class or homework)
     context = request.args.get('context', 'homework')

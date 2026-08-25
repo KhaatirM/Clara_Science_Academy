@@ -10,6 +10,7 @@ import {
   saveTechDevice,
   updateTechRepairTicketStatus,
   updateTechTheme,
+  uploadTechDevicesCsv,
 } from '../api/tech'
 import {
   ManagementPageHero,
@@ -96,7 +97,7 @@ export function TechDevicesPage() {
     inventory: {
       label: 'Inventory',
       icon: 'bi-laptop',
-      hint: 'Student laptop and tablet assignments across the academy.',
+      hint: 'Assigned devices, unassigned stock, and students still waiting for a device.',
     },
     repairs: {
       label: 'Repair tickets',
@@ -130,7 +131,7 @@ export function TechDevicesPage() {
                 className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--spa-mgmt-accent-deep)] no-underline hover:bg-white/90"
               >
                 <i className="bi bi-plus-lg" aria-hidden />
-                Assign device
+                Add device
               </Link>
             </div>
           ) : null}
@@ -170,34 +171,63 @@ export function TechDevicesPage() {
 function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: number) => void }) {
   const [data, setData] = useState<any>(null)
   const [type, setType] = useState('')
+  const [assignment, setAssignment] = useState('')
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchTechDevices({ type, q }))
+      setData(await fetchTechDevices({ type, q, assignment }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load devices')
     } finally {
       setLoading(false)
     }
-  }, [type, q])
+  }, [type, q, assignment])
 
   useEffect(() => {
     void load()
   }, [load])
 
   const records = (data?.records || []) as any[]
+  const pendingStudents = (data?.pending_students || []) as any[]
+  const counts = data?.counts || {}
   const laptopCount = records.filter((r) => String(r.device_type).toLowerCase() === 'laptop').length
   const tabletCount = records.filter((r) => String(r.device_type).toLowerCase() === 'tablet').length
+  const unassignedCount = records.filter((r) => !r.student_id).length
+
+  async function onCsvSelected(file: File | null) {
+    if (!file) return
+    setUploading(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const res = await uploadTechDevicesCsv(file)
+      const errList = (res.errors || []) as string[]
+      setMessage(
+        res.message ||
+          `Imported ${res.created || 0} created, ${res.updated || 0} updated.` +
+            (errList.length ? ` ${errList.length} row(s) skipped.` : ''),
+      )
+      if (errList.length) {
+        setError(errList.slice(0, 5).join(' · '))
+      }
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'CSV upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <>
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <article className="spa-mgmt-stat p-4 shadow-sm">
           <div className="text-2xl font-bold tabular-nums text-hub-text">{records.length}</div>
           <div className="text-xs font-semibold uppercase tracking-wide text-hub-muted">Shown</div>
@@ -220,6 +250,22 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
             <div className="text-xs font-semibold uppercase tracking-wide text-hub-muted">Tablets</div>
           </div>
         </article>
+        <article className="spa-mgmt-stat p-4 shadow-sm">
+          <div className="text-2xl font-bold tabular-nums text-hub-text">
+            {counts.unassigned ?? unassignedCount}
+          </div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+            Unassigned stock
+          </div>
+        </article>
+        <article className="spa-mgmt-stat p-4 shadow-sm">
+          <div className="text-2xl font-bold tabular-nums text-hub-text">
+            {counts.pending_students ?? pendingStudents.length}
+          </div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+            Pending students
+          </div>
+        </article>
       </div>
 
       <section className="spa-mgmt-card mb-4 overflow-hidden shadow-sm">
@@ -231,6 +277,18 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
               <option value="">All types</option>
               <option value="laptop">Laptop</option>
               <option value="tablet">Tablet</option>
+            </select>
+          </label>
+          <label className="flex min-w-[9rem] flex-1 flex-col gap-1.5 sm:max-w-[12rem]">
+            <span className={labelClass}>Assignment</span>
+            <select
+              className={fieldClass}
+              value={assignment}
+              onChange={(e) => setAssignment(e.target.value)}
+            >
+              <option value="">All</option>
+              <option value="assigned">Assigned</option>
+              <option value="unassigned">Unassigned</option>
             </select>
           </label>
           <label className="flex min-w-[14rem] flex-[2] flex-col gap-1.5">
@@ -253,6 +311,21 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
             <i className="bi bi-search" aria-hidden />
             Search
           </button>
+          <label className="spa-mgmt-btn-ghost cursor-pointer px-4 py-2.5 text-sm">
+            <i className="bi bi-upload" aria-hidden />
+            {uploading ? 'Uploading…' : 'Upload CSV'}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null
+                e.target.value = ''
+                void onCsvSelected(file)
+              }}
+            />
+          </label>
         </div>
       </section>
 
@@ -260,23 +333,90 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
         <div className="spa-mgmt-insight mb-4 px-4 py-3 text-sm font-medium">{message}</div>
       ) : null}
 
+      {pendingStudents.length > 0 ? (
+        <section className="spa-mgmt-card mb-4 overflow-hidden shadow-sm">
+          <div className="border-b border-[var(--spa-mgmt-border)] px-4 py-3">
+            <h2 className="mb-0 text-sm font-bold text-hub-text">
+              Students pending a device{' '}
+              <span className="font-normal text-hub-muted">({pendingStudents.length})</span>
+            </h2>
+            <p className="mb-0 mt-1 text-xs text-hub-muted">
+              Active students on the roster who do not have a school device assigned yet.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-[var(--spa-mgmt-border)] bg-[color-mix(in_srgb,var(--spa-mgmt-accent-soft)_55%,var(--spa-mgmt-surface))]">
+                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    Student
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    Grade
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    Expected
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingStudents.slice(0, 40).map((s) => (
+                  <tr
+                    key={s.id}
+                    className="border-b border-[color-mix(in_srgb,var(--spa-mgmt-border)_70%,transparent)] last:border-b-0"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-hub-text">{s.name}</div>
+                      <div className="mt-0.5 text-xs text-hub-muted">
+                        {s.student_id ? `ID ${s.student_id}` : '—'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-hub-muted">{s.grade_level ?? '—'}</td>
+                    <td className="px-4 py-3 capitalize text-hub-muted">
+                      {s.expected_device_type || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        to={`/tech/devices/new?student_id=${s.id}`}
+                        className="spa-mgmt-btn-ghost px-3 py-1.5 text-xs no-underline"
+                      >
+                        Assign device
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {pendingStudents.length > 40 ? (
+            <div className="border-t border-[var(--spa-mgmt-border)] px-4 py-2 text-xs text-hub-muted">
+              Showing first 40 of {pendingStudents.length}. Use Assign / Add device to continue.
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       {loading ? (
         <div className="spa-mgmt-card p-8 text-center text-hub-muted shadow-sm">Loading devices…</div>
-      ) : error ? (
+      ) : error && !records.length ? (
         <div className="alert alert-danger">{error}</div>
       ) : records.length === 0 ? (
         <div className="spa-mgmt-card border-dashed px-6 py-12 text-center shadow-sm">
           <i className="bi bi-laptop mb-2 text-2xl text-hub-muted" aria-hidden />
           <p className="mb-1 text-base font-semibold text-hub-text">No devices found</p>
           <p className="mb-4 text-sm text-hub-muted">
-            Assign a laptop or tablet to a student, or adjust your filters.
+            Add inventory (assigned or unassigned), upload the CSV template, or adjust filters.
           </p>
           <Link to="/tech/devices/new" className="spa-mgmt-btn-primary px-4 py-2.5 text-sm no-underline">
-            Assign device
+            Add device
           </Link>
         </div>
       ) : (
         <div className="spa-mgmt-card overflow-hidden shadow-sm">
+          {error ? <div className="alert alert-warning m-4 mb-0">{error}</div> : null}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[56rem] border-collapse text-left text-sm">
               <thead>
@@ -326,7 +466,9 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
                           </div>
                         </>
                       ) : (
-                        <span className="text-hub-muted">—</span>
+                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900">
+                          Unassigned
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 align-top text-hub-muted">{row.cord_number || '—'}</td>
@@ -352,7 +494,7 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
                           type="button"
                           className="spa-mgmt-btn-ghost px-3 py-1.5 text-xs"
                           onClick={async () => {
-                            if (!window.confirm('Remove this device assignment?')) return
+                            if (!window.confirm('Remove this device from inventory?')) return
                             try {
                               const res = await deleteTechDevice(row.id)
                               setMessage(res.message)
@@ -835,6 +977,8 @@ export function TechDeviceFormPage() {
   const { deviceId } = useParams()
   const id = deviceId ? Number(deviceId) : undefined
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const prefillStudentId = searchParams.get('student_id') || ''
   const [formMeta, setFormMeta] = useState<any>(null)
   const [form, setForm] = useState({
     device_type: 'laptop',
@@ -842,7 +986,7 @@ export function TechDeviceFormPage() {
     device_name: '',
     cord_number: '',
     operating_system: 'ChromeOS',
-    student_id: '',
+    student_id: prefillStudentId,
   })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -860,10 +1004,19 @@ export function TechDeviceFormPage() {
             operating_system: data.device.operating_system || 'ChromeOS',
             student_id: String(data.device.student_id || ''),
           })
+        } else if (prefillStudentId) {
+          const match = (data.students || []).find(
+            (s: any) => String(s.id) === String(prefillStudentId),
+          )
+          setForm((prev) => ({
+            ...prev,
+            student_id: prefillStudentId,
+            device_type: match?.expected_device_type || prev.device_type,
+          }))
         }
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Could not load form'))
-  }, [id])
+  }, [id, prefillStudentId])
 
   return (
     <ManagementPageShell>
@@ -874,10 +1027,10 @@ export function TechDeviceFormPage() {
               Tech · Devices
             </p>
             <h1 className="mb-0 text-3xl font-bold tracking-tight">
-              {id ? 'Edit device' : 'Assign device'}
+              {id ? 'Edit device' : 'Add device'}
             </h1>
             <p className="mb-0 mt-2 text-sm spa-mgmt-hero-muted">
-              Link a laptop or tablet asset to a student record.
+              Assign to a student now, or leave unassigned as stock inventory.
             </p>
           </div>
           <Link
@@ -902,10 +1055,15 @@ export function TechDeviceFormPage() {
             setBusy(true)
             setError(null)
             try {
+              const studentId = form.student_id ? Number(form.student_id) : null
               await saveTechDevice(
                 {
-                  ...form,
-                  student_id: Number(form.student_id),
+                  device_type: form.device_type,
+                  asset_name: form.asset_name,
+                  device_name: form.device_name,
+                  cord_number: form.cord_number,
+                  operating_system: form.operating_system,
+                  student_id: studentId,
                 },
                 id,
               )
@@ -977,14 +1135,23 @@ export function TechDeviceFormPage() {
               </label>
             </div>
             <label className="flex flex-col gap-1.5">
-              <span className={labelClass}>Student</span>
+              <span className={labelClass}>Student (optional)</span>
               <select
                 className={fieldClass}
-                required
                 value={form.student_id}
-                onChange={(e) => setForm((f) => ({ ...f, student_id: e.target.value }))}
+                onChange={(e) => {
+                  const nextId = e.target.value
+                  const match = (formMeta.students || []).find(
+                    (s: any) => String(s.id) === nextId,
+                  )
+                  setForm((f) => ({
+                    ...f,
+                    student_id: nextId,
+                    device_type: match?.expected_device_type || f.device_type,
+                  }))
+                }}
               >
-                <option value="">Select a student…</option>
+                <option value="">Unassigned (stock inventory)</option>
                 {(formMeta.students || []).map((s: any) => (
                   <option key={s.id} value={s.id}>
                     {s.name} (Grade {s.grade_level ?? '?'}) · {s.student_id}

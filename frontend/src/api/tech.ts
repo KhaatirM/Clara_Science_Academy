@@ -15,12 +15,26 @@ export async function updateTechTheme(theme: string) {
   })
 }
 
-export async function fetchTechDevices(query: { type?: string; q?: string } = {}) {
+export async function fetchTechDevices(query: {
+  type?: string
+  q?: string
+  assignment?: string
+} = {}) {
   const params = new URLSearchParams()
   if (query.type) params.set('type', query.type)
   if (query.q) params.set('q', query.q)
+  if (query.assignment) params.set('assignment', query.assignment)
   const qs = params.toString()
   return apiFetch<any>(`/api/spa/tech/devices${qs ? `?${qs}` : ''}`)
+}
+
+export async function uploadTechDevicesCsv(file: File) {
+  const body = new FormData()
+  body.append('csv_file', file)
+  return apiFetch<any>('/api/spa/tech/devices/bulk-upload', {
+    method: 'POST',
+    body,
+  })
 }
 
 export async function fetchTechDeviceForm(deviceId?: number) {

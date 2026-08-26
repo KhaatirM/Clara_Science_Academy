@@ -457,7 +457,8 @@ export function CreatePdfAssignmentPage() {
                 {dragOver ? 'Drop files to attach' : 'Drag & drop files here, or click to browse'}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                PDF, Word, images, and more — up to 16 MB each
+                PDF, Word, images, and more — up to 16 MB each. Files attach when you create the
+                assignment.
               </p>
               <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm">
                 <i className="bi bi-folder2-open" aria-hidden />

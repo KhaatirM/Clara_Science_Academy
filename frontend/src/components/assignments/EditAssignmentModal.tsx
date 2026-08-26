@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchAssignmentEditForm,
   saveAssignmentEdit,
@@ -45,6 +45,10 @@ export function EditAssignmentModal({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [removeIds, setRemoveIds] = useState<number[]>([])
+  const [clearGroupAttachment, setClearGroupAttachment] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -72,12 +76,18 @@ export function EditAssignmentModal({
     else {
       setForm(null)
       setError(null)
+      setNewFiles([])
+      setRemoveIds([])
+      setClearGroupAttachment(false)
     }
   }, [open, load])
 
   if (!open) return null
 
   const typeLabel = (form?.assignment_type || 'assignment').replace(/_/g, ' ')
+  const isPdfLike =
+    !form?.assignment_type ||
+    ['pdf', 'pdf_paper', 'paper'].includes(String(form.assignment_type).toLowerCase())
 
   async function handleSave() {
     if (!form) return
@@ -108,7 +118,20 @@ export function EditAssignmentModal({
       if (form.quiz) body.quiz = form.quiz
       if (form.discussion) body.discussion = form.discussion
 
-      const result = await saveAssignmentEdit(assignmentId, isGroup, body)
+      const removeAttachmentIds = isGroup
+        ? clearGroupAttachment
+          ? [-1]
+          : []
+        : removeIds
+
+      const result = await saveAssignmentEdit(
+        assignmentId,
+        isGroup,
+        body,
+        'management',
+        isPdfLike ? newFiles : [],
+        removeAttachmentIds,
+      )
       if (!result.success) throw new Error(result.message)
       onSaved(result.message || 'Assignment updated.')
       onClose()
@@ -121,6 +144,16 @@ export function EditAssignmentModal({
 
   function patch(patch: Partial<AssignmentEditForm>) {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev))
+  }
+
+  function toggleRemove(id: number | null) {
+    if (id == null) return
+    setRemoveIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  function onPickFiles(list: FileList | null) {
+    if (!list?.length) return
+    setNewFiles((prev) => [...prev, ...Array.from(list)])
   }
 
   return (
@@ -248,18 +281,83 @@ export function EditAssignmentModal({
                 </div>
               </div>
 
-              {form.attachments && form.attachments.length > 0 ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Current attachments</p>
-                  <ul className="mt-2 space-y-1 text-sm text-hub-text">
-                    {form.attachments.map((a, idx) => (
-                      <li key={a.id ?? idx}>
-                        <i className="bi bi-paperclip mr-1 text-teal-700" aria-hidden />
-                        {a.name}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-2 text-xs text-hub-muted">To replace files, use the full assignment creator.</p>
+              {isPdfLike ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Documents</p>
+                  {(form.attachments || []).length > 0 ? (
+                    <ul className="space-y-2 text-sm text-hub-text">
+                      {form.attachments!.map((a, idx) => (
+                        <li key={a.id ?? `legacy-${idx}`} className="flex items-center gap-2">
+                          <i className="bi bi-paperclip text-teal-700" aria-hidden />
+                          <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                          {isGroup ? (
+                            <label className="flex shrink-0 items-center gap-1 text-xs text-red-700">
+                              <input
+                                type="checkbox"
+                                checked={clearGroupAttachment}
+                                onChange={(e) => setClearGroupAttachment(e.target.checked)}
+                              />
+                              Remove
+                            </label>
+                          ) : a.id != null ? (
+                            <label className="flex shrink-0 items-center gap-1 text-xs text-red-700">
+                              <input
+                                type="checkbox"
+                                checked={removeIds.includes(a.id)}
+                                onChange={() => toggleRemove(a.id)}
+                              />
+                              Remove
+                            </label>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-hub-muted">No documents yet.</p>
+                  )}
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple={!isGroup}
+                      className="sr-only"
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
+                      onChange={(e) => {
+                        onPickFiles(e.target.files)
+                        e.target.value = ''
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isGroup ? 'Add or replace document' : 'Add documents'}
+                    </button>
+                    <p className="mt-1 text-xs text-hub-muted">
+                      New files are saved when you click Save changes.
+                    </p>
+                  </div>
+                  {newFiles.length > 0 ? (
+                    <ul className="space-y-1 text-sm">
+                      {newFiles.map((f, index) => (
+                        <li
+                          key={`${f.name}-${f.size}-${f.lastModified}`}
+                          className="flex items-center gap-2 text-emerald-900"
+                        >
+                          <i className="bi bi-file-earmark-plus" aria-hidden />
+                          <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                          <button
+                            type="button"
+                            className="text-xs text-slate-600 underline"
+                            onClick={() => setNewFiles((prev) => prev.filter((_, i) => i !== index))}
+                          >
+                            Undo
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ) : null}
 

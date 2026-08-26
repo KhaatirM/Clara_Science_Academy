@@ -468,6 +468,9 @@ export function CreateGroupPdfAssignmentPage() {
               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
               onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
             />
+            <p className="mt-1 text-xs text-slate-500">
+              File attaches when you create the assignment.
+            </p>
             {attachment ? <p className="mt-2 text-sm text-slate-600">{attachment.name}</p> : null}
           </FormSection>
 

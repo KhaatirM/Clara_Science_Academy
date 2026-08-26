@@ -1,4 +1,4 @@
-"""Class notes SPA helpers: folders/units and file uploads."""
+"""Class notes SPA helpers: nested folders/units and file uploads."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from typing import Any
 
 from flask import current_app, send_from_directory
 from flask_login import current_user
+from sqlalchemy import inspect, text
 from werkzeug.utils import secure_filename
 
 from extensions import db
@@ -22,13 +23,33 @@ from utils.class_notes_media import (
 )
 from utils.user_roles import user_has_management_entry_access
 
+NOTES_MAX_FOLDER_DEPTH = 3
+
 
 def ensure_class_notes_tables() -> None:
     try:
         ClassNotesFolder.__table__.create(db.engine, checkfirst=True)
         ClassNotesItem.__table__.create(db.engine, checkfirst=True)
+        _ensure_parent_id_column()
     except Exception:
         current_app.logger.exception('Could not ensure class notes tables')
+
+
+def _ensure_parent_id_column() -> None:
+    try:
+        insp = inspect(db.engine)
+        cols = {c['name'] for c in insp.get_columns('class_notes_folder')}
+        if 'parent_id' in cols:
+            return
+        with db.engine.begin() as conn:
+            conn.execute(
+                text(
+                    'ALTER TABLE class_notes_folder '
+                    'ADD COLUMN parent_id INTEGER REFERENCES class_notes_folder(id)'
+                )
+            )
+    except Exception:
+        current_app.logger.exception('Could not add class_notes_folder.parent_id')
 
 
 def _notes_upload_dir() -> str:
@@ -77,6 +98,34 @@ def _delete_item_file(item: ClassNotesItem) -> None:
         pass
 
 
+def _folder_depth(folder: ClassNotesFolder | None) -> int:
+    depth = 0
+    seen: set[int] = set()
+    cur = folder
+    while cur is not None:
+        depth += 1
+        if cur.id in seen:
+            break
+        seen.add(cur.id)
+        cur = cur.parent
+    return depth
+
+
+def _would_cycle(folder: ClassNotesFolder, new_parent_id: int | None) -> bool:
+    if new_parent_id is None:
+        return False
+    if new_parent_id == folder.id:
+        return True
+    cur = ClassNotesFolder.query.get(new_parent_id)
+    seen = {folder.id}
+    while cur is not None:
+        if cur.id in seen:
+            return True
+        seen.add(cur.id)
+        cur = cur.parent
+    return False
+
+
 def _serialize_item(item: ClassNotesItem) -> dict[str, Any]:
     return {
         'id': item.id,
@@ -94,22 +143,49 @@ def _serialize_item(item: ClassNotesItem) -> dict[str, Any]:
     }
 
 
-def _serialize_folder(folder: ClassNotesFolder) -> dict[str, Any]:
+def _serialize_folder_node(
+    folder: ClassNotesFolder,
+    children_by_parent: dict[int | None, list[ClassNotesFolder]],
+) -> dict[str, Any]:
     folder_items = sorted(
         folder.items or [],
         key=lambda i: i.uploaded_at or datetime.min,
         reverse=True,
     )
     items = [_serialize_item(i) for i in folder_items]
+    kids = children_by_parent.get(folder.id, [])
     return {
         'id': folder.id,
+        'parent_id': folder.parent_id,
         'name': folder.name,
         'description': folder.description or '',
         'sort_order': folder.sort_order or 0,
+        'depth': _folder_depth(folder),
         'item_count': len(items),
         'items': items,
+        'children': [_serialize_folder_node(c, children_by_parent) for c in kids],
         'created_at': folder.created_at.isoformat() if folder.created_at else None,
     }
+
+
+def _build_folder_tree(folders: list[ClassNotesFolder]) -> list[dict[str, Any]]:
+    by_parent: dict[int | None, list[ClassNotesFolder]] = {}
+    for f in folders:
+        by_parent.setdefault(f.parent_id, []).append(f)
+    for kids in by_parent.values():
+        kids.sort(key=lambda x: (x.sort_order or 0, (x.name or '').lower()))
+    roots = by_parent.get(None, [])
+    return [_serialize_folder_node(f, by_parent) for f in roots]
+
+
+def _flatten_folders(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for node in nodes:
+        children = node.get('children') or []
+        flat = {k: v for k, v in node.items() if k != 'children'}
+        out.append(flat)
+        out.extend(_flatten_folders(children))
+    return out
 
 
 def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str | None, int]:
@@ -126,6 +202,7 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
         .order_by(ClassNotesFolder.sort_order.asc(), ClassNotesFolder.name.asc())
         .all()
     )
+    tree = _build_folder_tree(folders)
     root_items = (
         ClassNotesItem.query.filter_by(class_id=class_id, folder_id=None)
         .order_by(ClassNotesItem.uploaded_at.desc())
@@ -137,37 +214,57 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
             'name': class_obj.name,
             'subject': class_obj.subject,
         },
-        'folders': [_serialize_folder(f) for f in folders],
+        'folders': tree,
+        'folders_flat': _flatten_folders(tree),
         'root_items': [_serialize_item(i) for i in root_items],
         'can_manage': can_manage,
         'allowed_extensions': sorted(NOTES_ALLOWED_EXTENSIONS),
         'max_video_seconds': NOTES_MAX_VIDEO_SECONDS,
+        'max_folder_depth': NOTES_MAX_FOLDER_DEPTH,
     }, None, 200
 
 
 def create_class_notes_folder(
-    class_id: int, *, name: str, description: str | None = None
+    class_id: int,
+    *,
+    name: str,
+    description: str | None = None,
+    parent_id: int | None = None,
 ) -> tuple[dict[str, Any] | None, str | None, int]:
     ensure_class_notes_tables()
     class_obj = Class.query.get(class_id)
     if not class_obj:
         return None, 'Class not found', 404
     if not _user_can_manage_class_notes(class_obj):
-        return None, 'Only teachers and administrators can create units.', 403
+        return None, 'Only teachers and administrators can create folders.', 403
 
     clean_name = (name or '').strip()
     if not clean_name:
-        return None, 'Unit name is required.', 400
+        return None, 'Folder name is required.', 400
     if len(clean_name) > 200:
-        return None, 'Unit name is too long.', 400
+        return None, 'Folder name is too long.', 400
+
+    parent = None
+    if parent_id is not None:
+        parent = ClassNotesFolder.query.filter_by(id=parent_id, class_id=class_id).first()
+        if not parent:
+            return None, 'Parent folder not found.', 404
+        if _folder_depth(parent) >= NOTES_MAX_FOLDER_DEPTH:
+            return (
+                None,
+                f'Folders can only nest {NOTES_MAX_FOLDER_DEPTH} levels deep '
+                '(Unit → Lesson → materials).',
+                400,
+            )
 
     max_order = (
         db.session.query(db.func.max(ClassNotesFolder.sort_order))
-        .filter_by(class_id=class_id)
+        .filter_by(class_id=class_id, parent_id=parent_id)
         .scalar()
     )
     folder = ClassNotesFolder(
         class_id=class_id,
+        parent_id=parent_id,
         name=clean_name,
         description=(description or '').strip() or None,
         sort_order=(max_order or 0) + 1,
@@ -178,8 +275,8 @@ def create_class_notes_folder(
     payload, _, _ = get_class_notes_payload(class_id)
     return {
         'success': True,
-        'message': 'Unit created.',
-        'folder': _serialize_folder(folder),
+        'message': 'Folder created.',
+        'folder_id': folder.id,
         **(payload or {}),
     }, None, 201
 
@@ -190,33 +287,78 @@ def update_class_notes_folder(
     *,
     name: str | None = None,
     description: str | None = None,
+    parent_id: int | None | object = ...,
 ) -> tuple[dict[str, Any] | None, str | None, int]:
     ensure_class_notes_tables()
     class_obj = Class.query.get(class_id)
     if not class_obj:
         return None, 'Class not found', 404
     if not _user_can_manage_class_notes(class_obj):
-        return None, 'Only teachers and administrators can edit units.', 403
+        return None, 'Only teachers and administrators can edit folders.', 403
 
     folder = ClassNotesFolder.query.filter_by(id=folder_id, class_id=class_id).first()
     if not folder:
-        return None, 'Unit not found', 404
+        return None, 'Folder not found', 404
 
     if name is not None:
         clean_name = name.strip()
         if not clean_name:
-            return None, 'Unit name is required.', 400
+            return None, 'Folder name is required.', 400
         folder.name = clean_name
     if description is not None:
         folder.description = description.strip() or None
+
+    if parent_id is not ...:
+        new_parent_id = parent_id
+        if new_parent_id is not None:
+            new_parent = ClassNotesFolder.query.filter_by(
+                id=int(new_parent_id), class_id=class_id
+            ).first()
+            if not new_parent:
+                return None, 'Parent folder not found.', 404
+            if _would_cycle(folder, int(new_parent_id)):
+                return None, 'Cannot move a folder into itself or a descendant.', 400
+            # Depth of moved folder subtree: current depth relative + new parent depth
+            subtree_height = 1
+
+            def _height(node: ClassNotesFolder) -> int:
+                kids = ClassNotesFolder.query.filter_by(
+                    class_id=class_id, parent_id=node.id
+                ).all()
+                if not kids:
+                    return 1
+                return 1 + max(_height(k) for k in kids)
+
+            subtree_height = _height(folder)
+            if _folder_depth(new_parent) + subtree_height > NOTES_MAX_FOLDER_DEPTH:
+                return (
+                    None,
+                    f'Move would exceed the {NOTES_MAX_FOLDER_DEPTH}-level folder limit.',
+                    400,
+                )
+            folder.parent_id = int(new_parent_id)
+        else:
+            folder.parent_id = None
+
     folder.updated_at = datetime.utcnow()
     db.session.commit()
     payload, _, _ = get_class_notes_payload(class_id)
     return {
         'success': True,
-        'message': 'Unit updated.',
+        'message': 'Folder updated.',
         **(payload or {}),
     }, None, 200
+
+
+def _delete_folder_recursive(folder: ClassNotesFolder) -> None:
+    children = ClassNotesFolder.query.filter_by(
+        class_id=folder.class_id, parent_id=folder.id
+    ).all()
+    for child in children:
+        _delete_folder_recursive(child)
+    for item in list(folder.items or []):
+        _delete_item_file(item)
+    db.session.delete(folder)
 
 
 def delete_class_notes_folder(
@@ -227,20 +369,18 @@ def delete_class_notes_folder(
     if not class_obj:
         return None, 'Class not found', 404
     if not _user_can_manage_class_notes(class_obj):
-        return None, 'Only teachers and administrators can remove units.', 403
+        return None, 'Only teachers and administrators can remove folders.', 403
 
     folder = ClassNotesFolder.query.filter_by(id=folder_id, class_id=class_id).first()
     if not folder:
-        return None, 'Unit not found', 404
+        return None, 'Folder not found', 404
 
-    for item in list(folder.items or []):
-        _delete_item_file(item)
-    db.session.delete(folder)
+    _delete_folder_recursive(folder)
     db.session.commit()
     payload, _, _ = get_class_notes_payload(class_id)
     return {
         'success': True,
-        'message': 'Unit removed.',
+        'message': 'Folder removed.',
         **(payload or {}),
     }, None, 200
 
@@ -270,7 +410,7 @@ def upload_class_notes_item(
     if folder_id is not None:
         folder = ClassNotesFolder.query.filter_by(id=folder_id, class_id=class_id).first()
         if not folder:
-            return None, 'Unit not found', 404
+            return None, 'Folder not found', 404
 
     upload_dir = _notes_upload_dir()
     stored = f"class_{class_id}_{uuid.uuid4().hex[:12]}.{ext}"
@@ -329,7 +469,6 @@ def upload_class_notes_item(
     )
     db.session.add(item)
     db.session.commit()
-
     payload, _, _ = get_class_notes_payload(class_id)
     return {
         'success': True,
@@ -337,6 +476,63 @@ def upload_class_notes_item(
         'item': _serialize_item(item),
         **(payload or {}),
     }, None, 201
+
+
+def upload_class_notes_items_bulk(
+    class_id: int,
+    file_storages: list,
+    *,
+    folder_id: int | None = None,
+) -> tuple[dict[str, Any] | None, str | None, int]:
+    ensure_class_notes_tables()
+    class_obj = Class.query.get(class_id)
+    if not class_obj:
+        return None, 'Class not found', 404
+    if not _user_can_manage_class_notes(class_obj):
+        return None, 'Only teachers and administrators can upload class notes.', 403
+    if folder_id is not None:
+        folder = ClassNotesFolder.query.filter_by(id=folder_id, class_id=class_id).first()
+        if not folder:
+            return None, 'Folder not found', 404
+
+    named = [f for f in file_storages if f and getattr(f, 'filename', None)]
+    if not named:
+        return None, 'Choose at least one file to upload.', 400
+
+    results: list[dict[str, Any]] = []
+    ok_count = 0
+    for file_storage in named:
+        item_payload, err, status = upload_class_notes_item(
+            class_id,
+            file_storage,
+            folder_id=folder_id,
+        )
+        if err:
+            results.append(
+                {
+                    'ok': False,
+                    'filename': getattr(file_storage, 'filename', None),
+                    'error': err,
+                    'status': status,
+                }
+            )
+        else:
+            ok_count += 1
+            results.append(
+                {
+                    'ok': True,
+                    'filename': getattr(file_storage, 'filename', None),
+                    'item': (item_payload or {}).get('item'),
+                }
+            )
+
+    payload, _, _ = get_class_notes_payload(class_id)
+    return {
+        'success': ok_count > 0,
+        'message': f'Uploaded {ok_count} of {len(named)} file(s).',
+        'results': results,
+        **(payload or {}),
+    }, None, 200 if ok_count > 0 else 400
 
 
 def delete_class_notes_item(
@@ -347,7 +543,7 @@ def delete_class_notes_item(
     if not class_obj:
         return None, 'Class not found', 404
     if not _user_can_manage_class_notes(class_obj):
-        return None, 'Only teachers and administrators can remove notes.', 403
+        return None, 'Only teachers and administrators can remove files.', 403
 
     item = ClassNotesItem.query.filter_by(id=item_id, class_id=class_id).first()
     if not item:
@@ -376,18 +572,21 @@ def download_class_notes_item(class_id: int, item_id: int):
     if not item:
         return None, 'File not found', 404
 
-    directory = _notes_upload_dir()
-    if not os.path.isfile(os.path.join(directory, item.stored_filename)):
-        return None, 'File missing on server.', 404
-
-    as_attachment = item.media_kind != 'video'
-    return (
-        send_from_directory(
-            directory,
-            item.stored_filename,
-            as_attachment=as_attachment,
-            download_name=item.original_filename,
-        ),
-        None,
-        200,
+    root = current_app.config.get('UPLOAD_FOLDER') or os.path.join(
+        current_app.root_path, 'static', 'uploads'
     )
+    directory = os.path.join(root, 'class_notes')
+    as_attachment = item.media_kind != 'video'
+    try:
+        return (
+            send_from_directory(
+                directory,
+                item.stored_filename,
+                as_attachment=as_attachment,
+                download_name=item.original_filename,
+            ),
+            None,
+            200,
+        )
+    except Exception:
+        return None, 'File missing on disk', 404

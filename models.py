@@ -3425,12 +3425,15 @@ class ClassSyllabus(db.Model):
 
 
 class ClassNotesFolder(db.Model):
-    """Teacher-created unit/folder inside class notes."""
+    """Teacher-created unit/folder inside class notes (nested up to 3 levels)."""
 
     __tablename__ = 'class_notes_folder'
 
     id = db.Column(db.Integer, primary_key=True)
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False, index=True)
+    parent_id = db.Column(
+        db.Integer, db.ForeignKey('class_notes_folder.id'), nullable=True, index=True
+    )
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
@@ -3440,6 +3443,11 @@ class ClassNotesFolder(db.Model):
 
     class_info = db.relationship('Class', back_populates='notes_folders')
     created_by = db.relationship('User', foreign_keys=[created_by_user_id])
+    parent = db.relationship(
+        'ClassNotesFolder',
+        remote_side=[id],
+        backref=db.backref('children', cascade='all, delete-orphan'),
+    )
     items = db.relationship(
         'ClassNotesItem',
         back_populates='folder',

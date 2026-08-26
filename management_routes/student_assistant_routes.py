@@ -1458,7 +1458,7 @@ def assistant_save_group_assignment(class_id):
                 file.save(filepath)
                 new_assignment.attachment_filename = unique_filename
                 new_assignment.attachment_original_filename = filename
-                new_assignment.attachment_file_path = filepath
+                new_assignment.attachment_file_path = os.path.join('group_assignments', unique_filename)
                 new_assignment.attachment_file_size = os.path.getsize(filepath)
                 new_assignment.attachment_mime_type = file.content_type
 

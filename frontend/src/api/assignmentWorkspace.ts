@@ -329,13 +329,37 @@ export async function saveAssignmentEdit(
   isGroup: boolean,
   body: Record<string, unknown>,
   scope: AssignmentWorkspaceScope = 'management',
+  files: File[] = [],
+  removeAttachmentIds: number[] = [],
 ) {
   const path = isGroup
     ? `${assignmentWorkspaceApiBase(scope)}/group/${assignmentId}/edit`
     : `${assignmentWorkspaceApiBase(scope)}/individual/${assignmentId}/edit`
+
+  const form = new FormData()
+  for (const [key, value] of Object.entries(body)) {
+    if (value === null || value === undefined) continue
+    if (typeof value === 'object') {
+      form.append(key, JSON.stringify(value))
+    } else if (typeof value === 'boolean') {
+      form.append(key, value ? 'true' : 'false')
+    } else {
+      form.append(key, String(value))
+    }
+  }
+  for (const id of removeAttachmentIds) {
+    form.append('remove_attachment_ids', String(id))
+  }
+  if (isGroup && removeAttachmentIds.length > 0) {
+    form.append('clear_attachment', 'true')
+  }
+  for (const file of files) {
+    form.append('assignment_files', file)
+  }
+
   return apiFetch<{ success: boolean; message: string }>(path, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: form,
   })
 }
 

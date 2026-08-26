@@ -562,22 +562,36 @@ def save_group_assignment(class_id):
         # Handle file upload
         if 'assignment_file' in request.files:
             file = request.files['assignment_file']
-            if file and file.filename and allowed_file(file.filename):
+            if file and file.filename:
+                if not allowed_file(file.filename):
+                    db.session.rollback()
+                    flash(
+                        'File type not allowed. Allowed: pdf, doc, docx, txt, jpg, jpeg, png, gif, xls, xlsx, ppt, pptx',
+                        'danger',
+                    )
+                    admin_view = request.args.get('admin_view') == 'true'
+                    return redirect(
+                        url_for(
+                            'teacher.groups.create_group_assignment',
+                            class_id=class_id,
+                            admin_view=admin_view,
+                        )
+                    )
                 filename = secure_filename(file.filename)
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
                 unique_filename = timestamp + filename
-                
+
                 upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'group_assignments')
                 os.makedirs(upload_dir, exist_ok=True)
                 filepath = os.path.join(upload_dir, unique_filename)
                 file.save(filepath)
-                
+
                 new_assignment.attachment_filename = unique_filename
                 new_assignment.attachment_original_filename = filename
-                new_assignment.attachment_file_path = filepath
+                new_assignment.attachment_file_path = os.path.join('group_assignments', unique_filename)
                 new_assignment.attachment_file_size = os.path.getsize(filepath)
                 new_assignment.attachment_mime_type = file.content_type
-        
+
         db.session.commit()
         flash(f"Group assignment '{title}' created successfully for {len(selected_groups)} group(s)!", "success")
         

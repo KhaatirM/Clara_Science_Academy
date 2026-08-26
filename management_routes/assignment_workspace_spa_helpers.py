@@ -13,6 +13,7 @@ from sqlalchemy.orm import joinedload
 from extensions import db
 from models import (
     Assignment,
+    AssignmentAttachment,
     AssignmentExtension,
     Grade,
     GroupAssignment,
@@ -1292,6 +1293,16 @@ def query_group_assignment_edit(assignment_id: int) -> dict[str, Any]:
         "late_penalty_per_day": float(ga.late_penalty_per_day or 0),
         "late_penalty_max_days": int(ga.late_penalty_max_days or 0),
         "allow_individual": bool(ga.allow_individual),
+        "attachments": (
+            [
+                {
+                    "id": None,
+                    "name": ga.attachment_original_filename or ga.attachment_filename,
+                }
+            ]
+            if ga.attachment_filename
+            else []
+        ),
     }
 
 
@@ -1299,9 +1310,191 @@ def _parse_edit_datetime(raw: str | None):
     if not raw or not str(raw).strip():
         return None
     from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
-    from utils.timezone_utils import get_school_timezone_name
+    from utils.school_timezone import get_school_timezone_name
 
     return parse_form_datetime_as_school_tz(str(raw).strip(), get_school_timezone_name())
+
+
+def _truthy_form_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "on", "yes"}
+
+
+def _coerce_remove_attachment_ids(raw) -> list[int]:
+    ids: list[int] = []
+    if raw is None:
+        return ids
+    if isinstance(raw, list):
+        values = raw
+    else:
+        values = str(raw).split(",")
+    for item in values:
+        try:
+            ids.append(int(str(item).strip()))
+        except (TypeError, ValueError):
+            continue
+    return ids
+
+
+def _delete_attachment_file(att: AssignmentAttachment) -> None:
+    import os
+
+    from flask import current_app
+
+    upload = current_app.config["UPLOAD_FOLDER"]
+    candidates = []
+    if att.attachment_file_path:
+        candidates.append(att.attachment_file_path)
+        candidates.append(os.path.join(upload, att.attachment_file_path))
+    if att.attachment_filename:
+        candidates.append(os.path.join(upload, "assignments", att.attachment_filename))
+        candidates.append(os.path.join(upload, att.attachment_filename))
+    for path in candidates:
+        try:
+            if path and os.path.isfile(path):
+                os.remove(path)
+        except OSError:
+            pass
+
+
+def _apply_individual_attachment_updates(assignment: Assignment, body: dict[str, Any]) -> str | None:
+    """Remove selected attachments and/or append new uploads. Returns error message or None."""
+    import os
+    from datetime import datetime
+
+    from flask import current_app, request
+    from werkzeug.utils import secure_filename
+
+    from management_routes.utils import ALLOWED_EXTENSIONS, allowed_file
+
+    remove_ids = set(_coerce_remove_attachment_ids(body.get("remove_attachment_ids")))
+    if remove_ids:
+        for att in list(assignment.attachment_list or []):
+            if att.id in remove_ids:
+                _delete_attachment_file(att)
+                db.session.delete(att)
+        db.session.flush()
+        remaining = (
+            AssignmentAttachment.query.filter_by(assignment_id=assignment.id)
+            .order_by(AssignmentAttachment.sort_order, AssignmentAttachment.id)
+            .all()
+        )
+        if remaining:
+            first = remaining[0]
+            assignment.attachment_filename = first.attachment_filename
+            assignment.attachment_original_filename = first.attachment_original_filename
+            assignment.attachment_file_path = first.attachment_file_path
+            assignment.attachment_file_size = first.attachment_file_size
+            assignment.attachment_mime_type = first.attachment_mime_type
+        else:
+            assignment.attachment_filename = None
+            assignment.attachment_original_filename = None
+            assignment.attachment_file_path = None
+            assignment.attachment_file_size = None
+            assignment.attachment_mime_type = None
+
+    files = request.files.getlist("assignment_files") if request.files else []
+    if not files or not (files[0] and files[0].filename):
+        single = request.files.get("assignment_file") if request.files else None
+        files = [single] if single and single.filename else []
+    named = [f for f in files if f and f.filename]
+    if not named:
+        return None
+
+    upload_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], "assignments")
+    os.makedirs(upload_dir, exist_ok=True)
+    existing_count = AssignmentAttachment.query.filter_by(assignment_id=assignment.id).count()
+    for idx, file in enumerate(named):
+        if not allowed_file(file.filename):
+            return f'File type not allowed. Allowed types are: {", ".join(sorted(ALLOWED_EXTENSIONS))}'
+        filename = secure_filename(file.filename)
+        unique_filename = (
+            f"assignment_{assignment.class_id}_{assignment.id}_"
+            f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{existing_count + idx}_{filename}"
+        )
+        filepath = os.path.join(upload_dir, unique_filename)
+        file.save(filepath)
+        rel = os.path.join("assignments", unique_filename)
+        att = AssignmentAttachment(
+            assignment_id=assignment.id,
+            attachment_filename=unique_filename,
+            attachment_original_filename=filename,
+            attachment_file_path=rel,
+            attachment_file_size=os.path.getsize(filepath),
+            attachment_mime_type=file.content_type or None,
+            sort_order=existing_count + idx,
+        )
+        db.session.add(att)
+        if existing_count + idx == 0 or not assignment.attachment_filename:
+            assignment.attachment_filename = unique_filename
+            assignment.attachment_original_filename = filename
+            assignment.attachment_file_path = rel
+            assignment.attachment_file_size = os.path.getsize(filepath)
+            assignment.attachment_mime_type = file.content_type
+    return None
+
+
+def _apply_group_attachment_updates(ga: GroupAssignment, body: dict[str, Any]) -> str | None:
+    import os
+    from datetime import datetime
+
+    from flask import current_app, request
+    from werkzeug.utils import secure_filename
+
+    from management_routes.utils import ALLOWED_EXTENSIONS, allowed_file
+
+    clear_attachment = _truthy_form_bool(body.get("clear_attachment")) or (
+        "remove_attachment_ids" in body and body.get("remove_attachment_ids") not in (None, "", [])
+    )
+    if clear_attachment and ga.attachment_filename:
+        upload = current_app.config["UPLOAD_FOLDER"]
+        for path in (
+            ga.attachment_file_path,
+            os.path.join(upload, ga.attachment_file_path) if ga.attachment_file_path else None,
+            os.path.join(upload, "group_assignments", ga.attachment_filename),
+            os.path.join(upload, ga.attachment_filename),
+        ):
+            try:
+                if path and os.path.isfile(path):
+                    os.remove(path)
+            except OSError:
+                pass
+        ga.attachment_filename = None
+        ga.attachment_original_filename = None
+        ga.attachment_file_path = None
+        ga.attachment_file_size = None
+        ga.attachment_mime_type = None
+
+    file = None
+    if request.files:
+        files = request.files.getlist("assignment_files") or []
+        if files and files[0] and files[0].filename:
+            file = files[0]
+        else:
+            file = request.files.get("assignment_file") or request.files.get("attachment")
+    if not file or not file.filename:
+        return None
+    if not allowed_file(file.filename):
+        return f'File type not allowed. Allowed types are: {", ".join(sorted(ALLOWED_EXTENSIONS))}'
+
+    filename = secure_filename(file.filename)
+    unique_filename = (
+        f"group_assignment_{ga.class_id}_{ga.id}_"
+        f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+    )
+    upload_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], "group_assignments")
+    os.makedirs(upload_dir, exist_ok=True)
+    abs_path = os.path.join(upload_dir, unique_filename)
+    file.save(abs_path)
+    ga.attachment_filename = unique_filename
+    ga.attachment_original_filename = filename
+    ga.attachment_file_path = os.path.join("group_assignments", unique_filename)
+    ga.attachment_file_size = os.path.getsize(abs_path)
+    ga.attachment_mime_type = file.content_type
+    return None
 
 
 def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) -> dict[str, Any]:
@@ -1339,14 +1532,14 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
     except (TypeError, ValueError):
         pass
     assignment.total_points = total_points
-    assignment.allow_extra_credit = bool(body.get("allow_extra_credit"))
+    assignment.allow_extra_credit = _truthy_form_bool(body.get("allow_extra_credit"))
     try:
         assignment.max_extra_credit_points = float(body.get("max_extra_credit_points") or 0)
     except (TypeError, ValueError):
         assignment.max_extra_credit_points = 0.0
     if not assignment.allow_extra_credit:
         assignment.max_extra_credit_points = 0.0
-    assignment.late_penalty_enabled = bool(body.get("late_penalty_enabled"))
+    assignment.late_penalty_enabled = _truthy_form_bool(body.get("late_penalty_enabled"))
     try:
         assignment.late_penalty_per_day = float(body.get("late_penalty_per_day") or 0)
         assignment.late_penalty_max_days = int(body.get("late_penalty_max_days") or 0)
@@ -1361,7 +1554,7 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
     assignment.open_date = open_date
     assignment.close_date = close_date
 
-    if body.get("status_revert_enabled") and body.get("status_override_until"):
+    if _truthy_form_bool(body.get("status_revert_enabled")) and body.get("status_override_until"):
         override_until = _parse_edit_datetime(body.get("status_override_until"))
         if override_until:
             assignment.status_override = status
@@ -1372,6 +1565,19 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
     else:
         assignment.status_override = None
         assignment.status_override_until = None
+
+    quiz_raw = body.get("quiz")
+    if isinstance(quiz_raw, str) and quiz_raw.strip():
+        try:
+            body["quiz"] = json.loads(quiz_raw)
+        except json.JSONDecodeError:
+            body["quiz"] = None
+    discussion_raw = body.get("discussion")
+    if isinstance(discussion_raw, str) and discussion_raw.strip():
+        try:
+            body["discussion"] = json.loads(discussion_raw)
+        except json.JSONDecodeError:
+            body["discussion"] = None
 
     atype = (assignment.assignment_type or "pdf").lower()
     if atype == "quiz" and isinstance(body.get("quiz"), dict):
@@ -1394,6 +1600,11 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
             pass
     if atype == "discussion" and isinstance(body.get("discussion"), dict):
         assignment.allow_student_edit_posts = bool(body["discussion"].get("allow_student_edit_posts"))
+
+    attach_err = _apply_individual_attachment_updates(assignment, body)
+    if attach_err:
+        db.session.rollback()
+        return {"success": False, "message": attach_err}
 
     try:
         db.session.commit()
@@ -1426,15 +1637,20 @@ def save_group_assignment_edit(assignment_id: int, body: dict[str, Any]) -> dict
         ga.total_points = float(body.get("total_points") or ga.total_points or 100)
     except (TypeError, ValueError):
         pass
-    ga.allow_extra_credit = bool(body.get("allow_extra_credit"))
+    ga.allow_extra_credit = _truthy_form_bool(body.get("allow_extra_credit"))
     try:
         ga.max_extra_credit_points = float(body.get("max_extra_credit_points") or 0)
     except (TypeError, ValueError):
         ga.max_extra_credit_points = 0.0
-    ga.late_penalty_enabled = bool(body.get("late_penalty_enabled"))
-    ga.allow_individual = bool(body.get("allow_individual"))
+    ga.late_penalty_enabled = _truthy_form_bool(body.get("late_penalty_enabled"))
+    ga.allow_individual = _truthy_form_bool(body.get("allow_individual"))
     ga.open_date = _parse_edit_datetime(body.get("open_date"))
     ga.close_date = _parse_edit_datetime(body.get("close_date"))
+
+    attach_err = _apply_group_attachment_updates(ga, body)
+    if attach_err:
+        db.session.rollback()
+        return {"success": False, "message": attach_err}
 
     try:
         db.session.commit()

@@ -211,7 +211,11 @@ def group_assignment_edit_meta(assignment_id: int):
 @permissions_required("assignments_grades:manage")
 def individual_assignment_edit(assignment_id: int):
     if request.method == "POST":
-        body = request.get_json(silent=True) or {}
+        if request.content_type and "multipart/form-data" in request.content_type:
+            body = request.form.to_dict(flat=True)
+            body["remove_attachment_ids"] = request.form.getlist("remove_attachment_ids")
+        else:
+            body = request.get_json(silent=True) or {}
         result = save_individual_assignment_edit(assignment_id, body)
         status = 200 if result.get("success") else 400
         return jsonify(result), status
@@ -223,7 +227,11 @@ def individual_assignment_edit(assignment_id: int):
 @permissions_required("assignments_grades:manage")
 def group_assignment_edit(assignment_id: int):
     if request.method == "POST":
-        body = request.get_json(silent=True) or {}
+        if request.content_type and "multipart/form-data" in request.content_type:
+            body = request.form.to_dict(flat=True)
+            body["remove_attachment_ids"] = request.form.getlist("remove_attachment_ids")
+        else:
+            body = request.get_json(silent=True) or {}
         result = save_group_assignment_edit(assignment_id, body)
         status = 200 if result.get("success") else 400
         return jsonify(result), status

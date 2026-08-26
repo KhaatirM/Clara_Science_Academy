@@ -189,9 +189,22 @@ def add_assignment_for_class(class_id):
                 single = request.files.get('assignment_file')
                 if single and single.filename:
                     files_to_save = [single]
-            for idx, file in enumerate(files_to_save):
-                if not file or not file.filename or not allowed_file(file.filename):
-                    continue
+            named_uploads = [f for f in files_to_save if f and f.filename]
+            saved_count = 0
+            for idx, file in enumerate(named_uploads):
+                if not allowed_file(file.filename):
+                    db.session.rollback()
+                    current_app.logger.warning(
+                        "Rejected assignment upload %s (disallowed type)",
+                        file.filename,
+                    )
+                    return create_form_err(
+                        'File type not allowed. Allowed types are: '
+                        'pdf, doc, docx, txt, jpg, jpeg, png, gif, xls, xlsx, ppt, pptx',
+                        redirect_target=url_for(
+                            'teacher.assignments.add_assignment_for_class', class_id=class_id
+                        ),
+                    )
                 filename = secure_filename(file.filename)
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
                 unique_filename = timestamp + f"{idx}_{filename}"
@@ -209,12 +222,22 @@ def add_assignment_for_class(class_id):
                     sort_order=idx,
                 )
                 db.session.add(att)
+                saved_count += 1
                 if idx == 0:
                     new_assignment.attachment_filename = unique_filename
                     new_assignment.attachment_original_filename = filename
                     new_assignment.attachment_file_path = attachment_file_path_stored
                     new_assignment.attachment_file_size = os.path.getsize(filepath)
                     new_assignment.attachment_mime_type = file.content_type
+
+            if named_uploads and saved_count == 0:
+                db.session.rollback()
+                return create_form_err(
+                    'No files could be saved. Check file types and try again.',
+                    redirect_target=url_for(
+                        'teacher.assignments.add_assignment_for_class', class_id=class_id
+                    ),
+                )
 
             db.session.commit()
             return create_form_ok(

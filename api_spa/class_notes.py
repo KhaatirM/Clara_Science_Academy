@@ -13,6 +13,7 @@ from management_routes.class_notes_spa_helpers import (
     get_class_notes_payload,
     update_class_notes_folder,
     upload_class_notes_item,
+    upload_class_notes_items_bulk,
 )
 
 from . import spa_api_blueprint
@@ -31,10 +32,18 @@ def spa_class_notes_get(class_id: int):
 @login_required
 def spa_class_notes_folder_create(class_id: int):
     body = request.get_json(silent=True) or {}
+    parent_raw = body.get('parent_id')
+    parent_id = None
+    if parent_raw not in (None, '', 'null', 'undefined'):
+        try:
+            parent_id = int(parent_raw)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid parent folder id.'}), 400
     payload, error, status = create_class_notes_folder(
         class_id,
         name=str(body.get('name') or ''),
         description=body.get('description'),
+        parent_id=parent_id,
     )
     if error:
         return jsonify({'error': error}), status
@@ -45,12 +54,20 @@ def spa_class_notes_folder_create(class_id: int):
 @login_required
 def spa_class_notes_folder_update(class_id: int, folder_id: int):
     body = request.get_json(silent=True) or {}
-    payload, error, status = update_class_notes_folder(
-        class_id,
-        folder_id,
-        name=body.get('name'),
-        description=body.get('description'),
-    )
+    kwargs: dict = {
+        'name': body.get('name'),
+        'description': body.get('description'),
+    }
+    if 'parent_id' in body:
+        parent_raw = body.get('parent_id')
+        if parent_raw in (None, '', 'null', 'undefined'):
+            kwargs['parent_id'] = None
+        else:
+            try:
+                kwargs['parent_id'] = int(parent_raw)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid parent folder id.'}), 400
+    payload, error, status = update_class_notes_folder(class_id, folder_id, **kwargs)
     if error:
         return jsonify({'error': error}), status
     return jsonify(payload), status
@@ -75,7 +92,7 @@ def spa_class_notes_item_upload(class_id: int):
         try:
             folder_id = int(folder_raw)
         except (TypeError, ValueError):
-            return jsonify({'error': 'Invalid unit id.'}), 400
+            return jsonify({'error': 'Invalid folder id.'}), 400
 
     duration = None
     duration_raw = request.form.get('duration_seconds')
@@ -94,6 +111,25 @@ def spa_class_notes_item_upload(class_id: int):
     )
     if error:
         return jsonify({'error': error}), status
+    return jsonify(payload), status
+
+
+@spa_api_blueprint.route('/classes/<int:class_id>/notes/items/bulk', methods=['POST'])
+@login_required
+def spa_class_notes_items_bulk(class_id: int):
+    files = request.files.getlist('files') or request.files.getlist('file')
+    folder_raw = request.form.get('folder_id')
+    folder_id = None
+    if folder_raw not in (None, '', 'null', 'undefined'):
+        try:
+            folder_id = int(folder_raw)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid folder id.'}), 400
+    payload, error, status = upload_class_notes_items_bulk(
+        class_id, files, folder_id=folder_id
+    )
+    if error:
+        return jsonify({'error': error, **(payload or {})}), status
     return jsonify(payload), status
 
 

@@ -50,7 +50,7 @@ from utils.attendance_status import (
     attendance_status_form_value,
     count_class_attendance_stats,
 )
-from .utils import allowed_file
+from .utils import allowed_file, ALLOWED_EXTENSIONS
 from services.class_google_group import try_provision_class_google_group
 from utils.user_roles import user_has_management_entry_access
 
@@ -2971,21 +2971,33 @@ def admin_create_group_pdf_assignment(class_id):
         
         if 'attachment' in request.files:
             file = request.files['attachment']
-            if file and file.filename and allowed_file(file.filename):
+            if file and file.filename:
+                if not allowed_file(file.filename):
+                    return create_form_err(
+                        f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}',
+                        redirect_target=url_for(
+                            'management.classes.admin_create_group_pdf_assignment',
+                            class_id=class_id,
+                        ),
+                    )
                 filename = secure_filename(file.filename)
                 timestamp = str(int(time.time()))
                 attachment_filename = f"group_assignment_{effective_class_id}_{timestamp}_{filename}"
                 attachment_original_filename = file.filename
-                
-                # Create uploads directory if it doesn't exist (use UPLOAD_FOLDER for consistency)
-                upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', current_app.static_folder or ''), 'group_assignments')
+
+                upload_dir = os.path.join(
+                    current_app.config.get('UPLOAD_FOLDER', current_app.static_folder or ''),
+                    'group_assignments',
+                )
                 os.makedirs(upload_dir, exist_ok=True)
-                
-                attachment_file_path = os.path.join(upload_dir, attachment_filename)
-                file.save(attachment_file_path)
-                attachment_file_size = os.path.getsize(attachment_file_path)
+
+                abs_path = os.path.join(upload_dir, attachment_filename)
+                file.save(abs_path)
+                # Relative path so files resolve after redeploys
+                attachment_file_path = os.path.join('group_assignments', attachment_filename)
+                attachment_file_size = os.path.getsize(abs_path)
                 attachment_mime_type = file.content_type
-        
+
         # Handle group selection
         group_selection = request.form.get('group_selection', 'all')
         selected_groups = request.form.getlist('selected_groups')

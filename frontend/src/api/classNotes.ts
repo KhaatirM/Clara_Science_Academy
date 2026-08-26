@@ -7,7 +7,7 @@ export async function fetchClassNotes(classId: number) {
 
 export async function createClassNotesFolder(
   classId: number,
-  body: { name: string; description?: string },
+  body: { name: string; description?: string; parent_id?: number | null },
 ) {
   return apiFetch<ClassNotesResponse>(`/api/spa/classes/${classId}/notes/folders`, {
     method: 'POST',
@@ -18,7 +18,7 @@ export async function createClassNotesFolder(
 export async function updateClassNotesFolder(
   classId: number,
   folderId: number,
-  body: { name?: string; description?: string },
+  body: { name?: string; description?: string; parent_id?: number | null },
 ) {
   return apiFetch<ClassNotesResponse>(`/api/spa/classes/${classId}/notes/folders/${folderId}`, {
     method: 'PATCH',
@@ -61,6 +61,36 @@ export async function uploadClassNotesItem(
     message?: string
   }
   if (!response.ok) {
+    throw new Error(data.error || data.message || `Upload failed (${response.status})`)
+  }
+  return data
+}
+
+export async function uploadClassNotesItemsBulk(
+  classId: number,
+  files: File[],
+  opts?: { folderId?: number | null },
+) {
+  const body = new FormData()
+  for (const file of files) body.append('files', file)
+  if (opts?.folderId != null) body.append('folder_id', String(opts.folderId))
+
+  const headers = new Headers()
+  const csrf = getCsrfToken()
+  if (csrf) headers.set('X-CSRFToken', csrf)
+
+  const response = await fetch(`/api/spa/classes/${classId}/notes/items/bulk`, {
+    method: 'POST',
+    body,
+    headers,
+    credentials: 'same-origin',
+    cache: 'no-store',
+  })
+  const data = (await response.json().catch(() => ({}))) as ClassNotesResponse & {
+    error?: string
+    message?: string
+  }
+  if (!response.ok && !data.results?.length) {
     throw new Error(data.error || data.message || `Upload failed (${response.status})`)
   }
   return data

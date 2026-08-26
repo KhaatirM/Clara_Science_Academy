@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug25_2026_v9'
+const SESSION_KEY = 'spaUpdateModalShownAug26_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
+    title: 'Assignment file picker & edit parity',
+    body: 'Click-to-browse for PDF/paper create and edit now works the same way as Class Notes. The edit popup shows open/close dates, category weight, and advanced grading options with dates in school time.',
+  },
+  {
     title: 'Assignment documents on edit & create',
-    body: 'Edit assignment now lets you add or remove PDFs and other files. Creating a PDF/paper assignment attaches selected files when you submit, with clearer errors if a file type is rejected.',
+    body: 'Edit assignment lets you add or remove PDFs and other files. Creating a PDF/paper assignment attaches selected files when you submit, with clearer errors if a file type is rejected.',
   },
   {
     title: 'Class Notes: nested folders & bulk upload',
     body: 'Organize notes as Unit → Lesson → Homework/Slides (up to 3 levels). Upload multiple files at once with drag-and-drop into the selected folder.',
   },
   {
-    title: 'School timezone on attendance & calendars',
-    body: 'Attendance, dashboards, schedules, and calendar “today” now use Eastern school time instead of the server clock. Evening attendance and date defaults should match what you see in the sidebar.',
-  },
-  {
-    title: 'Year GPA waits until Q1 release',
-    body: 'Roster GPA and academic-concerns alerts stay quiet until official Q1 grades are released. Students list shows No Data until then; staff see a short note explaining the wait.',
+    title: 'School timezone & Q1 GPA gate',
+    body: 'Attendance and calendars use Eastern school time. Roster GPA and academic-concerns alerts wait until official Q1 grades are released.',
   },
 ]
 
@@ -26,10 +26,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.516.3'
-  const releaseLabel = version?.release_label || 'August 25, 2026'
+  const display = version?.display || 'v 2.516.4'
+  const releaseLabel = version?.release_label || 'August 26, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2692
+  const updatesEstimate = version?.updates_estimate ?? 2693
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

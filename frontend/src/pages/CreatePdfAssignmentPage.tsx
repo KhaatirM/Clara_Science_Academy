@@ -144,7 +144,6 @@ export function CreatePdfAssignmentPage() {
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index))
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const openFilePicker = () => fileInputRef.current?.click()
@@ -153,6 +152,10 @@ export function CreatePdfAssignmentPage() {
     e.preventDefault()
     if (!meta) return
     setFormError(null)
+    if (!lockedClass && classIds.length === 0) {
+      setFormError('Select at least one class.')
+      return
+    }
     setSubmitting(true)
     try {
       const form = new FormData()
@@ -389,6 +392,14 @@ export function CreatePdfAssignmentPage() {
           </FormSection>
 
           <FormSection title="Assignment Files" icon="bi-cloud-upload" tone="success">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
+              onChange={(e) => onFileChange(e.target.files)}
+            />
             <div
               role="button"
               tabIndex={0}
@@ -430,17 +441,6 @@ export function CreatePdfAssignmentPage() {
                   : 'border-emerald-300 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50'
               }`}
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="sr-only"
-                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
-                onChange={(e) => {
-                  onFileChange(e.target.files)
-                  e.target.value = ''
-                }}
-              />
               <div
                 className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm ring-1 transition ${
                   dragOver

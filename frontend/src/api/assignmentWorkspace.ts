@@ -356,6 +356,8 @@ export async function saveAssignmentEdit(
   for (const file of files) {
     form.append('assignment_files', file)
   }
+  const csrf = getCsrfToken()
+  if (csrf) form.append('csrf_token', csrf)
 
   return apiFetch<{ success: boolean; message: string }>(path, {
     method: 'POST',

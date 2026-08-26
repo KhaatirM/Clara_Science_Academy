@@ -4,16 +4,31 @@ import {
   saveAssignmentEdit,
   type AssignmentEditForm,
 } from '../../api/assignmentWorkspace'
+import { isPdfPaperAssignmentType } from '../../utils/assignmentTypes'
+import { isoToSchoolDatetimeLocal } from '../../utils/schoolTimezone'
 
-const CATEGORIES = ['', 'Homework', 'Tests', 'Quizzes', 'Projects', 'Classwork', 'Participation', 'Extra Credit', 'Other']
+/** Same options as create PDF/paper (+ Classwork for older records). */
+const CATEGORIES = [
+  '',
+  'Homework',
+  'Tests',
+  'Quizzes',
+  'Projects',
+  'Labs',
+  'Classwork',
+  'Participation',
+  'Extra Credit',
+  'Other',
+]
 const STATUSES = ['Active', 'Inactive', 'Upcoming', 'Voided']
 
-function isoToDatetimeLocal(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+function normalizeQuarter(raw: string | null | undefined): string {
+  const q = String(raw || '1').trim().toUpperCase()
+  if (q === 'Q1' || q === '1') return '1'
+  if (q === 'Q2' || q === '2') return '2'
+  if (q === 'Q3' || q === '3') return '3'
+  if (q === 'Q4' || q === '4') return '4'
+  return '1'
 }
 
 function inputClass() {
@@ -41,6 +56,7 @@ export function EditAssignmentModal({
   onClose: () => void
   onSaved: (message: string) => void
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<AssignmentEditForm | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -48,21 +64,33 @@ export function EditAssignmentModal({
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [removeIds, setRemoveIds] = useState<number[]>([])
   const [clearGroupAttachment, setClearGroupAttachment] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchAssignmentEditForm(assignmentId, isGroup)
+      const data = await fetchAssignmentEditForm(assignmentId, isGroup, 'management')
+      const category = data.assignment_category || ''
       setForm({
         ...data,
-        due_date: isoToDatetimeLocal(data.due_date) || data.due_date || '',
-        open_date: data.open_date ? isoToDatetimeLocal(data.open_date) : '',
-        close_date: data.close_date ? isoToDatetimeLocal(data.close_date) : '',
-        status_override_until: data.status_override_until
-          ? isoToDatetimeLocal(data.status_override_until)
-          : '',
+        title: data.title || '',
+        description: data.description || '',
+        due_date: isoToSchoolDatetimeLocal(data.due_date) || '',
+        open_date: isoToSchoolDatetimeLocal(data.open_date) || '',
+        close_date: isoToSchoolDatetimeLocal(data.close_date) || '',
+        quarter: normalizeQuarter(data.quarter),
+        status: data.status || 'Active',
+        assignment_context: data.assignment_context || 'homework',
+        assignment_category: CATEGORIES.includes(category) ? category : category,
+        category_weight: data.category_weight ?? 0,
+        total_points: data.total_points ?? 100,
+        allow_extra_credit: Boolean(data.allow_extra_credit),
+        max_extra_credit_points: data.max_extra_credit_points ?? 0,
+        late_penalty_enabled: Boolean(data.late_penalty_enabled),
+        late_penalty_per_day: data.late_penalty_per_day ?? 0,
+        late_penalty_max_days: data.late_penalty_max_days ?? 0,
+        status_override_until: isoToSchoolDatetimeLocal(data.status_override_until) || '',
+        attachments: data.attachments || [],
       })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load assignment')
@@ -85,9 +113,7 @@ export function EditAssignmentModal({
   if (!open) return null
 
   const typeLabel = (form?.assignment_type || 'assignment').replace(/_/g, ' ')
-  const isPdfLike =
-    !form?.assignment_type ||
-    ['pdf', 'pdf_paper', 'paper'].includes(String(form.assignment_type).toLowerCase())
+  const isPdfLike = isPdfPaperAssignmentType(form?.assignment_type)
 
   async function handleSave() {
     if (!form) return
@@ -153,7 +179,17 @@ export function EditAssignmentModal({
 
   function onPickFiles(list: FileList | null) {
     if (!list?.length) return
-    setNewFiles((prev) => [...prev, ...Array.from(list)])
+    const picked = Array.from(list)
+    setNewFiles((prev) => {
+      const next = [...prev]
+      for (const file of picked) {
+        const exists = next.some(
+          (f) => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified,
+        )
+        if (!exists) next.push(file)
+      }
+      return next
+    })
   }
 
   return (
@@ -208,6 +244,7 @@ export function EditAssignmentModal({
                     value={form.due_date}
                     onChange={(e) => patch({ due_date: e.target.value })}
                     className={inputClass()}
+                    min="2020-01-01T00:00"
                   />
                 </div>
                 <div>
@@ -224,6 +261,28 @@ export function EditAssignmentModal({
                       </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <FieldLabel htmlFor="edit-open">Open date</FieldLabel>
+                  <input
+                    id="edit-open"
+                    type="datetime-local"
+                    value={form.open_date || ''}
+                    onChange={(e) => patch({ open_date: e.target.value })}
+                    className={inputClass()}
+                    min="2020-01-01T00:00"
+                  />
+                </div>
+                <div>
+                  <FieldLabel htmlFor="edit-close">Close date</FieldLabel>
+                  <input
+                    id="edit-close"
+                    type="datetime-local"
+                    value={form.close_date || ''}
+                    onChange={(e) => patch({ close_date: e.target.value })}
+                    className={inputClass()}
+                    min="2020-01-01T00:00"
+                  />
                 </div>
                 <div>
                   <FieldLabel htmlFor="edit-status">Status</FieldLabel>
@@ -257,7 +316,7 @@ export function EditAssignmentModal({
                   <input
                     id="edit-points"
                     type="number"
-                    min={1}
+                    min={0.1}
                     step="0.1"
                     value={form.total_points}
                     onChange={(e) => patch({ total_points: Number(e.target.value) })}
@@ -274,16 +333,57 @@ export function EditAssignmentModal({
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c || 'none'} value={c}>
-                        {c || 'None'}
+                        {c || 'None (Uncategorized)'}
                       </option>
                     ))}
+                    {form.assignment_category && !CATEGORIES.includes(form.assignment_category) ? (
+                      <option value={form.assignment_category}>{form.assignment_category}</option>
+                    ) : null}
                   </select>
+                </div>
+                <div>
+                  <FieldLabel htmlFor="edit-category-weight">Category weight (%)</FieldLabel>
+                  <input
+                    id="edit-category-weight"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    value={form.category_weight ?? 0}
+                    onChange={(e) => patch({ category_weight: Number(e.target.value) })}
+                    className={inputClass()}
+                  />
                 </div>
               </div>
 
               {isPdfLike ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Documents</p>
+                  {newFiles.length > 0 ? (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-2">
+                      <p className="mb-2 text-xs font-semibold text-emerald-900">
+                        Ready to attach ({newFiles.length})
+                      </p>
+                      <ul className="space-y-1 text-sm">
+                        {newFiles.map((f, index) => (
+                          <li
+                            key={`${f.name}-${f.size}-${f.lastModified}`}
+                            className="flex items-center gap-2 text-emerald-900"
+                          >
+                            <i className="bi bi-file-earmark-plus shrink-0" aria-hidden />
+                            <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs text-slate-600 underline"
+                              onClick={() => setNewFiles((prev) => prev.filter((_, i) => i !== index))}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   {(form.attachments || []).length > 0 ? (
                     <ul className="space-y-2 text-sm text-hub-text">
                       {form.attachments!.map((a, idx) => (
@@ -320,46 +420,84 @@ export function EditAssignmentModal({
                       ref={fileInputRef}
                       type="file"
                       multiple={!isGroup}
-                      className="sr-only"
+                      className="hidden"
                       accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
-                      onChange={(e) => {
-                        onPickFiles(e.target.files)
-                        e.target.value = ''
-                      }}
+                      onChange={(e) => onPickFiles(e.target.files)}
                     />
                     <button
                       type="button"
-                      className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800"
+                      className="inline-flex rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {isGroup ? 'Add or replace document' : 'Add documents'}
                     </button>
                     <p className="mt-1 text-xs text-hub-muted">
-                      New files are saved when you click Save changes.
+                      Selected files appear above. They are uploaded when you click Save changes.
                     </p>
                   </div>
-                  {newFiles.length > 0 ? (
-                    <ul className="space-y-1 text-sm">
-                      {newFiles.map((f, index) => (
-                        <li
-                          key={`${f.name}-${f.size}-${f.lastModified}`}
-                          className="flex items-center gap-2 text-emerald-900"
-                        >
-                          <i className="bi bi-file-earmark-plus" aria-hidden />
-                          <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                          <button
-                            type="button"
-                            className="text-xs text-slate-600 underline"
-                            onClick={() => setNewFiles((prev) => prev.filter((_, i) => i !== index))}
-                          >
-                            Undo
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
                 </div>
               ) : null}
+
+              <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Advanced grading</p>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.allow_extra_credit)}
+                    onChange={(e) => patch({ allow_extra_credit: e.target.checked })}
+                  />
+                  Allow extra credit
+                </label>
+                <div>
+                  <FieldLabel htmlFor="edit-max-extra">Max extra credit points</FieldLabel>
+                  <input
+                    id="edit-max-extra"
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={form.max_extra_credit_points ?? 0}
+                    onChange={(e) => patch({ max_extra_credit_points: Number(e.target.value) })}
+                    className={inputClass()}
+                    disabled={!form.allow_extra_credit}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.late_penalty_enabled)}
+                    onChange={(e) => patch({ late_penalty_enabled: e.target.checked })}
+                  />
+                  Enable late penalty
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel htmlFor="edit-late-per-day">Penalty per day (%)</FieldLabel>
+                    <input
+                      id="edit-late-per-day"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      value={form.late_penalty_per_day ?? 0}
+                      onChange={(e) => patch({ late_penalty_per_day: Number(e.target.value) })}
+                      className={inputClass()}
+                      disabled={!form.late_penalty_enabled}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel htmlFor="edit-late-max-days">Max days (0 = unlimited)</FieldLabel>
+                    <input
+                      id="edit-late-max-days"
+                      type="number"
+                      min={0}
+                      value={form.late_penalty_max_days ?? 0}
+                      onChange={(e) => patch({ late_penalty_max_days: Number(e.target.value) })}
+                      className={inputClass()}
+                      disabled={!form.late_penalty_enabled}
+                    />
+                  </div>
+                </div>
+              </div>
 
               {form.assignment_type === 'quiz' && form.quiz ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 space-y-3">
@@ -407,9 +545,6 @@ export function EditAssignmentModal({
                       }
                     />
                     Shuffle questions
-                    <span className="mt-0.5 block text-xs font-normal text-slate-500">
-                      Within each section
-                    </span>
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -447,15 +582,6 @@ export function EditAssignmentModal({
                   Allow individual submissions
                 </label>
               ) : null}
-
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={Boolean(form.allow_extra_credit)}
-                  onChange={(e) => patch({ allow_extra_credit: e.target.checked })}
-                />
-                Allow extra credit
-              </label>
             </div>
           ) : null}
         </div>

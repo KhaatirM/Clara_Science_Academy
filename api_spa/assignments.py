@@ -42,6 +42,18 @@ from management_routes.assignment_workspace_spa_helpers import (
 from . import spa_api_blueprint
 
 
+def _parse_assignment_edit_body() -> dict:
+    """Parse JSON or multipart form bodies for assignment edit saves."""
+    content_type = (request.content_type or "").lower()
+    if request.files or "multipart/form-data" in content_type:
+        body = request.form.to_dict(flat=True)
+        remove_ids = request.form.getlist("remove_attachment_ids")
+        if remove_ids:
+            body["remove_attachment_ids"] = remove_ids
+        return body
+    return request.get_json(silent=True) or {}
+
+
 def _assignments_meta() -> dict:
     return {"can_manage": user_can_manage_assignments_and_grades(current_user)}
 
@@ -211,11 +223,7 @@ def group_assignment_edit_meta(assignment_id: int):
 @permissions_required("assignments_grades:manage")
 def individual_assignment_edit(assignment_id: int):
     if request.method == "POST":
-        if request.content_type and "multipart/form-data" in request.content_type:
-            body = request.form.to_dict(flat=True)
-            body["remove_attachment_ids"] = request.form.getlist("remove_attachment_ids")
-        else:
-            body = request.get_json(silent=True) or {}
+        body = _parse_assignment_edit_body()
         result = save_individual_assignment_edit(assignment_id, body)
         status = 200 if result.get("success") else 400
         return jsonify(result), status
@@ -227,11 +235,7 @@ def individual_assignment_edit(assignment_id: int):
 @permissions_required("assignments_grades:manage")
 def group_assignment_edit(assignment_id: int):
     if request.method == "POST":
-        if request.content_type and "multipart/form-data" in request.content_type:
-            body = request.form.to_dict(flat=True)
-            body["remove_attachment_ids"] = request.form.getlist("remove_attachment_ids")
-        else:
-            body = request.get_json(silent=True) or {}
+        body = _parse_assignment_edit_body()
         result = save_group_assignment_edit(assignment_id, body)
         status = 200 if result.get("success") else 400
         return jsonify(result), status

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Student assistant console restored',
+    body: 'Student assistants can open the class assistant workspace again (attendance, grading, and assignment proposals). Templates removed during the SPA cutover are back.',
+  },
   {
     title: 'Teacher home dashboard fix',
     body: 'Fixed a server error that blocked the teacher home page from loading student/class summary stats after login.',
@@ -16,20 +20,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Assignment documents on edit & create',
     body: 'Edit assignment lets you add or remove PDFs and other files. Creating a PDF/paper assignment attaches selected files when you submit, with clearer errors if a file type is rejected.',
   },
-  {
-    title: 'Class Notes: nested folders & bulk upload',
-    body: 'Organize notes as Unit → Lesson → Homework/Slides (up to 3 levels). Upload multiple files at once with drag-and-drop into the selected folder.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.516.5'
+  const display = version?.display || 'v 2.516.6'
   const releaseLabel = version?.release_label || 'August 27, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2694
+  const updatesEstimate = version?.updates_estimate ?? 2695
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

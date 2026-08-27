@@ -167,15 +167,19 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 27, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) fixes the <strong>teacher home dashboard</strong> crash after login, and keeps recent assignment upload/edit and Class Notes improvements.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) restores the <strong>student assistant console</strong>, fixes the <strong>teacher home dashboard</strong> crash, and keeps recent assignment upload/edit improvements.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- August 27, 2026 - teacher home -->
+                    <!-- August 27, 2026 - student assistant + teacher home -->
                     <div class="update-section mb-4">
-                        <h6 class="mb-3"><i class="bi bi-house-door me-2"></i>Teacher Portal – August 27, 2026</h6>
+                        <h6 class="mb-3"><i class="bi bi-person-badge me-2"></i>Student Assistant &amp; Teacher Portal – August 27, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student assistant console:</strong> Restored hub/console templates removed during the SPA cutover so assistants can open class workspaces again (attendance, grading, proposals).
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Teacher home fix:</strong> Restored the missing Student import so the teacher dashboard home API loads class and roster summary stats again.
@@ -2021,11 +2025,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug27_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownAug27_2026_v2', 'true');
         }, 500);
     }
 });

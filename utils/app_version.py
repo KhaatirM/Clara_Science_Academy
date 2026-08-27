@@ -13,13 +13,13 @@ VERSION_ORIGIN = "0.0.0"
 # Current public portal version (2 = mature era; 516 = tech users, devices, active-year pickers).
 VERSION_MAJOR = 2
 VERSION_MINOR = 516
-VERSION_PATCH = 5
+VERSION_PATCH = 6
 
 APP_VERSION = f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
 APP_VERSION_DISPLAY = f"v {APP_VERSION}"
 
 # Rough count of changelog entries / shipped improvements across project history.
-ESTIMATED_UPDATE_COUNT = 2694
+ESTIMATED_UPDATE_COUNT = 2695
 
 RELEASE_LABEL = "August 27, 2026"
 PRODUCT_NAME = "Clara Science Academy Portal"

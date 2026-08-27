@@ -16,6 +16,8 @@ export interface BellPeriodDto {
 export interface BellScheduleDto {
   id: number
   school_year_id: number
+  grade_level: number | null
+  grade_label?: string
   title: string
   is_active: boolean
   periods: BellPeriodDto[]

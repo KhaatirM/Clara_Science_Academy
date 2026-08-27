@@ -76,7 +76,15 @@ def build_student_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
                 cells.append(cell_items)
             grid_rows.append({"time_label": row.get("time_label") or "", "cells": cells})
 
-        bell_grid = build_bell_grid_for_classes(classes, role="student")
+        student = Student.query.get(sid)
+        student_grade = getattr(student, "grade_level", None) if student else None
+        try:
+            student_grade = int(student_grade) if student_grade is not None else None
+        except (TypeError, ValueError):
+            student_grade = None
+        bell_grid = build_bell_grid_for_classes(
+            classes, role="student", grade_level=student_grade
+        )
         return {
             "days": days,
             "grid_rows": grid_rows,

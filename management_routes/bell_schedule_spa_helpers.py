@@ -17,14 +17,28 @@ from utils.bell_schedule_pdf import render_bell_schedule_pdf
 from utils.school_year_filters import get_active_school_year
 
 
-def build_management_bell_schedule_payload() -> dict[str, Any]:
-    schedule = ensure_active_bell_schedule()
+def _parse_grade_arg(raw) -> int | None:
+    """None means school-wide (all grades)."""
+    if raw is None or raw == '' or str(raw).lower() in ('all', 'null', 'none'):
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('Invalid grade level') from exc
+
+
+def build_management_bell_schedule_payload(grade_level: int | None = None) -> dict[str, Any]:
+    schedule = ensure_active_bell_schedule(grade_level=grade_level)
     year = get_active_school_year()
     grades = available_grade_levels(school_year=year)
     return {
         'bell_schedule': serialize_bell_schedule(schedule),
         'school_year': {'id': year.id, 'name': year.name} if year else None,
-        'grades': [{'grade': g, 'label': grade_label(g)} for g in grades],
+        'selected_grade': grade_level,
+        'grades': [
+            {'grade': None, 'label': 'All grades'},
+            *[{'grade': g, 'label': grade_label(g)} for g in grades],
+        ],
         'kind_options': [
             {'value': 'class', 'label': 'Class period'},
             {'value': 'break', 'label': 'Break'},
@@ -46,12 +60,15 @@ def build_management_bell_schedule_payload() -> dict[str, Any]:
 
 
 def save_management_bell_schedule(body: dict[str, Any]) -> dict[str, Any]:
-    schedule = ensure_active_bell_schedule()
+    grade_level = _parse_grade_arg(body.get('grade_level'))
+    schedule = ensure_active_bell_schedule(grade_level=grade_level)
     if not schedule:
         raise ValueError('No active school year — create a school year first.')
     periods = body.get('periods')
     if not isinstance(periods, list):
         raise ValueError('periods must be a list')
+    # Keep grade pinned on the schedule row
+    schedule.grade_level = grade_level
     replace_bell_schedule_periods(
         schedule,
         title=body.get('title'),
@@ -60,6 +77,7 @@ def save_management_bell_schedule(body: dict[str, Any]) -> dict[str, Any]:
     return {
         'success': True,
         'bell_schedule': serialize_bell_schedule(schedule),
+        'selected_grade': grade_level,
         'message': 'Bell schedule saved.',
     }
 
@@ -67,7 +85,7 @@ def save_management_bell_schedule(body: dict[str, Any]) -> dict[str, Any]:
 def build_grade_master_grid(grade: int) -> dict[str, Any]:
     year = get_active_school_year()
     classes = classes_for_grade_level(grade, school_year=year)
-    grid = build_bell_grid_for_classes(classes, role='student')
+    grid = build_bell_grid_for_classes(classes, role='student', grade_level=grade)
     return {
         **grid,
         'grade': grade,

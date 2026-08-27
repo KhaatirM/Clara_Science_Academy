@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Schedule by grade + editor layout',
+    body: 'Management Schedule lets you pick which grade a bell schedule is for. Period color pickers no longer stretch off-screen.',
+  },
   {
     title: 'Bell schedule grids & PDF downloads',
     body: 'Student and teacher Schedule tabs show a color Mon–Fri period grid. Download a PDF of your personal schedule. Classes fill periods by matching meeting times.',
   },
   {
     title: 'Management Schedule tab',
-    body: 'School admins can edit the school-wide bell schedule (periods, days, times, colors) and download master schedule PDFs by grade level.',
+    body: 'School admins can edit school-wide or per-grade bell schedules (periods, days, times, colors) and download master schedule PDFs by grade level.',
   },
   {
     title: 'Student assistant console restored',
     body: 'Student assistants can open the class assistant workspace again (attendance, grading, and assignment proposals). Templates removed during the SPA cutover are back.',
-  },
-  {
-    title: 'Teacher home dashboard fix',
-    body: 'Fixed a server error that blocked the teacher home page from loading student/class summary stats after login.',
   },
 ]
 
@@ -26,10 +26,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.517.0'
+  const display = version?.display || 'v 2.517.1'
   const releaseLabel = version?.release_label || 'August 27, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2698
+  const updatesEstimate = version?.updates_estimate ?? 2700
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

@@ -24,53 +24,69 @@ export function ManagementSchedulePage() {
   const [hub, setHub] = useState<ManagementBellScheduleResponse | null>(null)
   const [title, setTitle] = useState('')
   const [periods, setPeriods] = useState<BellPeriodDto[]>([])
+  /** Grade this bell schedule belongs to (null = all grades). */
+  const [editGrade, setEditGrade] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
-  const [selectedGrade, setSelectedGrade] = useState<number | null>(null)
+  const [previewGrade, setPreviewGrade] = useState<number | null>(null)
   const [gradeGrid, setGradeGrid] = useState<
     (BellGridPayload & { grade_label?: string; class_count?: number }) | null
   >(null)
   const [gradeLoading, setGradeLoading] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchManagementBellSchedule()
-      setHub(data)
-      setTitle(data.bell_schedule?.title || 'Bell Schedule')
-      setPeriods(
-        (data.bell_schedule?.periods || []).map((p, idx) => ({
-          ...p,
-          sort_order: p.sort_order ?? idx,
-          days_of_week: p.days_of_week?.length ? p.days_of_week : [0, 1, 2, 3, 4],
-        })),
-      )
-      setSelectedGrade((prev) => {
-        if (prev != null) return prev
-        return data.grades.length ? data.grades[0].grade : null
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load schedule')
-    } finally {
-      setLoading(false)
-    }
+  const applyPayload = useCallback((data: ManagementBellScheduleResponse) => {
+    setHub(data)
+    setTitle(data.bell_schedule?.title || 'Bell Schedule')
+    setPeriods(
+      (data.bell_schedule?.periods || []).map((p, idx) => ({
+        ...p,
+        sort_order: p.sort_order ?? idx,
+        days_of_week: p.days_of_week?.length ? p.days_of_week : [0, 1, 2, 3, 4],
+      })),
+    )
+    const selected =
+      data.selected_grade !== undefined
+        ? data.selected_grade
+        : (data.bell_schedule?.grade_level ?? null)
+    setEditGrade(selected)
+  }, [])
+
+  const load = useCallback(
+    async (grade: number | null) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchManagementBellSchedule(grade)
+        applyPayload(data)
+        if (previewGrade == null) {
+          const firstNumeric = data.grades.find((g) => g.grade != null)?.grade ?? null
+          setPreviewGrade(firstNumeric)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load schedule')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [applyPayload, previewGrade],
+  )
+
+  useEffect(() => {
+    void load(null)
+    // initial school-wide / default
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
-
-  useEffect(() => {
-    if (selectedGrade == null) {
+    if (previewGrade == null) {
       setGradeGrid(null)
       return
     }
     let cancelled = false
     setGradeLoading(true)
-    void fetchGradeMasterSchedule(selectedGrade)
+    void fetchGradeMasterSchedule(previewGrade)
       .then((data) => {
         if (!cancelled) setGradeGrid(data)
       })
@@ -86,7 +102,13 @@ export function ManagementSchedulePage() {
     return () => {
       cancelled = true
     }
-  }, [selectedGrade])
+  }, [previewGrade])
+
+  async function onEditGradeChange(next: number | null) {
+    setFlash(null)
+    setEditGrade(next)
+    await load(next)
+  }
 
   async function onSave() {
     setSaving(true)
@@ -95,6 +117,7 @@ export function ManagementSchedulePage() {
     try {
       const payload = {
         title,
+        grade_level: editGrade,
         periods: periods.map((p, idx) => ({
           ...p,
           sort_order: idx,
@@ -106,10 +129,14 @@ export function ManagementSchedulePage() {
       if (result.bell_schedule) {
         setPeriods(result.bell_schedule.periods || [])
         setTitle(result.bell_schedule.title || title)
+        setEditGrade(
+          result.selected_grade !== undefined
+            ? result.selected_grade
+            : (result.bell_schedule.grade_level ?? null),
+        )
       }
-      // Refresh grade preview after save
-      if (selectedGrade != null) {
-        const grid = await fetchGradeMasterSchedule(selectedGrade)
+      if (previewGrade != null) {
+        const grid = await fetchGradeMasterSchedule(previewGrade)
         setGradeGrid(grid)
       }
     } catch (err) {
@@ -146,6 +173,11 @@ export function ManagementSchedulePage() {
     })
   }
 
+  const numericGrades = (hub?.grades || []).filter((g) => g.grade != null) as Array<{
+    grade: number
+    label: string
+  }>
+
   return (
     <ManagementPageShell>
       <div className="container-fluid px-0 px-md-1">
@@ -178,8 +210,30 @@ export function ManagementSchedulePage() {
             ) : null}
 
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-                <div className="min-w-[220px] flex-1">
+              <div className="mb-4 flex flex-wrap items-end gap-3">
+                <div className="min-w-[160px] flex-1 sm:max-w-xs">
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-hub-muted">
+                    Schedule is for
+                  </label>
+                  <select
+                    className="form-select"
+                    value={editGrade === null ? 'all' : String(editGrade)}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      void onEditGradeChange(v === 'all' ? null : Number(v))
+                    }}
+                  >
+                    {(hub?.grades || [{ grade: null, label: 'All grades' }]).map((g) => (
+                      <option
+                        key={g.grade === null ? 'all' : `g-${g.grade}`}
+                        value={g.grade === null ? 'all' : String(g.grade)}
+                      >
+                        {g.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-[220px] flex-[2]">
                   <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-hub-muted">
                     Schedule title
                   </label>
@@ -212,10 +266,10 @@ export function ManagementSchedulePage() {
                 {periods.map((period, index) => (
                   <div
                     key={`period-${index}`}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3"
                   >
-                    <div className="grid gap-2 md:grid-cols-12 md:items-end">
-                      <div className="md:col-span-3">
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="min-w-[8rem] flex-1 basis-[8rem]">
                         <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
                           Name
                         </label>
@@ -225,7 +279,7 @@ export function ManagementSchedulePage() {
                           onChange={(e) => updatePeriod(index, { name: e.target.value })}
                         />
                       </div>
-                      <div className="md:col-span-2">
+                      <div className="w-[8.5rem] shrink-0">
                         <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
                           Kind
                         </label>
@@ -241,7 +295,7 @@ export function ManagementSchedulePage() {
                           ))}
                         </select>
                       </div>
-                      <div className="md:col-span-2">
+                      <div className="w-[7.25rem] shrink-0">
                         <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
                           Start
                         </label>
@@ -252,7 +306,7 @@ export function ManagementSchedulePage() {
                           onChange={(e) => updatePeriod(index, { start_time: e.target.value })}
                         />
                       </div>
-                      <div className="md:col-span-2">
+                      <div className="w-[7.25rem] shrink-0">
                         <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
                           End
                         </label>
@@ -263,18 +317,19 @@ export function ManagementSchedulePage() {
                           onChange={(e) => updatePeriod(index, { end_time: e.target.value })}
                         />
                       </div>
-                      <div className="md:col-span-1">
+                      <div className="w-12 shrink-0">
                         <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
                           Color
                         </label>
                         <input
                           type="color"
-                          className="form-control form-control-sm form-control-color w-100"
+                          aria-label={`Color for ${period.name || 'period'}`}
+                          className="h-8 w-10 cursor-pointer rounded border border-slate-300 bg-white p-0.5"
                           value={period.color_hex || '#5B8DEE'}
                           onChange={(e) => updatePeriod(index, { color_hex: e.target.value })}
                         />
                       </div>
-                      <div className="flex gap-1 md:col-span-2 md:justify-end">
+                      <div className="ml-auto flex shrink-0 gap-1 pb-0.5">
                         <button
                           type="button"
                           className="btn btn-outline-secondary btn-sm"
@@ -327,7 +382,7 @@ export function ManagementSchedulePage() {
                 ))}
                 {periods.length === 0 ? (
                   <p className="mb-0 text-sm text-hub-muted">
-                    No periods yet. Click “Add period” or save after seeding from the server default.
+                    No periods yet. Click “Add period” or switch grade to load a seeded schedule.
                   </p>
                 ) : null}
               </div>
@@ -341,9 +396,9 @@ export function ManagementSchedulePage() {
                     Master schedule of all classes offered at that grade level
                   </p>
                 </div>
-                {selectedGrade != null ? (
+                {previewGrade != null ? (
                   <a
-                    href={gradeSchedulePdfUrl(selectedGrade)}
+                    href={gradeSchedulePdfUrl(previewGrade)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800"
@@ -354,20 +409,18 @@ export function ManagementSchedulePage() {
                 ) : null}
               </div>
 
-              {(hub?.grades || []).length === 0 ? (
-                <p className="mb-0 text-sm text-hub-muted">
-                  No grade levels found on active-year classes yet.
-                </p>
+              {numericGrades.length === 0 ? (
+                <p className="mb-0 text-sm text-hub-muted">No grade levels available.</p>
               ) : (
                 <div className="mb-4 flex flex-wrap gap-2">
-                  {hub!.grades.map((g) => (
+                  {numericGrades.map((g) => (
                     <button
                       key={g.grade}
                       type="button"
                       className={`btn btn-sm ${
-                        selectedGrade === g.grade ? 'btn-primary' : 'btn-outline-secondary'
+                        previewGrade === g.grade ? 'btn-primary' : 'btn-outline-secondary'
                       }`}
-                      onClick={() => setSelectedGrade(g.grade)}
+                      onClick={() => setPreviewGrade(g.grade)}
                     >
                       {g.label}
                     </button>

@@ -4,24 +4,37 @@ import type { BellGridPayload, BellPeriodDto, BellScheduleDto } from '../types/b
 export interface ManagementBellScheduleResponse {
   bell_schedule: BellScheduleDto | null
   school_year: { id: number; name: string } | null
-  grades: Array<{ grade: number; label: string }>
+  selected_grade: number | null
+  grades: Array<{ grade: number | null; label: string }>
   kind_options: Array<{ value: string; label: string }>
   weekday_options: Array<{ value: number; label: string }>
   links: { pdf_grade_template: string }
 }
 
-export async function fetchManagementBellSchedule() {
-  return apiFetch<ManagementBellScheduleResponse>('/api/spa/management/bell-schedule')
+export async function fetchManagementBellSchedule(grade?: number | null) {
+  const qs =
+    grade === undefined
+      ? ''
+      : grade === null
+        ? '?grade=all'
+        : `?grade=${grade}`
+  return apiFetch<ManagementBellScheduleResponse>(`/api/spa/management/bell-schedule${qs}`)
 }
 
 export async function saveManagementBellSchedule(payload: {
   title: string
+  grade_level: number | null
   periods: BellPeriodDto[]
 }) {
-  return apiFetch<{ success: boolean; message?: string; bell_schedule?: BellScheduleDto }>(
-    '/api/spa/management/bell-schedule',
-    { method: 'PUT', body: JSON.stringify(payload) },
-  )
+  return apiFetch<{
+    success: boolean
+    message?: string
+    bell_schedule?: BellScheduleDto
+    selected_grade?: number | null
+  }>('/api/spa/management/bell-schedule', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function fetchGradeMasterSchedule(grade: number) {

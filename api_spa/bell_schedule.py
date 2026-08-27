@@ -30,7 +30,13 @@ def spa_bell_schedule():
 @management_required
 @permissions_required("classes:manage")
 def management_bell_schedule_get():
-    return jsonify(build_management_bell_schedule_payload())
+    from management_routes.bell_schedule_spa_helpers import _parse_grade_arg
+
+    try:
+        grade = _parse_grade_arg(request.args.get("grade"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(build_management_bell_schedule_payload(grade))
 
 
 @spa_api_blueprint.route("/management/bell-schedule", methods=["PUT"])

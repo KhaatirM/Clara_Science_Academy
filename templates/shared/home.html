@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 27, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) adds configurable <strong>bell schedule grids</strong> with <strong>PDF downloads</strong> for students, teachers, and grade-level master schedules, plus earlier assistant console and teacher home fixes.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) adds per-grade bell schedules, fixes the schedule editor color overflow, and keeps PDF grids for students, teachers, and grade masters.</p>
                     </div>
                 </div>
                 
@@ -182,7 +182,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Management Schedule tab:</strong> Edit school-wide bell periods (days, times, colors) and print master schedules by grade level.
+                                <strong>Management Schedule tab:</strong> Edit school-wide or per-grade bell periods (days, times, colors) and print master schedules by grade level. Color pickers stay within the row.
                             </li>
                         </ul>
                     </div>
@@ -2039,11 +2039,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug27_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownAug27_2026_v4', 'true');
         }, 500);
     }
 });

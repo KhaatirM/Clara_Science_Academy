@@ -14,6 +14,19 @@ DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 WEEKDAYS = [0, 1, 2, 3, 4]
 
+
+def grade_label(grade: int) -> str:
+    if grade == 0:
+        return 'Kindergarten'
+    if grade == 1:
+        return '1st Grade'
+    if grade == 2:
+        return '2nd Grade'
+    if grade == 3:
+        return '3rd Grade'
+    return f'{grade}th Grade'
+
+
 # Default Clara-style block schedule (admin can edit).
 # Odd days Mon/Wed: 1,3,5,7; Even Tue/Thu: 2,4,6,8; Friday: all periods shorter.
 _ODD = [0, 2]
@@ -93,21 +106,89 @@ def _fmt_range(start: time, end: time) -> str:
     return f'{_fmt_time(start)} – {_fmt_time(end)}'
 
 
-def _title_for_year(school_year) -> str:
+def _title_for_year(school_year, grade_level: int | None = None) -> str:
     name = (getattr(school_year, 'name', None) or '').strip()
-    if name:
-        return f'{name} Bell Schedule'
-    return 'Bell Schedule'
+    base = f'{name} Bell Schedule' if name else 'Bell Schedule'
+    if grade_level is None:
+        return base
+    return f'{base} · {grade_label(grade_level)}'
 
 
-def ensure_active_bell_schedule(school_year=None) -> BellSchedule | None:
-    """Return the active bell schedule for the year, creating a seeded default if needed."""
+def _ensure_bell_schedule_grade_column() -> None:
+    """Add bell_schedule.grade_level if missing (SQLite / Postgres)."""
+    from sqlalchemy import inspect, text
+
+    try:
+        inspector = inspect(db.engine)
+        if 'bell_schedule' not in inspector.get_table_names():
+            return
+        cols = {c['name'] for c in inspector.get_columns('bell_schedule')}
+        if 'grade_level' in cols:
+            return
+        with db.engine.begin() as conn:
+            conn.execute(text('ALTER TABLE bell_schedule ADD COLUMN grade_level INTEGER'))
+    except Exception:
+        pass
+
+
+def ensure_active_bell_schedule(
+    school_year=None,
+    *,
+    grade_level: int | None = None,
+) -> BellSchedule | None:
+    """
+    Return the active bell schedule for the year (and optional grade).
+
+    Preference order when grade_level is set:
+      1) exact grade match
+      2) school-wide (grade_level NULL) — copy-seeded into a new grade schedule
+      3) create fresh seeded schedule for that grade
+    """
+    _ensure_bell_schedule_grade_column()
     school_year = school_year or get_active_school_year()
     if not school_year:
         return None
 
+    q = BellSchedule.query.filter_by(school_year_id=school_year.id, is_active=True)
+    if grade_level is None:
+        existing = (
+            q.filter(BellSchedule.grade_level.is_(None))
+            .order_by(BellSchedule.id.desc())
+            .first()
+        )
+        if not existing:
+            # Legacy rows may lack grade_level; prefer any active then pin as school-wide
+            existing = q.order_by(BellSchedule.id.asc()).first()
+            if existing and existing.grade_level is None:
+                pass
+            elif existing is None:
+                existing = (
+                    BellSchedule.query.filter_by(school_year_id=school_year.id)
+                    .order_by(BellSchedule.id.asc())
+                    .first()
+                )
+                if existing:
+                    existing.is_active = True
+        if existing:
+            if not existing.periods:
+                _seed_default_periods(existing)
+                db.session.commit()
+            return existing
+        schedule = BellSchedule(
+            school_year_id=school_year.id,
+            grade_level=None,
+            title=_title_for_year(school_year),
+            is_active=True,
+        )
+        db.session.add(schedule)
+        db.session.flush()
+        _seed_default_periods(schedule)
+        db.session.commit()
+        return schedule
+
+    # Specific grade
     existing = (
-        BellSchedule.query.filter_by(school_year_id=school_year.id, is_active=True)
+        q.filter_by(grade_level=grade_level)
         .order_by(BellSchedule.id.desc())
         .first()
     )
@@ -117,26 +198,31 @@ def ensure_active_bell_schedule(school_year=None) -> BellSchedule | None:
             db.session.commit()
         return existing
 
-    any_for_year = (
-        BellSchedule.query.filter_by(school_year_id=school_year.id)
-        .order_by(BellSchedule.id.desc())
-        .first()
-    )
-    if any_for_year:
-        any_for_year.is_active = True
-        if not any_for_year.periods:
-            _seed_default_periods(any_for_year)
-        db.session.commit()
-        return any_for_year
-
+    # Seed from school-wide template if present
+    template = ensure_active_bell_schedule(school_year, grade_level=None)
     schedule = BellSchedule(
         school_year_id=school_year.id,
-        title=_title_for_year(school_year),
+        grade_level=grade_level,
+        title=_title_for_year(school_year, grade_level),
         is_active=True,
     )
     db.session.add(schedule)
     db.session.flush()
-    _seed_default_periods(schedule)
+    if template and template.periods:
+        for src in sorted(template.periods, key=lambda p: (p.sort_order or 0, p.id or 0)):
+            period = BellPeriod(
+                bell_schedule_id=schedule.id,
+                name=src.name,
+                kind=src.kind,
+                start_time=src.start_time,
+                end_time=src.end_time,
+                color_hex=src.color_hex,
+                sort_order=src.sort_order,
+                days_of_week_json=src.days_of_week_json,
+            )
+            db.session.add(period)
+    else:
+        _seed_default_periods(schedule)
     db.session.commit()
     return schedule
 
@@ -178,9 +264,12 @@ def serialize_bell_schedule(schedule: BellSchedule | None) -> dict[str, Any] | N
     if not schedule:
         return None
     periods = sorted(schedule.periods or [], key=lambda p: (p.sort_order or 0, p.id or 0))
+    gl = schedule.grade_level
     return {
         'id': schedule.id,
         'school_year_id': schedule.school_year_id,
+        'grade_level': gl,
+        'grade_label': grade_label(gl) if gl is not None else 'All grades',
         'title': schedule.title or 'Bell Schedule',
         'is_active': bool(schedule.is_active),
         'periods': [serialize_period(p) for p in periods],
@@ -308,6 +397,7 @@ def build_bell_grid_for_classes(
     *,
     role: str = 'student',
     schedule: BellSchedule | None = None,
+    grade_level: int | None = None,
 ) -> dict[str, Any]:
     """
     Place classes onto the active bell schedule by weekday + time overlap.
@@ -319,7 +409,11 @@ def build_bell_grid_for_classes(
         unmapped: [...],
       }
     """
-    schedule = schedule or ensure_active_bell_schedule()
+    if schedule is None:
+        schedule = ensure_active_bell_schedule(grade_level=grade_level)
+        # Fall back to school-wide if grade-specific missing unexpectedly
+        if schedule is None and grade_level is not None:
+            schedule = ensure_active_bell_schedule(grade_level=None)
     now = get_school_now()
     today_weekday = now.weekday()  # Mon=0
     now_time = now.time()
@@ -447,8 +541,8 @@ def classes_for_grade_level(grade: int, *, school_year=None) -> list[Class]:
 def available_grade_levels(*, school_year=None) -> list[int]:
     school_year = school_year or get_active_school_year()
     if not school_year:
-        return []
-    grades: set[int] = set()
+        return list(range(0, 13))
+    grades: set[int] = set(range(0, 13))  # always offer K–12 for schedule editing
     classes = Class.query.filter_by(school_year_id=school_year.id, is_active=True).all()
     for class_obj in classes:
         for g in class_obj.get_grade_levels() or []:
@@ -458,14 +552,3 @@ def available_grade_levels(*, school_year=None) -> list[int]:
                 continue
     return sorted(grades)
 
-
-def grade_label(grade: int) -> str:
-    if grade == 0:
-        return 'Kindergarten'
-    if grade == 1:
-        return '1st Grade'
-    if grade == 2:
-        return '2nd Grade'
-    if grade == 3:
-        return '3rd Grade'
-    return f'{grade}th Grade'

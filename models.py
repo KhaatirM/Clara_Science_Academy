@@ -545,12 +545,14 @@ class SchoolBreak(db.Model):
 
 
 class BellSchedule(db.Model):
-    """School-wide bell / period schedule for a school year (Mon–Fri period grid)."""
+    """Bell / period schedule for a school year (optionally scoped to one grade)."""
 
     __tablename__ = 'bell_schedule'
 
     id = db.Column(db.Integer, primary_key=True)
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    # None = school-wide / all grades; otherwise K=0 … 12
+    grade_level = db.Column(db.Integer, nullable=True)
     title = db.Column(db.String(120), nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -565,7 +567,7 @@ class BellSchedule(db.Model):
     )
 
     def __repr__(self):
-        return f"BellSchedule('{self.title}', year={self.school_year_id})"
+        return f"BellSchedule('{self.title}', year={self.school_year_id}, grade={self.grade_level})"
 
 
 class BellPeriod(db.Model):

@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Bell schedule grids & PDF downloads',
+    body: 'Student and teacher Schedule tabs show a color Mon–Fri period grid. Download a PDF of your personal schedule. Classes fill periods by matching meeting times.',
+  },
+  {
+    title: 'Management Schedule tab',
+    body: 'School admins can edit the school-wide bell schedule (periods, days, times, colors) and download master schedule PDFs by grade level.',
+  },
   {
     title: 'Student assistant console restored',
     body: 'Student assistants can open the class assistant workspace again (attendance, grading, and assignment proposals). Templates removed during the SPA cutover are back.',
@@ -12,24 +20,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Teacher home dashboard fix',
     body: 'Fixed a server error that blocked the teacher home page from loading student/class summary stats after login.',
   },
-  {
-    title: 'Assignment file picker & edit parity',
-    body: 'Click-to-browse for PDF/paper create and edit now works the same way as Class Notes. The edit popup shows open/close dates, category weight, and advanced grading options with dates in school time.',
-  },
-  {
-    title: 'Assignment documents on edit & create',
-    body: 'Edit assignment lets you add or remove PDFs and other files. Creating a PDF/paper assignment attaches selected files when you submit, with clearer errors if a file type is rejected.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.516.6'
+  const display = version?.display || 'v 2.517.0'
   const releaseLabel = version?.release_label || 'August 27, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2695
+  const updatesEstimate = version?.updates_estimate ?? 2698
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

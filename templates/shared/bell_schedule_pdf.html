@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title }}</title>
+  <style>
+    @page {
+      size: landscape Letter;
+      margin: 0.45in;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      font-size: 9pt;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      font-size: 18pt;
+      margin: 0 0 4px;
+      letter-spacing: 0.02em;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 10pt;
+      color: #475569;
+      margin: 0 0 14px;
+    }
+    .grid {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 6px 0;
+    }
+    .grid th {
+      background: #0f766e;
+      color: #fff;
+      padding: 6px 4px;
+      font-size: 10pt;
+      border-radius: 4px 4px 0 0;
+    }
+    .grid td {
+      vertical-align: top;
+      width: 20%;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 0 0 4px 4px;
+      padding: 4px;
+    }
+    .cell {
+      border-radius: 4px;
+      padding: 5px 6px;
+      margin-bottom: 5px;
+      color: #0f172a;
+      page-break-inside: avoid;
+    }
+    .cell-name {
+      font-weight: 700;
+      font-size: 8.5pt;
+      line-height: 1.2;
+    }
+    .cell-time {
+      font-size: 7.5pt;
+      opacity: 0.9;
+      margin-top: 1px;
+    }
+    .cell-class {
+      font-size: 8pt;
+      margin-top: 3px;
+      line-height: 1.25;
+      font-weight: 600;
+    }
+    .cell-meta {
+      font-size: 7pt;
+      font-weight: 400;
+      opacity: 0.85;
+    }
+    .fixed-label {
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 8.5pt;
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+    .unmapped {
+      margin-top: 12px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 8px;
+      font-size: 8pt;
+    }
+    .unmapped h2 {
+      font-size: 10pt;
+      margin: 0 0 4px;
+    }
+    .unmapped li { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  {% if subtitle %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
+
+  <table class="grid">
+    <thead>
+      <tr>
+        {% for day in day_columns %}
+        <th>{{ day.day_name }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        {% for day in day_columns %}
+        <td>
+          {% for cell in day.cells %}
+          <div class="cell" style="background: {{ cell.color_hex }};">
+            {% if cell.kind != 'class' %}
+              <div class="fixed-label">{{ cell.name }}</div>
+              <div class="cell-time" style="text-align:center;">{{ cell.time_str }}</div>
+            {% else %}
+              <div class="cell-name">{{ cell.name }}</div>
+              <div class="cell-time">{{ cell.time_str }}</div>
+              {% if cell.classes %}
+                {% for c in cell.classes %}
+                <div class="cell-class">
+                  {{ c.class_name }}
+                  <div class="cell-meta">
+                    {% if c.room %}Rm {{ c.room }}{% endif %}
+                    {% if c.teacher_name %} · {{ c.teacher_name }}{% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="cell-meta" style="margin-top:4px;">—</div>
+              {% endif %}
+            {% endif %}
+          </div>
+          {% endfor %}
+        </td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+
+  {% if unmapped %}
+  <div class="unmapped">
+    <h2>Unmapped class times</h2>
+    <ul>
+      {% for u in unmapped %}
+      <li>{{ u.day_name }}: {{ u.class_name }} ({{ u.time_str }}){% if u.room %} · Rm {{ u.room }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</body>
+</html>

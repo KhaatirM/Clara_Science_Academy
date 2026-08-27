@@ -14,6 +14,7 @@ from teacher_routes.teacher_tabs_spa_helpers import (
     build_teacher_attendance_payload,
     build_teacher_calendar_payload,
     build_teacher_schedule_payload,
+    build_teacher_schedule_pdf,
     build_teacher_settings_payload,
     build_teacher_students_payload,
 )
@@ -205,6 +206,16 @@ def teacher_attendance_upload_csv(class_id: int):
 @teacher_required
 def teacher_schedule():
     return _teacher_json(build_teacher_schedule_payload)
+
+
+@spa_api_blueprint.route("/teacher/schedule.pdf")
+@login_required
+@teacher_required
+def teacher_schedule_pdf():
+    try:
+        return build_teacher_schedule_pdf()
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @spa_api_blueprint.route("/teacher/calendar")

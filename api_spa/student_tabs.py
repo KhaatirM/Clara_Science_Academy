@@ -12,6 +12,7 @@ from student_routes.tabs_spa_helpers import (
     build_student_calendar_payload,
     build_student_jobs_payload,
     build_student_schedule_payload,
+    build_student_schedule_pdf,
     build_student_settings_payload,
 )
 
@@ -26,6 +27,18 @@ def student_schedule():
     if error or not payload:
         return jsonify({"error": error or "Could not load schedule"}), 500
     return jsonify(payload)
+
+
+@spa_api_blueprint.route("/student/schedule.pdf")
+@login_required
+@student_required
+def student_schedule_pdf():
+    try:
+        return build_student_schedule_pdf()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @spa_api_blueprint.route("/student/calendar")

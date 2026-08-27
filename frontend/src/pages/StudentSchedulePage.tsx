@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchStudentSchedule } from '../api/studentTabs'
+import { BellScheduleGrid } from '../components/schedule/BellScheduleGrid'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { StudentScheduleResponse } from '../types/studentTabs'
 
@@ -9,6 +10,7 @@ function spaPath(href: string) {
 }
 
 export function StudentSchedulePage() {
+  const navigate = useNavigate()
   const [data, setData] = useState<StudentScheduleResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +57,15 @@ export function StudentSchedulePage() {
                 </div>
               </header>
 
-              {data.stats.total_blocks === 0 ? (
+              {data.bell_grid ? (
+                <BellScheduleGrid
+                  grid={data.bell_grid}
+                  pdfUrl={data.links.pdf || '/api/spa/student/schedule.pdf'}
+                  showTeacher
+                  compactListDays={data.days}
+                  onOpenClass={(href) => navigate(spaPath(href))}
+                />
+              ) : data.stats.total_blocks === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
                   <i className="bi bi-calendar-x mb-2 text-3xl text-hub-muted" aria-hidden />
                   <p className="mb-0 font-semibold text-hub-text">No class times scheduled yet</p>
@@ -127,12 +137,12 @@ export function StudentSchedulePage() {
 
 function Stat({ label, value, icon }: { label: string; value: number; icon: string }) {
   return (
-    <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
-      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-teal-100">
-        <i className={`bi ${icon} me-1`} aria-hidden />
-        {label}
-      </p>
-      <p className="mb-0 text-2xl font-bold">{value}</p>
+    <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur-sm">
+      <div className="flex items-center gap-2 text-teal-100">
+        <i className={`bi ${icon}`} aria-hidden />
+        <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
+      </div>
+      <p className="mb-0 mt-1 text-2xl font-bold tabular-nums">{value}</p>
     </div>
   )
 }

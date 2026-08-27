@@ -1,3 +1,5 @@
+import type { BellGridPayload } from './bellSchedule'
+
 export interface StudentScheduleBlock {
   class_id: number
   class_name: string
@@ -19,6 +21,7 @@ export interface StudentScheduleDay {
 
 export interface StudentScheduleResponse {
   days: StudentScheduleDay[]
+  bell_grid?: BellGridPayload
   today_weekday: number
   today_display: string
   stats: {
@@ -27,7 +30,7 @@ export interface StudentScheduleResponse {
     active_days: number
     unique_classes: number
   }
-  links: { calendar: string }
+  links: { calendar: string; pdf?: string }
 }
 
 export interface StudentCalendarEvent {

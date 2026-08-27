@@ -29,6 +29,7 @@ import BillingPage from './pages/BillingPage'
 import StudentJobsPage from './pages/StudentJobsPage'
 import SettingsPage from './pages/SettingsPage'
 import { CalendarPage } from './pages/CalendarPage'
+import { ManagementSchedulePage } from './pages/ManagementSchedulePage'
 import { ClosureDashboardPage } from './pages/ClosureDashboardPage'
 import { ClosureSchedulePage } from './pages/ClosureSchedulePage'
 import { SchoolYearsPage } from './pages/SchoolYearsPage'
@@ -292,6 +293,7 @@ export default function App() {
             <>
           <Route path="/management" element={<HomePage />} />
           <Route path="/management/calendar" element={<CalendarPage />} />
+          <Route path="/management/schedule" element={<ManagementSchedulePage />} />
           <Route path="/management/school-years" element={<SchoolYearsPage />} />
           <Route path="/management/school-year/closure/schedule" element={<ClosureSchedulePage />} />
           <Route path="/management/school-year/closure/:closureId" element={<ClosureDashboardPage />} />

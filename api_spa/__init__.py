@@ -189,3 +189,4 @@ from api_spa import academic_concerns as _spa_academic_concerns  # noqa: F401, E
 from api_spa import class_syllabus as _spa_class_syllabus  # noqa: F401, E402
 from api_spa import class_notes as _spa_class_notes  # noqa: F401, E402
 from api_spa import parent_dashboard as _spa_parent_dashboard  # noqa: F401, E402
+from api_spa import bell_schedule as _spa_bell_schedule  # noqa: F401, E402

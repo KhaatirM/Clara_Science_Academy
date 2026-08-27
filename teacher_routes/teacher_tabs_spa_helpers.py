@@ -21,6 +21,8 @@ from teacher_routes.classes_spa_helpers import (
 )
 from utils.school_timezone import get_school_now, get_school_today
 from teacher_routes.utils import get_teacher_or_admin, is_admin
+from utils.bell_schedule import build_bell_grid_for_classes
+from utils.bell_schedule_pdf import render_bell_schedule_pdf
 from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
 from utils.school_year_filters import (
     count_pending_extension_requests,
@@ -427,10 +429,16 @@ def build_teacher_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
                 }
             )
 
+        bell_grid = build_bell_grid_for_classes(classes, role="teacher")
         return (
             {
                 "days": days,
                 "grid_rows": grid_rows,
+                "bell_grid": {
+                    "bell_schedule": bell_grid.get("bell_schedule"),
+                    "day_columns": bell_grid.get("day_columns") or [],
+                    "unmapped": bell_grid.get("unmapped") or [],
+                },
                 "today_weekday": today_weekday,
                 "today_display": get_school_now().strftime("%A, %B %d, %Y"),
                 "stats": {
@@ -439,11 +447,26 @@ def build_teacher_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
                     "active_days": insights.get("active_days", 0),
                     "unique_classes": insights.get("unique_classes", 0),
                 },
+                "links": {"pdf": "/api/spa/teacher/schedule.pdf"},
             },
             None,
         )
     except Exception as exc:
         return None, str(exc)
+
+
+def build_teacher_schedule_pdf():
+    classes = _teacher_classes_for_active_school_year(get_teacher_or_admin())
+    grid = build_bell_grid_for_classes(classes, role="teacher")
+    bell = grid.get("bell_schedule") or {}
+    title = bell.get("title") or "Bell Schedule"
+    return render_bell_schedule_pdf(
+        title=title,
+        subtitle="My teaching schedule",
+        day_columns=grid.get("day_columns") or [],
+        unmapped=grid.get("unmapped") or [],
+        filename="teacher_schedule.pdf",
+    )
 
 
 def build_teacher_calendar_payload(*, month: int | None, year: int | None) -> tuple[dict[str, Any] | None, str | None]:

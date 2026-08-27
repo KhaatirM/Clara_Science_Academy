@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchTeacherSchedule } from '../api/teacherTabs'
+import { BellScheduleGrid } from '../components/schedule/BellScheduleGrid'
 import { TeacherTabShell } from '../components/teacher/TeacherTabShell'
 import type { TeacherScheduleResponse } from '../types/teacherTabs'
 
@@ -38,7 +39,14 @@ export function TeacherSchedulePage() {
       loading={loading}
       error={error}
     >
-      {data ? (
+      {data?.bell_grid ? (
+        <BellScheduleGrid
+          grid={data.bell_grid}
+          pdfUrl={data.links?.pdf || '/api/spa/teacher/schedule.pdf'}
+          showTeacher={false}
+          compactListDays={data.days}
+        />
+      ) : data ? (
         <div className="teacher-schedule-wrap">
           <div className="teacher-schedule-days">
             {data.days.map((day) => (

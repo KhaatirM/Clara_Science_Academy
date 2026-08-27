@@ -544,6 +544,67 @@ class SchoolBreak(db.Model):
         return f"SchoolBreak('{self.name}' - {self.break_type} from {self.start_date} to {self.end_date})"
 
 
+class BellSchedule(db.Model):
+    """School-wide bell / period schedule for a school year (Mon–Fri period grid)."""
+
+    __tablename__ = 'bell_schedule'
+
+    id = db.Column(db.Integer, primary_key=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    title = db.Column(db.String(120), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    school_year = db.relationship('SchoolYear', backref='bell_schedules', lazy=True)
+    periods = db.relationship(
+        'BellPeriod',
+        backref='bell_schedule',
+        lazy=True,
+        cascade='all, delete-orphan',
+    )
+
+    def __repr__(self):
+        return f"BellSchedule('{self.title}', year={self.school_year_id})"
+
+
+class BellPeriod(db.Model):
+    """One named period/break/lunch slot on specific weekdays within a BellSchedule."""
+
+    __tablename__ = 'bell_period'
+
+    id = db.Column(db.Integer, primary_key=True)
+    bell_schedule_id = db.Column(db.Integer, db.ForeignKey('bell_schedule.id'), nullable=False)
+    name = db.Column(db.String(80), nullable=False)
+    kind = db.Column(db.String(20), nullable=False, default='class')  # class|break|lunch|tutorial|other
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    color_hex = db.Column(db.String(7), nullable=False, default='#4A90D9')
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    # JSON list of weekday ints: 0=Mon … 4=Fri
+    days_of_week_json = db.Column(db.String(80), nullable=False, default='[0,1,2,3,4]')
+
+    def get_days_of_week(self) -> list:
+        import json
+
+        if not self.days_of_week_json:
+            return []
+        try:
+            raw = json.loads(self.days_of_week_json)
+            return [int(d) for d in raw if str(d).lstrip('-').isdigit() and 0 <= int(d) <= 6]
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+
+    def set_days_of_week(self, days: list) -> None:
+        import json
+
+        cleaned = sorted({int(d) for d in (days or []) if 0 <= int(d) <= 6})
+        self.days_of_week_json = json.dumps(cleaned)
+
+    def __repr__(self):
+        return f"BellPeriod('{self.name}', {self.start_time}-{self.end_time})"
+
+
 class Class(db.Model):
     """
     Model for storing class information.

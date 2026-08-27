@@ -167,11 +167,25 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 27, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) restores the <strong>student assistant console</strong>, fixes the <strong>teacher home dashboard</strong> crash, and keeps recent assignment upload/edit improvements.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) adds configurable <strong>bell schedule grids</strong> with <strong>PDF downloads</strong> for students, teachers, and grade-level master schedules, plus earlier assistant console and teacher home fixes.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 27, 2026 - bell schedule -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-calendar-week me-2"></i>Bell Schedule &amp; PDFs – August 27, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student &amp; teacher Schedule:</strong> Color Mon–Fri period grid with Download PDF; classes fill periods by meeting-time overlap.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Management Schedule tab:</strong> Edit school-wide bell periods (days, times, colors) and print master schedules by grade level.
+                            </li>
+                        </ul>
+                    </div>
                     <!-- August 27, 2026 - student assistant + teacher home -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-person-badge me-2"></i>Student Assistant &amp; Teacher Portal – August 27, 2026</h6>
@@ -2025,11 +2039,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug27_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownAug27_2026_v3', 'true');
         }, 500);
     }
 });

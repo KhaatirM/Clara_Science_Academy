@@ -464,6 +464,20 @@ def management_schedule_announcement_route():
     """Schedule announcement route - delegates to communications module"""
     return management_schedule_announcement_func()
 
+@management_blueprint.route('/schedule', endpoint='schedule')
+@login_required
+@management_required
+@permissions_required('classes:manage')
+def schedule_route():
+    """Bell schedule management — redirects to React SPA when enabled."""
+    from utils.spa_management_urls import spa_schedule_redirect
+
+    spa_redirect = spa_schedule_redirect()
+    if spa_redirect is not None:
+        return spa_redirect
+    return redirect('/app/management/schedule')
+
+
 @management_blueprint.route('/student-jobs', endpoint='student_jobs')
 @login_required
 def student_jobs_route():

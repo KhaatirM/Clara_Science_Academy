@@ -93,6 +93,14 @@ export const MANAGEMENT_NAV: NavItem[] = [
     legacyHref: '/management/calendar',
   },
   {
+    id: 'schedule',
+    label: 'Schedule',
+    icon: 'bi-calendar-week-fill',
+    reactTo: '/management/schedule',
+    legacyHref: '/management/schedule',
+    perm: 'classes:manage',
+  },
+  {
     id: 'student-jobs',
     label: 'Student Jobs',
     icon: 'bi-briefcase-fill',

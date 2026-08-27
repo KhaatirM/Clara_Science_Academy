@@ -43,6 +43,7 @@ export interface TeacherStudentsResponse {
 }
 
 import type { ClassListItem, SchoolYearOption } from './classes'
+import type { BellGridPayload } from './bellSchedule'
 
 export interface TeacherAssignmentsClassItem extends ClassListItem {
   links: {
@@ -124,6 +125,7 @@ export interface TeacherScheduleResponse {
     time_label: string
     cells: TeacherScheduleBlock[][]
   }>
+  bell_grid?: BellGridPayload
   today_weekday: number
   today_display: string
   stats: {
@@ -132,6 +134,7 @@ export interface TeacherScheduleResponse {
     active_days: number
     unique_classes: number
   }
+  links?: { pdf?: string }
 }
 
 export interface TeacherCalendarEvent {

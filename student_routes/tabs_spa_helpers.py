@@ -13,6 +13,8 @@ from management_routes.calendar_spa_helpers import build_calendar_month
 from management_routes.settings_spa_helpers import THEME_OPTIONS
 from management_routes.student_jobs_spa_helpers import query_student_jobs_hub
 from models import Assignment, Class, Enrollment, Grade, SchoolYear, Student, User
+from utils.bell_schedule import build_bell_grid_for_classes
+from utils.bell_schedule_pdf import render_bell_schedule_pdf
 from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
 from utils.school_year_filters import get_active_school_year, student_classes_for_school_year
 from utils.user_theme import get_effective_theme, get_site_theme_override
@@ -74,9 +76,15 @@ def build_student_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
                 cells.append(cell_items)
             grid_rows.append({"time_label": row.get("time_label") or "", "cells": cells})
 
+        bell_grid = build_bell_grid_for_classes(classes, role="student")
         return {
             "days": days,
             "grid_rows": grid_rows,
+            "bell_grid": {
+                "bell_schedule": bell_grid.get("bell_schedule"),
+                "day_columns": bell_grid.get("day_columns") or [],
+                "unmapped": bell_grid.get("unmapped") or [],
+            },
             "today_weekday": today_weekday,
             "today_display": get_school_now().strftime("%A, %B %d, %Y"),
             "stats": {
@@ -85,10 +93,36 @@ def build_student_schedule_payload() -> tuple[dict[str, Any] | None, str | None]
                 "active_days": insights.get("active_days", 0),
                 "unique_classes": insights.get("unique_classes", 0),
             },
-            "links": {"calendar": "/app/student/calendar"},
+            "links": {
+                "calendar": "/app/student/calendar",
+                "pdf": "/api/spa/student/schedule.pdf",
+            },
         }, None
     except Exception as exc:
         return None, str(exc)
+
+
+def build_student_schedule_pdf():
+    sid = getattr(current_user, "student_id", None)
+    if not sid:
+        raise ValueError("Student profile required")
+    active_year = get_active_school_year()
+    classes = student_classes_for_school_year(sid, active_year) if active_year else []
+    grid = build_bell_grid_for_classes(classes, role="student")
+    bell = grid.get("bell_schedule") or {}
+    title = bell.get("title") or "Bell Schedule"
+    student = Student.query.get(sid)
+    name = ""
+    if student:
+        name = f"{student.first_name or ''} {student.last_name or ''}".strip()
+    subtitle = f"{name}'s schedule" if name else "My schedule"
+    return render_bell_schedule_pdf(
+        title=title,
+        subtitle=subtitle,
+        day_columns=grid.get("day_columns") or [],
+        unmapped=grid.get("unmapped") or [],
+        filename="my_schedule.pdf",
+    )
 
 
 def build_student_calendar_payload(

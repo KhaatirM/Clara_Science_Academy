@@ -15,6 +15,8 @@ MGMT_NAV_ROUTES: dict[str, tuple[str, str]] = {
     "attendance": ("attendance", "management.unified_attendance"),
     "report-cards": ("report-cards", "management.report_cards"),
     "billing": ("billing", "management.billing"),
+    "calendar": ("calendar", "management.calendar"),
+    "schedule": ("schedule", "management.schedule"),
     "student-jobs": ("student-jobs", "management.student_jobs"),
     "settings": ("settings", "management.settings"),
 }
@@ -316,6 +318,17 @@ def spa_student_jobs_redirect():
     if request.method != "GET":
         return None
     return redirect("/app/management/student-jobs")
+
+
+def spa_schedule_redirect():
+    """Redirect legacy management schedule GET to the React SPA."""
+    from flask import redirect, request
+
+    if not user_should_use_spa_management_shell():
+        return None
+    if request.method != "GET":
+        return None
+    return redirect("/app/management/schedule")
 
 
 def spa_settings_redirect():

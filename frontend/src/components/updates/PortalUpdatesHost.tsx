@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug26_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Teacher home dashboard fix',
+    body: 'Fixed a server error that blocked the teacher home page from loading student/class summary stats after login.',
+  },
   {
     title: 'Assignment file picker & edit parity',
     body: 'Click-to-browse for PDF/paper create and edit now works the same way as Class Notes. The edit popup shows open/close dates, category weight, and advanced grading options with dates in school time.',
@@ -16,20 +20,16 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
     title: 'Class Notes: nested folders & bulk upload',
     body: 'Organize notes as Unit → Lesson → Homework/Slides (up to 3 levels). Upload multiple files at once with drag-and-drop into the selected folder.',
   },
-  {
-    title: 'School timezone & Q1 GPA gate',
-    body: 'Attendance and calendars use Eastern school time. Roster GPA and academic-concerns alerts wait until official Q1 grades are released.',
-  },
 ]
 
 export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null }) {
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.516.4'
-  const releaseLabel = version?.release_label || 'August 26, 2026'
+  const display = version?.display || 'v 2.516.5'
+  const releaseLabel = version?.release_label || 'August 27, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2693
+  const updatesEstimate = version?.updates_estimate ?? 2694
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

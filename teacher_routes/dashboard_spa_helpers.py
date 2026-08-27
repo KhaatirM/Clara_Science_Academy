@@ -17,6 +17,7 @@ from models import (
     Grade,
     Notification,
     SchoolYear,
+    Student,
     Submission,
 )
 

@@ -1,0 +1,402 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add_assignment.css') }}">
+<style>
+    .discussion-settings-card {
+        border-left: 4px solid #0dcaf0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    
+    .participation-requirement {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .rubric-section {
+        background: #fff9e6;
+        border: 1px solid #ffd700;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5 add-assignment-container">
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="add-assignment-header">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                    <div>
+                        <h2 class="mb-2 mb-md-0">
+                            <i class="bi bi-chat-dots me-3 text-info"></i>{% if assignment %}Edit{% else %}Create{% endif %} Discussion Assignment
+                        </h2>
+                        <p class="mb-0">Foster critical thinking and peer engagement through structured academic discussions</p>
+                    </div>
+                    <div class="d-flex gap-2 mt-3 mt-md-0">
+                        {% if student_assistant_mode and back_url %}
+                            <a href="{{ back_url }}" class="btn btn-assignments-back btn-sm">
+                                <i class="bi bi-arrow-left me-1"></i>Back to assistant workspace
+                            </a>
+                        {% elif class_obj %}
+                            {% if can_assignments_admin_ui %}
+                                <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-assignments-back btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-assignments-back btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            {% if can_assignments_admin_ui %}
+                                <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-assignments-back btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-assignments-back btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <form method="POST" id="discussionAssignmentForm" action="{{ form_action if form_action is defined else '' }}">
+                <div class="assignment-form-wrapper">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    {% if assignment %}<input type="hidden" name="edit_id" value="{{ assignment.id }}"/>{% endif %}
+                    
+                    <!-- Discussion Topic & Instructions -->
+                    <div class="card assignment-section-card discussion-settings-card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-chat-quote me-2"></i>Discussion Topic & Instructions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="title" class="form-label fw-semibold">
+                                        <i class="bi bi-pencil me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                           value="{{ assignment.title if assignment else '' }}" placeholder="e.g., Climate Change: Causes and Solutions" required>
+                                </div>
+                                
+                                <div class="col-12 col-md-6">
+                                    <label for="class_id" class="form-label fw-semibold">
+                                        <i class="bi bi-book me-1 text-primary"></i>Class <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select form-select-lg" id="class_id" name="class_id" required>
+                                        <option value="">Choose a class...</option>
+                                        {% for c in classes %}
+                                        <option value="{{ c.id }}" {% if (class_obj and c.id == class_obj.id) or (assignment and c.id == assignment.class_id) %}selected{% endif %}>{{ c.name }} - {{ c.subject }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label for="discussion_prompt" class="form-label fw-semibold">
+                                        <i class="bi bi-question-circle me-1 text-info"></i>Discussion Prompt/Topic <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="discussion_prompt" name="discussion_prompt" 
+                                              rows="4" placeholder="Enter the main question or topic for discussion..." required>{{ discussion_prompt|default('') }}</textarea>
+                                    <div class="form-text">This is the central question or topic that students will discuss.</div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label for="description" class="form-label fw-semibold">
+                                        <i class="bi bi-card-text me-1 text-primary"></i>Instructions & Guidelines
+                                    </label>
+                                    <textarea class="form-control" id="description" name="description" rows="5"
+                                              placeholder="Provide detailed instructions, guidelines, and expectations for the discussion...">{{ instructions|default('') }}</textarea>
+                                    <div class="form-text">Include expectations for quality, length, citation requirements, etc.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Participation Requirements -->
+                    <div class="card assignment-section-card mt-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Participation Requirements</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="participation-requirement">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label for="min_initial_posts" class="form-label fw-semibold">
+                                            <i class="bi bi-chat-left-text me-1"></i>Minimum Initial Posts <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="number" class="form-control" id="min_initial_posts" name="min_initial_posts" 
+                                               value="{{ min_initial_posts|default(1) }}" min="1" max="10" required>
+                                        <div class="form-text">Number of initial discussion threads each student must create</div>
+                                    </div>
+                                    
+                                    <div class="col-12 col-md-6">
+                                        <label for="min_replies" class="form-label fw-semibold">
+                                            <i class="bi bi-reply me-1"></i>Minimum Replies <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="number" class="form-control" id="min_replies" name="min_replies" 
+                                               value="{{ min_replies|default(2) }}" min="0" max="20" required>
+                                        <div class="form-text">Number of replies each student must make to classmates' posts</div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="require_peer_response" name="require_peer_response" checked>
+                                            <label class="form-check-label" for="require_peer_response">
+                                                <strong>Require students to respond to peer posts</strong>
+                                                <div class="form-text">Students must reply to classmates, not just post their own thoughts</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="allow_student_threads" name="allow_student_threads" checked>
+                                            <label class="form-check-label" for="allow_student_threads">
+                                                <strong>Allow students to create new discussion threads</strong>
+                                                <div class="form-text">If unchecked, only the teacher can create discussion topics</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="allow_student_edit_posts" name="allow_student_edit_posts" {% if assignment and assignment.allow_student_edit_posts %}checked{% endif %}>
+                                            <label class="form-check-label" for="allow_student_edit_posts">
+                                                <strong>Allow students to edit their posts</strong>
+                                                <div class="form-text">If checked, students can go back and edit their thread posts and replies</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Settings -->
+                    <div class="card assignment-section-card mt-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Assignment Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label for="total_points" class="form-label fw-semibold">
+                                        <i class="bi bi-star me-1 text-warning"></i>Total Points <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number" class="form-control form-control-lg" id="total_points" name="total_points" 
+                                           value="{{ (assignment.total_points if assignment else 100)|int }}" min="1" step="0.1" required>
+                                </div>
+                                
+                                <div class="col-12 col-md-6">
+                                    <label for="quarter" class="form-label fw-semibold">
+                                        <i class="bi bi-calendar-range me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select form-select-lg" id="quarter" name="quarter" required>
+                                        {% set q = (assignment.quarter if assignment else current_quarter)|string %}
+                                        <option value="Q1" {% if q in ['Q1','1'] %}selected{% endif %}>Q1</option>
+                                        <option value="Q2" {% if q in ['Q2','2'] %}selected{% endif %}>Q2</option>
+                                        <option value="Q3" {% if q in ['Q3','3'] %}selected{% endif %}>Q3</option>
+                                        <option value="Q4" {% if q in ['Q4','4'] %}selected{% endif %}>Q4</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-12 col-md-6">
+                                    <label for="assignment_context" class="form-label fw-semibold">
+                                        <i class="bi bi-building me-1 text-primary"></i>Assignment Context
+                                    </label>
+                                    <select class="form-select form-select-lg" id="assignment_context" name="assignment_context">
+                                        <option value="homework" {% if not assignment or (assignment.assignment_context or 'homework') != 'in-class' %}selected{% endif %}>Homework</option>
+                                        <option value="in-class" {% if assignment and assignment.assignment_context == 'in-class' %}selected{% endif %}>In-Class</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-12 col-md-6">
+                                    <label for="due_date" class="form-label fw-semibold">
+                                        <i class="bi bi-calendar-check me-1 text-danger"></i>Due Date & Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" value="{% if assignment %}{{ assignment.due_date.strftime('%Y-%m-%dT%H:%M') if assignment.due_date else '' }}{% endif %}" required>
+                                </div>
+                                
+                                <div class="col-12 col-md-6">
+                                    <label for="open_date" class="form-label fw-semibold">
+                                        <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00" value="{% if assignment and assignment.open_date %}{{ assignment.open_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" required>
+                                    <div class="form-text">When students can start participating in the discussion</div>
+                                </div>
+                                
+                                <div class="col-12 col-md-6">
+                                    <label for="close_date" class="form-label fw-semibold">
+                                        <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00" value="{% if assignment and assignment.close_date %}{{ assignment.close_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" required>
+                                    <div class="form-text">When the discussion closes (defaults to due date if not set)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grading & Rubric (Optional) -->
+                    <div class="card assignment-section-card mt-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-clipboard-check me-2"></i>Grading & Rubric (Optional)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="rubric-section">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="use_rubric" name="use_rubric" {% if rubric_criteria %}checked{% endif %}>
+                                    <label class="form-check-label" for="use_rubric">
+                                        <strong>Use rubric-based grading</strong>
+                                        <div class="form-text">Enable rubric criteria for more structured assessment</div>
+                                    </label>
+                                </div>
+                                
+                                <div id="rubricFields" style="display: {{ 'block' if rubric_criteria else 'none' }};">
+                                    <div class="mb-3">
+                                        <label for="rubric_criteria" class="form-label fw-semibold">Rubric Criteria</label>
+                                        <textarea class="form-control" id="rubric_criteria" name="rubric_criteria" rows="6"
+                                                  placeholder="Enter rubric criteria, one per line. Example:&#10;Quality of Analysis (30 points): Demonstrates deep understanding...&#10;Use of Evidence (25 points): Supports arguments with credible sources...&#10;Engagement with Peers (20 points): Meaningful responses to classmates...&#10;Writing Quality (25 points): Clear, well-organized, error-free...">{{ rubric_criteria|default('') }}</textarea>
+                                        <div class="form-text">List each criterion on a new line with point values in parentheses</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle me-2"></i>{% if assignment %}Update{% else %}Create{% endif %} Discussion Assignment
+                        </button>
+                        {% if class_obj or (assignment and assignment.class_info) %}
+                            {% set cancel_class = class_obj or (assignment.class_info if assignment else none) %}
+                            {% if can_assignments_admin_ui %}
+                                <a href="{{ url_for('management.view_class', class_id=cancel_class.id) }}" class="btn btn-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.dashboard.view_class', class_id=cancel_class.id) }}" class="btn btn-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            {% if can_assignments_admin_ui %}
+                                <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Help Sidebar -->
+        <div class="col-12 col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Discussion Assignment Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <strong><i class="bi bi-check-circle text-success me-2"></i>Clear Prompts</strong>
+                            <p class="small mb-0">Write open-ended questions that encourage critical thinking and multiple perspectives.</p>
+                        </li>
+                        <li class="mb-3">
+                            <strong><i class="bi bi-check-circle text-success me-2"></i>Participation Requirements</strong>
+                            <p class="small mb-0">Set realistic minimums. Typically 1 initial post and 2-3 replies work well.</p>
+                        </li>
+                        <li class="mb-3">
+                            <strong><i class="bi bi-check-circle text-success me-2"></i>Time Management</strong>
+                            <p class="small mb-0">Give students enough time to read and respond thoughtfully. 1-2 weeks is common.</p>
+                        </li>
+                        <li class="mb-3">
+                            <strong><i class="bi bi-check-circle text-success me-2"></i>Rubric Clarity</strong>
+                            <p class="small mb-0">If using a rubric, make criteria specific and measurable for consistent grading.</p>
+                        </li>
+                        <li>
+                            <strong><i class="bi bi-check-circle text-success me-2"></i>Engagement</strong>
+                            <p class="small mb-0">Consider requiring peer responses to foster active dialogue and learning.</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle rubric fields
+    const useRubricCheckbox = document.getElementById('use_rubric');
+    const rubricFields = document.getElementById('rubricFields');
+    
+    useRubricCheckbox.addEventListener('change', function() {
+        rubricFields.style.display = this.checked ? 'block' : 'none';
+    });
+    
+    // Set default close_date to due_date if not set
+    const dueDateInput = document.getElementById('due_date');
+    const closeDateInput = document.getElementById('close_date');
+    
+    dueDateInput.addEventListener('change', function() {
+        if (!closeDateInput.value) {
+            closeDateInput.value = this.value;
+        }
+    });
+    
+    // Form validation
+    const form = document.getElementById('discussionAssignmentForm');
+    form.addEventListener('submit', function(e) {
+        const minInitial = parseInt(document.getElementById('min_initial_posts').value);
+        const minReplies = parseInt(document.getElementById('min_replies').value);
+        
+        if (minInitial < 1) {
+            e.preventDefault();
+            alert('Minimum initial posts must be at least 1.');
+            return false;
+        }
+        
+        if (minReplies < 0) {
+            e.preventDefault();
+            alert('Minimum replies cannot be negative.');
+            return false;
+        }
+        
+        const openDate = new Date(document.getElementById('open_date').value);
+        const closeDate = new Date(document.getElementById('close_date').value);
+        const dueDate = new Date(document.getElementById('due_date').value);
+        
+        if (openDate >= closeDate) {
+            e.preventDefault();
+            alert('Close date must be after open date.');
+            return false;
+        }
+        
+        if (dueDate > closeDate) {
+            e.preventDefault();
+            alert('Due date cannot be after close date.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
+{% endblock %}
+
+{% block title %}Assistant console{% endblock %}
+
+{% block dashboard_content %}
+<div class="student-assistant-container">
+    <div class="sa-console-hero">
+        <div class="sa-console-hero-inner">
+            <div class="sa-console-hero-text">
+                <div class="sa-console-hero-icon">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                </div>
+                <div>
+                    <h1 class="sa-console-hero-title">Student assistant console</h1>
+                    <p class="sa-console-hero-subtitle">
+                        You assist <strong>{{ assistant_classes|length }}</strong> class{% if assistant_classes|length != 1 %}es{% endif %}.
+                        Choose where to work — attendance and grading stay separate per class.
+                    </p>
+                </div>
+            </div>
+            <a href="{{ url_for('student.student_dashboard') }}" class="btn sa-console-back-btn">
+                <i class="bi bi-arrow-left me-1"></i>Student dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 sa-console-grid">
+        {% for c in assistant_classes %}
+        <div class="col-12 {% if assistant_classes|length > 1 %}col-lg-6{% else %}col-lg-8 mx-lg-auto{% endif %}">
+            <article class="sa-console-class-card sa-console-class-card-{{ (loop.index0 % 2) + 1 }}">
+                <div class="sa-console-class-card-accent"></div>
+                <div class="sa-console-class-card-body">
+                    <header class="sa-console-class-card-header">
+                        <h2 class="sa-console-class-title">{{ c.name }}</h2>
+                        <p class="sa-console-class-meta mb-0">
+                            <span class="badge sa-console-badge-subject">{{ c.subject or 'Course' }}</span>
+                            {% if c.teacher %}
+                            <span class="sa-console-teacher text-muted ms-2">
+                                <i class="bi bi-person-video2 me-1"></i>{{ c.teacher.first_name }} {{ c.teacher.last_name }}
+                            </span>
+                            {% endif %}
+                        </p>
+                    </header>
+                    <p class="sa-console-class-hint text-muted small mb-4">
+                        Workspace: take attendance and enter grades for this class only.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2 sa-console-actions">
+                        <a href="{{ url_for('student_assistant.class_hub', class_id=c.id) }}" class="btn sa-console-btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Open workspace
+                        </a>
+                        <a href="{{ url_for('student_assistant.take_attendance', class_id=c.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-calendar-check me-1"></i>Attendance
+                        </a>
+                    </div>
+                </div>
+            </article>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

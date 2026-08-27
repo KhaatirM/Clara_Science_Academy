@@ -1,0 +1,19 @@
+{# When assisting multiple classes, show quick navigation between hubs. Expects: assistant_classes, current_class_id #}
+{% if assistant_classes is defined and assistant_classes|length > 1 %}
+<div class="sa-class-switcher" role="navigation" aria-label="Switch assistant class">
+    <div class="sa-class-switcher-inner">
+        <span class="sa-class-switcher-label"><i class="bi bi-diagram-3 me-1"></i>Classes you assist</span>
+        <div class="sa-class-switcher-pills">
+            {% for c in assistant_classes %}
+            <a href="{{ url_for('student_assistant.class_hub', class_id=c.id) }}"
+               class="sa-class-pill {% if current_class_id is defined and c.id == current_class_id %}active{% endif %}">
+                <span class="sa-class-pill-name">{{ c.name }}</span>
+                {% if c.subject %}
+                <span class="sa-class-pill-subject">{{ c.subject }}</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

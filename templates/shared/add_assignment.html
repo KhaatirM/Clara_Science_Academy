@@ -1,0 +1,728 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add_assignment.css') }}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5 add-assignment-container">
+    <!-- Enhanced Header Section - Match Management Style -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="add-assignment-header">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                    <div>
+                        <h2 class="mb-2 mb-md-0">
+                            <i class="bi bi-file-earmark-text me-3"></i>Create PDF/Paper Assignment
+                        </h2>
+                        <p class="mb-0">{% if student_assistant_mode %}Propose an assignment for your class. A teacher or administrator must approve it before students can see it.{% else %}Design engaging assignments with file attachments and clear instructions{% endif %}</p>
+                    </div>
+                    <div class="d-flex gap-2 mt-3 mt-md-0">
+                        {% if student_assistant_mode %}
+                            <a href="{{ url_for('student_assistant.class_hub', class_id=class_obj.id) }}" class="btn btn-assignments-back btn-sm">
+                                <i class="bi bi-arrow-left me-1"></i>Back to assistant hub
+                            </a>
+                        {% elif class_obj %}
+                            <a href="{{ url_for('management.assignments_and_grades', class_id=class_obj.id) }}" class="btn btn-assignments-back btn-sm">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-assignments-back btn-sm">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="assignmentForm" action="{% if student_assistant_mode and form_action is defined %}{{ form_action }}{% elif class_obj %}{{ url_for('teacher.assignments.add_assignment_for_class', class_id=class_obj.id) }}{% else %}{{ url_for('management.add_assignment') }}{% endif %}">
+    <div class="add-assignment-main-row">
+        <!-- Sidebar: first child inside this row (grid-area places it on the right) -->
+        <div class="add-assignment-sidebar-col">
+                <div class="assignment-sidebar">
+                    <!-- Assignment Preview -->
+                    <div class="card preview-card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2"></i>Live Preview</h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div id="assignmentPreview">
+                                <div class="text-center text-muted py-3">
+                                    <i class="bi bi-eye-slash mb-2 d-block" style="font-size: 2rem; opacity: 0.5;"></i>
+                                    <p class="small mb-0">Assignment preview will appear here as you build it</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Tips -->
+                    <div class="card tips-card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Assignment Tips</h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="tip-item">
+                                <div class="d-flex align-items-start">
+                                    <div class="tip-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="bi bi-file-text"></i>
+                                    </div>
+                                    <div class="tip-content">
+                                        <strong>Clear Instructions</strong>
+                                        <p>Provide detailed, step-by-step instructions</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tip-item">
+                                <div class="d-flex align-items-start">
+                                    <div class="tip-icon bg-success bg-opacity-10 text-success">
+                                        <i class="bi bi-calendar-check"></i>
+                                    </div>
+                                    <div class="tip-content">
+                                        <strong>Realistic Deadlines</strong>
+                                        <p>Set appropriate due dates for the scope</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tip-item">
+                                <div class="d-flex align-items-start">
+                                    <div class="tip-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="bi bi-paperclip"></i>
+                                    </div>
+                                    <div class="tip-content">
+                                        <strong>Supporting Materials</strong>
+                                        <p>Attach relevant files and resources</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons (inside form so file uploads submit correctly) -->
+                    <div class="card action-buttons-card">
+                        <div class="card-body p-4">
+                            <div class="d-grid gap-3">
+                                <button type="submit" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
+                                    <i class="bi bi-check-circle me-2"></i>Create Assignment
+                                </button>
+                                {% if class_obj %}
+                                    <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-cancel-assignment">
+                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-cancel-assignment">
+                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <div class="add-assignment-form-col">
+                <div class="assignment-form-wrapper">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <!-- Assignment Information -->
+                    <div class="card assignment-section-card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
+                        </div>
+                        <div class="card-body add-assignment-form-body">
+                        <div class="row g-4 add-assignment-form-rows">
+                            <div class="col-12">
+                                <label for="title" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-pencil-square me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="title" name="title" placeholder="Enter a clear, descriptive title..." required>
+                            </div>
+                            <div class="col-12">
+                                <label for="description" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-card-text me-1 text-primary"></i>Assignment Description <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="4" placeholder="Instructions, learning objectives, and requirements..." required></textarea>
+                            </div>
+                            <!-- Row 1: Classes | Due Date -->
+                            <div class="col-12 col-sm-6">
+                                <label for="{% if class_obj %}class_id{% else %}class_ids{% endif %}" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-book me-1 text-primary"></i>Class{% if not class_obj %}es{% endif %} <span class="text-danger">*</span>
+                                </label>
+                                {% if class_obj %}
+                                    <select class="form-select" id="class_id" name="class_id" required>
+                                        <option value="{{ class_obj.id }}" selected>{{ class_obj.name }} - {{ class_obj.subject }}</option>
+                                    </select>
+                                {% elif classes %}
+                                    <div class="class-selection-panel">
+                                        <div class="class-selection-actions mb-1">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllClasses()">
+                                                <i class="bi bi-check-all me-1"></i>Select All
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllClasses()">
+                                                <i class="bi bi-x-lg me-1"></i>Deselect All
+                                            </button>
+                                        </div>
+                                        <div class="class-selection-list">
+                                            {% for class in classes %}
+                                            <label class="class-selection-item">
+                                                <input type="checkbox" name="class_ids" value="{{ class.id }}" class="form-check-input class-id-checkbox">
+                                                <span class="class-selection-label">{{ class.name }} – {{ class.subject }}</span>
+                                            </label>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted d-block mt-1">Select one or more classes.</small>
+                                {% else %}
+                                    <select class="form-select" id="class_id" name="class_id" required disabled>
+                                        <option value="">No classes available</option>
+                                    </select>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="due_date" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="quarter" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-calendar3 me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="quarter" name="quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
+                                    <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
+                                    <option value="3" {% if current_quarter == "3" %}selected{% endif %}>Quarter 3</option>
+                                    <option value="4" {% if current_quarter == "4" %}selected{% endif %}>Quarter 4</option>
+                                </select>
+                            </div>
+                            <!-- Row 2: Open Date | Close Date -->
+                            <div class="col-12 col-sm-6">
+                                <label for="open_date" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time
+                                </label>
+                                <input type="datetime-local" class="form-control" id="open_date" name="open_date" min="2020-01-01T00:00" placeholder="Optional">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="close_date" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time
+                                </label>
+                                <input type="datetime-local" class="form-control" id="close_date" name="close_date" min="2020-01-01T00:00" placeholder="Optional">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="status" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-toggle-on me-1 text-primary"></i>Status <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="Active" selected>Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Voided">Voided</option>
+                                </select>
+                            </div>
+                            <!-- Row 3: Context | Total Points -->
+                            <div class="col-12 col-sm-6">
+                                <label for="assignment_context" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-bookmark me-1 text-primary"></i>Context <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="assignment_context" name="assignment_context" required>
+                                    <option value="homework" {% if context != 'in-class' %}selected{% endif %}>Homework</option>
+                                    <option value="in-class" {% if context == 'in-class' %}selected{% endif %}>In-Class</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="total_points" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-star me-1 text-primary"></i>Total Points <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="total_points" name="total_points" value="100" min="0.1" step="0.1" required>
+                            </div>
+                            <!-- Row 4: Category | Category Weight -->
+                            <div class="col-12 col-sm-6">
+                                <label for="assignment_category" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-tags me-1 text-primary"></i>Category <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="assignment_category" name="assignment_category" required>
+                                    <option value="" selected>None (Uncategorized)</option>
+                                    <option value="Homework">Homework</option>
+                                    <option value="Tests">Tests</option>
+                                    <option value="Quizzes">Quizzes</option>
+                                    <option value="Projects">Projects</option>
+                                    <option value="Labs">Labs</option>
+                                    <option value="Participation">Participation</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="category_weight" class="form-label fw-semibold add-assignment-label">
+                                    <i class="bi bi-percent me-1 text-primary"></i>Category Weight (%)
+                                </label>
+                                <input type="number" class="form-control" id="category_weight" name="category_weight" value="0" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Advanced Grading Options -->
+                    <div class="card assignment-section-card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Advanced Grading Options</h5>
+                        </div>
+                        <div class="card-body">
+                                <div class="row g-3">
+                                    <!-- Extra Credit -->
+                                    <div class="col-12">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="allow_extra_credit" name="allow_extra_credit">
+                                            <label class="form-check-label fw-semibold" for="allow_extra_credit">
+                                                <i class="bi bi-star-fill me-1 text-warning"></i>Allow Extra Credit
+                                            </label>
+                                        </div>
+                                        <div class="ms-4 mt-2">
+                                            <label for="max_extra_credit_points" class="form-label">Maximum Extra Credit Points</label>
+                                            <input type="number" class="form-control" id="max_extra_credit_points" name="max_extra_credit_points" 
+                                                   value="0" min="0" step="0.1">
+                                            <div class="form-text">Maximum extra credit points students can earn</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Late Penalty -->
+                                    <div class="col-12">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="late_penalty_enabled" name="late_penalty_enabled">
+                                            <label class="form-check-label fw-semibold" for="late_penalty_enabled">
+                                                <i class="bi bi-clock-history me-1 text-danger"></i>Enable Late Penalty
+                                            </label>
+                                        </div>
+                                        <div class="ms-4 mt-2">
+                                            <div class="row g-2">
+                                                <div class="col-md-4">
+                                                    <label for="late_penalty_per_day" class="form-label">Penalty Per Day (%)</label>
+                                                    <input type="number" class="form-control" id="late_penalty_per_day" name="late_penalty_per_day" 
+                                                           value="0" min="0" max="100" step="0.1">
+                                                    <div class="form-text">e.g., 10 = 10% per day</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label for="late_penalty_max_days" class="form-label">Max Days (0 = unlimited)</label>
+                                                    <input type="number" class="form-control" id="late_penalty_max_days" name="late_penalty_max_days" 
+                                                           value="0" min="0">
+                                                    <div class="form-text">Stop applying penalty after X days</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                            
+                    <!-- File Upload Section -->
+                    <div class="card assignment-section-card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-cloud-upload me-2"></i>Assignment Files</h5>
+                        </div>
+                        <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="assignment_files" class="form-label fw-semibold">
+                                    <i class="bi bi-paperclip me-1 text-success"></i>Assignment Files (Optional)
+                                </label>
+                                <label for="assignment_files" class="file-upload-area border-2 border-dashed border-success rounded p-4 text-center d-block mb-0" 
+                                       id="fileUploadArea" style="cursor: pointer; transition: all 0.3s ease;">
+                                    <div id="fileUploadEmptyState">
+                                        <i class="bi bi-cloud-upload text-success mb-2" style="font-size: 2rem;"></i>
+                                        <p class="mb-2 fw-semibold">Click to upload or drag and drop</p>
+                                        <p class="text-muted small mb-0">PDF, DOC(X), TXT, JPG, PNG, GIF, XLS(X), PPT(X). You can select multiple files.</p>
+                                        <p class="text-muted small">Maximum file size: 16 MB per file</p>
+                                        <button type="button" class="btn btn-success mt-2" id="chooseFilesBtn" onclick="document.getElementById('assignment_files').click(); event.stopPropagation();">
+                                            <i class="bi bi-folder2-open me-1"></i> Choose Files
+                                        </button>
+                                    </div>
+                                    <div id="fileUploadSuccessState" class="d-none">
+                                        <i class="bi bi-check-circle-fill text-success mb-2" style="font-size: 2.5rem;"></i>
+                                        <p class="mb-1 fw-bold text-success"><span id="fileUploadCount">0</span> file(s) ready</p>
+                                        <p class="text-muted small mb-2">Click to change or add more files</p>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('assignment_files').click(); event.stopPropagation();">
+                                            <i class="bi bi-folder2-open me-1"></i> Add or change files
+                                        </button>
+                                    </div>
+                                    <input type="file" class="file-input-visually-hidden" id="assignment_files" name="assignment_files" multiple
+                                           accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
+                                           onchange="var f=this.files;var n=f.length;if(n>0){var e=document.getElementById('fileUploadEmptyState');var s=document.getElementById('fileUploadSuccessState');var c=document.getElementById('fileUploadCount');var list=document.getElementById('fileInfoList');var p=document.getElementById('filePreview');if(e&&s){e.classList.add('d-none');s.classList.remove('d-none');}if(c)c.textContent=n;if(list){list.innerHTML='';for(var i=0;i<n;i++){var li=document.createElement('li');li.className='list-group-item d-flex align-items-center';li.innerHTML='<i class=\'bi bi-file-earmark-text text-success me-2\'></i><div class=\'flex-grow-1\'><span class=\'fw-semibold\'>'+f[i].name+'</span></div>';list.appendChild(li);}}if(p)p.style.display='block';var u=document.getElementById('fileUploadArea');if(u){u.classList.add('file-upload-has-files');u.scrollIntoView({behavior:'smooth',block:'center'});}}">
+                                </label>
+                            </div>
+                            
+                            <!-- File Preview Section (multiple files) -->
+                            <div class="col-12">
+                                <div id="filePreview" class="mt-3" style="display: none;">
+                                    <div class="file-preview-card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0"><i class="bi bi-file-earmark me-2"></i>Selected Files</h6>
+                                            <button type="button" class="btn btn-light btn-sm" id="removeFile">
+                                                <i class="bi bi-x-circle"></i> Clear all
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <ul id="fileInfoList" class="list-group list-group-flush mb-0"></ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                <!-- Submit button at bottom for users who scroll - ensures file uploads are included -->
+                <div class="mt-4 d-lg-none">
+                    <button type="submit" class="btn btn-create-assignment btn-lg fw-bold w-100" id="createAssignmentBtnBottom">
+                        <i class="bi bi-check-circle me-2"></i>Create Assignment
+                    </button>
+                </div>
+            </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('assignment_files');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const filePreview = document.getElementById('filePreview');
+    const fileInfoList = document.getElementById('fileInfoList');
+    const removeFileBtn = document.getElementById('removeFile');
+    const classSelect = document.getElementById('class_id');
+    const assignmentPreview = document.getElementById('assignmentPreview');
+    const form = document.getElementById('assignmentForm');
+    
+    // If a class is pre-selected, disable the dropdown (single class mode)
+    if (classSelect && classSelect.value && classSelect.value !== '') {
+        classSelect.disabled = true;
+        // Add a hidden input to preserve the value when form is submitted
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'class_id';
+        hiddenInput.value = classSelect.value;
+        classSelect.parentNode.appendChild(hiddenInput);
+    }
+    
+    // File upload - only attach handlers if all elements exist
+    if (fileInput && fileUploadArea && filePreview && fileInfoList && removeFileBtn) {
+    // File upload area click handler
+    fileUploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    // Drag and drop functionality
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileUploadArea.style.backgroundColor = '#f8f9fa';
+        fileUploadArea.style.borderColor = '#28a745';
+    });
+    
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        fileUploadArea.style.backgroundColor = '';
+        fileUploadArea.style.borderColor = '#28a745';
+    });
+    
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileUploadArea.style.backgroundColor = '';
+        fileUploadArea.style.borderColor = '#28a745';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFilesUpload(files);
+        }
+    });
+    
+    // File input change/input handler - use both for reliability across browsers
+    function onFileInputChange() {
+        const files = Array.from(fileInput.files || []);
+        if (files.length > 0) {
+            handleFilesUpload(files);
+        } else {
+            hideFilePreview();
+        }
+    }
+    fileInput.addEventListener('change', onFileInputChange);
+    fileInput.addEventListener('input', onFileInputChange);
+    
+    // Remove file button
+    removeFileBtn.addEventListener('click', function() {
+        fileInput.value = '';
+        hideFilePreview();
+    });
+    
+    function handleFilesUpload(files) {
+        const maxSize = 16 * 1024 * 1024;
+        const allowedTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/gif',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        ];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.size > maxSize) {
+                showAlert(`File "${file.name}" exceeds 16 MB limit.`, 'danger');
+                fileInput.value = '';
+                return;
+            }
+            if (file.type && !allowedTypes.includes(file.type)) {
+                showAlert(`File type not supported: ${file.name}. Please choose a different file.`, 'danger');
+                fileInput.value = '';
+                return;
+            }
+        }
+        showFilePreview(files);
+        updateAssignmentPreview();
+    }
+    
+    function showFilePreview(files) {
+        fileInfoList.innerHTML = '';
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex align-items-center';
+            li.innerHTML = '<i class="bi bi-file-earmark-text text-success me-2"></i>' +
+                '<div class="flex-grow-1"><span class="fw-semibold">' + file.name + '</span><br><small class="text-muted">' +
+                formatFileSize(file.size) + ' &middot; ' + getFileTypeDisplay(file.type) + '</small></div>';
+            fileInfoList.appendChild(li);
+        }
+        filePreview.style.display = 'block';
+        // Show success state in upload area
+        const emptyState = document.getElementById('fileUploadEmptyState');
+        const successState = document.getElementById('fileUploadSuccessState');
+        const countEl = document.getElementById('fileUploadCount');
+        if (emptyState && successState && countEl) {
+            emptyState.classList.add('d-none');
+            countEl.textContent = files.length;
+            successState.classList.remove('d-none');
+            fileUploadArea.classList.add('file-upload-has-files');
+            // Scroll upload area into view so user sees the success feedback
+            fileUploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+    
+    function hideFilePreview() {
+        filePreview.style.display = 'none';
+        const emptyState = document.getElementById('fileUploadEmptyState');
+        const successState = document.getElementById('fileUploadSuccessState');
+        if (emptyState && successState) {
+            emptyState.classList.remove('d-none');
+            successState.classList.add('d-none');
+            fileUploadArea.classList.remove('file-upload-has-files');
+        }
+        updateAssignmentPreview();
+    }
+    
+    function getFileTypeDisplay(mimeType) {
+        const typeMap = {
+            'application/pdf': 'PDF Document',
+            'application/msword': 'Word Document',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
+            'text/plain': 'Text File',
+            'image/jpeg': 'JPEG Image',
+            'image/jpg': 'JPEG Image',
+            'image/png': 'PNG Image',
+            'image/gif': 'GIF Image',
+            'application/vnd.ms-excel': 'Excel Spreadsheet',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet',
+            'application/vnd.ms-powerpoint': 'PowerPoint Presentation',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint Presentation'
+        };
+        return typeMap[mimeType] || 'Unknown File Type';
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function updateAssignmentPreview() {
+        const title = document.getElementById('title').value || 'Untitled Assignment';
+        const description = document.getElementById('description').value || 'No description provided';
+        const dueDate = document.getElementById('due_date').value;
+        const fileCount = (fileInput.files && fileInput.files.length) || 0;
+        
+        let previewHTML = `
+            <div class="preview-section border-bottom pb-2 mb-2">
+                <h6 class="fw-bold">${title}</h6>
+                <p class="small text-muted mb-0">${description}</p>
+            </div>
+        `;
+        
+        if (dueDate) {
+            const date = new Date(dueDate);
+            previewHTML += `
+                <div class="preview-section border-bottom pb-2 mb-2">
+                    <strong class="small">Due Date:</strong>
+                    <p class="small text-muted mb-0">${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</p>
+                </div>
+            `;
+        }
+        
+        if (fileCount > 0) {
+            previewHTML += `<div class="preview-section"><strong class="small">Attached File${fileCount > 1 ? 's' : ''}:</strong>`;
+            for (let i = 0; i < fileCount; i++) {
+                const file = fileInput.files[i];
+                previewHTML += `
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-paperclip me-1"></i>
+                        ${file.name} (${formatFileSize(file.size)})
+                    </p>`;
+            }
+            previewHTML += `
+                </div>
+            `;
+        }
+        
+        assignmentPreview.innerHTML = previewHTML;
+    }
+    
+    function showAlert(message, type) {
+        // Create a temporary alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    } // end if (file upload elements exist)
+    
+    // Update preview on form changes
+    if (form && typeof updateAssignmentPreview === 'function') {
+        const formInputs = form.querySelectorAll('input, textarea, select');
+        formInputs.forEach(input => {
+            input.addEventListener('input', updateAssignmentPreview);
+            input.addEventListener('change', updateAssignmentPreview);
+        });
+    }
+    
+    // Form submission - validate class_ids when using checkboxes
+    const classIdsCheckboxes = document.querySelectorAll('input[name="class_ids"]');
+    if (form) form.addEventListener('submit', function(e) {
+        if (classIdsCheckboxes.length > 0) {
+            const checked = Array.from(classIdsCheckboxes).filter(cb => cb.checked);
+            if (!checked || checked.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one class.');
+                classIdsCheckboxes[0]?.closest('.class-selection-list')?.scrollIntoView({ behavior: 'smooth' });
+                return false;
+            }
+        }
+        const submitBtn = document.getElementById('createAssignmentBtn');
+        if (submitBtn) {
+            submitBtn.classList.add('loading');
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating Assignment...';
+            submitBtn.disabled = true;
+        }
+    });
+    
+    // Create Assignment button uses form="assignmentForm" and type="submit" so it natively submits the form.
+    // No click handler needed - browser validation and form submit event handle it.
+    
+    // In-class due date string (for when user switches to in-class via dropdown)
+    const IN_CLASS_DUE = {{ ('"' + in_class_due_date_str + '"') if in_class_due_date_str else 'null' }};
+    
+    function getInClassDueDateStr() {
+        if (IN_CLASS_DUE) return IN_CLASS_DUE;
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 0, 0);
+        return today.toISOString().slice(0, 16);
+    }
+    
+    function applyDueDateForContext(context) {
+        const dueInput = document.getElementById('due_date');
+        const dueDateDiv = dueInput.parentElement;
+        let infoEl = document.getElementById('inClassDueDateInfo');
+        
+        if (context === 'in-class') {
+            dueInput.value = getInClassDueDateStr();
+            dueInput.readOnly = true;
+            dueInput.style.backgroundColor = '#e9ecef';
+            if (!infoEl) {
+                infoEl = document.createElement('div');
+                infoEl.id = 'inClassDueDateInfo';
+                infoEl.className = 'alert alert-info mt-2 mb-0';
+                infoEl.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>In-Class Assignment:</strong> Due date automatically set to 4:00 PM EST today.';
+                dueDateDiv.appendChild(infoEl);
+            }
+        } else {
+            dueInput.readOnly = false;
+            dueInput.style.backgroundColor = '';
+            if (infoEl) infoEl.remove();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(23, 59, 0, 0);
+            dueInput.value = tomorrow.toISOString().slice(0, 16);
+        }
+    }
+    
+    // Assignment context dropdown: when changed, update due date behavior
+    const assignmentContextEl = document.getElementById('assignment_context');
+    if (assignmentContextEl) {
+        assignmentContextEl.addEventListener('change', function() {
+            applyDueDateForContext(this.value);
+        });
+        // Set initial due date based on assignment context (use both server context and current dropdown value)
+        const initialContext = assignmentContextEl.value || '{{ context }}';
+        applyDueDateForContext(initialContext);
+    }
+    
+    // Initialize preview
+    if (typeof updateAssignmentPreview === 'function') {
+        updateAssignmentPreview();
+    }
+    
+    // Select/Deselect all classes (for checkbox mode)
+    window.selectAllClasses = function() {
+        document.querySelectorAll('input[name="class_ids"]').forEach(cb => { cb.checked = true; });
+    };
+    window.deselectAllClasses = function() {
+        document.querySelectorAll('input[name="class_ids"]').forEach(cb => { cb.checked = false; });
+    };
+    
+    // Enable/disable advanced grading fields.
+    const elExtra = document.getElementById('allow_extra_credit');
+    const inpExtra = document.getElementById('max_extra_credit_points');
+    const elLate = document.getElementById('late_penalty_enabled');
+    const inpLatePerDay = document.getElementById('late_penalty_per_day');
+    const inpLateMaxDays = document.getElementById('late_penalty_max_days');
+
+    function syncAdvancedGradingInputs() {
+        // Keep fields editable at all times.
+        // Backend applies values only when matching switches are enabled.
+        if (inpExtra) inpExtra.disabled = false;
+        if (inpLatePerDay) inpLatePerDay.disabled = false;
+        if (inpLateMaxDays) inpLateMaxDays.disabled = false;
+    }
+
+    if (elExtra) elExtra.addEventListener('change', syncAdvancedGradingInputs);
+    if (elLate) elLate.addEventListener('change', syncAdvancedGradingInputs);
+    syncAdvancedGradingInputs();
+});
+</script>
+
+{% endblock %} 

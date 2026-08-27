@@ -1,0 +1,743 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_grade_assignment.css') }}">
+{% if is_student_assistant %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
+{% endif %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Enhanced Header -->
+    <div class="grading-header mb-4">
+        <div class="grading-header-content">
+            <div class="grading-header-icon">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="grading-header-info">
+                <h2 class="grading-header-title">{{ group_assignment.title }}</h2>
+                <p class="grading-header-subtitle">{{ class_obj.name }} • {{ group_assignment.quarter }}</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            {% if not is_student_assistant %}
+            <a href="{{ url_for('management.admin_group_grade_statistics', assignment_id=group_assignment.id) }}" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportGradesCSV()">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="printGradebook()">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gradingHelpModal">
+                <i class="bi bi-question-circle me-1"></i>Grading Help
+            </button>
+            {% if is_student_assistant and assistant_classes is defined and assistant_classes|length > 1 %}
+            <a href="{{ url_for('student_assistant.assistant_console') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-grid-1x2 me-1"></i>All classes
+            </a>
+            {% endif %}
+            <button onclick="goBack()" class="btn-grading-back">
+                <i class="bi bi-arrow-left me-2"></i>Back
+            </button>
+        </div>
+    </div>
+
+    {% if is_student_assistant %}
+    {% include 'management/_student_assistant_class_switcher.html' %}
+    {% endif %}
+
+    <!-- Assignment Stats Bar -->
+    <div class="grading-stats-bar mb-4">
+        <div class="grading-stat-card stat-total">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_students }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-graded">
+            <div class="stat-icon"><i class="bi bi-star-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="gradedStatCount">{{ graded_count }}</div>
+                <div class="stat-label">Graded</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-pending">
+            <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="pendingStatCount">{{ total_students - graded_count }}</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-average">
+            <div class="stat-icon"><i class="bi bi-graph-up"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="averageStatValue">
+                    {{ average_score|round(1) if average_score > 0 else '--' }}%
+                </div>
+                <div class="stat-label">Average</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Extension Reminder Notification -->
+    {% if extensions and extensions|length > 0 %}
+    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" style="border-left: 4px solid #0dcaf0;">
+        <div class="d-flex align-items-start">
+            <div class="flex-shrink-0 me-3">
+                <i class="bi bi-clock-history" style="font-size: 1.5rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2">
+                    <i class="bi bi-info-circle me-2"></i>Extension Reminder
+                </h6>
+                <p class="mb-2">
+                    <strong>The following students have been granted extensions for this assignment:</strong>
+                </p>
+                <div class="extension-student-list">
+                    {% for student in students %}
+                        {% if student.id in extensions %}
+                            {% set extension = extensions[student.id] %}
+                            <div class="extension-item mb-2 p-2 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                    <div class="mb-2 mb-md-0">
+                                        <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                        <span class="text-muted ms-2">({{ student.email }})</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="small">
+                                            <i class="bi bi-calendar-event me-1"></i>
+                                            <strong>Extended Due Date:</strong> {{ extension.extended_due_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                        </div>
+                                        {% if extension.reason %}
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-chat-left-text me-1"></i>
+                                            <em>Reason: {{ extension.reason }}</em>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Assignment Details Card -->
+    <div class="assignment-details-card mb-4">
+        <div class="assignment-details-header">
+            <i class="bi bi-info-circle-fill me-2"></i>Assignment Details
+        </div>
+        <div class="assignment-details-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-book"></i></div>
+                        <div>
+                            <div class="detail-label">Class</div>
+                            <div class="detail-value">{{ class_obj.name }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-calendar-event"></i></div>
+                        <div>
+                            <div class="detail-label">Due Date</div>
+                            <div class="detail-value">{{ group_assignment.due_date.strftime('%b %d, %Y') }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-grid-3x3"></i></div>
+                        <div>
+                            <div class="detail-label">Quarter</div>
+                            <div class="detail-value">{{ group_assignment.quarter }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-people"></i></div>
+                        <div>
+                            <div class="detail-label">Group Size</div>
+                            <div class="detail-value">{{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max or '∞' }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-star"></i></div>
+                        <div>
+                            <div class="detail-label">Total Points</div>
+                            <div class="detail-value">{{ total_points|int }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if group_assignment.description %}
+            <div class="assignment-description mt-3">
+                <strong>Description:</strong> {{ group_assignment.description }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Grading Form -->
+    <form method="POST" id="gradingForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="grading-container">
+            <div class="grading-container-header">
+                <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-3">
+                    <div>
+                        <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Student Grading</h5>
+                        <div class="grading-progress">
+                            <span id="gradedCount">{{ graded_count }}</span> / {{ total_students }} Graded
+                        </div>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkMarkSubmissionType('in_person')">
+                            <i class="bi bi-check-all me-1"></i>Mark All Submitted (Paper)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="bulkMarkSubmissionType('online')">
+                            <i class="bi bi-cloud-upload me-1"></i>Mark All Submitted (Online)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkMarkSubmissionType('not_submitted')">
+                            <i class="bi bi-x-lg me-1"></i>Mark All Not Submitted
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
+                            <i class="bi bi-ui-checks me-1"></i>Select/Deselect All
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="student-grading-cards">
+                {% for group in groups %}
+                    <!-- Group Section with Visual Separation -->
+                    <div class="group-section-container mb-4 pb-4" {% if not loop.last %}style="border-bottom: 3px solid #e0e0e0; margin-bottom: 2rem;"{% else %}style="border-bottom: 3px solid #e0e0e0;"{% endif %}>
+                        <div class="group-section-header mb-4 p-3 rounded" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1" style="color: white; font-weight: 600;">
+                                        <i class="bi bi-people-fill me-2"></i>{{ group.name }}
+                                    </h5>
+                                    <small style="opacity: 0.9;">
+                                        <i class="bi bi-person-check me-1"></i>{{ group.members|length }} member{{ 's' if group.members|length != 1 else '' }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-light text-dark px-3 py-2" style="font-size: 0.9rem;">
+                                        Group {{ loop.index }} of {{ groups|length }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="group-students-container">
+                    {% for member in group.members %}
+                        {% if member.student %}
+                        {% set student = member.student %}
+                        {% set student_id = student.id %}
+                        {% set grade_data = grades.get(student_id, {}) %}
+                        {% set score_value = (grade_data.get('score', 0)|float) if grade_data else 0 %}
+                        {% set comment_data = grade_data.get('comment', '') or grade_data.get('comments', '') if grade_data else '' %}
+                        {% set sub_type = grade_data.get('submission_type') if grade_data else '' %}
+                        {% set group_has_submission = group_submission_status.get(group.id, 'not_submitted') if group_submission_status else 'not_submitted' %}
+                        {% set display_sub_type = sub_type or group_has_submission %}
+                        {% set score_pct = (score_value / (total_points|float) * 100) if (total_points|float) > 0 else 0 %}
+                        {% set performance_class = 'excellent' if score_pct >= 90 else ('good' if score_pct >= 80 else ('warning' if score_pct >= 70 else ('failing' if score_pct > 0 else 'ungraded'))) %}
+                        
+                        <div class="student-grade-card {{ performance_class }}" data-student-id="{{ student_id }}" data-group-id="{{ group.id }}">
+                            <div class="student-grade-header">
+                                <!-- Bulk Select Checkbox -->
+                                <div class="bulk-select-checkbox">
+                                    <input type="checkbox" class="form-check-input student-select-checkbox" 
+                                           id="select_{{ student_id }}" value="{{ student_id }}">
+                                </div>
+                                
+                                <div class="student-grade-avatar">
+                                    {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
+                                </div>
+                                <div class="student-grade-info">
+                                    <div class="student-grade-name">{{ student.first_name }} {{ student.last_name }}</div>
+                                    <div class="student-grade-email">{{ student.email or 'No email' }}</div>
+                                    <div class="student-grade-group">
+                                        <small class="text-muted">
+                                            <i class="bi bi-people me-1"></i>Group: {{ group.name }}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="student-grade-badges">
+                                    {% if grade_data and score_value > 0 %}
+                                        <span class="submission-badge badge-submitted">
+                                            <i class="bi bi-check-circle-fill"></i> Graded
+                                        </span>
+                                    {% else %}
+                                        <span class="submission-badge badge-not-submitted">
+                                            <i class="bi bi-hourglass-split"></i> Not Graded
+                                        </span>
+                                    {% endif %}
+                                    {% if display_sub_type == 'online' %}
+                                        <span class="badge bg-info ms-1" title="Submitted online"><i class="bi bi-cloud-upload"></i></span>
+                                    {% elif display_sub_type == 'in_person' %}
+                                        <span class="badge bg-warning text-dark ms-1" title="Submitted in person"><i class="bi bi-person-check"></i></span>
+                                    {% elif display_sub_type == 'not_submitted' %}
+                                        <span class="badge bg-secondary ms-1" title="Not submitted"><i class="bi bi-x-circle"></i></span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="student-grade-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <div class="grade-input-group">
+                                            <label class="grade-label">
+                                                <i class="bi bi-percent"></i> Score
+                                            </label>
+                                            
+                                            <!-- Quick Letter Grade Buttons -->
+                                            <div class="letter-grade-buttons mb-2">
+                                                <button type="button" class="btn-letter-grade btn-grade-a" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.95)|round(1) }})" title="A (95%)">A</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-b" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.85)|round(1) }})" title="B (85%)">B</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-c" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.75)|round(1) }})" title="C (75%)">C</button>
+                                                <button type="button" class="btn-letter-grade btn-grade-d" onclick="setLetterGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.65)|round(1) }})" title="D (65%)">D</button>
+                                            </div>
+                                            
+                                            <!-- Common Grade Presets -->
+                                            <div class="grade-presets mb-2">
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ total_points|float }})">💯</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.9)|round(1) }})">90%</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.8)|round(1) }})">80%</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, {{ (total_points|float * 0.7)|round(1) }})">70%</button>
+                                                <button type="button" class="btn-preset" onclick="setGrade({{ student_id }}, {{ group.id }}, 0)">0</button>
+                                            </div>
+                                            
+                                            <div class="score-input-wrapper">
+                                                <input type="number" 
+                                                       class="score-input" 
+                                                       name="score_{{ group.id }}_{{ student_id }}" 
+                                                       id="score_{{ student_id }}_{{ group.id }}"
+                                                       value="{{ score_value if score_value else '' }}"
+                                                       min="0" 
+                                                       max="{{ total_points }}" 
+                                                       step="0.1"
+                                                       placeholder="0-{{ total_points|int }}"
+                                                       data-total-points="{{ total_points }}"
+                                                       data-student-id="{{ student_id }}"
+                                                       data-group-id="{{ group.id }}"
+                                                       oninput="updateScoreVisual(this); autoSaveGrade({{ student_id }}, {{ group.id }})">
+                                                <div class="score-visual-bar">
+                                                    <div class="score-visual-fill" style="width: {{ (score_pct)|round(0) }}%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <label class="form-label small mb-1">Submission</label>
+                                                <select name="submission_type_{{ group.id }}_{{ student_id }}" class="form-select form-select-sm" title="How did this student submit?">
+                                                    <option value="not_submitted" {% if display_sub_type == 'not_submitted' %}selected{% endif %}>❌ Not submitted</option>
+                                                    <option value="in_person" {% if display_sub_type == 'in_person' %}selected{% endif %}>📝 Paper/In-person</option>
+                                                    <option value="online" {% if display_sub_type == 'online' %}selected{% endif %}>📤 Online</option>
+                                                </select>
+                                                <label class="form-label small mb-0 mt-1">Notes</label>
+                                                {% set notes_val = grade_data.get('submission_notes', '') if grade_data else '' %}
+                                                {% set notes_is_other = notes_val and notes_val not in ['On-Time', 'Late'] %}
+                                                <select class="form-select form-select-sm mt-1 submission-notes-type-group" name="submission_notes_type_{{ group.id }}_{{ student_id }}" data-gid="{{ group.id }}" data-sid="{{ student_id }}" onchange="toggleGroupNotesOther(this)" title="Submission timing">
+                                                    <option value="On-Time" {% if notes_val == 'On-Time' or (not notes_val) %}selected{% endif %}>On-Time</option>
+                                                    <option value="Late" {% if notes_val == 'Late' %}selected{% endif %}>Late</option>
+                                                    <option value="Other" {% if notes_is_other %}selected{% endif %}>Other</option>
+                                                </select>
+                                                <input type="text" class="form-control form-control-sm mt-1 submission-notes-other-group" name="submission_notes_{{ group.id }}_{{ student_id }}" placeholder="Specify..." value="{{ notes_val if notes_is_other else '' }}" id="notes_other_{{ group.id }}_{{ student_id }}" style="display:{{ 'block' if notes_is_other else 'none' }};">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="grade-input-group">
+                                            <label class="grade-label">
+                                                <i class="bi bi-chat-left-text"></i> Feedback
+                                            </label>
+                                            <textarea class="comment-input" 
+                                                      name="comments_{{ group.id }}_{{ student_id }}" 
+                                                      id="comments_{{ student_id }}_{{ group.id }}"
+                                                      rows="3" 
+                                                      maxlength="500"
+                                                      placeholder="Add constructive feedback for the student..."
+                                                      data-student-id="{{ student_id }}"
+                                                      data-group-id="{{ group.id }}"
+                                                      oninput="updateCharCount(this); autoSaveGrade({{ student_id }}, {{ group.id }})">{{ comment_data }}</textarea>
+                                            <div class="char-counter">
+                                                <span class="char-count">{{ comment_data|length if comment_data else 0 }}</span>/500
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-3">
+                                        <div class="current-grade-display">
+                                            <label class="grade-label">
+                                                <i class="bi bi-star-fill"></i> Current Grade
+                                            </label>
+                                            <div class="grade-display-box">
+                                                {% if score_value > 0 %}
+                                                    <div class="grade-display-score">{{ score_value|round(1) }}/{{ total_points|int }}</div>
+                                                    <div class="grade-display-letter">
+                                                        {% if score_pct >= 90 %}A
+                                                        {% elif score_pct >= 80 %}B
+                                                        {% elif score_pct >= 70 %}C
+                                                        {% elif score_pct >= 60 %}D
+                                                        {% else %}F
+                                                        {% endif %}
+                                                    </div>
+                                                {% else %}
+                                                    <div class="grade-display-score text-muted">--</div>
+                                                    <div class="grade-display-letter text-muted">Not Graded</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                        </div>
+                    </div>
+                    {% if not loop.last %}
+                    <!-- Visual Separator Between Groups -->
+                    <div class="group-separator my-4">
+                        <div class="d-flex align-items-center">
+                            <div style="flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #667eea, transparent);"></div>
+                            <div class="px-3">
+                                <i class="bi bi-arrow-down text-muted" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div style="flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #764ba2, transparent);"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="grading-footer mt-4">
+            <div class="d-flex justify-content-center gap-3">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle me-2"></i>Save All Grades
+                </button>
+                <a href="{{ cancel_url or url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-x-circle me-2"></i>Cancel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Grading Help Modal -->
+<div class="modal fade" id="gradingHelpModal" tabindex="-1" aria-labelledby="gradingHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="gradingHelpModalLabel">
+                    <i class="bi bi-question-circle me-2"></i>Grading Fields Guide (Group Assignment)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Use this guide to correctly record grades for each student in the group.</p>
+                <div class="mb-3">
+                    <h6><i class="bi bi-star text-primary me-2"></i>Points Earned</h6>
+                    <p class="mb-0">Points each student earned (out of {{ total_points|int }} for this assignment). Use the quick buttons (A, B, C, D) or enter a value. Enter 0 for no credit. Each student in the group receives an individual grade.</p>
+                </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-cloud-upload text-primary me-2"></i>Submission Type</h6>
+                    <p class="mb-0">How did this student submit? <strong>Online</strong> = uploaded digitally; <strong>Paper/In-person</strong> = turned in physically; <strong>Not submitted</strong> = no submission. The default reflects whether the group uploaded a file online.</p>
+                </div>
+                <div class="mb-3">
+                    <h6><i class="bi bi-chat-dots text-primary me-2"></i>Submission Notes</h6>
+                    <p class="mb-0"><strong>On-Time</strong>, <strong>Late</strong>, or <strong>Other</strong> (when Other is selected, enter a custom note in the text field).</p>
+                </div>
+                <div class="mb-0">
+                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
+                    <p class="mb-0">Optional comment visible to the student. Add constructive feedback on their contribution to the group work.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Import functions from individual assignment grading page
+function goBack() {
+    window.location.href = "{{ back_url or url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}";
+}
+function toggleGroupNotesOther(selectEl) {
+    if (!selectEl) return;
+    const gid = selectEl.getAttribute('data-gid');
+    const sid = selectEl.getAttribute('data-sid');
+    const otherInput = document.getElementById('notes_other_' + gid + '_' + sid);
+    if (otherInput) {
+        otherInput.style.display = selectEl.value === 'Other' ? 'block' : 'none';
+        if (selectEl.value !== 'Other') otherInput.value = '';
+    }
+}
+
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.student-select-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+
+function bulkMarkSubmissionType(submissionType) {
+    const selects = document.querySelectorAll('select[name^="submission_type_"]');
+    selects.forEach(sel => {
+        if (sel.options[sel.selectedIndex]?.value !== submissionType) {
+            sel.value = submissionType;
+        }
+    });
+}
+
+function setLetterGrade(studentId, groupId, score) {
+    const input = document.getElementById(`score_${studentId}_${groupId}`);
+    if (input) {
+        input.value = score;
+        updateScoreVisual(input);
+        autoSaveGrade(studentId, groupId);
+    }
+}
+
+function setGrade(studentId, groupId, score) {
+    const input = document.getElementById(`score_${studentId}_${groupId}`);
+    if (input) {
+        input.value = score;
+        updateScoreVisual(input);
+        autoSaveGrade(studentId, groupId);
+    }
+}
+
+function updateScoreVisual(input) {
+    const score = parseFloat(input.value) || 0;
+    const totalPoints = parseFloat(input.dataset.totalPoints) || 100;
+    const pct = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+    const visualFill = input.parentElement.querySelector('.score-visual-fill');
+    if (visualFill) {
+        visualFill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    }
+    
+    // Update card class based on percentage
+    const card = input.closest('.student-grade-card');
+    if (card) {
+        card.className = 'student-grade-card ' + 
+            (pct >= 90 ? 'excellent' : 
+             pct >= 80 ? 'good' : 
+             pct >= 70 ? 'warning' : 
+             pct > 0 ? 'failing' : 'ungraded');
+    }
+}
+
+function updateCharCount(textarea) {
+    const charCount = textarea.parentElement.querySelector('.char-count');
+    if (charCount) {
+        charCount.textContent = textarea.value.length;
+    }
+}
+
+function autoSaveGrade(studentId, groupId) {
+    // Auto-save functionality can be added here
+    // For now, just update the UI
+    updateGradedCount();
+}
+
+function updateGradedCount() {
+    const scoreInputs = document.querySelectorAll('.score-input');
+    let gradedCount = 0;
+    scoreInputs.forEach(input => {
+        if (input.value && parseFloat(input.value) > 0) {
+            gradedCount++;
+        }
+    });
+    
+    const gradedCountEl = document.getElementById('gradedCount');
+    const gradedStatCountEl = document.getElementById('gradedStatCount');
+    const pendingStatCountEl = document.getElementById('pendingStatCount');
+    
+    if (gradedCountEl) gradedCountEl.textContent = gradedCount;
+    if (gradedStatCountEl) gradedStatCountEl.textContent = gradedCount;
+    if (pendingStatCountEl) {
+        const total = {{ total_students }};
+        pendingStatCountEl.textContent = total - gradedCount;
+    }
+    
+    // Update average
+    updateAverage();
+}
+
+function updateAverage() {
+    const scoreInputs = document.querySelectorAll('.score-input');
+    let total = 0;
+    let count = 0;
+    
+    scoreInputs.forEach(input => {
+        const score = parseFloat(input.value);
+        if (score && score > 0) {
+            total += score;
+            count++;
+        }
+    });
+    
+    const average = count > 0 ? (total / count).toFixed(1) : '--';
+    const averageEl = document.getElementById('averageStatValue');
+    if (averageEl) {
+        averageEl.textContent = average + (average !== '--' ? '%' : '');
+    }
+}
+
+// Handle form submission with AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize submission notes "Other" boxes
+    document.querySelectorAll('.submission-notes-type-group').forEach(function(sel) {
+        if (sel.value === 'Other') toggleGroupNotesOther(sel);
+    });
+    // Grading help modal is opened via the help button only (no auto-show) to avoid blocking the page
+    // Update all score visuals
+    document.querySelectorAll('.score-input').forEach(input => {
+        updateScoreVisual(input);
+    });
+    
+    // Update counts
+    updateGradedCount();
+    
+    // Intercept form submission
+    const gradingForm = document.getElementById('gradingForm');
+    if (gradingForm) {
+        gradingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const submitButton = gradingForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
+            
+            // Create FormData from form
+            const formData = new FormData(gradingForm);
+            
+            // Submit via AJAX
+            fetch(gradingForm.action || window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showSuccessMessage(data.message || 'Grades saved successfully!', data.graded_count || 0);
+                    
+                    // Update statistics
+                    if (data.graded_count !== undefined) {
+                        const gradedStatCountEl = document.getElementById('gradedStatCount');
+                        if (gradedStatCountEl) {
+                            gradedStatCountEl.textContent = data.graded_count;
+                        }
+                        updateGradedCount();
+                        updateAverage();
+                    }
+                    
+                    // Reload page after a short delay to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showErrorMessage(data.message || 'Error saving grades. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorMessage('An error occurred while saving grades. Please try again.');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            });
+        });
+    }
+});
+
+function showSuccessMessage(message, gradedCount) {
+    // Remove any existing alerts
+    const existingAlert = document.querySelector('.grade-save-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Create success alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show grade-save-alert';
+    alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+            <div class="flex-grow-1">
+                <strong>${message}</strong>
+                ${gradedCount > 0 ? `<br><small>${gradedCount} grade${gradedCount !== 1 ? 's' : ''} saved successfully.</small>` : ''}
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 300);
+        }
+    }, 5000);
+}
+
+function showErrorMessage(message) {
+    // Remove any existing alerts
+    const existingAlert = document.querySelector('.grade-save-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Create error alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger alert-dismissible fade show grade-save-alert';
+    alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+            <div class="flex-grow-1">
+                <strong>${message}</strong>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 300);
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

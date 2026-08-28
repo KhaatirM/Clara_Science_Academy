@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v5'
+const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v6'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Simpler weekly bell periods',
+    body: 'Bell schedules now use one set of periods for the whole week. When you assign a class, pick Mon–Fri on the assignment card instead of duplicating periods per day pattern.',
+  },
   {
     title: 'Drag classes into bell periods',
     body: 'Management Schedule → Assign classes: drag grade classes into periods; meeting times update automatically. Students see them on their schedule grid.',
@@ -30,7 +34,7 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.517.2'
+  const display = version?.display || 'v 2.517.3'
   const releaseLabel = version?.release_label || 'August 27, 2026'
   const origin = version?.origin || '0.0.0'
   const updatesEstimate = version?.updates_estimate ?? 2702

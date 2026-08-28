@@ -27,11 +27,8 @@ def grade_label(grade: int) -> str:
     return f'{grade}th Grade'
 
 
-# Default Clara-style block schedule (admin can edit).
-# Odd days Mon/Wed: 1,3,5,7; Even Tue/Thu: 2,4,6,8; Friday: all periods shorter.
-_ODD = [0, 2]
-_EVEN = [1, 3]
-_FRI = [4]
+# Default weekly bell slots (one row per period; class days chosen at assignment time).
+_WEEK = [0, 1, 2, 3, 4]
 
 
 def _t(h: int, m: int) -> time:
@@ -39,11 +36,11 @@ def _t(h: int, m: int) -> time:
 
 
 def _default_period_specs() -> list[dict[str, Any]]:
-    """Return seed period definitions (name, kind, start, end, color, days, sort)."""
+    """Return seed period definitions for the full week."""
     specs: list[dict[str, Any]] = []
     order = 0
 
-    def add(name, kind, start, end, color, days):
+    def add(name, kind, start, end, color):
         nonlocal order
         specs.append(
             {
@@ -52,43 +49,23 @@ def _default_period_specs() -> list[dict[str, Any]]:
                 'start_time': start,
                 'end_time': end,
                 'color_hex': color,
-                'days': list(days),
+                'days': list(_WEEK),
                 'sort_order': order,
             }
         )
         order += 1
 
-    # Mon/Wed (odd periods)
-    add('Period 1', 'class', _t(8, 0), _t(9, 20), '#5B8DEE', _ODD)
-    add('Break', 'break', _t(9, 20), _t(9, 35), '#A8D08D', _ODD)
-    add('Period 3', 'class', _t(9, 35), _t(10, 55), '#F4A261', _ODD)
-    add('Lunch', 'lunch', _t(10, 55), _t(11, 40), '#E9C46A', _ODD)
-    add('Period 5', 'class', _t(11, 40), _t(13, 0), '#E76F51', _ODD)
-    add('Tutorial', 'tutorial', _t(13, 0), _t(13, 30), '#9B6B9E', _ODD)
-    add('Period 7', 'class', _t(13, 30), _t(14, 50), '#2A9D8F', _ODD)
-
-    # Tue/Thu (even periods)
-    add('Period 2', 'class', _t(8, 0), _t(9, 20), '#457B9D', _EVEN)
-    add('Break', 'break', _t(9, 20), _t(9, 35), '#A8D08D', _EVEN)
-    add('Period 4', 'class', _t(9, 35), _t(10, 55), '#E07A5F', _EVEN)
-    add('Lunch', 'lunch', _t(10, 55), _t(11, 40), '#E9C46A', _EVEN)
-    add('Period 6', 'class', _t(11, 40), _t(13, 0), '#3D5A80', _EVEN)
-    add('Tutorial', 'tutorial', _t(13, 0), _t(13, 30), '#9B6B9E', _EVEN)
-    add('Period 8', 'class', _t(13, 30), _t(14, 50), '#81B29A', _EVEN)
-
-    # Friday — all periods shorter
-    add('Period 1', 'class', _t(8, 0), _t(8, 35), '#5B8DEE', _FRI)
-    add('Period 2', 'class', _t(8, 40), _t(9, 15), '#457B9D', _FRI)
-    add('Period 3', 'class', _t(9, 20), _t(9, 55), '#F4A261', _FRI)
-    add('Break', 'break', _t(9, 55), _t(10, 10), '#A8D08D', _FRI)
-    add('Period 4', 'class', _t(10, 10), _t(10, 45), '#E07A5F', _FRI)
-    add('Period 5', 'class', _t(10, 50), _t(11, 25), '#E76F51', _FRI)
-    add('Lunch', 'lunch', _t(11, 25), _t(12, 5), '#E9C46A', _FRI)
-    add('Period 6', 'class', _t(12, 5), _t(12, 40), '#3D5A80', _FRI)
-    add('Period 7', 'class', _t(12, 45), _t(13, 20), '#2A9D8F', _FRI)
-    add('Period 8', 'class', _t(13, 25), _t(14, 0), '#81B29A', _FRI)
-    add('Tutorial', 'tutorial', _t(14, 0), _t(14, 30), '#9B6B9E', _FRI)
-
+    add('Period 1', 'class', _t(8, 0), _t(9, 20), '#5B8DEE')
+    add('Period 2', 'class', _t(8, 0), _t(9, 20), '#457B9D')
+    add('Break', 'break', _t(9, 20), _t(9, 35), '#A8D08D')
+    add('Period 3', 'class', _t(9, 35), _t(10, 55), '#F4A261')
+    add('Period 4', 'class', _t(9, 35), _t(10, 55), '#E07A5F')
+    add('Lunch', 'lunch', _t(10, 55), _t(11, 40), '#E9C46A')
+    add('Period 5', 'class', _t(11, 40), _t(13, 0), '#E76F51')
+    add('Period 6', 'class', _t(11, 40), _t(13, 0), '#3D5A80')
+    add('Tutorial', 'tutorial', _t(13, 0), _t(13, 30), '#9B6B9E')
+    add('Period 7', 'class', _t(13, 30), _t(14, 50), '#2A9D8F')
+    add('Period 8', 'class', _t(13, 30), _t(14, 50), '#81B29A')
     return specs
 
 
@@ -131,6 +108,91 @@ def _ensure_bell_schedule_grade_column() -> None:
         pass
 
 
+def _ensure_assignment_days_column() -> None:
+    """Add bell_period_class_assignment.days_of_week_json if missing."""
+    from sqlalchemy import inspect, text
+
+    try:
+        inspector = inspect(db.engine)
+        if 'bell_period_class_assignment' not in inspector.get_table_names():
+            return
+        cols = {c['name'] for c in inspector.get_columns('bell_period_class_assignment')}
+        if 'days_of_week_json' in cols:
+            return
+        with db.engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE bell_period_class_assignment "
+                    "ADD COLUMN days_of_week_json VARCHAR(80) DEFAULT '[0,1,2,3,4]'"
+                )
+            )
+    except Exception:
+        pass
+
+
+def _ensure_class_schedule_int_days() -> None:
+    """Older SQLite databases declared class_schedule.day_of_week as VARCHAR.
+
+    Text weekdays break integer comparisons and day lookups, so rebuild the
+    column as INTEGER once and coerce the stored values.
+    """
+    from sqlalchemy import inspect, text
+
+    try:
+        if db.engine.dialect.name != 'sqlite':
+            return
+        inspector = inspect(db.engine)
+        if 'class_schedule' not in inspector.get_table_names():
+            return
+        column = next(
+            (c for c in inspector.get_columns('class_schedule') if c['name'] == 'day_of_week'),
+            None,
+        )
+        if column is None or 'CHAR' not in str(column['type']).upper():
+            return
+
+        with db.engine.begin() as conn:
+            conn.execute(text('PRAGMA foreign_keys=OFF'))
+            conn.execute(
+                text(
+                    'CREATE TABLE class_schedule_migrated ('
+                    ' id INTEGER PRIMARY KEY AUTOINCREMENT,'
+                    ' class_id INTEGER NOT NULL,'
+                    ' day_of_week INTEGER NOT NULL,'
+                    ' start_time TIME NOT NULL,'
+                    ' end_time TIME NOT NULL,'
+                    ' room VARCHAR(50),'
+                    ' FOREIGN KEY (class_id) REFERENCES class (id))'
+                )
+            )
+            conn.execute(
+                text(
+                    'INSERT INTO class_schedule_migrated'
+                    ' (id, class_id, day_of_week, start_time, end_time, room)'
+                    ' SELECT id, class_id, CAST(day_of_week AS INTEGER),'
+                    ' start_time, end_time, room FROM class_schedule'
+                )
+            )
+            conn.execute(text('DROP TABLE class_schedule'))
+            conn.execute(text('ALTER TABLE class_schedule_migrated RENAME TO class_schedule'))
+            conn.execute(text('PRAGMA foreign_keys=ON'))
+    except Exception:
+        pass
+
+
+def _weekday_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_weekdays(days: list | None) -> list[int]:
+    if not days:
+        return []
+    return sorted({int(d) for d in days if 0 <= int(d) <= 4})
+
+
 def ensure_active_bell_schedule(
     school_year=None,
     *,
@@ -145,6 +207,8 @@ def ensure_active_bell_schedule(
       3) create fresh seeded schedule for that grade
     """
     _ensure_bell_schedule_grade_column()
+    _ensure_assignment_days_column()
+    _ensure_class_schedule_int_days()
     school_year = school_year or get_active_school_year()
     if not school_year:
         return None
@@ -326,7 +390,7 @@ def replace_bell_schedule_periods(
         days_raw = raw.get('days_of_week')
         if not isinstance(days_raw, list) or not days_raw:
             raise ValueError(f'{name}: select at least one weekday')
-        days = sorted({int(d) for d in days_raw if 0 <= int(d) <= 4})
+        days = _normalize_weekdays(days_raw)
         if not days:
             raise ValueError(f'{name}: select at least one weekday (Mon–Fri)')
         sort_order = int(raw.get('sort_order') if raw.get('sort_order') is not None else idx)
@@ -425,7 +489,7 @@ def build_bell_grid_for_classes(
     )
 
     class_by_id = {c.id: c for c in classes}
-    assignments_by_period: dict[int, list[Class]] = {}
+    assignments_by_period_day: dict[tuple[int, int], list[Class]] = {}
     assigned_class_ids: set[int] = set()
     if schedule:
         period_ids = {p.id for p in periods}
@@ -440,25 +504,27 @@ def build_bell_grid_for_classes(
             class_obj = class_by_id.get(row.class_id)
             if not class_obj:
                 continue
-            assignments_by_period.setdefault(row.bell_period_id, []).append(class_obj)
             assigned_class_ids.add(class_obj.id)
+            for day_index in row.get_days_of_week():
+                assignments_by_period_day.setdefault((row.bell_period_id, day_index), []).append(
+                    class_obj
+                )
 
     # Track which (class_id, day) meetings were placed into at least one period cell
     placed_keys: set[tuple[int, int]] = set()
     day_columns: list[dict[str, Any]] = []
 
     for day_index in WEEKDAYS:
-        day_periods = [p for p in periods if day_index in p.get_days_of_week()]
         cells: list[dict[str, Any]] = []
-        for period in day_periods:
+        for period in periods:
+            if day_index not in period.get_days_of_week():
+                continue
             cell_classes: list[dict[str, Any]] = []
             if (period.kind or 'class') == 'class':
-                explicit = assignments_by_period.get(period.id) or []
+                explicit = assignments_by_period_day.get((period.id, day_index)) or []
                 if explicit:
                     for class_obj in explicit:
                         meeting = _class_meeting_on_day(class_obj, day_index)
-                        if not meeting:
-                            meeting = _ensure_meeting_for_period_day(class_obj, period, day_index)
                         if not meeting:
                             continue
                         placed_keys.add((class_obj.id, day_index))
@@ -594,48 +660,29 @@ def available_grade_levels(*, school_year=None) -> list[int]:
     return sorted(grades)
 
 
-def _ensure_meeting_for_period_day(
-    class_obj: Class, period: BellPeriod, day_index: int
-) -> ClassSchedule | None:
-    """Return ClassSchedule row for this day if period includes that weekday."""
-    if day_index not in (period.get_days_of_week() or []):
-        return None
-    return ClassSchedule.query.filter_by(class_id=class_obj.id, day_of_week=day_index).first()
-
-
-def rebuild_class_schedule_text(class_obj: Class) -> None:
-    """Rebuild Class.schedule display string from ClassSchedule rows."""
-    rows = (
-        ClassSchedule.query.filter_by(class_id=class_obj.id)
-        .order_by(ClassSchedule.day_of_week, ClassSchedule.start_time)
-        .all()
+def _sync_class_from_bell_assignments(class_obj: Class, schedule: BellSchedule) -> None:
+    """Rebuild Mon–Fri ClassSchedule rows from bell assignments on this schedule."""
+    period_ids = [p.id for p in (schedule.periods or [])]
+    assignments = (
+        BellPeriodClassAssignment.query.filter(
+            BellPeriodClassAssignment.class_id == class_obj.id,
+            BellPeriodClassAssignment.bell_period_id.in_(period_ids),
+        ).all()
+        if period_ids
+        else []
     )
-    parts: list[str] = []
-    for row in rows:
-        if row.day_of_week < 0 or row.day_of_week >= len(DAY_SHORT):
-            continue
-        if not row.start_time or not row.end_time:
-            continue
-        parts.append(
-            f'{DAY_SHORT[row.day_of_week]} {_fmt_time(row.start_time)}-{_fmt_time(row.end_time)}'
-        )
-    class_obj.schedule = ', '.join(parts) if parts else None
 
+    for day_index in WEEKDAYS:
+        row = ClassSchedule.query.filter_by(class_id=class_obj.id, day_of_week=day_index).first()
+        if row:
+            db.session.delete(row)
 
-def _apply_period_times_to_class(class_obj: Class, period: BellPeriod) -> None:
-    """Write period start/end onto ClassSchedule for each weekday in the period."""
     room = getattr(class_obj, 'room_number', None) or None
-    days = period.get_days_of_week() or []
-    for day_index in days:
-        existing = ClassSchedule.query.filter_by(
-            class_id=class_obj.id, day_of_week=day_index
-        ).first()
-        if existing:
-            existing.start_time = period.start_time
-            existing.end_time = period.end_time
-            if room:
-                existing.room = room
-        else:
+    for assignment in assignments:
+        period = assignment.bell_period
+        if not period:
+            continue
+        for day_index in assignment.get_days_of_week():
             db.session.add(
                 ClassSchedule(
                     class_id=class_obj.id,
@@ -648,19 +695,46 @@ def _apply_period_times_to_class(class_obj: Class, period: BellPeriod) -> None:
     rebuild_class_schedule_text(class_obj)
 
 
-def _clear_period_times_from_class(class_obj: Class, period: BellPeriod) -> None:
-    """Remove ClassSchedule rows for weekdays covered by this period."""
-    for day_index in period.get_days_of_week() or []:
-        row = ClassSchedule.query.filter_by(
-            class_id=class_obj.id, day_of_week=day_index
-        ).first()
-        if row:
-            db.session.delete(row)
-    rebuild_class_schedule_text(class_obj)
+def rebuild_class_schedule_text(class_obj: Class) -> None:
+    """Rebuild Class.schedule display string from ClassSchedule rows."""
+    rows = (
+        ClassSchedule.query.filter_by(class_id=class_obj.id)
+        .order_by(ClassSchedule.day_of_week, ClassSchedule.start_time)
+        .all()
+    )
+    parts: list[str] = []
+    for row in rows:
+        day = _weekday_int(row.day_of_week)
+        if day is None or day < 0 or day >= len(DAY_SHORT):
+            continue
+        if not row.start_time or not row.end_time:
+            continue
+        parts.append(f'{DAY_SHORT[day]} {_fmt_time(row.start_time)}-{_fmt_time(row.end_time)}')
+    class_obj.schedule = ', '.join(parts) if parts else None
 
 
-def assign_class_to_bell_period(*, class_id: int, period_id: int) -> dict[str, Any]:
-    """Assign a class to a bell period and sync meeting times."""
+def _days_within_period(period: BellPeriod, days_of_week: list[int] | None) -> list[int]:
+    """Clamp requested weekdays to the days the period actually runs."""
+    period_days = _normalize_weekdays(period.get_days_of_week()) or list(_WEEK)
+    if days_of_week is None:
+        return period_days
+    requested = _normalize_weekdays(days_of_week)
+    if not requested:
+        raise ValueError('Select at least one weekday (Mon–Fri)')
+    allowed = [d for d in requested if d in period_days]
+    if not allowed:
+        labels = ', '.join(DAY_SHORT[d] for d in period_days)
+        raise ValueError(f'{period.name} only runs on {labels}. Pick one of those days.')
+    return allowed
+
+
+def assign_class_to_bell_period(
+    *,
+    class_id: int,
+    period_id: int,
+    days_of_week: list[int] | None = None,
+) -> dict[str, Any]:
+    """Assign a class to a bell period and sync meeting times on selected weekdays."""
     period = BellPeriod.query.get(period_id)
     if not period:
         raise ValueError('Period not found')
@@ -673,7 +747,8 @@ def assign_class_to_bell_period(*, class_id: int, period_id: int) -> dict[str, A
     if not schedule:
         raise ValueError('Bell period has no parent schedule')
 
-    # One period slot per class within this bell schedule
+    days = _days_within_period(period, days_of_week)
+
     sibling_period_ids = [p.id for p in (schedule.periods or [])]
     existing = (
         BellPeriodClassAssignment.query.filter(
@@ -684,18 +759,56 @@ def assign_class_to_bell_period(*, class_id: int, period_id: int) -> dict[str, A
         else []
     )
     for row in existing:
-        old_period = row.bell_period
-        if old_period:
-            _clear_period_times_from_class(class_obj, old_period)
         db.session.delete(row)
 
-    db.session.add(BellPeriodClassAssignment(bell_period_id=period_id, class_id=class_id))
-    _apply_period_times_to_class(class_obj, period)
+    assignment = BellPeriodClassAssignment(bell_period_id=period_id, class_id=class_id)
+    assignment.set_days_of_week(days)
+    db.session.add(assignment)
+    _sync_class_from_bell_assignments(class_obj, schedule)
     db.session.commit()
     return {
         'success': True,
         'class_id': class_id,
         'period_id': period_id,
+        'days_of_week': days,
+        'schedule_text': class_obj.schedule,
+    }
+
+
+def update_bell_period_assignment_days(
+    *,
+    class_id: int,
+    period_id: int,
+    days_of_week: list[int],
+) -> dict[str, Any]:
+    """Change which weekdays a class meets during its assigned period."""
+    period = BellPeriod.query.get(period_id)
+    if not period:
+        raise ValueError('Period not found')
+    class_obj = Class.query.get(class_id)
+    if not class_obj:
+        raise ValueError('Class not found')
+    schedule = period.bell_schedule
+    if not schedule:
+        raise ValueError('Bell period has no parent schedule')
+
+    days = _days_within_period(period, days_of_week)
+
+    assignment = BellPeriodClassAssignment.query.filter_by(
+        bell_period_id=period_id,
+        class_id=class_id,
+    ).first()
+    if not assignment:
+        raise ValueError('Class is not assigned to this period')
+
+    assignment.set_days_of_week(days)
+    _sync_class_from_bell_assignments(class_obj, schedule)
+    db.session.commit()
+    return {
+        'success': True,
+        'class_id': class_id,
+        'period_id': period_id,
+        'days_of_week': days,
         'schedule_text': class_obj.schedule,
     }
 
@@ -718,11 +831,24 @@ def unassign_class_from_bell_schedule(*, class_id: int, grade_level: int) -> dic
         else []
     )
     for row in rows:
-        if row.bell_period:
-            _clear_period_times_from_class(class_obj, row.bell_period)
         db.session.delete(row)
+    if rows:
+        _sync_class_from_bell_assignments(class_obj, schedule)
+    else:
+        rebuild_class_schedule_text(class_obj)
     db.session.commit()
     return {'success': True, 'class_id': class_id}
+
+
+def reset_bell_schedule_periods(schedule: BellSchedule) -> BellSchedule:
+    """Replace all periods with the simplified weekly template (clears class assignments)."""
+    for period in list(schedule.periods or []):
+        db.session.delete(period)
+    db.session.flush()
+    _seed_default_periods(schedule)
+    schedule.updated_at = datetime.utcnow()
+    db.session.commit()
+    return schedule
 
 
 def _serialize_class_planner_card(class_obj: Class) -> dict[str, Any]:
@@ -760,7 +886,15 @@ def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
             class_obj = class_by_id.get(row.class_id)
             if not class_obj:
                 continue
-            cards.append(_serialize_class_planner_card(class_obj))
+            days = row.get_days_of_week()
+            cards.append(
+                {
+                    **_serialize_class_planner_card(class_obj),
+                    'assignment_id': row.id,
+                    'days_of_week': days,
+                    'day_labels': [DAY_SHORT[d] for d in days if 0 <= d < len(DAY_SHORT)],
+                }
+            )
             assigned_ids.add(class_obj.id)
         assignments_by_period[period.id] = cards
 

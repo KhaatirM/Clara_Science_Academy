@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 from flask_login import login_required
 
 from decorators import management_required, permissions_required
@@ -114,11 +114,97 @@ def management_schedule_assign():
         period_id = int(body.get("period_id"))
     except (TypeError, ValueError):
         return jsonify({"success": False, "message": "class_id and period_id are required"}), 400
+    days_raw = body.get("days_of_week")
+    days_of_week = None
+    if days_raw is not None:
+        if not isinstance(days_raw, list):
+            return jsonify({"success": False, "message": "days_of_week must be a list"}), 400
+        days_of_week = days_raw
     try:
-        return jsonify(assign_class_to_bell_period(class_id=class_id, period_id=period_id))
+        result = assign_class_to_bell_period(
+            class_id=class_id,
+            period_id=period_id,
+            days_of_week=days_of_week,
+        )
+        current_app.logger.info(
+            "schedule assign: class=%s period=%s requested_days=%s saved_days=%s",
+            class_id,
+            period_id,
+            days_of_week,
+            result.get("days_of_week"),
+        )
+        return jsonify(result)
     except ValueError as exc:
         db.session.rollback()
         return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@spa_api_blueprint.route("/management/schedule/assignment-days", methods=["PATCH"])
+@login_required
+@management_required
+@permissions_required("classes:manage")
+def management_schedule_assignment_days():
+    from utils.bell_schedule import update_bell_period_assignment_days
+
+    body = request.get_json(silent=True) or {}
+    try:
+        class_id = int(body.get("class_id"))
+        period_id = int(body.get("period_id"))
+        days_raw = body.get("days_of_week")
+        if not isinstance(days_raw, list):
+            raise ValueError("days_of_week must be a list")
+    except (TypeError, ValueError) as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    try:
+        result = update_bell_period_assignment_days(
+            class_id=class_id,
+            period_id=period_id,
+            days_of_week=days_raw,
+        )
+        current_app.logger.info(
+            "schedule assignment days: class=%s period=%s requested_days=%s saved_days=%s",
+            class_id,
+            period_id,
+            days_raw,
+            result.get("days_of_week"),
+        )
+        return jsonify(result)
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@spa_api_blueprint.route("/management/bell-schedule/reset", methods=["POST"])
+@login_required
+@management_required
+@permissions_required("classes:manage")
+def management_bell_schedule_reset():
+    from management_routes.bell_schedule_spa_helpers import _parse_grade_arg
+    from utils.bell_schedule import ensure_active_bell_schedule, reset_bell_schedule_periods, serialize_bell_schedule
+
+    body = request.get_json(silent=True) or {}
+    try:
+        grade_level = _parse_grade_arg(body.get("grade_level"))
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    schedule = ensure_active_bell_schedule(grade_level=grade_level)
+    if not schedule:
+        return jsonify({"success": False, "message": "No active school year"}), 400
+    try:
+        reset_bell_schedule_periods(schedule)
+        return jsonify(
+            {
+                "success": True,
+                "message": "Bell periods reset to the weekly template.",
+                "bell_schedule": serialize_bell_schedule(schedule),
+            }
+        )
     except Exception as exc:
         db.session.rollback()
         return jsonify({"success": False, "message": str(exc)}), 500

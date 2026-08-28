@@ -57,11 +57,57 @@ export async function fetchSchedulePlanner(grade: number) {
   )
 }
 
-export async function assignClassToPeriod(classId: number, periodId: number) {
-  return apiFetch<{ success: boolean; class_id: number; period_id: number; schedule_text?: string }>(
-    '/api/spa/management/schedule/assign',
-    { method: 'POST', body: JSON.stringify({ class_id: classId, period_id: periodId }) },
-  )
+export async function assignClassToPeriod(
+  classId: number,
+  periodId: number,
+  daysOfWeek?: number[],
+) {
+  return apiFetch<{
+    success: boolean
+    class_id: number
+    period_id: number
+    days_of_week?: number[]
+    schedule_text?: string
+  }>('/api/spa/management/schedule/assign', {
+    method: 'POST',
+    body: JSON.stringify({
+      class_id: classId,
+      period_id: periodId,
+      ...(daysOfWeek ? { days_of_week: daysOfWeek } : {}),
+    }),
+  })
+}
+
+export async function updateAssignmentDays(
+  classId: number,
+  periodId: number,
+  daysOfWeek: number[],
+) {
+  return apiFetch<{
+    success: boolean
+    class_id: number
+    period_id: number
+    days_of_week: number[]
+    schedule_text?: string
+  }>('/api/spa/management/schedule/assignment-days', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      class_id: classId,
+      period_id: periodId,
+      days_of_week: daysOfWeek,
+    }),
+  })
+}
+
+export async function resetBellSchedulePeriods(gradeLevel: number | null) {
+  return apiFetch<{
+    success: boolean
+    message?: string
+    bell_schedule?: import('../types/bellSchedule').BellScheduleDto
+  }>('/api/spa/management/bell-schedule/reset', {
+    method: 'POST',
+    body: JSON.stringify({ grade_level: gradeLevel }),
+  })
 }
 
 export async function unassignClassFromGradeSchedule(classId: number, gradeLevel: number) {

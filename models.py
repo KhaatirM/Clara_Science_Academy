@@ -608,13 +608,15 @@ class BellPeriod(db.Model):
 
 
 class BellPeriodClassAssignment(db.Model):
-    """Maps a class into a bell period; saving applies period times to ClassSchedule."""
+    """Maps a class into a bell period; saving applies period times on selected weekdays."""
 
     __tablename__ = 'bell_period_class_assignment'
 
     id = db.Column(db.Integer, primary_key=True)
     bell_period_id = db.Column(db.Integer, db.ForeignKey('bell_period.id'), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    # Weekdays this class meets during this period (0=Mon … 4=Fri)
+    days_of_week_json = db.Column(db.String(80), nullable=False, default='[0,1,2,3,4]')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     bell_period = db.relationship('BellPeriod', backref=db.backref('class_assignments', lazy=True))
@@ -623,6 +625,23 @@ class BellPeriodClassAssignment(db.Model):
     __table_args__ = (
         db.UniqueConstraint('bell_period_id', 'class_id', name='uq_bell_period_class'),
     )
+
+    def get_days_of_week(self) -> list:
+        import json
+
+        if not self.days_of_week_json:
+            return []
+        try:
+            raw = json.loads(self.days_of_week_json)
+            return [int(d) for d in raw if 0 <= int(d) <= 4]
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+
+    def set_days_of_week(self, days: list) -> None:
+        import json
+
+        cleaned = sorted({int(d) for d in (days or []) if 0 <= int(d) <= 4})
+        self.days_of_week_json = json.dumps(cleaned)
 
     def __repr__(self):
         return f"BellPeriodClassAssignment(period={self.bell_period_id}, class={self.class_id})"

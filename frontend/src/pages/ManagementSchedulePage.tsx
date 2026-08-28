@@ -3,6 +3,7 @@ import {
   fetchGradeMasterSchedule,
   fetchManagementBellSchedule,
   gradeSchedulePdfUrl,
+  resetBellSchedulePeriods,
   saveManagementBellSchedule,
   type ManagementBellScheduleResponse,
 } from '../api/bellSchedule'
@@ -20,6 +21,17 @@ const EMPTY_PERIOD = (): BellPeriodDto => ({
   sort_order: 0,
   days_of_week: [0, 1, 2, 3, 4],
 })
+
+const SCHEDULE_TABS = [
+  { id: 'assign' as const, label: 'Assign classes', icon: 'bi-arrows-move' },
+  { id: 'periods' as const, label: 'Edit bell periods', icon: 'bi-calendar-week' },
+  { id: 'print' as const, label: 'Preview & print', icon: 'bi-printer' },
+]
+
+const fieldInput =
+  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-hub-text shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-200'
+const fieldInputSm =
+  'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-hub-text focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-200'
 
 export function ManagementSchedulePage() {
   const [hub, setHub] = useState<ManagementBellScheduleResponse | null>(null)
@@ -124,6 +136,32 @@ export function ManagementSchedulePage() {
     await load(next)
   }
 
+  async function onResetTemplate() {
+    if (
+      !window.confirm(
+        'Reset to the simplified weekly template? This removes all current periods and class assignments for this schedule.',
+      )
+    ) {
+      return
+    }
+    setSaving(true)
+    setFlash(null)
+    setError(null)
+    try {
+      const result = await resetBellSchedulePeriods(editGrade)
+      setFlash(result.message || 'Bell periods reset.')
+      if (result.bell_schedule) {
+        setPeriods(result.bell_schedule.periods || [])
+        setTitle(result.bell_schedule.title || title)
+      }
+      await load(editGrade)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Reset failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function onSave() {
     setSaving(true)
     setFlash(null)
@@ -223,28 +261,20 @@ export function ManagementSchedulePage() {
               </div>
             ) : null}
 
-            <div className="mb-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={`btn btn-sm ${activeTab === 'assign' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => setActiveTab('assign')}
-              >
-                Assign classes
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${activeTab === 'periods' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => setActiveTab('periods')}
-              >
-                Edit bell periods
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${activeTab === 'print' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => setActiveTab('print')}
-              >
-                Preview &amp; print
-              </button>
+            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Schedule sections">
+              {SCHEDULE_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  className={['spa-mgmt-tab', activeTab === tab.id ? 'is-active' : ''].join(' ')}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <i className={`bi ${tab.icon}`} aria-hidden />
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             {activeTab === 'assign' ? (
@@ -255,7 +285,7 @@ export function ManagementSchedulePage() {
                       Grade
                     </label>
                     <select
-                      className="form-select"
+                      className={fieldInput}
                       value={editGrade === null ? '' : String(editGrade)}
                       onChange={(e) => {
                         const g = Number(e.target.value)
@@ -293,7 +323,7 @@ export function ManagementSchedulePage() {
                     Schedule is for
                   </label>
                   <select
-                    className="form-select"
+                    className={fieldInput}
                     value={editGrade === null ? 'all' : String(editGrade)}
                     onChange={(e) => {
                       const v = e.target.value
@@ -315,29 +345,45 @@ export function ManagementSchedulePage() {
                     Schedule title
                   </label>
                   <input
-                    className="form-control"
+                    className={fieldInput}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary btn-sm"
+                    className="spa-mgmt-btn-ghost px-3 py-2 text-sm"
                     onClick={() => setPeriods((prev) => [...prev, EMPTY_PERIOD()])}
                   >
+                    <i className="bi bi-plus-lg" aria-hidden />
                     Add period
                   </button>
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
+                    className="spa-mgmt-btn-ghost px-3 py-2 text-sm"
+                    disabled={saving}
+                    onClick={() => void onResetTemplate()}
+                  >
+                    <i className="bi bi-arrow-counterclockwise" aria-hidden />
+                    Reset weekly template
+                  </button>
+                  <button
+                    type="button"
+                    className="spa-mgmt-btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={saving || periods.length === 0}
                     onClick={() => void onSave()}
                   >
+                    <i className="bi bi-check-lg" aria-hidden />
                     {saving ? 'Saving…' : 'Save bell schedule'}
                   </button>
                 </div>
               </div>
+
+              <p className="mb-3 text-sm text-hub-muted">
+                Choose which weekdays each period appears on the grid. When assigning classes, you
+                also pick which days that class meets within the period.
+              </p>
 
               <div className="space-y-3">
                 {periods.map((period, index) => (
@@ -351,7 +397,7 @@ export function ManagementSchedulePage() {
                           Name
                         </label>
                         <input
-                          className="form-control form-control-sm"
+                          className={fieldInputSm}
                           value={period.name}
                           onChange={(e) => updatePeriod(index, { name: e.target.value })}
                         />
@@ -361,7 +407,7 @@ export function ManagementSchedulePage() {
                           Kind
                         </label>
                         <select
-                          className="form-select form-select-sm"
+                          className={fieldInputSm}
                           value={period.kind}
                           onChange={(e) => updatePeriod(index, { kind: e.target.value })}
                         >
@@ -378,7 +424,7 @@ export function ManagementSchedulePage() {
                         </label>
                         <input
                           type="time"
-                          className="form-control form-control-sm"
+                          className={fieldInputSm}
                           value={period.start_time}
                           onChange={(e) => updatePeriod(index, { start_time: e.target.value })}
                         />
@@ -389,7 +435,7 @@ export function ManagementSchedulePage() {
                         </label>
                         <input
                           type="time"
-                          className="form-control form-control-sm"
+                          className={fieldInputSm}
                           value={period.end_time}
                           onChange={(e) => updatePeriod(index, { end_time: e.target.value })}
                         />
@@ -409,7 +455,7 @@ export function ManagementSchedulePage() {
                       <div className="ml-auto flex shrink-0 gap-1 pb-0.5">
                         <button
                           type="button"
-                          className="btn btn-outline-secondary btn-sm"
+                          className="spa-mgmt-btn-ghost px-2 py-1.5 text-sm"
                           onClick={() => movePeriod(index, -1)}
                           disabled={index === 0}
                           title="Move up"
@@ -418,7 +464,7 @@ export function ManagementSchedulePage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-outline-secondary btn-sm"
+                          className="spa-mgmt-btn-ghost px-2 py-1.5 text-sm"
                           onClick={() => movePeriod(index, 1)}
                           disabled={index === periods.length - 1}
                           title="Move down"
@@ -427,7 +473,7 @@ export function ManagementSchedulePage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-outline-danger btn-sm"
+                          className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100"
                           onClick={() => setPeriods((prev) => prev.filter((_, i) => i !== index))}
                           title="Remove"
                         >
@@ -442,12 +488,7 @@ export function ManagementSchedulePage() {
                           <button
                             key={d.value}
                             type="button"
-                            className={`btn btn-sm ${on ? 'btn-teal active' : 'btn-outline-secondary'}`}
-                            style={
-                              on
-                                ? { backgroundColor: '#0f766e', borderColor: '#0f766e', color: '#fff' }
-                                : undefined
-                            }
+                            className={['spa-mgmt-tab text-xs', on ? 'is-active' : ''].join(' ')}
                             onClick={() => toggleDay(index, d.value)}
                           >
                             {d.label}
@@ -496,9 +537,7 @@ export function ManagementSchedulePage() {
                     <button
                       key={g.grade}
                       type="button"
-                      className={`btn btn-sm ${
-                        previewGrade === g.grade ? 'btn-primary' : 'btn-outline-secondary'
-                      }`}
+                      className={['spa-mgmt-tab', previewGrade === g.grade ? 'is-active' : ''].join(' ')}
                       onClick={() => setPreviewGrade(g.grade)}
                     >
                       {g.label}

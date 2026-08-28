@@ -8,6 +8,12 @@ export interface PlannerClassCard {
   grade_levels: number[]
 }
 
+export interface PlannerAssignedClass extends PlannerClassCard {
+  assignment_id: number
+  days_of_week: number[]
+  day_labels?: string[]
+}
+
 export interface PlannerPeriodRow {
   id: number
   name: string
@@ -19,7 +25,7 @@ export interface PlannerPeriodRow {
   sort_order: number
   days_of_week: number[]
   day_labels?: string[]
-  assigned_classes: PlannerClassCard[]
+  assigned_classes: PlannerAssignedClass[]
 }
 
 export interface SchedulePlannerResponse {

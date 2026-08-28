@@ -3541,6 +3541,9 @@ class ClassNotesFolder(db.Model):
     description = db.Column(db.Text, nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    # Set when this folder mirrors a Google Drive subfolder (managed by sync, not by hand).
+    drive_folder_id = db.Column(db.String(120), nullable=True, index=True)
+    drive_link_id = db.Column(db.Integer, nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -3587,6 +3590,73 @@ class ClassNotesItem(db.Model):
 
     def __repr__(self):
         return f"ClassNotesItem(id={self.id}, class_id={self.class_id}, file={self.original_filename})"
+
+
+class ClassNotesDriveLink(db.Model):
+    """A shared Google Drive folder mirrored into a class's notes."""
+
+    __tablename__ = 'class_notes_drive_link'
+
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False, index=True)
+    # Notes folder the Drive contents land in; NULL means the class notes root.
+    folder_id = db.Column(db.Integer, db.ForeignKey('class_notes_folder.id'), nullable=True)
+    drive_folder_id = db.Column(db.String(120), nullable=False, index=True)
+    drive_folder_name = db.Column(db.String(255), nullable=False)
+    drive_web_view_link = db.Column(db.String(500), nullable=True)
+    linked_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    include_subfolders = db.Column(db.Boolean, nullable=False, default=True)
+    last_synced_at = db.Column(db.DateTime, nullable=True)
+    last_error = db.Column(db.String(500), nullable=True)
+    needs_reauth = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    class_info = db.relationship('Class', foreign_keys=[class_id])
+    folder = db.relationship('ClassNotesFolder', foreign_keys=[folder_id])
+    linked_by = db.relationship('User', foreign_keys=[linked_by_user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('class_id', 'drive_folder_id', name='uq_class_notes_drive_folder'),
+    )
+
+    def __repr__(self):
+        return f"ClassNotesDriveLink(class_id={self.class_id}, drive={self.drive_folder_id})"
+
+
+class ClassNotesDriveItem(db.Model):
+    """Mirrored metadata for one file living in a linked Drive folder.
+
+    File bytes stay in Drive; the portal streams them on demand.
+    """
+
+    __tablename__ = 'class_notes_drive_item'
+
+    id = db.Column(db.Integer, primary_key=True)
+    link_id = db.Column(
+        db.Integer, db.ForeignKey('class_notes_drive_link.id'), nullable=False, index=True
+    )
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False, index=True)
+    folder_id = db.Column(db.Integer, db.ForeignKey('class_notes_folder.id'), nullable=True, index=True)
+    drive_file_id = db.Column(db.String(120), nullable=False, index=True)
+    name = db.Column(db.String(255), nullable=False)
+    mime_type = db.Column(db.String(160), nullable=True)
+    media_kind = db.Column(db.String(32), nullable=False, default='document')
+    file_size = db.Column(db.BigInteger, nullable=True)
+    drive_modified_time = db.Column(db.String(64), nullable=True)
+    web_view_link = db.Column(db.String(500), nullable=True)
+    is_google_native = db.Column(db.Boolean, nullable=False, default=False)
+    synced_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    link = db.relationship('ClassNotesDriveLink', backref=db.backref('items', lazy=True))
+    folder = db.relationship('ClassNotesFolder', foreign_keys=[folder_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('link_id', 'drive_file_id', name='uq_class_notes_drive_item'),
+    )
+
+    def __repr__(self):
+        return f"ClassNotesDriveItem(id={self.id}, name={self.name!r})"
 
 
 class GoogleWorkspaceOffboardJob(db.Model):

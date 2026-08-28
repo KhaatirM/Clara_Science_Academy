@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
-from flask import jsonify, request
+import io
+
+from flask import jsonify, request, send_file
 from flask_login import login_required
 
+from management_routes.class_notes_drive_helpers import (
+    download_drive_item,
+    link_drive_folder,
+    sync_drive_link_by_id,
+    unlink_drive_folder,
+)
 from management_routes.class_notes_spa_helpers import (
     create_class_notes_folder,
     delete_class_notes_folder,
@@ -149,3 +157,64 @@ def spa_class_notes_item_download(class_id: int, item_id: int):
     if error:
         return jsonify({'error': error}), status
     return result
+
+
+@spa_api_blueprint.route('/classes/<int:class_id>/notes/drive/link', methods=['POST'])
+@login_required
+def spa_class_notes_drive_link(class_id: int):
+    body = request.get_json(silent=True) or {}
+    folder_raw = body.get('folder_id')
+    folder_id = None
+    if folder_raw not in (None, '', 'null', 'undefined'):
+        try:
+            folder_id = int(folder_raw)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid folder id.'}), 400
+
+    payload, error, status = link_drive_folder(
+        class_id,
+        folder_url=str(body.get('folder_url') or body.get('url') or ''),
+        folder_id=folder_id,
+        include_subfolders=bool(body.get('include_subfolders', True)),
+    )
+    if error:
+        return jsonify({'error': error}), status
+    return jsonify(payload), status
+
+
+@spa_api_blueprint.route(
+    '/classes/<int:class_id>/notes/drive/links/<int:link_id>/sync', methods=['POST']
+)
+@login_required
+def spa_class_notes_drive_sync(class_id: int, link_id: int):
+    payload, error, status = sync_drive_link_by_id(class_id, link_id)
+    if error:
+        return jsonify({'error': error}), status
+    if not (payload or {}).get('success'):
+        return jsonify(payload), status
+    return jsonify(payload), status
+
+
+@spa_api_blueprint.route(
+    '/classes/<int:class_id>/notes/drive/links/<int:link_id>', methods=['DELETE']
+)
+@login_required
+def spa_class_notes_drive_unlink(class_id: int, link_id: int):
+    payload, error, status = unlink_drive_folder(class_id, link_id)
+    if error:
+        return jsonify({'error': error}), status
+    return jsonify(payload), status
+
+
+@spa_api_blueprint.route('/classes/<int:class_id>/notes/drive/items/<int:item_id>/download')
+@login_required
+def spa_class_notes_drive_item_download(class_id: int, item_id: int):
+    result, error, status = download_drive_item(class_id, item_id)
+    if error:
+        return jsonify({'error': error}), status
+    return send_file(
+        io.BytesIO(result['data']),
+        mimetype=result['content_type'],
+        as_attachment=not result['inline'],
+        download_name=result['download_name'],
+    )

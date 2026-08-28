@@ -6,14 +6,22 @@ import {
   deleteClassNotesFolder,
   deleteClassNotesItem,
   fetchClassNotes,
+  linkClassNotesDriveFolder,
   readVideoDurationSeconds,
+  syncClassNotesDriveLink,
+  unlinkClassNotesDriveFolder,
   updateClassNotesFolder,
   uploadClassNotesItemsBulk,
 } from '../api/classNotes'
 import { ClassSubpageShell } from '../components/classes/ClassSubpageShell'
 import { ClassWorkflowNav } from '../components/classes/ClassWorkflowNav'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
-import type { ClassNotesFolder, ClassNotesItem, ClassNotesResponse } from '../types/classNotes'
+import type {
+  ClassNotesDriveLink,
+  ClassNotesFolder,
+  ClassNotesItem,
+  ClassNotesResponse,
+} from '../types/classNotes'
 import type { ManagementOutletContext } from '../types/layout'
 
 type Scope = 'management' | 'teacher' | 'student'
@@ -81,6 +89,123 @@ function folderBreadcrumb(
   return chain
 }
 
+function formatSyncedAt(value: string | null) {
+  if (!value) return 'not synced yet'
+  const when = new Date(value.endsWith('Z') ? value : `${value}Z`)
+  if (Number.isNaN(when.getTime())) return 'not synced yet'
+  const minutes = Math.round((Date.now() - when.getTime()) / 60000)
+  if (minutes < 1) return 'synced just now'
+  if (minutes < 60) return `synced ${minutes} min ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `synced ${hours} hr ago`
+  return `synced ${when.toLocaleDateString()}`
+}
+
+function DrivePanel({
+  links,
+  busy,
+  onLink,
+  onSync,
+  onUnlink,
+}: {
+  links: ClassNotesDriveLink[]
+  busy: boolean
+  onLink: (url: string) => void
+  onSync: (link: ClassNotesDriveLink) => void
+  onUnlink: (link: ClassNotesDriveLink) => void
+}) {
+  const [url, setUrl] = useState('')
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-blue-100 bg-gradient-to-r from-blue-100/80 to-blue-50/50 px-4 py-3">
+        <h2 className="mb-0 text-sm font-bold uppercase tracking-wide text-hub-text">
+          <i className="bi bi-google me-2 text-blue-700" aria-hidden />
+          Google Drive
+        </h2>
+      </div>
+      <div className="space-y-3 p-3">
+        {links.map((link) => (
+          <div key={link.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="truncate text-sm font-semibold text-hub-text">
+              {link.drive_folder_name}
+            </div>
+            <div className="mt-0.5 text-xs text-hub-muted">
+              {link.item_count} file{link.item_count === 1 ? '' : 's'} · {formatSyncedAt(link.last_synced_at)}
+            </div>
+            {link.needs_reauth ? (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Google access expired for this folder.{' '}
+                <a className="font-semibold underline" href="/teacher/google-account/connect">
+                  Reconnect Google account
+                </a>
+              </div>
+            ) : link.last_error ? (
+              <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                {link.last_error}
+              </div>
+            ) : null}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-teal-500 disabled:opacity-60"
+                onClick={() => onSync(link)}
+              >
+                Sync now
+              </button>
+              {link.drive_web_view_link ? (
+                <a
+                  href={link.drive_web_view_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-teal-500"
+                >
+                  Open in Drive
+                </a>
+              ) : null}
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                onClick={() => onUnlink(link)}
+              >
+                Unlink
+              </button>
+            </div>
+          </div>
+        ))}
+
+        <div className="rounded-xl border border-dashed border-slate-300 p-3">
+          <label className="mb-1 block text-xs font-semibold text-hub-muted">
+            Link a shared Drive folder
+          </label>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="https://drive.google.com/drive/folders/…"
+          />
+          <button
+            type="button"
+            disabled={busy || !url.trim()}
+            className="rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            onClick={() => {
+              onLink(url.trim())
+              setUrl('')
+            }}
+          >
+            Link folder
+          </button>
+          <p className="mb-0 mt-2 text-xs text-hub-muted">
+            Files stay in Drive. Students see and download them here without needing Drive access.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function FolderTreeNode({
   folder,
   depth,
@@ -137,14 +262,17 @@ function FolderTreeNode({
             className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-hub-text"
             onClick={() => onSelect(folder.id)}
           >
-            <i className="bi bi-folder2-open me-1 text-teal-700" aria-hidden />
+            <i
+              className={`bi ${folder.is_drive_folder ? 'bi-google text-blue-700' : 'bi-folder2-open text-teal-700'} me-1`}
+              aria-hidden
+            />
             {folder.name}
           </button>
           <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-hub-muted">
             {folder.item_count}
           </span>
         </div>
-        {canManage ? (
+        {canManage && !folder.is_drive_folder ? (
           <div className="mt-1.5 flex flex-wrap gap-1 ps-6">
             {canNest ? (
               <button
@@ -363,6 +491,64 @@ export function ClassNotesPage() {
     }
   }
 
+  async function onLinkDrive(folderUrl: string) {
+    if (!canManage || !folderUrl) return
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await linkClassNotesDriveFolder(id, {
+        folder_url: folderUrl,
+        folder_id: selectedKey === 'root' ? null : selectedKey,
+      })
+      setData(res)
+      setMessage(res.message || 'Drive folder linked.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not link that Drive folder')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onSyncDrive(link: ClassNotesDriveLink) {
+    if (!canManage) return
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await syncClassNotesDriveLink(id, link.id)
+      setData(res)
+      setMessage(res.message || 'Drive folder synced.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sync that Drive folder')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onUnlinkDrive(link: ClassNotesDriveLink) {
+    if (!canManage) return
+    if (
+      !window.confirm(
+        `Unlink “${link.drive_folder_name}”? The files stay in Google Drive but disappear from class notes.`,
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await unlinkClassNotesDriveFolder(id, link.id)
+      setData(res)
+      setSelectedKey('root')
+      setMessage(res.message || 'Drive folder unlinked.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not unlink that Drive folder')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function onDeleteItem(item: ClassNotesItem) {
     if (!canManage) return
     if (!window.confirm(`Remove “${item.title}”?`)) return
@@ -401,9 +587,21 @@ export function ClassNotesPage() {
       </div>
     )
 
+  const driveLinks = data?.drive_links || []
+  const needsReauth = canManage && driveLinks.some((link) => link.needs_reauth)
+
   const body = (
     <>
       {loading ? <p className="text-hub-muted">Loading class notes…</p> : null}
+      {needsReauth ? (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Google access for a linked Drive folder has expired, so its files are not refreshing.{' '}
+          <a className="font-semibold underline" href="/teacher/google-account/connect">
+            Reconnect your Google account
+          </a>
+          .
+        </div>
+      ) : null}
       {error ? (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
       ) : null}
@@ -521,6 +719,16 @@ export function ClassNotesPage() {
                 )}
               </div>
             </section>
+
+            {canManage ? (
+              <DrivePanel
+                links={driveLinks}
+                busy={busy}
+                onLink={(url) => void onLinkDrive(url)}
+                onSync={(link) => void onSyncDrive(link)}
+                onUnlink={(link) => void onUnlinkDrive(link)}
+              />
+            ) : null}
           </aside>
 
           <section className="lg:col-span-8">
@@ -611,54 +819,77 @@ export function ClassNotesPage() {
 
                 {items.length ? (
                   <ul className="mb-0 space-y-2">
-                    {items.map((item) => (
-                      <li
-                        key={item.id}
-                        className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800">
-                          <i className={`bi ${mediaIcon(item.media_kind)}`} aria-hidden />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-hub-text">{item.title}</div>
-                          <div className="text-xs text-hub-muted">
-                            {item.original_filename}
-                            {item.file_size != null ? ` · ${formatBytes(item.file_size)}` : ''}
-                            {item.media_kind === 'video' && item.duration_seconds != null
-                              ? ` · ${formatDuration(item.duration_seconds)}`
-                              : ''}
+                    {items.map((item) => {
+                      const fromDrive = item.source === 'drive'
+                      const downloadUrl = item.download_url || classNotesItemDownloadUrl(id, item.id)
+                      return (
+                        <li
+                          key={`${item.source || 'upload'}-${item.id}`}
+                          className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800">
+                            <i className={`bi ${mediaIcon(item.media_kind)}`} aria-hidden />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="truncate text-sm font-semibold text-hub-text">
+                                {item.title}
+                              </span>
+                              {fromDrive ? (
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-blue-800">
+                                  Drive
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="text-xs text-hub-muted">
+                              {item.original_filename}
+                              {item.file_size != null ? ` · ${formatBytes(item.file_size)}` : ''}
+                              {item.media_kind === 'video' && item.duration_seconds != null
+                                ? ` · ${formatDuration(item.duration_seconds)}`
+                                : ''}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {item.media_kind === 'video' ? (
+                          <div className="flex flex-wrap gap-2">
+                            {item.media_kind === 'video' ? (
+                              <a
+                                href={downloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                              >
+                                Open
+                              </a>
+                            ) : null}
                             <a
-                              href={classNotesItemDownloadUrl(id, item.id)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                              href={downloadUrl}
+                              className="rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
                             >
-                              Open
+                              Download
                             </a>
-                          ) : null}
-                          <a
-                            href={classNotesItemDownloadUrl(id, item.id)}
-                            className="rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
-                          >
-                            Download
-                          </a>
-                          {canManage ? (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
-                              onClick={() => void onDeleteItem(item)}
-                            >
-                              Remove
-                            </button>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
+                            {fromDrive && canManage && item.web_view_link ? (
+                              <a
+                                href={item.web_view_link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                              >
+                                Open in Drive
+                              </a>
+                            ) : null}
+                            {canManage && !fromDrive ? (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                                onClick={() => void onDeleteItem(item)}
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                        </li>
+                      )
+                    })}
                   </ul>
                 ) : (
                   <div className="rounded-xl border border-dashed border-slate-300 px-5 py-12 text-center">

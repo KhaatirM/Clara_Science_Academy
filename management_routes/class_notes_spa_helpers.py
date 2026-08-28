@@ -13,7 +13,14 @@ from sqlalchemy import inspect, text
 from werkzeug.utils import secure_filename
 
 from extensions import db
-from models import Class, ClassNotesFolder, ClassNotesItem, Enrollment
+from models import (
+    Class,
+    ClassNotesDriveItem,
+    ClassNotesDriveLink,
+    ClassNotesFolder,
+    ClassNotesItem,
+    Enrollment,
+)
 from utils.class_notes_media import (
     NOTES_ALLOWED_EXTENSIONS,
     NOTES_MAX_VIDEO_SECONDS,
@@ -30,7 +37,10 @@ def ensure_class_notes_tables() -> None:
     try:
         ClassNotesFolder.__table__.create(db.engine, checkfirst=True)
         ClassNotesItem.__table__.create(db.engine, checkfirst=True)
+        ClassNotesDriveLink.__table__.create(db.engine, checkfirst=True)
+        ClassNotesDriveItem.__table__.create(db.engine, checkfirst=True)
         _ensure_parent_id_column()
+        _ensure_folder_drive_columns()
     except Exception:
         current_app.logger.exception('Could not ensure class notes tables')
 
@@ -50,6 +60,27 @@ def _ensure_parent_id_column() -> None:
             )
     except Exception:
         current_app.logger.exception('Could not add class_notes_folder.parent_id')
+
+
+def _ensure_folder_drive_columns() -> None:
+    """Add the Drive mirror columns to class_notes_folder on existing databases."""
+    try:
+        insp = inspect(db.engine)
+        cols = {c['name'] for c in insp.get_columns('class_notes_folder')}
+        statements = []
+        if 'drive_folder_id' not in cols:
+            statements.append(
+                'ALTER TABLE class_notes_folder ADD COLUMN drive_folder_id VARCHAR(120)'
+            )
+        if 'drive_link_id' not in cols:
+            statements.append('ALTER TABLE class_notes_folder ADD COLUMN drive_link_id INTEGER')
+        if not statements:
+            return
+        with db.engine.begin() as conn:
+            for statement in statements:
+                conn.execute(text(statement))
+    except Exception:
+        current_app.logger.exception('Could not add class_notes_folder drive columns')
 
 
 def _notes_upload_dir() -> str:
@@ -129,6 +160,7 @@ def _would_cycle(folder: ClassNotesFolder, new_parent_id: int | None) -> bool:
 def _serialize_item(item: ClassNotesItem) -> dict[str, Any]:
     return {
         'id': item.id,
+        'source': 'upload',
         'class_id': item.class_id,
         'folder_id': item.folder_id,
         'title': item.title,
@@ -138,14 +170,53 @@ def _serialize_item(item: ClassNotesItem) -> dict[str, Any]:
         'media_kind': item.media_kind,
         'duration_seconds': item.duration_seconds,
         'download_url': f'/api/spa/classes/{item.class_id}/notes/items/{item.id}/download',
+        'web_view_link': None,
         'uploaded_at': item.uploaded_at.isoformat() if item.uploaded_at else None,
         'uploaded_by': item.uploaded_by.username if item.uploaded_by else None,
     }
 
 
+def _serialize_drive_item(item: ClassNotesDriveItem) -> dict[str, Any]:
+    return {
+        'id': item.id,
+        'source': 'drive',
+        'class_id': item.class_id,
+        'folder_id': item.folder_id,
+        'title': item.name,
+        'original_filename': item.name,
+        'content_type': item.mime_type,
+        'file_size': item.file_size,
+        'media_kind': item.media_kind,
+        'duration_seconds': None,
+        'download_url': (
+            f'/api/spa/classes/{item.class_id}/notes/drive/items/{item.id}/download'
+        ),
+        'web_view_link': item.web_view_link,
+        'uploaded_at': item.synced_at.isoformat() if item.synced_at else None,
+        'uploaded_by': None,
+    }
+
+
+def _drive_items_by_folder(class_id: int) -> dict[int | None, list[dict[str, Any]]]:
+    """Mirrored Drive files grouped by the notes folder they belong to."""
+    grouped: dict[int | None, list[dict[str, Any]]] = {}
+    try:
+        rows = (
+            ClassNotesDriveItem.query.filter_by(class_id=class_id)
+            .order_by(ClassNotesDriveItem.name.asc())
+            .all()
+        )
+    except Exception:
+        return grouped
+    for row in rows:
+        grouped.setdefault(row.folder_id, []).append(_serialize_drive_item(row))
+    return grouped
+
+
 def _serialize_folder_node(
     folder: ClassNotesFolder,
     children_by_parent: dict[int | None, list[ClassNotesFolder]],
+    drive_by_folder: dict[int | None, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     folder_items = sorted(
         folder.items or [],
@@ -153,6 +224,7 @@ def _serialize_folder_node(
         reverse=True,
     )
     items = [_serialize_item(i) for i in folder_items]
+    items.extend((drive_by_folder or {}).get(folder.id, []))
     kids = children_by_parent.get(folder.id, [])
     return {
         'id': folder.id,
@@ -162,20 +234,43 @@ def _serialize_folder_node(
         'sort_order': folder.sort_order or 0,
         'depth': _folder_depth(folder),
         'item_count': len(items),
+        'is_drive_folder': bool(getattr(folder, 'drive_folder_id', None)),
         'items': items,
-        'children': [_serialize_folder_node(c, children_by_parent) for c in kids],
+        'children': [
+            _serialize_folder_node(c, children_by_parent, drive_by_folder) for c in kids
+        ],
         'created_at': folder.created_at.isoformat() if folder.created_at else None,
     }
 
 
-def _build_folder_tree(folders: list[ClassNotesFolder]) -> list[dict[str, Any]]:
+def _build_folder_tree(
+    folders: list[ClassNotesFolder],
+    drive_by_folder: dict[int | None, list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
     by_parent: dict[int | None, list[ClassNotesFolder]] = {}
     for f in folders:
         by_parent.setdefault(f.parent_id, []).append(f)
     for kids in by_parent.values():
         kids.sort(key=lambda x: (x.sort_order or 0, (x.name or '').lower()))
     roots = by_parent.get(None, [])
-    return [_serialize_folder_node(f, by_parent) for f in roots]
+    return [_serialize_folder_node(f, by_parent, drive_by_folder) for f in roots]
+
+
+def serialize_drive_link(link: ClassNotesDriveLink) -> dict[str, Any]:
+    return {
+        'id': link.id,
+        'class_id': link.class_id,
+        'folder_id': link.folder_id,
+        'drive_folder_id': link.drive_folder_id,
+        'drive_folder_name': link.drive_folder_name,
+        'drive_web_view_link': link.drive_web_view_link,
+        'include_subfolders': bool(link.include_subfolders),
+        'last_synced_at': link.last_synced_at.isoformat() if link.last_synced_at else None,
+        'last_error': link.last_error,
+        'needs_reauth': bool(link.needs_reauth),
+        'linked_by': link.linked_by.username if link.linked_by else None,
+        'item_count': len(link.items or []),
+    }
 
 
 def _flatten_folders(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -197,17 +292,39 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
         return None, 'Access denied', 403
 
     can_manage = _user_can_manage_class_notes(class_obj)
+
+    # Imported lazily: the drive helpers import from this module.
+    try:
+        from .class_notes_drive_helpers import refresh_stale_drive_links
+
+        refresh_stale_drive_links(class_id)
+    except Exception:
+        current_app.logger.exception('Could not refresh Drive links for class %s', class_id)
+
     folders = (
         ClassNotesFolder.query.filter_by(class_id=class_id)
         .order_by(ClassNotesFolder.sort_order.asc(), ClassNotesFolder.name.asc())
         .all()
     )
-    tree = _build_folder_tree(folders)
+    drive_by_folder = _drive_items_by_folder(class_id)
+    tree = _build_folder_tree(folders, drive_by_folder)
     root_items = (
         ClassNotesItem.query.filter_by(class_id=class_id, folder_id=None)
         .order_by(ClassNotesItem.uploaded_at.desc())
         .all()
     )
+    root_payload = [_serialize_item(i) for i in root_items]
+    root_payload.extend(drive_by_folder.get(None, []))
+
+    try:
+        links = (
+            ClassNotesDriveLink.query.filter_by(class_id=class_id, is_active=True)
+            .order_by(ClassNotesDriveLink.created_at.asc())
+            .all()
+        )
+    except Exception:
+        links = []
+
     return {
         'class': {
             'id': class_obj.id,
@@ -216,7 +333,8 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
         },
         'folders': tree,
         'folders_flat': _flatten_folders(tree),
-        'root_items': [_serialize_item(i) for i in root_items],
+        'root_items': root_payload,
+        'drive_links': [serialize_drive_link(link) for link in links],
         'can_manage': can_manage,
         'allowed_extensions': sorted(NOTES_ALLOWED_EXTENSIONS),
         'max_video_seconds': NOTES_MAX_VIDEO_SECONDS,

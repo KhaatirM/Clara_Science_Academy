@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v6'
+const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Link a Google Drive folder to Class Notes',
+    body: 'Teachers can paste a shared Drive folder link on a class Notes page. Its subfolders and files appear in Class Notes automatically, and anything you drop in Drive shows up after the next sync.',
+  },
+  {
+    title: 'Students download Drive files without Drive access',
+    body: 'Mirrored files stream through the portal using the same class permission checks, so students never need to be shared on the folder. Google Docs and Slides download as PDF; Sheets as Excel.',
+  },
+  {
+    title: 'Sync now, Unlink, and reconnect prompts',
+    body: 'The Drive panel shows the last sync time with Sync now and Unlink buttons. If Google access expires, a banner links straight to reconnecting your account.',
+  },
   {
     title: 'Simpler weekly bell periods',
     body: 'Bell schedules now use one set of periods for the whole week. When you assign a class, pick Mon–Fri on the assignment card instead of duplicating periods per day pattern.',
@@ -34,10 +46,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.517.3'
-  const releaseLabel = version?.release_label || 'August 27, 2026'
+  const display = version?.display || 'v 2.518.0'
+  const releaseLabel = version?.release_label || 'August 28, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2702
+  const updatesEstimate = version?.updates_estimate ?? 2707
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -143,11 +155,11 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  Security, Reports &amp; Classroom – {releaseLabel}
+                  Google Drive in Class Notes – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  Idle auto sign-out, grade-3 report PDF fix, grade-filtered class rosters, and
-                  school-managed Google Classroom lifecycle.
+                  Link a shared Drive folder to a class and its files show up in Class Notes, ready
+                  for students to download without any Drive sharing.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

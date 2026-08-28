@@ -55,6 +55,25 @@ def notes_media_kind(ext: str) -> str:
     return 'other'
 
 
+def notes_media_kind_for_drive(mime_type: str | None, name: str | None) -> str:
+    """Classify a Drive file, preferring its MIME type and falling back to the name."""
+    mime = (mime_type or '').lower()
+    if mime.startswith('video/'):
+        return 'video'
+    if mime.startswith('image/'):
+        return 'image'
+    if mime == 'application/pdf' or mime.startswith('text/'):
+        return 'document'
+    if mime.startswith('application/vnd.google-apps.'):
+        # Docs, Slides, Sheets and Drawings all export to a document format.
+        return 'document' if mime != 'application/vnd.google-apps.folder' else 'other'
+    if mime.startswith('application/vnd.openxmlformats') or mime.startswith('application/vnd.ms-'):
+        return 'document'
+    if name and '.' in name:
+        return notes_media_kind(name.rsplit('.', 1)[-1])
+    return 'other'
+
+
 def _read_mp4_duration_seconds(path: str) -> Optional[float]:
     """Best-effort MP4/MOV duration from the mvhd atom (no ffmpeg required)."""
     try:

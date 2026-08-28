@@ -106,6 +106,29 @@ export function classNotesItemDownloadUrl(classId: number, itemId: number) {
   return `/api/spa/classes/${classId}/notes/items/${itemId}/download`
 }
 
+export async function linkClassNotesDriveFolder(
+  classId: number,
+  body: { folder_url: string; folder_id?: number | null; include_subfolders?: boolean },
+) {
+  return apiFetch<ClassNotesResponse>(`/api/spa/classes/${classId}/notes/drive/link`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function syncClassNotesDriveLink(classId: number, linkId: number) {
+  return apiFetch<ClassNotesResponse>(
+    `/api/spa/classes/${classId}/notes/drive/links/${linkId}/sync`,
+    { method: 'POST' },
+  )
+}
+
+export async function unlinkClassNotesDriveFolder(classId: number, linkId: number) {
+  return apiFetch<ClassNotesResponse>(`/api/spa/classes/${classId}/notes/drive/links/${linkId}`, {
+    method: 'DELETE',
+  })
+}
+
 /** Read video duration in the browser (used before upload). */
 export function readVideoDurationSeconds(file: File): Promise<number> {
   return new Promise((resolve, reject) => {

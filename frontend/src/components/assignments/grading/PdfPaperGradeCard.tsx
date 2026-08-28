@@ -1,4 +1,5 @@
 import type { GradeStudentRow } from '../../../api/assignmentWorkspace'
+import { GRADE_TONES, gradeToneFromLetter } from '../../../utils/gradeDisplay'
 import {
   bucketFromDraft,
   formatShortWhen,
@@ -82,6 +83,8 @@ export function PdfPaperGradeCard({
   )
   const showNotesOther = draft.submission_notes_type === 'Other'
   const commentLen = draft.comment.length
+
+  const tone = GRADE_TONES[voided ? 'none' : gradeToneFromLetter(bucket)]
 
   const perfBorder =
     voided
@@ -237,7 +240,7 @@ export function PdfPaperGradeCard({
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
+              className={`h-full rounded-full transition-all ${tone.bar}`}
               style={{ width: `${Math.min(pct ?? 0, 100)}%` }}
             />
           </div>
@@ -271,7 +274,7 @@ export function PdfPaperGradeCard({
               <div className="text-sm font-semibold text-slate-500">Voided</div>
             ) : pct != null ? (
               <>
-                <div className="text-2xl font-extrabold text-emerald-700">
+                <div className={`text-2xl font-extrabold ${tone.text}`}>
                   {draft.score}
                   <span className="text-base font-normal text-hub-muted"> / {totalPoints}</span>
                 </div>

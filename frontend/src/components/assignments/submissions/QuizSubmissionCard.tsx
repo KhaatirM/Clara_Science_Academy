@@ -4,6 +4,7 @@ import {
   type QuizSubmissionRow,
 } from '../../../api/assignmentWorkspace'
 import type { AssignmentWorkspaceScope } from '../../../utils/assignmentWorkspaceScope'
+import { GRADE_TONES, gradeToneFromPercent } from '../../../utils/gradeDisplay'
 import { StudentAvatar } from './submissionsShared'
 
 function formatSubmissionWhen(iso: string | null | undefined) {
@@ -183,7 +184,9 @@ export function QuizSubmissionCard({
                 </span>
               ) : null}
               {graded && pct != null ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-bold text-white">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${GRADE_TONES[gradeToneFromPercent(pct)].solid}`}
+                >
                   <i className="bi bi-star-fill" />
                   Graded: {pct}%
                 </span>
@@ -272,9 +275,11 @@ export function QuizSubmissionCard({
 
         <div className="flex flex-col justify-center">
           {graded && pct != null && !row.is_voided ? (
-            <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50">
+            <div
+              className={`overflow-hidden rounded-xl border ${GRADE_TONES[gradeToneFromPercent(pct)].badge}`}
+            >
               <div
-                className="flex items-center gap-2 bg-emerald-500 px-3 py-2 text-sm font-bold text-white transition-all"
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-bold text-white transition-all ${GRADE_TONES[gradeToneFromPercent(pct)].bar}`}
                 style={{ width: `${Math.min(pct, 100)}%`, minWidth: '8rem' }}
               >
                 <i className="bi bi-star-fill" />

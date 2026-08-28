@@ -7,6 +7,8 @@ import {
   submitStudentAssignment,
 } from '../api/studentAssignments'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import type { GradeTone } from '../utils/gradeDisplay'
+import { GRADE_TONES, gradeToneFromLetter, gradeToneFromPercent } from '../utils/gradeDisplay'
 import type {
   StudentAssignmentAction,
   StudentAssignmentBucket,
@@ -525,6 +527,13 @@ function formatTimeRemaining(dueIso: string | null) {
   return `${mins}m remaining`
 }
 
+/** Grade colors follow the score, so a D never looks like an A. */
+function cardGradeTone(card: StudentAssignmentCard): GradeTone {
+  if (!card.grade.has_grade) return 'none'
+  if (card.grade.percentage != null) return gradeToneFromPercent(card.grade.percentage)
+  return gradeToneFromLetter(card.grade.letter)
+}
+
 function statusBanner(card: StudentAssignmentCard) {
   if (card.bucket === 'inactive' && !card.grade.has_grade) {
     return {
@@ -536,7 +545,7 @@ function statusBanner(card: StudentAssignmentCard) {
   }
   if (card.grade.has_grade) {
     return {
-      tone: 'bg-emerald-50 text-emerald-900 border-emerald-200',
+      tone: GRADE_TONES[cardGradeTone(card)].badge,
       title: 'Graded',
       message: 'Your work has been graded and reviewed.',
       pill: card.grade.letter || 'Graded',
@@ -600,7 +609,9 @@ function AssignmentCard({
             </span>
           ) : null}
           {card.grade.has_grade && card.grade.letter ? (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-900">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-xs font-bold ${GRADE_TONES[cardGradeTone(card)].badge}`}
+            >
               {card.grade.letter}
             </span>
           ) : card.student_status === 'Extended' ? (
@@ -972,18 +983,22 @@ function AssignmentDetailModal({
               </section>
 
               {card.grade.has_grade ? (
-                <section className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
-                  <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-950">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                <section
+                  className={`rounded-2xl border p-4 shadow-sm ${GRADE_TONES[cardGradeTone(card)].panel}`}
+                >
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-hub-text">
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-lg ${GRADE_TONES[cardGradeTone(card)].solid}`}
+                    >
                       <i className="bi bi-chat-square-text text-xs" aria-hidden />
                     </span>
                     Grade &amp; feedback
                   </h3>
-                  <p className="mb-2 text-lg font-bold text-emerald-900">
+                  <p className={`mb-2 text-lg font-bold ${GRADE_TONES[cardGradeTone(card)].text}`}>
                     {card.grade.display}
                     {card.grade.letter ? ` (${card.grade.letter})` : ''}
                   </p>
-                  <p className="mb-0 whitespace-pre-wrap text-sm text-emerald-950/80">
+                  <p className="mb-0 whitespace-pre-wrap text-sm text-slate-700">
                     {card.grade.feedback || 'No written feedback.'}
                   </p>
                 </section>

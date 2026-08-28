@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchStudentClassDetail } from '../api/studentClasses'
 import { ClassSyllabusModal } from '../components/classes/ClassSyllabusModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { GRADE_TONES, gradeToneFromLetter } from '../utils/gradeDisplay'
 import type {
   StudentClassDetailAnnouncement,
   StudentClassDetailAssignment,
@@ -381,7 +382,9 @@ function StudentClassViewBody({
                               {statusLabel(a.status)}
                             </span>
                             {a.letter_grade ? (
-                              <span className="rounded-full bg-teal-700 px-2 py-0.5 text-[10px] font-bold text-white">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${GRADE_TONES[gradeToneFromLetter(a.letter_grade)].solid}`}
+                              >
                                 {a.letter_grade}
                               </span>
                             ) : null}

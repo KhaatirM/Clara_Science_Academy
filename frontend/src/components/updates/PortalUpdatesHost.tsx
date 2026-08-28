@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Grade colors now match the grade',
+    body: 'Score cards, letter badges, and the assignment view popup were always green regardless of the grade. They now follow the score: A green, B blue, C amber, D orange, F red.',
+  },
   {
     title: 'Link a Google Drive folder to Class Notes',
     body: 'Teachers can paste a shared Drive folder link on a class Notes page. Its subfolders and files appear in Class Notes automatically, and anything you drop in Drive shows up after the next sync.',
@@ -46,10 +50,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.518.0'
+  const display = version?.display || 'v 2.518.1'
   const releaseLabel = version?.release_label || 'August 28, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2707
+  const updatesEstimate = version?.updates_estimate ?? 2708
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

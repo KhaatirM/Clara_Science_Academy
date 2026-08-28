@@ -167,11 +167,21 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 28, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 28</strong> (<strong>{{ app_version_display }}</strong>) connects Google Drive to Class Notes: link a shared folder to a class and its files appear for students, no Drive sharing required.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 28</strong> (<strong>{{ app_version_display }}</strong>) connects Google Drive to Class Notes and fixes grade colors that always showed green.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 28, 2026 - grade colors -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Grade Colors – August 28, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Colors match the grade:</strong> Score cards on the grading page, the corner letter badge on the assignments tab, and the grade in the view popup were always green no matter the score. They now follow the grade: A green, B blue, C amber, D orange, F red.
+                            </li>
+                        </ul>
+                    </div>
                     <!-- August 28, 2026 - Google Drive class notes -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-google me-2"></i>Google Drive in Class Notes – August 28, 2026</h6>
@@ -2061,11 +2071,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug28_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownAug28_2026_v2', 'true');
         }, 500);
     }
 });

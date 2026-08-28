@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Art and Music are now one Art/Music class',
+    body: 'Every grade had a separate Art class and Music class. They are now a single "Art/Music" class per grade, matching the report card. Existing rosters, assignments, grades, and attendance were merged into the combined class, and core class setup creates just the one going forward.',
+  },
   {
     title: 'Graded redos no longer stay "Pending"',
     body: 'Grading a redo through the speed grader never closed out the redo record, so the dashboard kept showing Pending with no final grade. Grading now records the redo score and final grade, keeping the higher of the original and the redo. Redos you already graded show their grade again automatically.',

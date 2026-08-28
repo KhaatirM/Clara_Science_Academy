@@ -6,7 +6,7 @@ const SUBJECTS = [
   'Science',
   'English',
   'History',
-  'Art',
+  'Art/Music',
   'Physical Education',
   'Other',
 ]

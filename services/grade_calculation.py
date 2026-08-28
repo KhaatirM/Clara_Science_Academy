@@ -13,7 +13,7 @@ from utils.school_timezone import get_school_now, get_school_today
 
 # Fallback subject lists (used when SubjectRequirement table is empty).
 # Mirrors utils/core_class_catalog.py broad subjects.
-_ENRICHMENT = ["Art", "Music", "Physical Education"]
+_ENRICHMENT = ["Art/Music", "Physical Education"]
 _HISTORY_SOCIAL = "History/Social Studies"
 
 

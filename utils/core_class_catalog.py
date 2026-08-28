@@ -5,7 +5,7 @@ Used by the school-year class auto-setup tool and the manual setup guide.
 Religious-language electives and other add-ons are excluded from auto-setup.
 
 Broad subjects (stored on Class.subject): Math, History/Social Studies, Science,
-Art, Music, Language Arts, Physical Education.
+Art/Music, Language Arts, Physical Education.
 
 Class names use a short grade suffix (e.g. Math 2, Language Arts 1, Science K).
 Middle-school science uses fixed titles (Introduction to Physics, Physics I,
@@ -42,17 +42,15 @@ ELECTIVE_SUBJECTS = frozenset({
     'elective',
 })
 
-_ART = {
-    'display_name': 'Art',
-    'subject': 'Art',
-    'name_base': 'Art',
-    'match_tokens': ('art',),
-}
-_MUSIC = {
-    'display_name': 'Music',
-    'subject': 'Music',
-    'name_base': 'Music',
-    'match_tokens': ('music', 'art/music'),
+# Art and Music are taught as one combined enrichment class per grade, which is
+# also how the report card templates list them.
+ART_MUSIC_SUBJECT = 'Art/Music'
+
+_ART_MUSIC = {
+    'display_name': 'Art/Music',
+    'subject': ART_MUSIC_SUBJECT,
+    'name_base': 'Art/Music',
+    'match_tokens': ('art/music', 'art & music', 'art and music', 'art', 'music'),
 }
 _PE = {
     'display_name': 'Physical Education',
@@ -60,7 +58,7 @@ _PE = {
     'name_base': 'PE',
     'match_tokens': ('physical education', 'pe', 'p.e.'),
 }
-_REQUIRED_ENRICHMENT = [_ART, _MUSIC, _PE]
+_REQUIRED_ENRICHMENT = [_ART_MUSIC, _PE]
 
 _MATH = {
     'display_name': 'Math',

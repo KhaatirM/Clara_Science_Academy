@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownAug27_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Drag classes into bell periods',
+    body: 'Management Schedule → Assign classes: drag grade classes into periods; meeting times update automatically. Students see them on their schedule grid.',
+  },
   {
     title: 'Schedule by grade + editor layout',
     body: 'Management Schedule lets you pick which grade a bell schedule is for. Period color pickers no longer stretch off-screen.',
@@ -26,10 +30,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.517.1'
+  const display = version?.display || 'v 2.517.2'
   const releaseLabel = version?.release_label || 'August 27, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2700
+  const updatesEstimate = version?.updates_estimate ?? 2702
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

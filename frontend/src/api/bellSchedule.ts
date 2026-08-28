@@ -50,3 +50,23 @@ export async function fetchGradeMasterSchedule(grade: number) {
 export function gradeSchedulePdfUrl(grade: number) {
   return `/api/spa/management/schedule/grade/${grade}.pdf`
 }
+
+export async function fetchSchedulePlanner(grade: number) {
+  return apiFetch<import('../types/schedulePlanner').SchedulePlannerResponse>(
+    `/api/spa/management/schedule/planner?grade=${grade}`,
+  )
+}
+
+export async function assignClassToPeriod(classId: number, periodId: number) {
+  return apiFetch<{ success: boolean; class_id: number; period_id: number; schedule_text?: string }>(
+    '/api/spa/management/schedule/assign',
+    { method: 'POST', body: JSON.stringify({ class_id: classId, period_id: periodId }) },
+  )
+}
+
+export async function unassignClassFromGradeSchedule(classId: number, gradeLevel: number) {
+  return apiFetch<{ success: boolean; class_id: number }>(
+    '/api/spa/management/schedule/unassign',
+    { method: 'POST', body: JSON.stringify({ class_id: classId, grade_level: gradeLevel }) },
+  )
+}

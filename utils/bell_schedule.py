@@ -6,7 +6,7 @@ from datetime import datetime, time
 from typing import Any
 
 from extensions import db
-from models import BellPeriod, BellSchedule, Class, ClassSchedule
+from models import BellPeriod, BellPeriodClassAssignment, BellSchedule, Class, ClassSchedule
 from utils.school_timezone import get_school_now
 from utils.school_year_filters import get_active_school_year
 
@@ -424,6 +424,25 @@ def build_bell_grid_for_classes(
         else []
     )
 
+    class_by_id = {c.id: c for c in classes}
+    assignments_by_period: dict[int, list[Class]] = {}
+    assigned_class_ids: set[int] = set()
+    if schedule:
+        period_ids = {p.id for p in periods}
+        rows = (
+            BellPeriodClassAssignment.query.filter(
+                BellPeriodClassAssignment.bell_period_id.in_(period_ids)
+            ).all()
+            if period_ids
+            else []
+        )
+        for row in rows:
+            class_obj = class_by_id.get(row.class_id)
+            if not class_obj:
+                continue
+            assignments_by_period.setdefault(row.bell_period_id, []).append(class_obj)
+            assigned_class_ids.add(class_obj.id)
+
     # Track which (class_id, day) meetings were placed into at least one period cell
     placed_keys: set[tuple[int, int]] = set()
     day_columns: list[dict[str, Any]] = []
@@ -434,28 +453,48 @@ def build_bell_grid_for_classes(
         for period in day_periods:
             cell_classes: list[dict[str, Any]] = []
             if (period.kind or 'class') == 'class':
-                for class_obj in classes:
-                    meeting = _class_meeting_on_day(class_obj, day_index)
-                    if not meeting or not meeting.start_time or not meeting.end_time:
-                        continue
-                    if not _times_overlap(
-                        meeting.start_time,
-                        meeting.end_time,
-                        period.start_time,
-                        period.end_time,
-                    ):
-                        continue
-                    placed_keys.add((class_obj.id, day_index))
-                    cell_classes.append(
-                        _serialize_placed_class(
-                            class_obj,
-                            meeting,
-                            role=role,
-                            now_time=now_time,
-                            today_weekday=today_weekday,
-                            day_index=day_index,
+                explicit = assignments_by_period.get(period.id) or []
+                if explicit:
+                    for class_obj in explicit:
+                        meeting = _class_meeting_on_day(class_obj, day_index)
+                        if not meeting:
+                            meeting = _ensure_meeting_for_period_day(class_obj, period, day_index)
+                        if not meeting:
+                            continue
+                        placed_keys.add((class_obj.id, day_index))
+                        cell_classes.append(
+                            _serialize_placed_class(
+                                class_obj,
+                                meeting,
+                                role=role,
+                                now_time=now_time,
+                                today_weekday=today_weekday,
+                                day_index=day_index,
+                            )
                         )
-                    )
+                else:
+                    for class_obj in classes:
+                        meeting = _class_meeting_on_day(class_obj, day_index)
+                        if not meeting or not meeting.start_time or not meeting.end_time:
+                            continue
+                        if not _times_overlap(
+                            meeting.start_time,
+                            meeting.end_time,
+                            period.start_time,
+                            period.end_time,
+                        ):
+                            continue
+                        placed_keys.add((class_obj.id, day_index))
+                        cell_classes.append(
+                            _serialize_placed_class(
+                                class_obj,
+                                meeting,
+                                role=role,
+                                now_time=now_time,
+                                today_weekday=today_weekday,
+                                day_index=day_index,
+                            )
+                        )
             cell_classes.sort(key=lambda c: c.get('class_name') or '')
             cells.append(
                 {
@@ -488,6 +527,8 @@ def build_bell_grid_for_classes(
 
     unmapped: list[dict[str, Any]] = []
     for class_obj in classes:
+        if class_obj.id in assigned_class_ids:
+            continue
         for day_index in range(7):
             meeting = _class_meeting_on_day(class_obj, day_index)
             if not meeting:
@@ -551,4 +592,195 @@ def available_grade_levels(*, school_year=None) -> list[int]:
             except (TypeError, ValueError):
                 continue
     return sorted(grades)
+
+
+def _ensure_meeting_for_period_day(
+    class_obj: Class, period: BellPeriod, day_index: int
+) -> ClassSchedule | None:
+    """Return ClassSchedule row for this day if period includes that weekday."""
+    if day_index not in (period.get_days_of_week() or []):
+        return None
+    return ClassSchedule.query.filter_by(class_id=class_obj.id, day_of_week=day_index).first()
+
+
+def rebuild_class_schedule_text(class_obj: Class) -> None:
+    """Rebuild Class.schedule display string from ClassSchedule rows."""
+    rows = (
+        ClassSchedule.query.filter_by(class_id=class_obj.id)
+        .order_by(ClassSchedule.day_of_week, ClassSchedule.start_time)
+        .all()
+    )
+    parts: list[str] = []
+    for row in rows:
+        if row.day_of_week < 0 or row.day_of_week >= len(DAY_SHORT):
+            continue
+        if not row.start_time or not row.end_time:
+            continue
+        parts.append(
+            f'{DAY_SHORT[row.day_of_week]} {_fmt_time(row.start_time)}-{_fmt_time(row.end_time)}'
+        )
+    class_obj.schedule = ', '.join(parts) if parts else None
+
+
+def _apply_period_times_to_class(class_obj: Class, period: BellPeriod) -> None:
+    """Write period start/end onto ClassSchedule for each weekday in the period."""
+    room = getattr(class_obj, 'room_number', None) or None
+    days = period.get_days_of_week() or []
+    for day_index in days:
+        existing = ClassSchedule.query.filter_by(
+            class_id=class_obj.id, day_of_week=day_index
+        ).first()
+        if existing:
+            existing.start_time = period.start_time
+            existing.end_time = period.end_time
+            if room:
+                existing.room = room
+        else:
+            db.session.add(
+                ClassSchedule(
+                    class_id=class_obj.id,
+                    day_of_week=day_index,
+                    start_time=period.start_time,
+                    end_time=period.end_time,
+                    room=room,
+                )
+            )
+    rebuild_class_schedule_text(class_obj)
+
+
+def _clear_period_times_from_class(class_obj: Class, period: BellPeriod) -> None:
+    """Remove ClassSchedule rows for weekdays covered by this period."""
+    for day_index in period.get_days_of_week() or []:
+        row = ClassSchedule.query.filter_by(
+            class_id=class_obj.id, day_of_week=day_index
+        ).first()
+        if row:
+            db.session.delete(row)
+    rebuild_class_schedule_text(class_obj)
+
+
+def assign_class_to_bell_period(*, class_id: int, period_id: int) -> dict[str, Any]:
+    """Assign a class to a bell period and sync meeting times."""
+    period = BellPeriod.query.get(period_id)
+    if not period:
+        raise ValueError('Period not found')
+    if (period.kind or 'class') != 'class':
+        raise ValueError('Only class periods accept class assignments')
+    class_obj = Class.query.get(class_id)
+    if not class_obj:
+        raise ValueError('Class not found')
+    schedule = period.bell_schedule
+    if not schedule:
+        raise ValueError('Bell period has no parent schedule')
+
+    # One period slot per class within this bell schedule
+    sibling_period_ids = [p.id for p in (schedule.periods or [])]
+    existing = (
+        BellPeriodClassAssignment.query.filter(
+            BellPeriodClassAssignment.class_id == class_id,
+            BellPeriodClassAssignment.bell_period_id.in_(sibling_period_ids),
+        ).all()
+        if sibling_period_ids
+        else []
+    )
+    for row in existing:
+        old_period = row.bell_period
+        if old_period:
+            _clear_period_times_from_class(class_obj, old_period)
+        db.session.delete(row)
+
+    db.session.add(BellPeriodClassAssignment(bell_period_id=period_id, class_id=class_id))
+    _apply_period_times_to_class(class_obj, period)
+    db.session.commit()
+    return {
+        'success': True,
+        'class_id': class_id,
+        'period_id': period_id,
+        'schedule_text': class_obj.schedule,
+    }
+
+
+def unassign_class_from_bell_schedule(*, class_id: int, grade_level: int) -> dict[str, Any]:
+    """Remove a class from all period slots on the grade bell schedule."""
+    schedule = ensure_active_bell_schedule(grade_level=grade_level)
+    if not schedule:
+        raise ValueError('No bell schedule for this grade')
+    class_obj = Class.query.get(class_id)
+    if not class_obj:
+        raise ValueError('Class not found')
+    period_ids = [p.id for p in (schedule.periods or [])]
+    rows = (
+        BellPeriodClassAssignment.query.filter(
+            BellPeriodClassAssignment.class_id == class_id,
+            BellPeriodClassAssignment.bell_period_id.in_(period_ids),
+        ).all()
+        if period_ids
+        else []
+    )
+    for row in rows:
+        if row.bell_period:
+            _clear_period_times_from_class(class_obj, row.bell_period)
+        db.session.delete(row)
+    db.session.commit()
+    return {'success': True, 'class_id': class_id}
+
+
+def _serialize_class_planner_card(class_obj: Class) -> dict[str, Any]:
+    teacher = getattr(class_obj, 'teacher', None)
+    teacher_name = (
+        f'{teacher.first_name} {teacher.last_name}'.strip() if teacher else 'TBD'
+    )
+    return {
+        'class_id': class_obj.id,
+        'class_name': class_obj.name or '',
+        'subject': (class_obj.subject or '').strip() or 'General',
+        'room': getattr(class_obj, 'room_number', None) or 'TBD',
+        'teacher_name': teacher_name,
+        'schedule_text': (class_obj.schedule or '').strip() or None,
+        'grade_levels': class_obj.get_grade_levels() or [],
+    }
+
+
+def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
+    """Payload for drag-and-drop period planner (management)."""
+    schedule = ensure_active_bell_schedule(grade_level=grade_level)
+    if not schedule:
+        raise ValueError('No bell schedule for this grade')
+    classes = classes_for_grade_level(grade_level)
+    class_by_id = {c.id: c for c in classes}
+    periods = sorted(schedule.periods or [], key=lambda p: (p.sort_order or 0, p.id or 0))
+
+    assignments_by_period: dict[int, list[dict[str, Any]]] = {}
+    assigned_ids: set[int] = set()
+    for period in periods:
+        if (period.kind or 'class') != 'class':
+            continue
+        cards = []
+        for row in period.class_assignments or []:
+            class_obj = class_by_id.get(row.class_id)
+            if not class_obj:
+                continue
+            cards.append(_serialize_class_planner_card(class_obj))
+            assigned_ids.add(class_obj.id)
+        assignments_by_period[period.id] = cards
+
+    period_rows = []
+    for period in periods:
+        period_rows.append(
+            {
+                **serialize_period(period),
+                'assigned_classes': assignments_by_period.get(period.id, []),
+            }
+        )
+
+    return {
+        'bell_schedule': serialize_bell_schedule(schedule),
+        'grade_level': grade_level,
+        'grade_label': grade_label(grade_level),
+        'periods': period_rows,
+        'classes': [_serialize_class_planner_card(c) for c in classes],
+        'unassigned_classes': [
+            _serialize_class_planner_card(c) for c in classes if c.id not in assigned_ids
+        ],
+    }
 

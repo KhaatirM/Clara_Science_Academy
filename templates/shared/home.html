@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 27, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) adds per-grade bell schedules, fixes the schedule editor color overflow, and keeps PDF grids for students, teachers, and grade masters.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 27</strong> (<strong>{{ app_version_display }}</strong>) adds drag-and-drop class-to-period scheduling; times sync automatically and students see assignments on their schedule grid.</p>
                     </div>
                 </div>
                 
@@ -179,6 +179,10 @@
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Student &amp; teacher Schedule:</strong> Color Mon–Fri period grid with Download PDF; classes fill periods by meeting-time overlap.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assign classes to periods:</strong> Drag grade classes into bell periods on Management Schedule; class meeting times update automatically for students.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -2039,11 +2043,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug27_2026_v5')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug27_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownAug27_2026_v5', 'true');
         }, 500);
     }
 });

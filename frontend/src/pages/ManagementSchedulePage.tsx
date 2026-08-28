@@ -7,6 +7,7 @@ import {
   type ManagementBellScheduleResponse,
 } from '../api/bellSchedule'
 import { BellScheduleGrid } from '../components/schedule/BellScheduleGrid'
+import { PeriodClassPlanner } from '../components/schedule/PeriodClassPlanner'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { BellGridPayload, BellPeriodDto, BellPeriodKind } from '../types/bellSchedule'
 
@@ -35,6 +36,7 @@ export function ManagementSchedulePage() {
     (BellGridPayload & { grade_label?: string; class_count?: number }) | null
   >(null)
   const [gradeLoading, setGradeLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'assign' | 'periods' | 'print'>('assign')
 
   const applyPayload = useCallback((data: ManagementBellScheduleResponse) => {
     setHub(data)
@@ -60,9 +62,10 @@ export function ManagementSchedulePage() {
       try {
         const data = await fetchManagementBellSchedule(grade)
         applyPayload(data)
-        if (previewGrade == null) {
-          const firstNumeric = data.grades.find((g) => g.grade != null)?.grade ?? null
-          setPreviewGrade(firstNumeric)
+        const firstNumeric = data.grades.find((g) => g.grade != null)?.grade ?? null
+        setPreviewGrade((prev) => prev ?? firstNumeric)
+        if (grade === null && firstNumeric != null) {
+          setEditGrade(firstNumeric)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not load schedule')
@@ -70,12 +73,23 @@ export function ManagementSchedulePage() {
         setLoading(false)
       }
     },
-    [applyPayload, previewGrade],
+    [applyPayload],
   )
 
   useEffect(() => {
-    void load(null)
-    // initial school-wide / default
+    void (async () => {
+      try {
+        const data = await fetchManagementBellSchedule(null)
+        const firstNumeric = data.grades.find((g) => g.grade != null)?.grade ?? null
+        await load(firstNumeric ?? null)
+        if (firstNumeric != null) {
+          setEditGrade(firstNumeric)
+          setPreviewGrade(firstNumeric)
+        }
+      } catch {
+        await load(null)
+      }
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -209,6 +223,69 @@ export function ManagementSchedulePage() {
               </div>
             ) : null}
 
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={`btn btn-sm ${activeTab === 'assign' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                onClick={() => setActiveTab('assign')}
+              >
+                Assign classes
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${activeTab === 'periods' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                onClick={() => setActiveTab('periods')}
+              >
+                Edit bell periods
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${activeTab === 'print' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                onClick={() => setActiveTab('print')}
+              >
+                Preview &amp; print
+              </button>
+            </div>
+
+            {activeTab === 'assign' ? (
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                <div className="mb-4 flex flex-wrap items-end gap-3">
+                  <div className="min-w-[160px] sm:max-w-xs">
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-hub-muted">
+                      Grade
+                    </label>
+                    <select
+                      className="form-select"
+                      value={editGrade === null ? '' : String(editGrade)}
+                      onChange={(e) => {
+                        const g = Number(e.target.value)
+                        if (!Number.isFinite(g)) return
+                        setEditGrade(g)
+                        setPreviewGrade(g)
+                        void load(g)
+                      }}
+                    >
+                      {numericGrades.length === 0 ? (
+                        <option value="">No grades</option>
+                      ) : (
+                        numericGrades.map((g) => (
+                          <option key={g.grade} value={g.grade}>
+                            {g.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                </div>
+                {editGrade != null ? (
+                  <PeriodClassPlanner grade={editGrade} />
+                ) : (
+                  <p className="text-sm text-hub-muted">Select a grade to assign classes to periods.</p>
+                )}
+              </section>
+            ) : null}
+
+            {activeTab === 'periods' ? (
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
               <div className="mb-4 flex flex-wrap items-end gap-3">
                 <div className="min-w-[160px] flex-1 sm:max-w-xs">
@@ -387,7 +464,9 @@ export function ManagementSchedulePage() {
                 ) : null}
               </div>
             </section>
+            ) : null}
 
+            {activeTab === 'print' ? (
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -440,6 +519,7 @@ export function ManagementSchedulePage() {
                 </>
               ) : null}
             </section>
+            ) : null}
           </div>
         )}
       </div>

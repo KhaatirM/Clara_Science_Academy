@@ -81,6 +81,75 @@ def management_schedule_grade_preview(grade: int):
         return jsonify({"error": str(exc)}), 500
 
 
+@spa_api_blueprint.route("/management/schedule/planner")
+@login_required
+@management_required
+@permissions_required("classes:manage")
+def management_schedule_planner():
+    from management_routes.bell_schedule_spa_helpers import _parse_grade_arg
+
+    try:
+        grade = _parse_grade_arg(request.args.get("grade"))
+        if grade is None:
+            return jsonify({"error": "Select a specific grade for the planner"}), 400
+        from utils.bell_schedule import build_schedule_planner_payload
+
+        return jsonify(build_schedule_planner_payload(grade))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@spa_api_blueprint.route("/management/schedule/assign", methods=["POST"])
+@login_required
+@management_required
+@permissions_required("classes:manage")
+def management_schedule_assign():
+    from utils.bell_schedule import assign_class_to_bell_period
+
+    body = request.get_json(silent=True) or {}
+    try:
+        class_id = int(body.get("class_id"))
+        period_id = int(body.get("period_id"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "class_id and period_id are required"}), 400
+    try:
+        return jsonify(assign_class_to_bell_period(class_id=class_id, period_id=period_id))
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
+@spa_api_blueprint.route("/management/schedule/unassign", methods=["POST"])
+@login_required
+@management_required
+@permissions_required("classes:manage")
+def management_schedule_unassign():
+    from management_routes.bell_schedule_spa_helpers import _parse_grade_arg
+    from utils.bell_schedule import unassign_class_from_bell_schedule
+
+    body = request.get_json(silent=True) or {}
+    try:
+        class_id = int(body.get("class_id"))
+        grade_level = _parse_grade_arg(body.get("grade_level"))
+        if grade_level is None:
+            raise ValueError("grade_level is required")
+    except (TypeError, ValueError) as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    try:
+        return jsonify(unassign_class_from_bell_schedule(class_id=class_id, grade_level=grade_level))
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 500
+
+
 @spa_api_blueprint.route("/management/schedule/grade/<int:grade>.pdf")
 @login_required
 @management_required

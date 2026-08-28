@@ -607,6 +607,27 @@ class BellPeriod(db.Model):
         return f"BellPeriod('{self.name}', {self.start_time}-{self.end_time})"
 
 
+class BellPeriodClassAssignment(db.Model):
+    """Maps a class into a bell period; saving applies period times to ClassSchedule."""
+
+    __tablename__ = 'bell_period_class_assignment'
+
+    id = db.Column(db.Integer, primary_key=True)
+    bell_period_id = db.Column(db.Integer, db.ForeignKey('bell_period.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    bell_period = db.relationship('BellPeriod', backref=db.backref('class_assignments', lazy=True))
+    class_info = db.relationship('Class', backref=db.backref('bell_period_assignments', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('bell_period_id', 'class_id', name='uq_bell_period_class'),
+    )
+
+    def __repr__(self):
+        return f"BellPeriodClassAssignment(period={self.bell_period_id}, class={self.class_id})"
+
+
 class Class(db.Model):
     """
     Model for storing class information.

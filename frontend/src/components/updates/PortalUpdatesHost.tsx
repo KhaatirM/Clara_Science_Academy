@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Student Jobs page loads again',
+    body: 'The update that added inspection archiving tried to add a column the live database rejected, which made the Student Jobs page fail to load. The database update now runs correctly and the page works again.',
+  },
   {
     title: 'Art and Music are now one Art/Music class',
     body: 'Every grade had a separate Art class and Music class. They are now a single "Art/Music" class per grade, matching the report card. Existing rosters, assignments, grades, and attendance were merged into the combined class, and core class setup creates just the one going forward.',

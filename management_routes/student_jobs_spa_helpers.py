@@ -125,38 +125,51 @@ INSPECTION_BONUS_LABELS: dict[str, str] = {
 _INSPECTION_ARCHIVE_COLUMNS_READY = False
 
 
-def ensure_inspection_archive_columns() -> None:
-    """Add the archive columns on existing databases (no migration framework here)."""
+def ensure_inspection_archive_columns() -> bool:
+    """Add the archive columns on existing databases (no migration framework here).
+
+    Returns whether the columns are usable, so callers can fall back to
+    unfiltered queries instead of emitting SQL for a column that is missing.
+    """
     global _INSPECTION_ARCHIVE_COLUMNS_READY
     if _INSPECTION_ARCHIVE_COLUMNS_READY:
-        return
+        return True
     from sqlalchemy import inspect as sa_inspect, text
 
     try:
+        is_postgres = db.engine.dialect.name == 'postgresql'
+        bool_default = 'false' if is_postgres else '0'
+        timestamp_type = 'TIMESTAMP' if is_postgres else 'DATETIME'
+
         columns = {c["name"] for c in sa_inspect(db.engine).get_columns("cleaning_inspection")}
         statements = []
         if "is_archived" not in columns:
             statements.append(
                 "ALTER TABLE cleaning_inspection "
-                "ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0"
+                f"ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT {bool_default}"
             )
         if "archived_at" not in columns:
-            statements.append("ALTER TABLE cleaning_inspection ADD COLUMN archived_at DATETIME")
-        if statements:
+            statements.append(
+                f"ALTER TABLE cleaning_inspection ADD COLUMN archived_at {timestamp_type}"
+            )
+        # Each statement gets its own transaction so one failure cannot leave the
+        # connection in an aborted state for the rest of the request.
+        for statement in statements:
             with db.engine.begin() as conn:
-                for statement in statements:
-                    conn.execute(text(statement))
+                conn.execute(text(statement))
     except Exception:
         from flask import current_app
 
         current_app.logger.exception("Could not add cleaning_inspection archive columns")
-        return
+        return False
     _INSPECTION_ARCHIVE_COLUMNS_READY = True
+    return True
 
 
 def active_inspections_query():
     """Inspections that still 'count' — archived ones are treated as never having happened."""
-    ensure_inspection_archive_columns()
+    if not ensure_inspection_archive_columns():
+        return CleaningInspection.query
     return CleaningInspection.query.filter(
         db.or_(CleaningInspection.is_archived.is_(False), CleaningInspection.is_archived.is_(None))
     )
@@ -421,7 +434,8 @@ def get_inspection_detail(*, inspection_id: int) -> dict[str, Any]:
 
 def archive_inspection(*, inspection_id: int, archived: bool = True) -> dict[str, Any]:
     """Hide an inspection so it no longer counts, keeping the record recoverable."""
-    ensure_inspection_archive_columns()
+    if not ensure_inspection_archive_columns():
+        return {"success": False, "error": "Archiving is unavailable until the database is updated."}
     inspection = CleaningInspection.query.get(inspection_id)
     if not inspection:
         return {"success": False, "error": "Inspection not found."}

@@ -172,6 +172,17 @@
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 28, 2026 - Student Jobs hotfix -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Fix – August 28, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Jobs loads again:</strong> The inspection archiving update tried to add a database column in a form the live database rejected, which broke the Student Jobs page. The update now runs correctly and the page works again.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- August 28, 2026 - Art/Music merge -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Classes – August 28, 2026</h6>
@@ -2100,11 +2111,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v5')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug28_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownAug28_2026_v5', 'true');
         }, 500);
     }
 });

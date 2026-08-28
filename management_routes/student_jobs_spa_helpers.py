@@ -100,6 +100,67 @@ VALID_TEAM_TYPES = frozenset(
     {"cleaning", "computer", "lunch_duty", "experiment_duty", "other"}
 )
 
+INSPECTION_DEDUCTION_LABELS: dict[str, str] = {
+    "bathroom_not_restocked": "Bathroom not restocked",
+    "trash_can_left_full": "Trash can left full",
+    "floor_not_swept": "Floor not swept",
+    "materials_left_out": "Materials left out",
+    "tables_missed": "Tables missed",
+    "classroom_trash_full": "Classroom trash full",
+    "bathroom_floor_poor": "Bathroom floor in poor condition",
+    "not_finished_on_time": "Not finished on time",
+    "small_debris_left": "Small debris left behind",
+    "trash_spilled": "Trash spilled",
+    "dispensers_half_filled": "Dispensers only half filled",
+}
+
+INSPECTION_BONUS_LABELS: dict[str, str] = {
+    "exceptional_finish": "Exceptional finish",
+    "speed_efficiency": "Speed and efficiency",
+    "going_above_beyond": "Going above and beyond",
+    "teamwork_award": "Teamwork award",
+}
+
+
+_INSPECTION_ARCHIVE_COLUMNS_READY = False
+
+
+def ensure_inspection_archive_columns() -> None:
+    """Add the archive columns on existing databases (no migration framework here)."""
+    global _INSPECTION_ARCHIVE_COLUMNS_READY
+    if _INSPECTION_ARCHIVE_COLUMNS_READY:
+        return
+    from sqlalchemy import inspect as sa_inspect, text
+
+    try:
+        columns = {c["name"] for c in sa_inspect(db.engine).get_columns("cleaning_inspection")}
+        statements = []
+        if "is_archived" not in columns:
+            statements.append(
+                "ALTER TABLE cleaning_inspection "
+                "ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0"
+            )
+        if "archived_at" not in columns:
+            statements.append("ALTER TABLE cleaning_inspection ADD COLUMN archived_at DATETIME")
+        if statements:
+            with db.engine.begin() as conn:
+                for statement in statements:
+                    conn.execute(text(statement))
+    except Exception:
+        from flask import current_app
+
+        current_app.logger.exception("Could not add cleaning_inspection archive columns")
+        return
+    _INSPECTION_ARCHIVE_COLUMNS_READY = True
+
+
+def active_inspections_query():
+    """Inspections that still 'count' — archived ones are treated as never having happened."""
+    ensure_inspection_archive_columns()
+    return CleaningInspection.query.filter(
+        db.or_(CleaningInspection.is_archived.is_(False), CleaningInspection.is_archived.is_(None))
+    )
+
 
 def _serialize_inspection(inspection: CleaningInspection) -> dict[str, Any]:
     team = CleaningTeam.query.get(inspection.team_id)
@@ -128,9 +189,10 @@ def query_inspection_history(*, page: int = 1, per_page: int = 10) -> dict[str, 
     per_page = max(1, min(per_page, 100))
 
     try:
-        total = CleaningInspection.query.count()
+        total = active_inspections_query().count()
         inspections = (
-            CleaningInspection.query.order_by(CleaningInspection.inspection_date.desc())
+            active_inspections_query()
+            .order_by(CleaningInspection.inspection_date.desc())
             .offset((page - 1) * per_page)
             .limit(per_page)
             .all()
@@ -236,7 +298,8 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
 
         try:
             recent_inspections = (
-                CleaningInspection.query.filter_by(team_id=team.id)
+                active_inspections_query()
+                .filter(CleaningInspection.team_id == team.id)
                 .order_by(CleaningInspection.inspection_date.desc())
                 .limit(5)
                 .all()
@@ -275,8 +338,10 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
         )
 
     try:
-        inspection_total = CleaningInspection.query.count()
-        passed_count = CleaningInspection.query.filter(CleaningInspection.final_score >= 60).count()
+        inspection_total = active_inspections_query().count()
+        passed_count = active_inspections_query().filter(
+            CleaningInspection.final_score >= 60
+        ).count()
     except Exception:
         inspection_total = 0
         passed_count = 0
@@ -324,3 +389,63 @@ def archive_cleaning_team(*, team_id: int) -> dict[str, Any]:
         "success": True,
         "message": f'Team "{team.team_name}" archived. Inspection history is preserved.',
     }
+
+
+def get_inspection_detail(*, inspection_id: int) -> dict[str, Any]:
+    ensure_inspection_archive_columns()
+    inspection = CleaningInspection.query.get(inspection_id)
+    if not inspection:
+        return {"success": False, "error": "Inspection not found."}
+
+    detail = _serialize_inspection(inspection)
+    detail.update(
+        {
+            "inspection_type": inspection.inspection_type or "cleaning",
+            "starting_score": inspection.starting_score,
+            "is_archived": bool(getattr(inspection, "is_archived", False)),
+            "created_at": inspection.created_at.isoformat() if inspection.created_at else None,
+            "deductions": [
+                label
+                for attr, label in INSPECTION_DEDUCTION_LABELS.items()
+                if getattr(inspection, attr, False)
+            ],
+            "bonuses": [
+                label
+                for attr, label in INSPECTION_BONUS_LABELS.items()
+                if getattr(inspection, attr, False)
+            ],
+        }
+    )
+    return {"success": True, "inspection": detail}
+
+
+def archive_inspection(*, inspection_id: int, archived: bool = True) -> dict[str, Any]:
+    """Hide an inspection so it no longer counts, keeping the record recoverable."""
+    ensure_inspection_archive_columns()
+    inspection = CleaningInspection.query.get(inspection_id)
+    if not inspection:
+        return {"success": False, "error": "Inspection not found."}
+
+    inspection.is_archived = bool(archived)
+    inspection.archived_at = datetime.utcnow() if archived else None
+    db.session.commit()
+    return {
+        "success": True,
+        "message": (
+            "Inspection archived. It no longer counts toward the team's score."
+            if archived
+            else "Inspection restored."
+        ),
+    }
+
+
+def delete_inspection(*, inspection_id: int) -> dict[str, Any]:
+    """Permanently remove an inspection."""
+    ensure_inspection_archive_columns()
+    inspection = CleaningInspection.query.get(inspection_id)
+    if not inspection:
+        return {"success": False, "error": "Inspection not found."}
+
+    db.session.delete(inspection)
+    db.session.commit()
+    return {"success": True, "message": "Inspection deleted."}

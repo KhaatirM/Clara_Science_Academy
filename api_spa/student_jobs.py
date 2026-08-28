@@ -8,7 +8,10 @@ from flask_login import current_user, login_required
 from decorators import management_required, permissions_required
 from management_routes.student_jobs_spa_helpers import (
     archive_cleaning_team,
+    archive_inspection,
     create_cleaning_team,
+    delete_inspection,
+    get_inspection_detail,
     query_inspection_history,
     query_student_jobs_hub,
 )
@@ -114,7 +117,41 @@ def student_jobs_team_inspections(team_identifier: str):
 @login_required
 @management_required
 def student_jobs_inspection_detail(inspection_id: int):
-    return api_inspection_get(inspection_id)
+    try:
+        result = get_inspection_detail(inspection_id=inspection_id)
+    except Exception:
+        # Fall back to the legacy payload rather than breaking the view action.
+        return api_inspection_get(inspection_id)
+    status = 200 if result.get("success") else 404
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route(
+    "/student-jobs/inspections/<int:inspection_id>/archive", methods=["POST"]
+)
+@login_required
+@management_required
+def student_jobs_archive_inspection(inspection_id: int):
+    data = request.get_json(silent=True) or {}
+    archived = data.get("archived", True)
+    try:
+        result = archive_inspection(inspection_id=inspection_id, archived=bool(archived))
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/inspections/<int:inspection_id>", methods=["DELETE"])
+@login_required
+@management_required
+def student_jobs_delete_inspection(inspection_id: int):
+    try:
+        result = delete_inspection(inspection_id=inspection_id)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
 
 
 @spa_api_blueprint.route("/student-jobs/inspections", methods=["POST"])

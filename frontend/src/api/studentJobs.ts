@@ -3,6 +3,7 @@ import type {
   CleaningInspectionPayload,
   CreateStudentJobsTeamPayload,
   StudentJobsHubResponse,
+  StudentJobsInspectionDetail,
   StudentJobsInspectionHistoryResponse,
   StudentJobsStudentOption,
 } from '../types/studentJobs'
@@ -76,7 +77,21 @@ export async function saveStudentJobsInspection(payload: CleaningInspectionPaylo
 }
 
 export async function fetchInspectionDetail(inspectionId: number) {
-  return apiFetch<{ success: boolean; inspection: Record<string, unknown> }>(
+  return apiFetch<{ success: boolean; inspection: StudentJobsInspectionDetail; error?: string }>(
     `/api/spa/student-jobs/inspections/${inspectionId}`,
+  )
+}
+
+export async function archiveInspection(inspectionId: number, archived = true) {
+  return apiFetch<{ success: boolean; message?: string; error?: string }>(
+    `/api/spa/student-jobs/inspections/${inspectionId}/archive`,
+    { method: 'POST', body: JSON.stringify({ archived }) },
+  )
+}
+
+export async function deleteInspection(inspectionId: number) {
+  return apiFetch<{ success: boolean; message?: string; error?: string }>(
+    `/api/spa/student-jobs/inspections/${inspectionId}`,
+    { method: 'DELETE' },
   )
 }

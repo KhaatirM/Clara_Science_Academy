@@ -2154,7 +2154,7 @@ def _save_single_student_grade(assignment_id, student_id):
         submission_record=sub_for_adjustments,
         notes_type=notes_type
     )
-    grade_data = json.dumps({
+    grade_data_dict = {
         'score': adjusted['points_earned'], 'points_earned': adjusted['points_earned'],
         'raw_points': adjusted['raw_points'],
         'extra_credit_points': adjusted['extra_credit_points'],
@@ -2163,7 +2163,16 @@ def _save_single_student_grade(assignment_id, student_id):
         'total_points': adjusted['total_points'], 'max_score': adjusted['max_score'],
         'percentage': adjusted['percentage'], 'comment': comment, 'feedback': comment,
         'graded_at': datetime.utcnow().isoformat()
-    })
+    }
+    from utils.redo_grading import finalize_redo_for_grade
+
+    finalize_redo_for_grade(
+        assignment_id=assignment_id,
+        student_id=student_id,
+        grade_data=grade_data_dict,
+        late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
+    )
+    grade_data = json.dumps(grade_data_dict)
 
     if existing_grade:
         existing_grade.grade_data = grade_data
@@ -2496,38 +2505,15 @@ def grade_assignment(assignment_id):
                         db.session.flush()
                         check_and_void_grade(grade)
 
-                    # Check if this is a redo submission and calculate final grade
-                    redo = AssignmentRedo.query.filter_by(
+                    # Close out a granted redo so it stops showing as pending
+                    from utils.redo_grading import finalize_redo_for_grade
+
+                    if not grade.is_voided and finalize_redo_for_grade(
                         assignment_id=assignment_id,
                         student_id=student.id,
-                        is_used=True
-                    ).first()
-
-                    if redo:
-                        # This is a redo - calculate final grade
-                        redo.redo_grade = points_earned
-
-                        # Apply late penalty if redo was late
-                        effective_redo_grade = points_earned
-                        if redo.was_redo_late:
-                            effective_redo_grade = max(0, points_earned - 10)  # 10% penalty
-
-                        # Keep higher grade
-                        if redo.original_grade:
-                            redo.final_grade = max(redo.original_grade, effective_redo_grade)
-                        else:
-                            redo.final_grade = effective_redo_grade
-
-                        # Update the grade_data with final grade
-                        final_percentage = (redo.final_grade / total_points * 100) if total_points > 0 else 0
-                        grade_data_dict['score'] = redo.final_grade
-                        grade_data_dict['points_earned'] = redo.final_grade
-                        grade_data_dict['percentage'] = round(final_percentage, 2)
-                        grade_data_dict['is_redo_final'] = True
-                        if redo.was_redo_late:
-                            grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {points_earned}% (-10%), Final: {redo.final_grade}%]"
-                        else:
-                            grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
+                        grade_data=grade_data_dict,
+                        late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
+                    ):
                         grade.grade_data = json.dumps(grade_data_dict)
 
                     # Auto-create in_person submission when a positive grade is saved and none exists yet

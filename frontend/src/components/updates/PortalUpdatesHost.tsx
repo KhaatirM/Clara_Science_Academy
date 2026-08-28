@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Graded redos no longer stay "Pending"',
+    body: 'Grading a redo through the speed grader never closed out the redo record, so the dashboard kept showing Pending with no final grade. Grading now records the redo score and final grade, keeping the higher of the original and the redo. Redos you already graded show their grade again automatically.',
+  },
+  {
+    title: 'Archive or delete inspections',
+    body: 'Student Jobs inspections can now be archived (removed from history and no longer counted toward the team score) or permanently deleted.',
+  },
+  {
+    title: 'Inspection details open in a real popup',
+    body: 'Viewing an inspection used a plain browser alert box. It now opens an in-app panel listing the score, every deduction and bonus, and the inspector notes.',
+  },
   {
     title: 'Grade colors now match the grade',
     body: 'Score cards, letter badges, and the assignment view popup were always green regardless of the grade. They now follow the score: A green, B blue, C amber, D orange, F red.',
@@ -50,10 +62,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.518.1'
+  const display = version?.display || 'v 2.518.2'
   const releaseLabel = version?.release_label || 'August 28, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2708
+  const updatesEstimate = version?.updates_estimate ?? 2711
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -159,11 +171,11 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  Google Drive in Class Notes – {releaseLabel}
+                  Redos, Inspections &amp; Grade Colors – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  Link a shared Drive folder to a class and its files show up in Class Notes, ready
-                  for students to download without any Drive sharing.
+                  Graded redos close out properly instead of sitting at Pending, inspections can be
+                  archived or deleted, and grade colors follow the actual score.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

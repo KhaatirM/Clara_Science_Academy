@@ -581,6 +581,14 @@ def save_student_grade(assignment_id, student_id):
             # If a teacher is saving a quiz score here, treat it as finalized.
             **({'grading_status': 'final'} if assignment.assignment_type == 'quiz' else {}),
         }
+        from utils.redo_grading import finalize_redo_for_grade
+
+        finalize_redo_for_grade(
+            assignment_id=assignment_id,
+            student_id=student_id,
+            grade_data=grade_data,
+            late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
+        )
 
         if existing_grade:
             existing_grade.grade_data = json.dumps(grade_data)

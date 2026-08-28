@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 
 import {
   addTeamMembers,
+  archiveInspection,
   archiveStudentJobsTeam,
   createStudentJobsTeam,
+  deleteInspection,
   fetchAllInspectionsForExport,
   fetchInspectionDetail,
   fetchInspectionHistory,
@@ -16,6 +18,7 @@ import {
 } from '../api/studentJobs'
 import type {
   StudentJobsHubResponse,
+  StudentJobsInspectionDetail,
   StudentJobsInspectionHistoryItem,
   StudentJobsInspectionPagination,
   StudentJobsTeam,
@@ -189,6 +192,9 @@ export default function StudentJobsPage() {
   const [inspectionPage, setInspectionPage] = useState(1)
   const [inspectionsLoading, setInspectionsLoading] = useState(false)
   const [exportingInspections, setExportingInspections] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [inspectionDetail, setInspectionDetail] = useState<StudentJobsInspectionDetail | null>(null)
 
   const loadInspections = useCallback(async (page: number) => {
     setInspectionsLoading(true)
@@ -401,14 +407,76 @@ export default function StudentJobsPage() {
   }
 
   async function viewInspection(inspectionId: number) {
+    setDetailLoading(true)
+    setInspectionDetail(null)
+    setDetailOpen(true)
     try {
       const result = await fetchInspectionDetail(inspectionId)
-      const inspection = result.inspection
-      window.alert(
-        `Team: ${inspection.team_name}\nScore: ${inspection.score}\nInspector: ${inspection.inspector_name}\nNotes: ${inspection.inspector_notes || '—'}`,
-      )
+      if (!result.success || !result.inspection) {
+        setDetailOpen(false)
+        setMessage(result.error || 'Could not load inspection.')
+        return
+      }
+      setInspectionDetail(result.inspection)
     } catch (err) {
+      setDetailOpen(false)
       setMessage(err instanceof Error ? err.message : 'Could not load inspection.')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  async function handleArchiveInspection(item: { id: number; team_name: string; date: string }) {
+    if (
+      !window.confirm(
+        `Archive the ${formatInspectionDate(item.date)} inspection for ${item.team_name}? ` +
+          'It stops counting toward the team score and disappears from the history.',
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    try {
+      const result = await archiveInspection(item.id, true)
+      if (!result.success) {
+        setMessage(result.error || 'Could not archive inspection.')
+        return
+      }
+      setMessage(result.message || 'Inspection archived.')
+      setDetailOpen(false)
+      await load()
+      await loadInspections(inspectionPage)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not archive inspection.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDeleteInspection(item: { id: number; team_name: string; date: string }) {
+    if (
+      !window.confirm(
+        `Permanently delete the ${formatInspectionDate(item.date)} inspection for ${item.team_name}? ` +
+          'This cannot be undone.',
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    try {
+      const result = await deleteInspection(item.id)
+      if (!result.success) {
+        setMessage(result.error || 'Could not delete inspection.')
+        return
+      }
+      setMessage(result.message || 'Inspection deleted.')
+      setDetailOpen(false)
+      await load()
+      await loadInspections(inspectionPage)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not delete inspection.')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -648,13 +716,31 @@ export default function StudentJobsPage() {
                     <td className="px-4 py-3">{item.status}</td>
                     <td className="px-4 py-3">{item.inspector_name}</td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => void viewInspection(item.id)}
-                        className="text-xs font-semibold text-violet-700"
-                      >
-                        View
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void viewInspection(item.id)}
+                          className="text-xs font-semibold text-violet-700 hover:underline"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleArchiveInspection(item)}
+                          className="text-xs font-semibold text-amber-700 hover:underline disabled:opacity-60"
+                        >
+                          Archive
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleDeleteInspection(item)}
+                          className="text-xs font-semibold text-red-700 hover:underline disabled:opacity-60"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -696,6 +782,142 @@ export default function StudentJobsPage() {
           </div>
         ) : null}
       </section>
+
+      {detailOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="inspection-detail-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="inspection-detail-title" className="text-lg font-bold text-hub-text">
+                  Inspection details
+                </h2>
+                {inspectionDetail ? (
+                  <p className="mt-0.5 text-sm text-hub-muted">
+                    {inspectionDetail.team_name} · {formatInspectionDate(inspectionDetail.date)}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailOpen(false)}
+                className="text-hub-muted hover:text-hub-text"
+                aria-label="Close"
+              >
+                <i className="bi bi-x-lg" aria-hidden />
+              </button>
+            </div>
+
+            {detailLoading || !inspectionDetail ? (
+              <p className="py-10 text-center text-hub-muted">Loading inspection…</p>
+            ) : (
+              <>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <span
+                    className={`rounded-full px-3 py-1 text-sm font-bold ${scoreBadgeClass(inspectionDetail.score)}`}
+                  >
+                    {inspectionDetail.score} points
+                  </span>
+                  <span className="text-sm font-semibold text-hub-text">
+                    {inspectionDetail.status}
+                  </span>
+                  {inspectionDetail.is_archived ? (
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                      Archived
+                    </span>
+                  ) : null}
+                </div>
+
+                <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                  <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+                      Inspector
+                    </dt>
+                    <dd className="mb-0 font-semibold text-hub-text">
+                      {inspectionDetail.inspector_name}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
+                      Point changes
+                    </dt>
+                    <dd className="mb-0 font-semibold text-hub-text">
+                      {`-${inspectionDetail.major_deductions ?? 0} major · -${inspectionDetail.moderate_deductions ?? 0} moderate · -${inspectionDetail.minor_deductions ?? 0} minor · +${inspectionDetail.bonus_points ?? 0} bonus`}
+                    </dd>
+                  </div>
+                </dl>
+
+                {inspectionDetail.deductions?.length ? (
+                  <div className="mt-4">
+                    <h3 className="mb-1.5 text-sm font-bold text-hub-text">Deductions</h3>
+                    <ul className="mb-0 space-y-1 ps-0">
+                      {inspectionDetail.deductions.map((label) => (
+                        <li key={label} className="flex items-start gap-2 text-sm text-red-800">
+                          <i className="bi bi-dash-circle mt-0.5" aria-hidden />
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {inspectionDetail.bonuses?.length ? (
+                  <div className="mt-4">
+                    <h3 className="mb-1.5 text-sm font-bold text-hub-text">Bonuses</h3>
+                    <ul className="mb-0 space-y-1 ps-0">
+                      {inspectionDetail.bonuses.map((label) => (
+                        <li key={label} className="flex items-start gap-2 text-sm text-emerald-800">
+                          <i className="bi bi-plus-circle mt-0.5" aria-hidden />
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <div className="mt-4">
+                  <h3 className="mb-1.5 text-sm font-bold text-hub-text">Inspector notes</h3>
+                  <p className="mb-0 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm text-hub-text">
+                    {inspectionDetail.inspector_notes || 'No notes recorded.'}
+                  </p>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setDetailOpen(false)}
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void handleArchiveInspection(inspectionDetail)}
+                      className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                    >
+                      Archive
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void handleDeleteInspection(inspectionDetail)}
+                      className="rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {inspectionOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

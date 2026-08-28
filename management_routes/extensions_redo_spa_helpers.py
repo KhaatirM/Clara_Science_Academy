@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -13,6 +14,7 @@ from models import (
     AssignmentRedo,
     AssignmentReopening,
     ExtensionRequest,
+    Grade,
     RedoRequest,
     TeacherStaff,
 )
@@ -252,17 +254,69 @@ def _serialize_reopening(r: AssignmentReopening) -> dict[str, Any]:
     }
 
 
-def _serialize_redo(redo: AssignmentRedo, *, now: datetime) -> dict[str, Any]:
+def _recorded_grade_scores(redos: list[AssignmentRedo]) -> dict[tuple[int, int], float]:
+    """Actual graded scores keyed by (assignment_id, student_id).
+
+    Redos granted before grading closed them out have ``final_grade = NULL``;
+    reading the real Grade row keeps those from being reported as pending.
+    """
+    if not redos:
+        return {}
+    pairs = {(r.assignment_id, r.student_id) for r in redos}
+    assignment_ids = {a for a, _ in pairs}
+    student_ids = {s for _, s in pairs}
+    scores: dict[tuple[int, int], float] = {}
+    rows = (
+        Grade.query.filter(
+            Grade.assignment_id.in_(assignment_ids), Grade.student_id.in_(student_ids)
+        )
+        .order_by(Grade.graded_at.asc())
+        .all()
+    )
+    for row in rows:
+        key = (row.assignment_id, row.student_id)
+        if key not in pairs or getattr(row, "is_voided", False):
+            continue
+        try:
+            data = json.loads(row.grade_data) if isinstance(row.grade_data, str) else row.grade_data
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        value = data.get("score")
+        if value is None:
+            value = data.get("points_earned")
+        if value is None:
+            continue
+        try:
+            scores[key] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return scores
+
+
+def _serialize_redo(
+    redo: AssignmentRedo,
+    *,
+    now: datetime,
+    recorded_scores: dict[tuple[int, int], float] | None = None,
+) -> dict[str, Any]:
     assignment = redo.assignment
     student = redo.student
     class_info = assignment.class_info if assignment else None
+
+    final_grade = redo.final_grade
+    if final_grade is None and recorded_scores is not None:
+        final_grade = recorded_scores.get((redo.assignment_id, redo.student_id))
+    has_final = final_grade is not None
+
     is_overdue = bool(
         (not redo.is_used)
-        and (not redo.final_grade)
+        and (not has_final)
         and redo.redo_deadline
         and (_as_utc_aware(redo.redo_deadline) < now)
     )
-    if redo.final_grade:
+    if has_final:
         status = "graded"
     elif redo.is_used:
         status = "submitted"
@@ -275,8 +329,8 @@ def _serialize_redo(redo: AssignmentRedo, *, now: datetime) -> dict[str, Any]:
         "assignment_id": redo.assignment_id,
         "reason": redo.reason or "",
         "original_grade": redo.original_grade,
-        "redo_grade": redo.redo_grade,
-        "final_grade": redo.final_grade,
+        "redo_grade": redo.redo_grade if redo.redo_grade is not None else final_grade,
+        "final_grade": final_grade,
         "was_redo_late": bool(redo.was_redo_late),
         "is_used": bool(redo.is_used),
         "is_overdue": is_overdue,
@@ -394,16 +448,21 @@ def query_redo_dashboard() -> dict[str, Any]:
     reopenings = [r for r in reopenings if r.assignment and r.student]
     redo_requests = [r for r in redo_requests if r.assignment and r.student]
 
-    serialized_redos = [_serialize_redo(r, now=now) for r in redos]
-    active_redos = len([r for r in redos if not r.is_used and not r.final_grade])
-    completed_redos = len([r for r in redos if r.final_grade])
+    recorded_scores = _recorded_grade_scores(redos)
+    serialized_redos = [
+        _serialize_redo(r, now=now, recorded_scores=recorded_scores) for r in redos
+    ]
+    active_redos = len([r for r in serialized_redos if r["status"] in ("pending", "submitted")])
+    completed_redos = len([r for r in serialized_redos if r["status"] == "graded"])
     overdue_redos = len([r for r in serialized_redos if r["is_overdue"]])
     active_reopenings = len(reopenings)
 
     improvements: list[float] = []
-    for redo in redos:
-        if redo.original_grade and redo.final_grade:
-            improvement = redo.final_grade - redo.original_grade
+    for row in serialized_redos:
+        original = row.get("original_grade")
+        final = row.get("final_grade")
+        if original is not None and final is not None:
+            improvement = final - original
             if improvement > 0:
                 improvements.append(improvement)
     improvement_rate = round(sum(improvements) / len(improvements), 1) if improvements else 0

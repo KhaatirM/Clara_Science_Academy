@@ -167,11 +167,29 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 28, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 28</strong> (<strong>{{ app_version_display }}</strong>) connects Google Drive to Class Notes and fixes grade colors that always showed green.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 28</strong> (<strong>{{ app_version_display }}</strong>) fixes graded redos stuck on Pending, adds archive/delete for inspections, connects Google Drive to Class Notes, and fixes grade colors that always showed green.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 28, 2026 - redos and inspections -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Redos &amp; Inspections – August 28, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Graded redos close out:</strong> Grading a redo never updated the redo record, so it stayed &ldquo;Pending&rdquo; with no final grade. Grading now records the redo score and final grade (keeping the higher of the original and the redo). Redos you already graded show their grade again automatically.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Archive or delete inspections:</strong> Student Jobs inspections can be archived so they stop counting toward the team score and leave the history, or deleted permanently.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Inspection details popup:</strong> Viewing an inspection opened a plain browser alert box. It now opens an in-app panel with the score, every deduction and bonus, and the inspector notes.
+                            </li>
+                        </ul>
+                    </div>
                     <!-- August 28, 2026 - grade colors -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Grade Colors – August 28, 2026</h6>
@@ -2071,11 +2089,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug28_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownAug28_2026_v3', 'true');
         }, 500);
     }
 });

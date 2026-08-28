@@ -38,6 +38,15 @@ export type StudentJobsInspectionHistoryItem = {
   inspector_notes?: string
 }
 
+export type StudentJobsInspectionDetail = StudentJobsInspectionHistoryItem & {
+  inspection_type?: string
+  starting_score?: number
+  is_archived?: boolean
+  created_at?: string | null
+  deductions?: string[]
+  bonuses?: string[]
+}
+
 export type StudentJobsInspectionPagination = {
   page: number
   per_page: number

@@ -4,6 +4,30 @@ export type StudentJobsMember = {
   name: string
   role: string
   assignment_description: string
+  task_id: number | null
+  task_name: string | null
+}
+
+export type StudentJobsDuty = {
+  id: number
+  team_id: number
+  name: string
+  area: string
+  description: string
+  scoring_type: string
+  scoring_label: string
+  sort_order: number
+  assigned: Array<{ member_id: number; student_id: number; name: string }>
+}
+
+export type StudentJobsInspectionType = {
+  value: string
+  label: string
+  description: string
+  starting_score: number
+  pass_threshold: number
+  deductions: StudentJobsDeductionOption[]
+  bonuses: StudentJobsBonusOption[]
 }
 
 export type StudentJobsTeamStats = {
@@ -24,6 +48,7 @@ export type StudentJobsTeam = {
   current_score: number
   stats: StudentJobsTeamStats
   members: StudentJobsMember[]
+  duties: StudentJobsDuty[]
   detailed_description: Record<string, unknown>
   recent_inspections: Array<{
     id: number
@@ -37,6 +62,8 @@ export type StudentJobsTeam = {
 export type StudentJobsInspectionHistoryItem = {
   id: number
   date: string
+  inspection_type?: string
+  inspection_type_label?: string
   team_id: number
   team_name: string
   score: number
@@ -98,43 +125,28 @@ export type StudentJobsHubResponse = {
   }
   deduction_options: StudentJobsDeductionOption[]
   bonus_options: StudentJobsBonusOption[]
+  inspection_types: StudentJobsInspectionType[]
   team_type_options: Array<{ value: string; label: string }>
   urls: { home: string }
 }
 
 export type StudentJobsDeductionOption = {
-  key: keyof CleaningDeductionFlags
+  key: string
   label: string
   points: number
   severity: 'major' | 'moderate' | 'minor'
 }
 
 export type StudentJobsBonusOption = {
-  key: keyof CleaningBonusFlags
+  key: string
   label: string
   points: number
 }
 
-export type CleaningDeductionFlags = {
-  bathroom_not_restocked: boolean
-  trash_can_left_full: boolean
-  floor_not_swept: boolean
-  materials_left_out: boolean
-  tables_missed: boolean
-  classroom_trash_full: boolean
-  bathroom_floor_poor: boolean
-  not_finished_on_time: boolean
-  small_debris_left: boolean
-  trash_spilled: boolean
-  dispensers_half_filled: boolean
-}
+/** Checklist items are keyed by inspection type, so the shape stays open. */
+export type CleaningDeductionFlags = Record<string, boolean>
 
-export type CleaningBonusFlags = {
-  exceptional_finish: boolean
-  speed_efficiency: boolean
-  going_above_beyond: boolean
-  teamwork_award: boolean
-}
+export type CleaningBonusFlags = Record<string, boolean>
 
 export type StudentJobsStudentOption = {
   id: number
@@ -145,27 +157,10 @@ export type StudentJobsStudentOption = {
 
 export type CleaningInspectionPayload = {
   team_id: number
+  inspection_type: string
   inspection_date: string
   inspector_name: string
   inspector_notes?: string
-  final_score: number
-  major_deductions: number
-  moderate_deductions: number
-  minor_deductions: number
-  bonus_points: number
-  bathroom_not_restocked: boolean
-  trash_can_left_full: boolean
-  floor_not_swept: boolean
-  materials_left_out: boolean
-  tables_missed: boolean
-  classroom_trash_full: boolean
-  bathroom_floor_poor: boolean
-  not_finished_on_time: boolean
-  small_debris_left: boolean
-  trash_spilled: boolean
-  dispensers_half_filled: boolean
-  exceptional_finish: boolean
-  speed_efficiency: boolean
-  going_above_beyond: boolean
-  teamwork_award: boolean
+  /** Checked checklist items, spread in by key. The server recalculates the score. */
+  [key: string]: boolean | string | number | undefined
 }

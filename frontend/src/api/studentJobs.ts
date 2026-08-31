@@ -59,9 +59,36 @@ export async function removeTeamMembers(teamId: number, memberIds: number[]) {
   )
 }
 
+export async function createTeamDuty(
+  teamId: number,
+  payload: { name: string; area?: string; description?: string; scoring_type?: string },
+) {
+  return apiFetch<{ success: boolean; duty_id?: number; message?: string; error?: string }>(
+    `/api/spa/student-jobs/teams/${teamId}/duties`,
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+}
+
+export async function updateTeamDuty(
+  dutyId: number,
+  payload: { name?: string; area?: string; description?: string; scoring_type?: string },
+) {
+  return apiFetch<{ success: boolean; message?: string; error?: string }>(
+    `/api/spa/student-jobs/duties/${dutyId}`,
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+}
+
+export async function deleteTeamDuty(dutyId: number) {
+  return apiFetch<{ success: boolean; message?: string; error?: string }>(
+    `/api/spa/student-jobs/duties/${dutyId}`,
+    { method: 'DELETE' },
+  )
+}
+
 export async function updateTeamMember(
   memberId: number,
-  payload: { role?: string; assignment_description?: string },
+  payload: { role?: string; assignment_description?: string; task_id?: number | null },
 ) {
   return apiFetch<{ success: boolean; message?: string; error?: string }>(
     `/api/spa/student-jobs/members/${memberId}`,

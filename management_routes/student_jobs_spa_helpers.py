@@ -5,8 +5,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from models import CleaningInspection, CleaningTeam, CleaningTeamMember, db
+from models import CleaningInspection, CleaningTask, CleaningTeam, CleaningTeamMember, db
 from management_routes.students import get_team_detailed_description
+from utils.student_jobs_catalog import (
+    CLEANING,
+    LUNCH_HALL,
+    all_labels,
+    get_inspection_type,
+    inspection_type_options,
+    normalize_type,
+    read_flag,
+)
 from utils.user_roles import canonical_role_label
 
 
@@ -111,7 +120,9 @@ def _team_stats(inspections: list[CleaningInspection]) -> dict[str, Any]:
     }
 
 
-def _serialize_member(member: CleaningTeamMember) -> dict[str, Any] | None:
+def _serialize_member(
+    member: CleaningTeamMember, duty_names: dict[int, str] | None = None
+) -> dict[str, Any] | None:
     from utils.student_roster import student_is_archived
 
     if not member.student or student_is_archived(member.student):
@@ -121,12 +132,15 @@ def _serialize_member(member: CleaningTeamMember) -> dict[str, Any] | None:
         assignment_desc = member.assignment_description or ""
     except Exception:
         pass
+    task_id = getattr(member, "task_id", None)
     return {
         "id": member.student.id,
         "member_id": member.id,
         "name": f"{member.student.first_name} {member.student.last_name}",
         "role": member.role or "",
         "assignment_description": assignment_desc,
+        "task_id": task_id,
+        "task_name": (duty_names or {}).get(task_id) if task_id else None,
     }
 
 
@@ -134,77 +148,57 @@ VALID_TEAM_TYPES = frozenset(
     {"cleaning", "computer", "lunch_duty", "experiment_duty", "other"}
 )
 
-INSPECTION_DEDUCTION_LABELS: dict[str, str] = {
-    "bathroom_not_restocked": "Bathroom not restocked",
-    "trash_can_left_full": "Trash can left full",
-    "floor_not_swept": "Floor not swept",
-    "materials_left_out": "Materials left out",
-    "tables_missed": "Tables missed",
-    "classroom_trash_full": "Classroom trash full",
-    "bathroom_floor_poor": "Bathroom floor in poor condition",
-    "not_finished_on_time": "Not finished on time",
-    "small_debris_left": "Small debris left behind",
-    "trash_spilled": "Trash spilled",
-    "dispensers_half_filled": "Dispensers only half filled",
-}
-
-INSPECTION_BONUS_LABELS: dict[str, str] = {
-    "exceptional_finish": "Exceptional finish",
-    "speed_efficiency": "Speed and efficiency",
-    "going_above_beyond": "Going above and beyond",
-    "teamwork_award": "Teamwork award",
-}
-
-# Point values must stay in step with frontend/src/utils/studentJobsScoring.ts.
-INSPECTION_DEDUCTION_POINTS: dict[str, int] = {
-    "bathroom_not_restocked": 10,
-    "trash_can_left_full": 10,
-    "floor_not_swept": 10,
-    "materials_left_out": 10,
-    "tables_missed": 5,
-    "classroom_trash_full": 5,
-    "bathroom_floor_poor": 5,
-    "not_finished_on_time": 5,
-    "small_debris_left": 2,
-    "trash_spilled": 2,
-    "dispensers_half_filled": 2,
-}
-
-INSPECTION_BONUS_POINTS: dict[str, int] = {
-    "exceptional_finish": 5,
-    "speed_efficiency": 5,
-    "going_above_beyond": 3,
-    "teamwork_award": 2,
-}
-
-_SEVERITY_BY_POINTS = {10: "major", 5: "moderate", 2: "minor"}
-
-
 def inspection_deduction_options() -> list[dict[str, Any]]:
-    """Labelled, point-valued deduction checkboxes for the inspection form."""
-    return [
-        {
-            "key": key,
-            "label": label,
-            "points": INSPECTION_DEDUCTION_POINTS.get(key, 0),
-            "severity": _SEVERITY_BY_POINTS.get(INSPECTION_DEDUCTION_POINTS.get(key, 0), "minor"),
-        }
-        for key, label in INSPECTION_DEDUCTION_LABELS.items()
-    ]
+    """Labelled, point-valued deduction checkboxes for the standard cleaning form."""
+    return list(get_inspection_type(CLEANING)["deductions"])
 
 
 def inspection_bonus_options() -> list[dict[str, Any]]:
-    return [
-        {"key": key, "label": label, "points": INSPECTION_BONUS_POINTS.get(key, 0)}
-        for key, label in INSPECTION_BONUS_LABELS.items()
-    ]
+    return list(get_inspection_type(CLEANING)["bonuses"])
+
+
+def _add_missing_columns(table: str, columns: dict[str, str]) -> bool:
+    """Add columns to an existing table; this project has no migration framework.
+
+    ``columns`` maps a column name to its DDL type clause. Each statement runs in
+    its own transaction so one failure cannot leave the connection in an aborted
+    state for the rest of the request.
+    """
+    from sqlalchemy import inspect as sa_inspect, text
+
+    try:
+        existing = {c["name"] for c in sa_inspect(db.engine).get_columns(table)}
+    except Exception:
+        from flask import current_app
+
+        current_app.logger.exception("Could not inspect %s", table)
+        return False
+
+    ok = True
+    for name, ddl_type in columns.items():
+        if name in existing:
+            continue
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl_type}"))
+        except Exception:
+            from flask import current_app
+
+            current_app.logger.exception("Could not add %s.%s", table, name)
+            ok = False
+    return ok
+
+
+def _dialect_types() -> tuple[str, str]:
+    is_postgres = db.engine.dialect.name == "postgresql"
+    return ("false" if is_postgres else "0", "TIMESTAMP" if is_postgres else "DATETIME")
 
 
 _INSPECTION_ARCHIVE_COLUMNS_READY = False
 
 
 def ensure_inspection_archive_columns() -> bool:
-    """Add the archive columns on existing databases (no migration framework here).
+    """Add the archive columns on existing databases.
 
     Returns whether the columns are usable, so callers can fall back to
     unfiltered queries instead of emitting SQL for a column that is missing.
@@ -212,36 +206,50 @@ def ensure_inspection_archive_columns() -> bool:
     global _INSPECTION_ARCHIVE_COLUMNS_READY
     if _INSPECTION_ARCHIVE_COLUMNS_READY:
         return True
-    from sqlalchemy import inspect as sa_inspect, text
 
+    bool_default, timestamp_type = _dialect_types()
+    ok = _add_missing_columns(
+        "cleaning_inspection",
+        {
+            "is_archived": f"BOOLEAN NOT NULL DEFAULT {bool_default}",
+            "archived_at": timestamp_type,
+        },
+    )
+    _INSPECTION_ARCHIVE_COLUMNS_READY = ok
+    return ok
+
+
+_DUTY_COLUMNS_READY = False
+
+
+def ensure_duty_columns() -> bool:
+    """Create the duty table and the columns that link duties, members and checklists."""
+    global _DUTY_COLUMNS_READY
+    if _DUTY_COLUMNS_READY:
+        return True
+
+    bool_default, _ = _dialect_types()
     try:
-        is_postgres = db.engine.dialect.name == 'postgresql'
-        bool_default = 'false' if is_postgres else '0'
-        timestamp_type = 'TIMESTAMP' if is_postgres else 'DATETIME'
-
-        columns = {c["name"] for c in sa_inspect(db.engine).get_columns("cleaning_inspection")}
-        statements = []
-        if "is_archived" not in columns:
-            statements.append(
-                "ALTER TABLE cleaning_inspection "
-                f"ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT {bool_default}"
-            )
-        if "archived_at" not in columns:
-            statements.append(
-                f"ALTER TABLE cleaning_inspection ADD COLUMN archived_at {timestamp_type}"
-            )
-        # Each statement gets its own transaction so one failure cannot leave the
-        # connection in an aborted state for the rest of the request.
-        for statement in statements:
-            with db.engine.begin() as conn:
-                conn.execute(text(statement))
+        CleaningTask.__table__.create(db.engine, checkfirst=True)
     except Exception:
         from flask import current_app
 
-        current_app.logger.exception("Could not add cleaning_inspection archive columns")
+        current_app.logger.exception("Could not create the cleaning_task table")
         return False
-    _INSPECTION_ARCHIVE_COLUMNS_READY = True
-    return True
+
+    ok = _add_missing_columns(
+        "cleaning_task",
+        {
+            "scoring_type": "VARCHAR(50)",
+            "sort_order": "INTEGER DEFAULT 0",
+            "is_active": f"BOOLEAN DEFAULT {'true' if bool_default == 'false' else '1'}",
+        },
+    )
+    ok = _add_missing_columns("cleaning_team_member", {"task_id": "INTEGER"}) and ok
+    ok = _add_missing_columns("cleaning_inspection", {"checklist_json": "TEXT"}) and ok
+
+    _DUTY_COLUMNS_READY = ok
+    return ok
 
 
 def active_inspections_query():
@@ -253,12 +261,253 @@ def active_inspections_query():
     )
 
 
+def _serialize_duty(task: CleaningTask, members: list[CleaningTeamMember]) -> dict[str, Any]:
+    assigned = [m for m in members if getattr(m, "task_id", None) == task.id]
+    return {
+        "id": task.id,
+        "team_id": task.team_id,
+        "name": task.task_name,
+        "area": task.area_covered or "",
+        "description": task.task_description or "",
+        "scoring_type": normalize_type(getattr(task, "scoring_type", None)),
+        "scoring_label": get_inspection_type(getattr(task, "scoring_type", None))["label"],
+        "sort_order": getattr(task, "sort_order", 0) or 0,
+        "assigned": [
+            {"member_id": m.id, "student_id": m.student_id, "name": _member_name(m)}
+            for m in assigned
+        ],
+    }
+
+
+def _member_name(member: CleaningTeamMember) -> str:
+    student = member.student
+    if not student:
+        return f"Student {member.student_id}"
+    return f"{student.first_name} {student.last_name}"
+
+
+def _team_duties(team_id: int) -> list[CleaningTask]:
+    try:
+        return (
+            CleaningTask.query.filter(
+                CleaningTask.team_id == team_id,
+                db.or_(CleaningTask.is_active.is_(True), CleaningTask.is_active.is_(None)),
+            )
+            .order_by(CleaningTask.sort_order, CleaningTask.id)
+            .all()
+        )
+    except Exception:
+        return []
+
+
+def seed_team_duties(team: CleaningTeam) -> bool:
+    """Turn a team's built-in area list into editable duty records, once.
+
+    The areas used to be hardcoded in Python and matched by team name. Seeding
+    them means schools can edit, add and remove duties from the UI.
+    """
+    try:
+        if CleaningTask.query.filter_by(team_id=team.id).first():
+            return False
+    except Exception:
+        return False
+
+    details = get_team_detailed_description(team) or {}
+    created = 0
+    order = 0
+
+    for group_key, group in details.items():
+        if group_key == "description" or not isinstance(group, dict):
+            continue
+        group_label = group_key.replace("_", " ").title()
+        for area, instructions in group.items():
+            text = str(instructions or "").strip()
+            if text.upper() == "N/A":
+                continue
+            db.session.add(
+                CleaningTask(
+                    team_id=team.id,
+                    task_name=area[:100],
+                    area_covered=group_label[:200],
+                    task_description=text,
+                    scoring_type=LUNCH_HALL if area.strip().lower() == "lunch hall" else CLEANING,
+                    sort_order=order,
+                    is_active=True,
+                )
+            )
+            order += 1
+            created += 1
+
+    description = details.get("description")
+    if not created and isinstance(description, str) and description.strip():
+        db.session.add(
+            CleaningTask(
+                team_id=team.id,
+                task_name="Assigned duties",
+                area_covered=team.team_name[:200],
+                task_description=description.strip(),
+                scoring_type=CLEANING,
+                sort_order=0,
+                is_active=True,
+            )
+        )
+        created += 1
+
+    if not created:
+        return False
+    db.session.commit()
+    return True
+
+
+STANDARD_CLEANING_DUTIES: list[dict[str, str]] = [
+    {
+        "name": "Stairway",
+        "area": "Common Areas",
+        "scoring_type": CLEANING,
+        "description": (
+            "• Swept top to bottom, including the corner of every step\n"
+            "• No trash, paper or debris left on any step or landing\n"
+            "• Handrail wiped down"
+        ),
+    },
+    {
+        "name": "Lunch Hall",
+        "area": "Common Areas",
+        "scoring_type": LUNCH_HALL,
+        "description": (
+            "• Tables wiped down and cleared\n"
+            "• No trash on the floor\n"
+            "• No dishes left out\n"
+            "• All food and condiments put up\n"
+            "• Trash taken out"
+        ),
+    },
+]
+
+
+def ensure_standard_duties(team: CleaningTeam) -> bool:
+    """Make sure every cleaning team carries the school-wide areas.
+
+    Teams that already had a duty list would otherwise never pick up areas added
+    after they were set up.
+    """
+    team_type = (getattr(team, "team_type", None) or "cleaning").lower()
+    if team_type != "cleaning":
+        return False
+
+    existing = _team_duties(team.id)
+    have = {(duty.task_name or "").strip().lower() for duty in existing}
+    order = max([duty.sort_order or 0 for duty in existing], default=-1)
+
+    added = 0
+    for standard in STANDARD_CLEANING_DUTIES:
+        if standard["name"].lower() in have:
+            continue
+        order += 1
+        db.session.add(
+            CleaningTask(
+                team_id=team.id,
+                task_name=standard["name"],
+                area_covered=standard["area"],
+                task_description=standard["description"],
+                scoring_type=standard["scoring_type"],
+                sort_order=order,
+                is_active=True,
+            )
+        )
+        added += 1
+
+    if not added:
+        return False
+    db.session.commit()
+    return True
+
+
+def create_team_duty(
+    *,
+    team_id: int,
+    name: str,
+    area: str = "",
+    description: str = "",
+    scoring_type: str = CLEANING,
+) -> dict[str, Any]:
+    ensure_duty_columns()
+    team = CleaningTeam.query.filter_by(id=team_id, is_active=True).first()
+    if not team:
+        return {"success": False, "error": "Team not found."}
+
+    duty_name = (name or "").strip()
+    if not duty_name:
+        return {"success": False, "error": "A duty needs a name."}
+
+    existing = _team_duties(team_id)
+    duty = CleaningTask(
+        team_id=team_id,
+        task_name=duty_name[:100],
+        area_covered=(area or "").strip()[:200],
+        task_description=(description or "").strip(),
+        scoring_type=normalize_type(scoring_type),
+        sort_order=(existing[-1].sort_order or 0) + 1 if existing else 0,
+        is_active=True,
+    )
+    db.session.add(duty)
+    db.session.commit()
+    return {"success": True, "duty_id": duty.id, "message": f'Added duty "{duty_name}".'}
+
+
+def update_team_duty(*, duty_id: int, **fields: Any) -> dict[str, Any]:
+    ensure_duty_columns()
+    duty = CleaningTask.query.get(duty_id)
+    if not duty:
+        return {"success": False, "error": "Duty not found."}
+
+    if "name" in fields:
+        new_name = (fields.get("name") or "").strip()
+        if not new_name:
+            return {"success": False, "error": "A duty needs a name."}
+        duty.task_name = new_name[:100]
+    if "area" in fields:
+        duty.area_covered = (fields.get("area") or "").strip()[:200]
+    if "description" in fields:
+        duty.task_description = (fields.get("description") or "").strip()
+    if "scoring_type" in fields:
+        duty.scoring_type = normalize_type(fields.get("scoring_type"))
+
+    db.session.commit()
+    return {"success": True, "message": "Duty updated."}
+
+
+def delete_team_duty(*, duty_id: int) -> dict[str, Any]:
+    ensure_duty_columns()
+    duty = CleaningTask.query.get(duty_id)
+    if not duty:
+        return {"success": False, "error": "Duty not found."}
+
+    try:
+        CleaningTeamMember.query.filter_by(task_id=duty.id).update(
+            {"task_id": None}, synchronize_session=False
+        )
+    except Exception:
+        pass
+    name = duty.task_name
+    db.session.delete(duty)
+    db.session.commit()
+    return {"success": True, "message": f'Removed duty "{name}".'}
+
+
 def _serialize_inspection(inspection: CleaningInspection) -> dict[str, Any]:
     team = CleaningTeam.query.get(inspection.team_id)
     team_name = team.team_name if team else f"Team {inspection.team_id}"
-    status = "Passed" if inspection.final_score >= 60 else "Failed - Re-do Required"
+    definition = get_inspection_type(inspection.inspection_type)
+    status = (
+        "Passed"
+        if (inspection.final_score or 0) >= definition["pass_threshold"]
+        else "Failed - Re-do Required"
+    )
     return {
         "id": inspection.id,
+        "inspection_type": definition["value"],
+        "inspection_type_label": definition["label"],
         "date": inspection.inspection_date.isoformat()
         if hasattr(inspection.inspection_date, "isoformat")
         else str(inspection.inspection_date),
@@ -377,6 +626,7 @@ def create_cleaning_team(
 
 def query_student_jobs_hub(*, user) -> dict[str, Any]:
     role = canonical_role_label(getattr(user, "role", None))
+    duties_ready = ensure_duty_columns()
     teams = _load_teams()
     team_payloads: list[dict[str, Any]] = []
     total_members = 0
@@ -386,6 +636,17 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             members = CleaningTeamMember.query.filter_by(team_id=team.id, is_active=True).all()
         except Exception:
             members = []
+
+        duties: list[CleaningTask] = []
+        if duties_ready:
+            try:
+                seed_team_duties(team)
+                ensure_standard_duties(team)
+                duties = _team_duties(team.id)
+            except Exception:
+                db.session.rollback()
+                duties = []
+        duty_names = {duty.id: duty.task_name for duty in duties}
 
         try:
             team_inspections = (
@@ -399,7 +660,9 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             team_inspections = []
         recent_inspections = team_inspections[:5]
 
-        member_list = [m for m in (_serialize_member(member) for member in members) if m]
+        member_list = [
+            m for m in (_serialize_member(member, duty_names) for member in members) if m
+        ]
         total_members += len(member_list)
         team_type = getattr(team, "team_type", None) or (
             "computer" if "computer" in (team.team_name or "").lower() else "cleaning"
@@ -414,6 +677,7 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
                 "current_score": _team_current_score(team.id, recent_inspections),
                 "stats": _team_stats(team_inspections),
                 "members": member_list,
+                "duties": [_serialize_duty(duty, members) for duty in duties],
                 "detailed_description": get_team_detailed_description(team),
                 "recent_inspections": [
                     {
@@ -461,6 +725,7 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
         },
         "deduction_options": inspection_deduction_options(),
         "bonus_options": inspection_bonus_options(),
+        "inspection_types": inspection_type_options(),
         "team_type_options": [
             {"value": "cleaning", "label": "Cleaning"},
             {"value": "computer", "label": "Computer"},
@@ -499,22 +764,23 @@ def get_inspection_detail(*, inspection_id: int) -> dict[str, Any]:
     if not inspection:
         return {"success": False, "error": "Inspection not found."}
 
+    definition = get_inspection_type(inspection.inspection_type)
+    labels = all_labels()
     detail = _serialize_inspection(inspection)
     detail.update(
         {
-            "inspection_type": inspection.inspection_type or "cleaning",
             "starting_score": inspection.starting_score,
             "is_archived": bool(getattr(inspection, "is_archived", False)),
             "created_at": inspection.created_at.isoformat() if inspection.created_at else None,
             "deductions": [
-                label
-                for attr, label in INSPECTION_DEDUCTION_LABELS.items()
-                if getattr(inspection, attr, False)
+                labels.get(item["key"], item["key"])
+                for item in definition["deductions"]
+                if read_flag(inspection, item["key"])
             ],
             "bonuses": [
-                label
-                for attr, label in INSPECTION_BONUS_LABELS.items()
-                if getattr(inspection, attr, False)
+                labels.get(item["key"], item["key"])
+                for item in definition["bonuses"]
+                if read_flag(inspection, item["key"])
             ],
         }
     )

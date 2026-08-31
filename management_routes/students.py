@@ -10,7 +10,7 @@ from models import (
     Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, StudentGroup, Submission,
     GroupSubmission, GroupGrade, GroupAssignment, AssignmentExtension, MessageGroupMember, Notification,
     QuizAnswer, QuizProgress, DiscussionPost, GroupQuizAnswer, CleaningTeamMember,
-    CleaningTeam, CleaningInspection, GradeHistory
+    CleaningTeam, CleaningInspection, CleaningTask, GradeHistory
 )
 
 from utils.school_timezone import get_school_now, get_school_today
@@ -3101,7 +3101,17 @@ def get_team_detailed_description(team):
             'common_areas': {
                 'Hallway': '• Swept & all trash liners replaced',
                 'Females Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
-                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.'
+                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
+                'Stairway': '''• Swept top to bottom, including the corner of every step
+• No trash, paper or debris left on any step or landing
+• Handrail wiped down''',
+                'Lunch Hall': '''• Tables wiped down and cleared
+• No trash on the floor
+• No dishes left out
+• All food and condiments put up
+• Trash taken out
+
+Scored separately on the Lunch Hall checklist.'''
             }
         }
     
@@ -3125,7 +3135,17 @@ def get_team_detailed_description(team):
             'common_areas': {
                 'Hallway': '• Swept & all trash liners replaced',
                 'Females Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
-                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.'
+                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
+                'Stairway': '''• Swept top to bottom, including the corner of every step
+• No trash, paper or debris left on any step or landing
+• Handrail wiped down''',
+                'Lunch Hall': '''• Tables wiped down and cleared
+• No trash on the floor
+• No dishes left out
+• All food and condiments put up
+• Trash taken out
+
+Scored separately on the Lunch Hall checklist.'''
             }
         }
     
@@ -3178,7 +3198,17 @@ def get_team_detailed_description(team):
             'common_areas': {
                 'Hallway': '• Swept & all trash liners replaced',
                 'Females Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
-                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.'
+                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
+                'Stairway': '''• Swept top to bottom, including the corner of every step
+• No trash, paper or debris left on any step or landing
+• Handrail wiped down''',
+                'Lunch Hall': '''• Tables wiped down and cleared
+• No trash on the floor
+• No dishes left out
+• All food and condiments put up
+• Trash taken out
+
+Scored separately on the Lunch Hall checklist.'''
             }
         }
     
@@ -3630,6 +3660,18 @@ def api_team_member_update(member_id):
             member.role = (data['role'] or '').strip() or member.role
         if 'assignment_description' in data:
             member.assignment_description = (data.get('assignment_description') or '').strip() or None
+        if 'task_id' in data:
+            from management_routes.student_jobs_spa_helpers import ensure_duty_columns
+
+            ensure_duty_columns()
+            raw_task = data.get('task_id')
+            if raw_task in (None, '', 'none'):
+                member.task_id = None
+            else:
+                task = CleaningTask.query.get(int(raw_task))
+                if not task or task.team_id != member.team_id:
+                    return jsonify({'success': False, 'error': 'That duty is not on this team.'}), 400
+                member.task_id = task.id
         db.session.commit()
         return jsonify({'success': True, 'message': 'Member updated.'})
     except Exception as e:
@@ -3799,46 +3841,36 @@ def submit_cleaning_inspection():
         if not team_id or not inspection_date_raw or not inspector_name:
             return jsonify({'success': False, 'error': 'team_id, inspection_date, and inspector_name are required'}), 400
 
+        from management_routes.student_jobs_spa_helpers import ensure_duty_columns
+        from utils.student_jobs_catalog import (
+            apply_flags,
+            get_inspection_type,
+            score_inspection,
+        )
+
+        ensure_duty_columns()
+        definition = get_inspection_type(data.get('inspection_type'))
+        # The score is recomputed here so the checklist and the number always agree.
+        scores = score_inspection(definition, data)
+
         inspection = CleaningInspection(
             team_id=team_id,
             inspection_date=datetime.strptime(str(inspection_date_raw), '%Y-%m-%d').date(),
             inspector_name=inspector_name,
             inspector_notes=data.get('inspector_notes', ''),
-            
-            # Deductions
-            bathroom_not_restocked=data.get('bathroom_not_restocked', False),
-            trash_can_left_full=data.get('trash_can_left_full', False),
-            floor_not_swept=data.get('floor_not_swept', False),
-            materials_left_out=data.get('materials_left_out', False),
-            tables_missed=data.get('tables_missed', False),
-            classroom_trash_full=data.get('classroom_trash_full', False),
-            bathroom_floor_poor=data.get('bathroom_floor_poor', False),
-            not_finished_on_time=data.get('not_finished_on_time', False),
-            small_debris_left=data.get('small_debris_left', False),
-            trash_spilled=data.get('trash_spilled', False),
-            dispensers_half_filled=data.get('dispensers_half_filled', False),
-            
-            # Bonuses
-            exceptional_finish=data.get('exceptional_finish', False),
-            speed_efficiency=data.get('speed_efficiency', False),
-            going_above_beyond=data.get('going_above_beyond', False),
-            teamwork_award=data.get('teamwork_award', False),
-            
-            # Calculate scores
-            major_deductions=data.get('major_deductions', 0),
-            moderate_deductions=data.get('moderate_deductions', 0),
-            minor_deductions=data.get('minor_deductions', 0),
-            bonus_points=data.get('bonus_points', 0),
-            final_score=data.get('final_score', 100)
+            inspection_type=definition['value'],
+            **scores,
         )
-        
+        apply_flags(inspection, data, definition)
+
         db.session.add(inspection)
         db.session.commit()
         
         return jsonify({
             'success': True,
             'message': 'Inspection submitted successfully',
-            'inspection_id': inspection.id
+            'inspection_id': inspection.id,
+            'final_score': inspection.final_score,
         })
         
     except Exception as e:

@@ -5,7 +5,9 @@ import {
   archiveInspection,
   archiveStudentJobsTeam,
   createStudentJobsTeam,
+  createTeamDuty,
   deleteInspection,
+  deleteTeamDuty,
   fetchAllInspectionsForExport,
   fetchInspectionDetail,
   fetchInspectionHistory,
@@ -13,6 +15,7 @@ import {
   fetchStudentJobsStudents,
   removeTeamMembers,
   saveStudentJobsInspection,
+  updateTeamDuty,
   updateTeamMember,
 } from '../api/studentJobs'
 import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
@@ -33,25 +36,15 @@ import { spaRoute } from '../utils/spaRoute'
 
 const INSPECTIONS_PER_PAGE = 10
 
-const EMPTY_DEDUCTIONS: CleaningDeductionFlags = {
-  bathroom_not_restocked: false,
-  trash_can_left_full: false,
-  floor_not_swept: false,
-  materials_left_out: false,
-  tables_missed: false,
-  classroom_trash_full: false,
-  bathroom_floor_poor: false,
-  not_finished_on_time: false,
-  small_debris_left: false,
-  trash_spilled: false,
-  dispensers_half_filled: false,
-}
+const EMPTY_DEDUCTIONS: CleaningDeductionFlags = {}
+const EMPTY_BONUSES: CleaningBonusFlags = {}
 
-const EMPTY_BONUSES: CleaningBonusFlags = {
-  exceptional_finish: false,
-  speed_efficiency: false,
-  going_above_beyond: false,
-  teamwork_award: false,
+const EMPTY_DUTY_DRAFT = {
+  id: null as number | null,
+  name: '',
+  area: '',
+  description: '',
+  scoring_type: 'cleaning',
 }
 
 const TEAM_TYPE_STYLE: Record<string, { label: string; chip: string; icon: string }> = {
@@ -203,8 +196,13 @@ export function StudentJobsPage() {
   const [students, setStudents] = useState<StudentJobsStudentOption[]>([])
   const [studentsLoaded, setStudentsLoaded] = useState(false)
 
+  // Duties
+  const [dutiesTeam, setDutiesTeam] = useState<StudentJobsTeam | null>(null)
+  const [dutyDraft, setDutyDraft] = useState<typeof EMPTY_DUTY_DRAFT | null>(null)
+
   // Inspection form
   const [inspectionOpen, setInspectionOpen] = useState(false)
+  const [inspectionType, setInspectionType] = useState('cleaning')
   const [inspectionTeamId, setInspectionTeamId] = useState<number | null>(null)
   const [inspectionDate, setInspectionDate] = useState(todayInputValue())
   const [inspectorName, setInspectorName] = useState('')
@@ -290,8 +288,25 @@ export function StudentJobsPage() {
     }
   }, [])
 
-  const deductionOptions = data?.deduction_options || []
-  const bonusOptions = data?.bonus_options || []
+  // Keep open modals pointed at the freshly loaded copy of their team.
+  useEffect(() => {
+    if (!data) return
+    const sync = (team: StudentJobsTeam | null) =>
+      team ? data.teams.find((candidate) => candidate.id === team.id) || null : null
+    setMembersTeam(sync)
+    setDutiesTeam(sync)
+    setDetailTeam(sync)
+  }, [data])
+
+  const inspectionTypes = data?.inspection_types || []
+  const activeType = useMemo(
+    () => inspectionTypes.find((type) => type.value === inspectionType) || inspectionTypes[0],
+    [inspectionTypes, inspectionType],
+  )
+  const deductionOptions = activeType?.deductions || data?.deduction_options || []
+  const bonusOptions = activeType?.bonuses || data?.bonus_options || []
+  const startingScore = activeType?.starting_score ?? data?.point_system.starting_points ?? 100
+  const passThreshold = activeType?.pass_threshold ?? data?.point_system.redo_threshold ?? 60
 
   const scorePreview = useMemo(() => {
     let major = 0
@@ -312,9 +327,9 @@ export function StudentJobsPage() {
       moderate_deductions: moderate,
       minor_deductions: minor,
       bonus_points: bonus,
-      final_score: 100 - major - moderate - minor + bonus,
+      final_score: Math.max(0, startingScore - major - moderate - minor + bonus),
     }
-  }, [deductionOptions, bonusOptions, deductions, bonuses])
+  }, [deductionOptions, bonusOptions, deductions, bonuses, startingScore])
 
   const filteredTeams = useMemo(() => {
     const needle = teamQuery.trim().toLowerCase()
@@ -345,8 +360,9 @@ export function StudentJobsPage() {
     return `${Math.round((100 * (data?.summary.passed || 0)) / total)}%`
   }, [data?.summary])
 
-  function openInspection(teamId?: number) {
+  function openInspection(teamId?: number, type = 'cleaning') {
     setInspectionTeamId(teamId ?? data?.teams[0]?.id ?? null)
+    setInspectionType(type)
     setInspectionDate(todayInputValue())
     setInspectorNotes('')
     setDeductions(EMPTY_DEDUCTIONS)
@@ -367,10 +383,10 @@ export function StudentJobsPage() {
     try {
       const result = await saveStudentJobsInspection({
         team_id: inspectionTeamId,
+        inspection_type: inspectionType,
         inspection_date: inspectionDate,
         inspector_name: inspectorName.trim(),
         inspector_notes: inspectorNotes.trim(),
-        ...scorePreview,
         ...deductions,
         ...bonuses,
       })
@@ -739,7 +755,9 @@ export function StudentJobsPage() {
                               className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
                             >
                               {member.name}
-                              {member.role && member.role !== 'Team Member' ? (
+                              {member.task_name ? (
+                                <span className="ml-1 text-teal-700">· {member.task_name}</span>
+                              ) : member.role && member.role !== 'Team Member' ? (
                                 <span className="ml-1 text-slate-500">· {member.role}</span>
                               ) : null}
                             </span>
@@ -756,6 +774,25 @@ export function StudentJobsPage() {
                       >
                         <i className="bi bi-clipboard-check" aria-hidden />
                         Inspect
+                      </button>
+                      {team.duties.some((duty) => duty.scoring_type === 'lunch_hall') ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+                          onClick={() => openInspection(team.id, 'lunch_hall')}
+                        >
+                          <i className="bi bi-cup-straw" aria-hidden />
+                          Lunch Hall
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-hub-text hover:bg-slate-50"
+                        onClick={() => setDutiesTeam(team)}
+                      >
+                        <i className="bi bi-list-check" aria-hidden />
+                        Duties
+                        <span className="text-hub-muted">({team.duties.length})</span>
                       </button>
                       <button
                         type="button"
@@ -903,7 +940,14 @@ export function StudentJobsPage() {
                           <td className="whitespace-nowrap px-5 py-3 font-semibold text-hub-text">
                             {formatDate(item.date)}
                           </td>
-                          <td className="px-3 py-3 text-hub-text">{item.team_name}</td>
+                          <td className="px-3 py-3 text-hub-text">
+                            {item.team_name}
+                            {item.inspection_type && item.inspection_type !== 'cleaning' ? (
+                              <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                                {item.inspection_type_label}
+                              </span>
+                            ) : null}
+                          </td>
                           <td className="px-3 py-3">
                             <span
                               className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${tone.chip}`}
@@ -1040,42 +1084,51 @@ export function StudentJobsPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Deductions and bonuses" subtitle="What an inspector can mark">
-            <div className="space-y-4 p-5">
-              <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-red-700">
-                  Deductions
-                </h3>
-                <ul className="mb-0 list-none space-y-1 p-0">
-                  {deductionOptions.map((option) => (
-                    <li
-                      key={option.key}
-                      className="flex items-center justify-between gap-3 rounded-lg bg-red-50/60 px-3 py-1.5 text-sm"
-                    >
-                      <span className="text-hub-text">{option.label}</span>
-                      <span className="shrink-0 font-bold text-red-700">−{option.points}</span>
-                    </li>
-                  ))}
-                </ul>
+          {inspectionTypes.map((type) => (
+            <SectionCard
+              key={type.value}
+              title={`${type.label} checklist`}
+              subtitle={type.description}
+            >
+              <div className="space-y-4 p-5">
+                <div>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-red-700">
+                    Deductions
+                  </h3>
+                  <ul className="mb-0 list-none space-y-1 p-0">
+                    {type.deductions.map((option) => (
+                      <li
+                        key={option.key}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-red-50/60 px-3 py-1.5 text-sm"
+                      >
+                        <span className="text-hub-text">{option.label}</span>
+                        <span className="shrink-0 font-bold text-red-700">−{option.points}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
+                    Bonuses
+                  </h3>
+                  <ul className="mb-0 list-none space-y-1 p-0">
+                    {type.bonuses.map((option) => (
+                      <li
+                        key={option.key}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50/60 px-3 py-1.5 text-sm"
+                      >
+                        <span className="text-hub-text">{option.label}</span>
+                        <span className="shrink-0 font-bold text-emerald-700">
+                          +{option.points}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
-                  Bonuses
-                </h3>
-                <ul className="mb-0 list-none space-y-1 p-0">
-                  {bonusOptions.map((option) => (
-                    <li
-                      key={option.key}
-                      className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50/60 px-3 py-1.5 text-sm"
-                    >
-                      <span className="text-hub-text">{option.label}</span>
-                      <span className="shrink-0 font-bold text-emerald-700">+{option.points}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </SectionCard>
+            </SectionCard>
+          ))}
+
         </div>
       ) : null}
 
@@ -1100,7 +1153,7 @@ export function StudentJobsPage() {
               >
                 {scorePreview.final_score}
               </span>
-              {scorePreview.final_score < data.point_system.redo_threshold ? (
+              {scorePreview.final_score < passThreshold ? (
                 <span className="text-xs font-bold text-red-700">Redo required</span>
               ) : null}
             </div>
@@ -1123,6 +1176,39 @@ export function StudentJobsPage() {
         }
       >
         <div className="space-y-4">
+          {inspectionTypes.length > 1 ? (
+            <div className="flex flex-wrap gap-2">
+              {inspectionTypes.map((type) => {
+                const active = type.value === inspectionType
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    className={`flex-1 rounded-xl border px-4 py-2.5 text-left transition ${
+                      active
+                        ? 'border-teal-600 bg-teal-50'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                    onClick={() => {
+                      setInspectionType(type.value)
+                      setDeductions(EMPTY_DEDUCTIONS)
+                      setBonuses(EMPTY_BONUSES)
+                    }}
+                  >
+                    <span
+                      className={`block text-sm font-bold ${
+                        active ? 'text-teal-800' : 'text-hub-text'
+                      }`}
+                    >
+                      {type.label}
+                    </span>
+                    <span className="block text-xs text-hub-muted">{type.description}</span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="block">
               <span className={LABEL_CLASS}>Team</span>
@@ -1339,10 +1425,7 @@ export function StudentJobsPage() {
               onClick={async () => {
                 if (!membersTeam) return
                 const ok = await runAction(() => addTeamMembers(membersTeam.id, memberSelection))
-                if (ok) {
-                  setMemberSelection([])
-                  setMembersTeam(null)
-                }
+                if (ok) setMemberSelection([])
               }}
             >
               Add {memberSelection.length || ''} student{memberSelection.length === 1 ? '' : 's'}
@@ -1367,7 +1450,7 @@ export function StudentJobsPage() {
                       key={member.member_id}
                       className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold text-hub-text">
                           {member.name}
                         </div>
@@ -1375,6 +1458,31 @@ export function StudentJobsPage() {
                           {member.role || 'Team Member'}
                           {member.assignment_description ? ` · ${member.assignment_description}` : ''}
                         </div>
+                        <select
+                          className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-hub-text focus:border-teal-500 focus:bg-white focus:outline-none"
+                          value={member.task_id ?? ''}
+                          disabled={busy || membersTeam.duties.length === 0}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            void runAction(() =>
+                              updateTeamMember(member.member_id, {
+                                task_id: value ? Number(value) : null,
+                              }),
+                            )
+                          }}
+                        >
+                          <option value="">
+                            {membersTeam.duties.length === 0
+                              ? 'No duties set up yet'
+                              : 'No duty assigned'}
+                          </option>
+                          {membersTeam.duties.map((duty) => (
+                            <option key={duty.id} value={duty.id}>
+                              {duty.name}
+                              {duty.scoring_type === 'lunch_hall' ? ' (Lunch Hall)' : ''}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="flex shrink-0 gap-1">
                         <button
@@ -1401,10 +1509,9 @@ export function StudentJobsPage() {
                               ),
                               confirmLabel: 'Remove',
                               action: async () => {
-                                const ok = await runAction(() =>
+                                await runAction(() =>
                                   removeTeamMembers(membersTeam.id, [member.member_id]),
                                 )
-                                if (ok) setMembersTeam(null)
                               },
                             })
                           }
@@ -1439,6 +1546,229 @@ export function StudentJobsPage() {
         ) : null}
       </Modal>
 
+      {/* Duties */}
+      <Modal
+        open={!!dutiesTeam}
+        onClose={() => {
+          setDutiesTeam(null)
+          setDutyDraft(null)
+        }}
+        title={dutiesTeam ? `${dutiesTeam.name} — duties` : 'Duties'}
+        subtitle="What this team is responsible for, and who does each part."
+        icon="bi-list-check"
+        size="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              className="mr-auto rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+              onClick={() => setDutyDraft({ ...EMPTY_DUTY_DRAFT })}
+            >
+              <i className="bi bi-plus-lg me-1.5" aria-hidden />
+              Add duty
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+              onClick={() => {
+                setDutiesTeam(null)
+                setDutyDraft(null)
+              }}
+            >
+              Done
+            </button>
+          </>
+        }
+      >
+        {dutiesTeam ? (
+          <div className="space-y-3">
+            {dutiesTeam.duties.length === 0 ? (
+              <p className="mb-0 rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-hub-muted">
+                No duties yet. Add one to describe what this team does.
+              </p>
+            ) : (
+              dutiesTeam.duties.map((duty) => (
+                <div key={duty.id} className="rounded-xl border border-slate-200 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-hub-text">{duty.name}</span>
+                        {duty.area ? (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                            {duty.area}
+                          </span>
+                        ) : null}
+                        {duty.scoring_type === 'lunch_hall' ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                            Scored separately · Lunch Hall
+                          </span>
+                        ) : null}
+                      </div>
+                      {duty.description ? (
+                        <p className="mb-0 mt-1 whitespace-pre-wrap text-sm text-hub-muted">
+                          {duty.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        className="rounded-lg px-2 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50"
+                        onClick={() =>
+                          setDutyDraft({
+                            id: duty.id,
+                            name: duty.name,
+                            area: duty.area,
+                            description: duty.description,
+                            scoring_type: duty.scoring_type,
+                          })
+                        }
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                        onClick={() =>
+                          setConfirm({
+                            title: 'Remove this duty?',
+                            body: (
+                              <>
+                                <strong>{duty.name}</strong> will be removed and anyone assigned to
+                                it will be left without a duty.
+                              </>
+                            ),
+                            confirmLabel: 'Remove duty',
+                            action: async () => {
+                              await runAction(() => deleteTeamDuty(duty.id))
+                            },
+                          })
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-hub-muted">
+                      Assigned
+                    </span>
+                    {duty.assigned.length === 0 ? (
+                      <span className="text-xs text-hub-muted">
+                        Nobody yet — assign students from the Members tab.
+                      </span>
+                    ) : (
+                      duty.assigned.map((person) => (
+                        <span
+                          key={person.member_id}
+                          className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800"
+                        >
+                          {person.name}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Add / edit duty */}
+      <Modal
+        open={!!dutyDraft}
+        onClose={() => setDutyDraft(null)}
+        title={dutyDraft?.id ? 'Edit duty' : 'Add duty'}
+        subtitle={dutiesTeam?.name}
+        icon="bi-clipboard-plus"
+        footer={
+          <>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+              onClick={() => setDutyDraft(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
+              disabled={busy || !dutyDraft?.name.trim()}
+              onClick={async () => {
+                if (!dutyDraft || !dutiesTeam) return
+                const payload = {
+                  name: dutyDraft.name.trim(),
+                  area: dutyDraft.area.trim(),
+                  description: dutyDraft.description.trim(),
+                  scoring_type: dutyDraft.scoring_type,
+                }
+                const ok = await runAction(() =>
+                  dutyDraft.id
+                    ? updateTeamDuty(dutyDraft.id, payload)
+                    : createTeamDuty(dutiesTeam.id, payload),
+                )
+                if (ok) setDutyDraft(null)
+              }}
+            >
+              {dutyDraft?.id ? 'Save duty' : 'Add duty'}
+            </button>
+          </>
+        }
+      >
+        {dutyDraft ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className={LABEL_CLASS}>Duty name</span>
+                <input
+                  className={FIELD_CLASS}
+                  placeholder="e.g. Sweeping Team"
+                  value={dutyDraft.name}
+                  onChange={(e) => setDutyDraft({ ...dutyDraft, name: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className={LABEL_CLASS}>Area</span>
+                <input
+                  className={FIELD_CLASS}
+                  placeholder="e.g. Common Areas"
+                  value={dutyDraft.area}
+                  onChange={(e) => setDutyDraft({ ...dutyDraft, area: e.target.value })}
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className={LABEL_CLASS}>Scored as</span>
+              <select
+                className={FIELD_CLASS}
+                value={dutyDraft.scoring_type}
+                onChange={(e) => setDutyDraft({ ...dutyDraft, scoring_type: e.target.value })}
+              >
+                {inspectionTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-hub-muted">
+                Lunch Hall duties are graded on their own checklist instead of the standard cleaning
+                one.
+              </span>
+            </label>
+            <label className="block">
+              <span className={LABEL_CLASS}>What has to be done</span>
+              <textarea
+                className={`${FIELD_CLASS} min-h-[8rem]`}
+                placeholder={'• Swept top to bottom\n• Trash taken out'}
+                value={dutyDraft.description}
+                onChange={(e) => setDutyDraft({ ...dutyDraft, description: e.target.value })}
+              />
+            </label>
+          </div>
+        ) : null}
+      </Modal>
+
       {/* Team details */}
       <Modal
         open={!!detailTeam}
@@ -1453,7 +1783,39 @@ export function StudentJobsPage() {
             {detailTeam.description ? (
               <p className="mb-0 text-hub-text">{detailTeam.description}</p>
             ) : null}
-            <TeamAreas details={detailTeam.detailed_description} />
+            {detailTeam.duties.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                  Duties
+                </h3>
+                <ul className="mb-0 list-none space-y-1 p-0">
+                  {detailTeam.duties.map((duty) => (
+                    <li key={duty.id} className="rounded-lg bg-slate-50 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-hub-text">{duty.name}</span>
+                        {duty.scoring_type === 'lunch_hall' ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                            Scored separately
+                          </span>
+                        ) : null}
+                        {duty.assigned.length > 0 ? (
+                          <span className="text-xs text-hub-muted">
+                            {duty.assigned.map((p) => p.name).join(', ')}
+                          </span>
+                        ) : null}
+                      </div>
+                      {duty.description ? (
+                        <p className="mb-0 mt-1 whitespace-pre-wrap text-sm text-hub-muted">
+                          {duty.description}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <TeamAreas details={detailTeam.detailed_description} />
+            )}
             <div>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
                 Recent inspections
@@ -1584,10 +1946,7 @@ export function StudentJobsPage() {
           const ok = await runAction(() =>
             updateTeamMember(editingMember.member_id, { role: editingRole.trim() }),
           )
-          if (ok) {
-            setEditingMember(null)
-            setMembersTeam(null)
-          }
+          if (ok) setEditingMember(null)
         }}
       />
 

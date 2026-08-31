@@ -379,6 +379,48 @@ export function StudentJobsPortalPage() {
               </div>
             </div>
 
+            {openTeam.duties.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                  What this team does
+                </h3>
+                <ul className="mb-0 list-none space-y-1 p-0">
+                  {openTeam.duties.map((duty) => {
+                    const isMine = duty.assigned.some(
+                      (person) => person.student_id === data?.my_student_id,
+                    )
+                    return (
+                      <li
+                        key={duty.id}
+                        className={`rounded-lg px-3 py-2 ${
+                          isMine ? 'bg-teal-50 ring-1 ring-teal-200' : 'bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-hub-text">{duty.name}</span>
+                          {isMine ? (
+                            <span className="rounded-full bg-teal-600 px-2 py-0.5 text-xs font-bold text-white">
+                              Your duty
+                            </span>
+                          ) : null}
+                          {duty.scoring_type === 'lunch_hall' ? (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                              Scored separately
+                            </span>
+                          ) : null}
+                        </div>
+                        {duty.description ? (
+                          <p className="mb-0 mt-1 whitespace-pre-wrap text-sm text-hub-muted">
+                            {duty.description}
+                          </p>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ) : null}
+
             <div>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
                 Members ({openTeam.members.length})
@@ -394,7 +436,7 @@ export function StudentJobsPortalPage() {
                     >
                       <span className="font-semibold text-hub-text">{member.name}</span>
                       <span className="text-xs text-hub-muted">
-                        {member.role || 'Team Member'}
+                        {member.task_name || member.role || 'Team Member'}
                       </span>
                     </li>
                   ))}

@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Assign duties to a cleaning team',
+    body: 'Each team now has an editable list of duties — a name, the area it covers, and what has to be done. Open a team and use Duties to add, edit, or remove them, then pick a duty for each student from the Members panel. The duties that used to be hardcoded per team were carried over automatically, and students see their own duty highlighted on the Jobs page.',
+  },
+  {
+    title: 'Stairway and Lunch Hall added to the cleaning detail',
+    body: 'Both areas now appear on every cleaning team. Stairway is part of the normal inspection, with a new "Stairway not swept or cleaned" deduction worth 10 points.',
+  },
+  {
+    title: 'Lunch Hall is scored on its own',
+    body: 'Lunch Hall has a separate checklist worth 20 points per item: tables wiped and cleared, no trash on the floor, no dishes left out, food and condiments put up, and trash taken out. Use the Lunch Hall button on a team to run it, and inspection history labels which checklist was used.',
+  },
   {
     title: 'Student Jobs has been rebuilt',
     body: 'New layout with team performance at a glance: score, trend, average, pass rate, and a mini chart of recent inspections. Teams and inspections are now separate tabs with search and filters, the inspection form shows plain-English items with their point values and a live score, and every browser alert/confirm popup has been replaced with proper in-app dialogs. The student view was rebuilt to match and puts your own team first.',

@@ -10,10 +10,13 @@ from management_routes.student_jobs_spa_helpers import (
     archive_cleaning_team,
     archive_inspection,
     create_cleaning_team,
+    create_team_duty,
     delete_inspection,
+    delete_team_duty,
     get_inspection_detail,
     query_inspection_history,
     query_student_jobs_hub,
+    update_team_duty,
 )
 from management_routes.students import (
     api_get_students,
@@ -59,6 +62,51 @@ def student_jobs_create_team():
 def student_jobs_archive_team(team_id: int):
     try:
         result = archive_cleaning_team(team_id=team_id)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/teams/<int:team_id>/duties", methods=["POST"])
+@login_required
+@management_required
+def student_jobs_create_duty(team_id: int):
+    data = request.get_json(silent=True) or {}
+    try:
+        result = create_team_duty(
+            team_id=team_id,
+            name=data.get("name", ""),
+            area=data.get("area", ""),
+            description=data.get("description", ""),
+            scoring_type=data.get("scoring_type", "cleaning"),
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/duties/<int:duty_id>", methods=["POST"])
+@login_required
+@management_required
+def student_jobs_update_duty(duty_id: int):
+    data = request.get_json(silent=True) or {}
+    allowed = {k: v for k, v in data.items() if k in {"name", "area", "description", "scoring_type"}}
+    try:
+        result = update_team_duty(duty_id=duty_id, **allowed)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/duties/<int:duty_id>", methods=["DELETE"])
+@login_required
+@management_required
+def student_jobs_delete_duty(duty_id: int):
+    try:
+        result = delete_team_duty(duty_id=duty_id)
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
     status = 200 if result.get("success") else 400

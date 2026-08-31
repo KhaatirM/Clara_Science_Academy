@@ -3259,6 +3259,8 @@ class CleaningTeamMember(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     role = db.Column(db.String(50), nullable=False)  # "Sweeping Team", "Wipe Down Team", "Trash Team", "Bathroom Team"
     assignment_description = db.Column(db.Text, nullable=True)  # Detailed job assignment description
+    # The duty this student is responsible for; several students can share one duty.
+    task_id = db.Column(db.Integer, db.ForeignKey('cleaning_task.id'), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -3308,6 +3310,9 @@ class CleaningInspection(db.Model):
     
     # Additional information
     inspector_notes = db.Column(db.Text, nullable=True)
+    # Checklist items that have no dedicated column, as {item_key: true}. Used by
+    # inspection types added after the fixed columns above (e.g. Lunch Hall).
+    checklist_json = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Archived inspections are hidden everywhere and stop counting toward team score.
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
@@ -3326,11 +3331,20 @@ class CleaningTask(db.Model):
     task_name = db.Column(db.String(100), nullable=False)  # "Sweeping Team", "Wipe Down Team", etc.
     task_description = db.Column(db.Text, nullable=False)
     area_covered = db.Column(db.String(200), nullable=False)  # "all four classrooms", "both bathrooms", etc.
+    # Which inspection type scores this duty. 'lunch_hall' duties are graded on
+    # their own checklist rather than the standard cleaning one.
+    scoring_type = db.Column(db.String(50), default='cleaning')
+    sort_order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     team = db.relationship('CleaningTeam', backref='tasks')
+    members = db.relationship(
+        'CleaningTeamMember',
+        backref='task',
+        foreign_keys='CleaningTeamMember.task_id',
+    )
     
     def __repr__(self):
         return f"CleaningTask('{self.task_name}', Team: {self.team_id})"

@@ -110,9 +110,21 @@ export async function resetBellSchedulePeriods(gradeLevel: number | null) {
   })
 }
 
-export async function unassignClassFromGradeSchedule(classId: number, gradeLevel: number) {
+/** Omit periodId to take the class out of every period on the schedule. */
+export async function unassignClassFromGradeSchedule(
+  classId: number,
+  gradeLevel: number,
+  periodId?: number,
+) {
   return apiFetch<{ success: boolean; class_id: number }>(
     '/api/spa/management/schedule/unassign',
-    { method: 'POST', body: JSON.stringify({ class_id: classId, grade_level: gradeLevel }) },
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        class_id: classId,
+        grade_level: gradeLevel,
+        period_id: periodId ?? null,
+      }),
+    },
   )
 }

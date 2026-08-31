@@ -27,7 +27,7 @@ function labelDays(days: number[]): string {
 
 export function PeriodClassPlanner({ grade }: Props) {
   const [periods, setPeriods] = useState<PlannerPeriodRow[]>([])
-  const [unassigned, setUnassigned] = useState<PlannerClassCard[]>([])
+  const [classes, setClasses] = useState<PlannerClassCard[]>([])
   const [gradeLabel, setGradeLabel] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -55,7 +55,9 @@ export function PeriodClassPlanner({ grade }: Props) {
           })),
         })),
       )
-      setUnassigned(data.unassigned_classes || [])
+      setClasses(
+        (data.classes || []).map((c) => ({ ...c, placements: c.placements || [] })),
+      )
       setGradeLabel(data.grade_label || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load planner')
@@ -98,11 +100,11 @@ export function PeriodClassPlanner({ grade }: Props) {
     }
   }
 
-  async function onUnassign(classId: number) {
+  async function onUnassign(classId: number, periodId?: number) {
     setBusy(true)
     setError(null)
     try {
-      await unassignClassFromGradeSchedule(classId, grade)
+      await unassignClassFromGradeSchedule(classId, grade, periodId)
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not unassign class')
@@ -117,8 +119,21 @@ export function PeriodClassPlanner({ grade }: Props) {
     const classId = Number.parseInt(raw, 10)
     if (!Number.isFinite(classId)) return
     const period = periods.find((p) => p.id === periodId)
+    const periodDays = period?.days_of_week?.length ? period.days_of_week : [0, 1, 2, 3, 4]
+    // Preselect only the days this class is still free, so dropping it into a
+    // second period does not steal the days it already meets elsewhere.
+    const taken = new Set(
+      periods
+        .filter((p) => p.id !== periodId)
+        .flatMap((p) =>
+          (p.assigned_classes || [])
+            .filter((c) => c.class_id === classId)
+            .flatMap((c) => c.days_of_week || []),
+        ),
+    )
+    const free = periodDays.filter((day) => !taken.has(day))
     setPendingAssign({ classId, periodId })
-    setPendingDays(period?.days_of_week?.length ? period.days_of_week : [0, 1, 2, 3, 4])
+    setPendingDays(free.length ? free : periodDays)
     setDragClassId(null)
   }
 
@@ -146,8 +161,9 @@ export function PeriodClassPlanner({ grade }: Props) {
   return (
     <div className="space-y-3">
       <p className="mb-0 text-sm text-hub-muted">
-        Drag a class into a period, then choose which days it meets. Period times apply for{' '}
-        {gradeLabel || 'this grade'} on the days you select.
+        Drag a class into a period, then choose which days it meets. The same class can go in
+        different periods on different days. Period times apply for {gradeLabel || 'this grade'} on
+        the days you select.
       </p>
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
@@ -201,7 +217,7 @@ export function PeriodClassPlanner({ grade }: Props) {
                         periodId={period.id}
                         periodDays={period.days_of_week}
                         busy={busy}
-                        onRemove={() => void onUnassign(c.class_id)}
+                        onRemove={() => void onUnassign(c.class_id, period.id)}
                         onDaysChange={(days) => void onUpdateDays(c.class_id, period.id, days)}
                       />
                     ))
@@ -229,12 +245,12 @@ export function PeriodClassPlanner({ grade }: Props) {
             Classes ({gradeLabel})
           </h3>
           <div className="max-h-[32rem] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
-            {unassigned.length === 0 ? (
+            {classes.length === 0 ? (
               <p className="mb-0 px-2 py-4 text-center text-sm text-hub-muted">
-                All classes for this grade are assigned to a period.
+                No classes for this grade yet.
               </p>
             ) : (
-              unassigned.map((c) => (
+              classes.map((c) => (
                 <ClassChip
                   key={c.class_id}
                   card={c}
@@ -246,7 +262,8 @@ export function PeriodClassPlanner({ grade }: Props) {
             )}
           </div>
           <p className="mt-2 mb-0 text-xs text-hub-muted">
-            Each class goes in one period; pick Mon–Fri on the assignment card after dropping.
+            A class can sit in more than one period — drag it again and pick different days. Taking a
+            day here removes it from whichever period had it.
           </p>
         </div>
       </div>
@@ -265,7 +282,8 @@ export function PeriodClassPlanner({ grade }: Props) {
             <p className="mb-4 text-sm text-hub-muted">
               Select the weekdays this class meets during{' '}
               {periods.find((p) => p.id === pendingAssign.periodId)?.name || 'this period'}. Other
-              classes can use the same period on the days you leave off.
+              classes can use the same period on the days you leave off, and this class keeps any
+              other period it sits in on the remaining days.
             </p>
             <div className="mb-4 flex flex-wrap gap-2">
               {pendingDayChoices.map((d) => {
@@ -395,6 +413,7 @@ function ClassChip({
   onDragStart?: () => void
   onDragEnd?: () => void
 }) {
+  const placements = card.placements || []
   return (
     <div
       draggable={draggable}
@@ -412,8 +431,23 @@ function ClassChip({
         <p className="mb-0 truncate text-sm font-bold text-hub-text">{card.class_name}</p>
         <p className="mb-0 truncate text-xs text-hub-muted">
           {card.subject} · {card.teacher_name}
-          {card.schedule_text ? ` · ${card.schedule_text}` : ''}
         </p>
+        {placements.length ? (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {placements.map((placement) => (
+              <span
+                key={placement.period_id}
+                className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-teal-800"
+              >
+                {placement.period_name} · {labelDays(placement.days_of_week)}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="mt-1 inline-block rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-500">
+            Not scheduled
+          </span>
+        )}
       </div>
       <i className="bi bi-grip-vertical shrink-0 text-hub-muted" aria-hidden />
     </div>

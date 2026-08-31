@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'A class can meet in different periods on different days',
+    body: 'The planner used to allow one period per class, so dropping a class somewhere new took it out of the period it was already in. Now every class stays in the list and can be dropped into as many periods as you need — drag it again and pick the days. Only the free days are preselected, taking a day gives it to the new period, and the × on a card now removes just that one placement.',
+  },
   {
     title: 'Saving bell periods keeps your class assignments',
     body: 'Editing the bell schedule failed with a database error, and every save rebuilt the periods from scratch, which would have dropped the classes assigned to them. Periods are now updated in place: unrelated edits leave assignments alone, removing a weekday trims the affected classes to the days that remain, and labelling a period as reserved releases its classes and updates their schedules.',

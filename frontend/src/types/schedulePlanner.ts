@@ -1,3 +1,9 @@
+export interface PlannerPlacement {
+  period_id: number
+  period_name: string
+  days_of_week: number[]
+}
+
 export interface PlannerClassCard {
   class_id: number
   class_name: string
@@ -6,6 +12,8 @@ export interface PlannerClassCard {
   teacher_name: string
   schedule_text: string | null
   grade_levels: number[]
+  /** Every period this class already sits in, across the week. */
+  placements?: PlannerPlacement[]
 }
 
 export interface PlannerAssignedClass extends PlannerClassCard {

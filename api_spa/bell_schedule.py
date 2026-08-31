@@ -224,10 +224,16 @@ def management_schedule_unassign():
         grade_level = _parse_grade_arg(body.get("grade_level"))
         if grade_level is None:
             raise ValueError("grade_level is required")
+        raw_period = body.get("period_id")
+        period_id = int(raw_period) if raw_period not in (None, "") else None
     except (TypeError, ValueError) as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
     try:
-        return jsonify(unassign_class_from_bell_schedule(class_id=class_id, grade_level=grade_level))
+        return jsonify(
+            unassign_class_from_bell_schedule(
+                class_id=class_id, grade_level=grade_level, period_id=period_id
+            )
+        )
     except ValueError as exc:
         db.session.rollback()
         return jsonify({"success": False, "message": str(exc)}), 400

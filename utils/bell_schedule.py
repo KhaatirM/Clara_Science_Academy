@@ -817,6 +817,58 @@ def _days_within_period(period: BellPeriod, days_of_week: list[int] | None) -> l
     return allowed
 
 
+def _class_assignments_on_schedule(
+    schedule: BellSchedule,
+    class_id: int,
+    *,
+    exclude_period_id: int | None = None,
+) -> list[BellPeriodClassAssignment]:
+    period_ids = [
+        p.id for p in (schedule.periods or []) if p.id and p.id != exclude_period_id
+    ]
+    if not period_ids:
+        return []
+    return BellPeriodClassAssignment.query.filter(
+        BellPeriodClassAssignment.class_id == class_id,
+        BellPeriodClassAssignment.bell_period_id.in_(period_ids),
+    ).all()
+
+
+def _release_days_from_other_periods(
+    schedule: BellSchedule,
+    class_id: int,
+    period_id: int,
+    days: list[int],
+) -> None:
+    """Give the requested weekdays to this period.
+
+    A class can sit in several periods across the week, but not in two periods
+    on the same day, so the day is taken off whichever period had it.
+    """
+    claimed = set(days)
+    for row in _class_assignments_on_schedule(schedule, class_id, exclude_period_id=period_id):
+        current = row.get_days_of_week()
+        remaining = [day for day in current if day not in claimed]
+        if remaining == current:
+            continue
+        if remaining:
+            row.set_days_of_week(remaining)
+        else:
+            db.session.delete(row)
+
+
+def _default_days_for_assignment(
+    schedule: BellSchedule, class_id: int, period: BellPeriod
+) -> list[int]:
+    """Days to preselect: the period's days that the class has not already used."""
+    period_days = _normalize_weekdays(period.get_days_of_week()) or list(_WEEK)
+    taken: set[int] = set()
+    for row in _class_assignments_on_schedule(schedule, class_id, exclude_period_id=period.id):
+        taken.update(row.get_days_of_week())
+    free = [day for day in period_days if day not in taken]
+    return free or period_days
+
+
 def assign_class_to_bell_period(
     *,
     class_id: int,
@@ -841,23 +893,23 @@ def assign_class_to_bell_period(
     if not schedule:
         raise ValueError('Bell period has no parent schedule')
 
-    days = _days_within_period(period, days_of_week)
-
-    sibling_period_ids = [p.id for p in (schedule.periods or [])]
-    existing = (
-        BellPeriodClassAssignment.query.filter(
-            BellPeriodClassAssignment.class_id == class_id,
-            BellPeriodClassAssignment.bell_period_id.in_(sibling_period_ids),
-        ).all()
-        if sibling_period_ids
-        else []
+    days = (
+        _default_days_for_assignment(schedule, class_id, period)
+        if days_of_week is None
+        else _days_within_period(period, days_of_week)
     )
-    for row in existing:
-        db.session.delete(row)
 
-    assignment = BellPeriodClassAssignment(bell_period_id=period_id, class_id=class_id)
+    _release_days_from_other_periods(schedule, class_id, period.id, days)
+
+    assignment = BellPeriodClassAssignment.query.filter_by(
+        bell_period_id=period_id,
+        class_id=class_id,
+    ).first()
+    if assignment is None:
+        assignment = BellPeriodClassAssignment(bell_period_id=period_id, class_id=class_id)
+        db.session.add(assignment)
     assignment.set_days_of_week(days)
-    db.session.add(assignment)
+    db.session.flush()
     _sync_class_from_bell_assignments(class_obj, schedule)
     db.session.commit()
     return {
@@ -895,7 +947,9 @@ def update_bell_period_assignment_days(
     if not assignment:
         raise ValueError('Class is not assigned to this period')
 
+    _release_days_from_other_periods(schedule, class_id, period.id, days)
     assignment.set_days_of_week(days)
+    db.session.flush()
     _sync_class_from_bell_assignments(class_obj, schedule)
     db.session.commit()
     return {
@@ -907,8 +961,10 @@ def update_bell_period_assignment_days(
     }
 
 
-def unassign_class_from_bell_schedule(*, class_id: int, grade_level: int) -> dict[str, Any]:
-    """Remove a class from all period slots on the grade bell schedule."""
+def unassign_class_from_bell_schedule(
+    *, class_id: int, grade_level: int, period_id: int | None = None
+) -> dict[str, Any]:
+    """Remove a class from one period, or from every period when none is given."""
     schedule = ensure_active_bell_schedule(grade_level=grade_level)
     if not schedule:
         raise ValueError('No bell schedule for this grade')
@@ -916,6 +972,8 @@ def unassign_class_from_bell_schedule(*, class_id: int, grade_level: int) -> dic
     if not class_obj:
         raise ValueError('Class not found')
     period_ids = [p.id for p in (schedule.periods or [])]
+    if period_id is not None:
+        period_ids = [pid for pid in period_ids if pid == period_id]
     rows = (
         BellPeriodClassAssignment.query.filter(
             BellPeriodClassAssignment.class_id == class_id,
@@ -971,6 +1029,7 @@ def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
     periods = sorted(schedule.periods or [], key=lambda p: (p.sort_order or 0, p.id or 0))
 
     assignments_by_period: dict[int, list[dict[str, Any]]] = {}
+    placements_by_class: dict[int, list[dict[str, Any]]] = {}
     assigned_ids: set[int] = set()
     for period in periods:
         if (period.kind or 'class') != 'class' or (period.usage_label or '').strip():
@@ -987,6 +1046,13 @@ def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
                     'assignment_id': row.id,
                     'days_of_week': days,
                     'day_labels': [DAY_SHORT[d] for d in days if 0 <= d < len(DAY_SHORT)],
+                }
+            )
+            placements_by_class.setdefault(class_obj.id, []).append(
+                {
+                    'period_id': period.id,
+                    'period_name': period.name or '',
+                    'days_of_week': days,
                 }
             )
             assigned_ids.add(class_obj.id)
@@ -1006,7 +1072,13 @@ def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
         'grade_level': grade_level,
         'grade_label': grade_label(grade_level),
         'periods': period_rows,
-        'classes': [_serialize_class_planner_card(c) for c in classes],
+        'classes': [
+            {
+                **_serialize_class_planner_card(c),
+                'placements': placements_by_class.get(c.id, []),
+            }
+            for c in classes
+        ],
         'unassigned_classes': [
             _serialize_class_planner_card(c) for c in classes if c.id not in assigned_ids
         ],

@@ -6,6 +6,7 @@ import type {
   StudentJobsInspectionDetail,
   StudentJobsInspectionHistoryResponse,
   StudentJobsStudentOption,
+  UpdateStudentJobsTeamPayload,
 } from '../types/studentJobs'
 
 export async function fetchStudentJobsHub(): Promise<StudentJobsHubResponse> {
@@ -15,6 +16,16 @@ export async function fetchStudentJobsHub(): Promise<StudentJobsHubResponse> {
 export async function createStudentJobsTeam(payload: CreateStudentJobsTeamPayload) {
   return apiFetch<{ success: boolean; team_id?: number; message?: string; error?: string }>(
     '/api/spa/student-jobs/teams',
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+}
+
+export async function updateStudentJobsTeam(
+  teamId: number,
+  payload: UpdateStudentJobsTeamPayload,
+) {
+  return apiFetch<{ success: boolean; team_id?: number; message?: string; error?: string }>(
+    `/api/spa/student-jobs/teams/${teamId}`,
     { method: 'POST', body: JSON.stringify(payload) },
   )
 }

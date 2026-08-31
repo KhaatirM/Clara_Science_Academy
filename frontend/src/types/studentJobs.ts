@@ -45,6 +45,9 @@ export type StudentJobsTeam = {
   name: string
   description: string
   team_type: string
+  /** Weekday numbers the team works, Mon=0. Empty means every school day. */
+  days_of_week: number[]
+  day_labels: string[]
   current_score: number
   stats: StudentJobsTeamStats
   members: StudentJobsMember[]
@@ -103,6 +106,14 @@ export type CreateStudentJobsTeamPayload = {
   description?: string
   team_type: string
   student_ids?: number[]
+  days_of_week?: number[]
+}
+
+export type UpdateStudentJobsTeamPayload = {
+  name?: string
+  description?: string
+  team_type?: string
+  days_of_week?: number[]
 }
 
 export type StudentJobsHubResponse = {

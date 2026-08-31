@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v5'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v6'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Set the days a cleaning team works, and edit teams',
+    body: 'Creating a team now asks which weekdays it works, and every team card has an Edit button for renaming it, changing its type or description, and adjusting those days later. The working days show on the team card and on the student Jobs page, so students know which days they are on.',
+  },
   {
     title: 'A class can meet in different periods on different days',
     body: 'The planner used to allow one period per class, so dropping a class somewhere new took it out of the period it was already in. Now every class stays in the list and can be dropped into as many periods as you need — drag it again and pick the days. Only the free days are preselected, taking a day gives it to the new period, and the × on a card now removes just that one placement.',

@@ -6,6 +6,7 @@ import {
   archiveStudentJobsTeam,
   createStudentJobsTeam,
   createTeamDuty,
+  updateStudentJobsTeam,
   deleteInspection,
   deleteTeamDuty,
   fetchAllInspectionsForExport,
@@ -38,6 +39,83 @@ const INSPECTIONS_PER_PAGE = 10
 
 const EMPTY_DEDUCTIONS: CleaningDeductionFlags = {}
 const EMPTY_BONUSES: CleaningBonusFlags = {}
+
+const WEEKDAY_OPTIONS = [
+  { value: 0, label: 'Mon' },
+  { value: 1, label: 'Tue' },
+  { value: 2, label: 'Wed' },
+  { value: 3, label: 'Thu' },
+  { value: 4, label: 'Fri' },
+]
+const DEFAULT_WORKDAYS = [0, 1, 2, 3, 4]
+
+type TeamDraft = {
+  name: string
+  team_type: string
+  description: string
+  days_of_week: number[]
+}
+
+const EMPTY_TEAM_DRAFT: TeamDraft = {
+  name: '',
+  team_type: 'cleaning',
+  description: '',
+  days_of_week: [...DEFAULT_WORKDAYS],
+}
+
+function toggleDay(days: number[], day: number): number[] {
+  return days.includes(day)
+    ? days.filter((d) => d !== day)
+    : [...days, day].sort((a, b) => a - b)
+}
+
+/** Teams with every weekday selected are described as working daily. */
+function workdaySummary(days: number[]): string {
+  if (!days.length || days.length >= WEEKDAY_OPTIONS.length) return 'Every school day'
+  return WEEKDAY_OPTIONS.filter((d) => days.includes(d.value))
+    .map((d) => d.label)
+    .join(', ')
+}
+
+function WorkdayPicker({
+  days,
+  onChange,
+  disabled,
+}: {
+  days: number[]
+  onChange: (days: number[]) => void
+  disabled?: boolean
+}) {
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {WEEKDAY_OPTIONS.map((day) => {
+          const on = days.includes(day.value)
+          return (
+            <button
+              key={day.value}
+              type="button"
+              disabled={disabled}
+              aria-pressed={on}
+              className={[
+                'rounded-xl border px-3 py-1.5 text-sm font-bold',
+                on
+                  ? 'border-teal-600 bg-teal-600 text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+              ].join(' ')}
+              onClick={() => onChange(toggleDay(days, day.value))}
+            >
+              {day.label}
+            </button>
+          )
+        })}
+      </div>
+      <p className="mb-0 mt-1.5 text-xs text-hub-muted">
+        {days.length ? `Works ${workdaySummary(days)}.` : 'No days picked — counts as every school day.'}
+      </p>
+    </div>
+  )
+}
 
 const EMPTY_DUTY_DRAFT = {
   id: null as number | null,
@@ -216,6 +294,11 @@ export function StudentJobsPage() {
   const [newTeamType, setNewTeamType] = useState('cleaning')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamStudentIds, setNewTeamStudentIds] = useState<number[]>([])
+  const [newTeamDays, setNewTeamDays] = useState<number[]>([...DEFAULT_WORKDAYS])
+
+  // Edit team
+  const [editTeam, setEditTeam] = useState<StudentJobsTeam | null>(null)
+  const [editDraft, setEditDraft] = useState<TeamDraft>(EMPTY_TEAM_DRAFT)
 
   // Members
   const [membersTeam, setMembersTeam] = useState<StudentJobsTeam | null>(null)
@@ -416,6 +499,7 @@ export function StudentJobsPage() {
         description: newTeamDescription.trim(),
         team_type: newTeamType,
         student_ids: newTeamStudentIds,
+        days_of_week: newTeamDays,
       })
       if (result.success) {
         showAppToast(result.message || 'Team created.', 'success')
@@ -423,6 +507,7 @@ export function StudentJobsPage() {
         setNewTeamName('')
         setNewTeamDescription('')
         setNewTeamStudentIds([])
+        setNewTeamDays([...DEFAULT_WORKDAYS])
         await load()
       } else {
         showAppToast(result.error || 'Could not create the team.', 'danger')
@@ -432,6 +517,33 @@ export function StudentJobsPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  function openEditTeam(team: StudentJobsTeam) {
+    setEditTeam(team)
+    setEditDraft({
+      name: team.name,
+      team_type: team.team_type,
+      description: team.description,
+      days_of_week: team.days_of_week?.length ? [...team.days_of_week] : [...DEFAULT_WORKDAYS],
+    })
+  }
+
+  async function submitEditTeam() {
+    if (!editTeam) return
+    if (!editDraft.name.trim()) {
+      showAppToast('Team name is required.', 'warning')
+      return
+    }
+    const saved = await runAction(() =>
+      updateStudentJobsTeam(editTeam.id, {
+        name: editDraft.name.trim(),
+        description: editDraft.description.trim(),
+        team_type: editDraft.team_type,
+        days_of_week: editDraft.days_of_week,
+      }),
+    )
+    if (saved) setEditTeam(null)
   }
 
   async function runAction(fn: () => Promise<{ success: boolean; message?: string; error?: string }>) {
@@ -702,6 +814,10 @@ export function StudentJobsPage() {
                             ? ` · last inspected ${formatDate(team.stats.last_inspected)}`
                             : ' · never inspected'}
                         </p>
+                        <p className="mb-0 mt-1 text-xs font-bold uppercase tracking-wide text-teal-800">
+                          <i className="bi bi-calendar-week me-1" aria-hidden />
+                          {workdaySummary(team.days_of_week || [])}
+                        </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <span
@@ -793,6 +909,14 @@ export function StudentJobsPage() {
                         <i className="bi bi-list-check" aria-hidden />
                         Duties
                         <span className="text-hub-muted">({team.duties.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-hub-text hover:bg-slate-50"
+                        onClick={() => openEditTeam(team)}
+                      >
+                        <i className="bi bi-pencil" aria-hidden />
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -1385,6 +1509,10 @@ export function StudentJobsPage() {
             />
           </label>
           <div>
+            <span className={LABEL_CLASS}>Days they work</span>
+            <WorkdayPicker days={newTeamDays} onChange={setNewTeamDays} disabled={busy} />
+          </div>
+          <div>
             <span className={LABEL_CLASS}>
               Starting members ({newTeamStudentIds.length} selected)
             </span>
@@ -1396,6 +1524,77 @@ export function StudentJobsPage() {
                   prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
                 )
               }
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit team */}
+      <Modal
+        open={!!editTeam}
+        onClose={() => setEditTeam(null)}
+        title={editTeam ? `Edit ${editTeam.name}` : 'Edit team'}
+        subtitle="Rename the team, change what it covers, or set the days it works."
+        icon="bi-pencil-square"
+        footer={
+          <>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-hub-text hover:bg-slate-50"
+              onClick={() => setEditTeam(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
+              onClick={() => void submitEditTeam()}
+              disabled={busy}
+            >
+              {busy ? 'Saving…' : 'Save changes'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={LABEL_CLASS}>Team name</span>
+              <input
+                className={FIELD_CLASS}
+                value={editDraft.name}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </label>
+            <label className="block">
+              <span className={LABEL_CLASS}>Type</span>
+              <select
+                className={FIELD_CLASS}
+                value={editDraft.team_type}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, team_type: e.target.value }))}
+              >
+                {data.team_type_options.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className={LABEL_CLASS}>What this team does</span>
+            <input
+              className={FIELD_CLASS}
+              value={editDraft.description}
+              onChange={(e) => setEditDraft((prev) => ({ ...prev, description: e.target.value }))}
+            />
+          </label>
+          <div>
+            <span className={LABEL_CLASS}>Days they work</span>
+            <WorkdayPicker
+              days={editDraft.days_of_week}
+              onChange={(days) => setEditDraft((prev) => ({ ...prev, days_of_week: days }))}
+              disabled={busy}
             />
           </div>
         </div>

@@ -141,6 +141,11 @@ function MyDutiesPanel({
             <div key={team.id}>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
                 {team.name}
+                <span className="ml-2 text-teal-800">
+                  {team.days_of_week?.length && team.days_of_week.length < 5
+                    ? (team.day_labels || []).join(', ')
+                    : 'Every school day'}
+                </span>
               </h3>
 
               {team.duties.length === 0 ? (
@@ -215,6 +220,11 @@ function TeamCard({
             ) : null}
           </div>
           <h3 className="mb-0 mt-1 truncate text-base font-bold text-hub-text">{team.name}</h3>
+          <p className="mb-0 text-[11px] font-bold uppercase tracking-wide text-teal-800">
+            {team.days_of_week?.length && team.days_of_week.length < 5
+              ? (team.day_labels || []).join(', ')
+              : 'Every school day'}
+          </p>
         </div>
         <span className={`shrink-0 rounded-full px-3 py-1 text-lg font-extrabold ${tone.chip}`}>
           {team.current_score}

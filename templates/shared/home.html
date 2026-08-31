@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 31, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 31</strong> (<strong>{{ app_version_display }}</strong>) lets a class meet in different periods on different days, adds duty assignments for cleaning teams, brings in the Stairway and Lunch Hall areas with Lunch Hall scored on its own checklist, rebuilds the Student Jobs page, lets School Administrators post announcements again, shows teachers their class mailing list, lets you label what a period is used for, and fixes students not moving to the right Google Group when their grade changes.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 31</strong> (<strong>{{ app_version_display }}</strong>) lets a class meet in different periods on different days, adds working days and an edit button for cleaning teams, adds duty assignments for cleaning teams, brings in the Stairway and Lunch Hall areas with Lunch Hall scored on its own checklist, rebuilds the Student Jobs page, lets School Administrators post announcements again, shows teachers their class mailing list, lets you label what a period is used for, and fixes students not moving to the right Google Group when their grade changes.</p>
                     </div>
                 </div>
 
@@ -191,6 +191,10 @@
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-list-check me-2"></i>Cleaning Duties &amp; Areas – August 31, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Working days and team editing:</strong> Creating a team now asks which weekdays it works, and every team card has an <strong>Edit</strong> button for renaming it, changing its type or description, and adjusting those days later. The days appear on the team card and on the student Jobs page.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Assign duties to a team:</strong> Every team now has an editable duty list &mdash; a name, the area it covers, and what has to be done. Use <strong>Duties</strong> on a team card to add, edit, or remove them, then pick a duty for each student in the Members panel. The duties that were previously fixed in code were carried over automatically, and students see their own duty highlighted.
@@ -2206,11 +2210,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug31_2026_v5')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug31_2026_v6')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug31_2026_v5', 'true');
+            sessionStorage.setItem('updateModalShownAug31_2026_v6', 'true');
         }, 500);
     }
 });

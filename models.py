@@ -3243,6 +3243,9 @@ class CleaningTeam(db.Model):
     team_name = db.Column(db.String(100), nullable=False, unique=True)  # "Team 1" or "Team 2"
     team_description = db.Column(db.String(200), nullable=False)  # "4 Classrooms & Hallway Trash"
     team_type = db.Column(db.String(50), default='cleaning')  # 'cleaning', 'lunch_duty', 'experiment_duty', 'other'
+    # Weekdays the team works, as a comma list of ints with Monday=0.
+    # Empty means the team works every school day.
+    days_of_week = db.Column(db.String(40), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -3250,7 +3253,32 @@ class CleaningTeam(db.Model):
     # Relationships
     team_members = db.relationship('CleaningTeamMember', backref='cleaning_team', cascade='all, delete-orphan')
     inspections = db.relationship('CleaningInspection', backref='cleaning_team', cascade='all, delete-orphan')
-    
+
+    def get_days_of_week(self) -> list:
+        raw = (getattr(self, 'days_of_week', None) or '').strip()
+        if not raw:
+            return []
+        days = []
+        for chunk in raw.split(','):
+            try:
+                day = int(chunk.strip())
+            except (TypeError, ValueError):
+                continue
+            if 0 <= day <= 6 and day not in days:
+                days.append(day)
+        return sorted(days)
+
+    def set_days_of_week(self, days) -> None:
+        cleaned = []
+        for value in days or []:
+            try:
+                day = int(value)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= day <= 6 and day not in cleaned:
+                cleaned.append(day)
+        self.days_of_week = ','.join(str(d) for d in sorted(cleaned)) or None
+
     def __repr__(self):
         return f"CleaningTeam('{self.team_name}', '{self.team_description}')"
 

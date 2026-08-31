@@ -16,8 +16,10 @@ from management_routes.student_jobs_spa_helpers import (
     get_inspection_detail,
     query_inspection_history,
     query_student_jobs_hub,
+    update_cleaning_team,
     update_team_duty,
 )
+from models import db
 from management_routes.students import (
     api_get_students,
     api_inspection_get,
@@ -49,8 +51,29 @@ def student_jobs_create_team():
             description=data.get("description", ""),
             team_type=data.get("team_type", "other"),
             student_ids=data.get("student_ids") or data.get("members") or [],
+            days_of_week=data.get("days_of_week"),
         )
     except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/teams/<int:team_id>", methods=["POST"])
+@login_required
+@management_required
+def student_jobs_update_team(team_id: int):
+    data = request.get_json(silent=True) or {}
+    try:
+        result = update_cleaning_team(
+            team_id=team_id,
+            name=data.get("name"),
+            description=data.get("description"),
+            team_type=data.get("team_type"),
+            days_of_week=data.get("days_of_week"),
+        )
+    except Exception as exc:
+        db.session.rollback()
         return jsonify({"success": False, "error": str(exc)}), 500
     status = 200 if result.get("success") else 400
     return jsonify(result), status

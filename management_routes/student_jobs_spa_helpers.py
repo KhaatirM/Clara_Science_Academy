@@ -219,6 +219,46 @@ def ensure_inspection_archive_columns() -> bool:
     return ok
 
 
+_TEAM_COLUMNS_READY = False
+
+WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def ensure_team_columns() -> bool:
+    """Add the workday column on databases created before teams had one."""
+    global _TEAM_COLUMNS_READY
+    if _TEAM_COLUMNS_READY:
+        return True
+    _TEAM_COLUMNS_READY = _add_missing_columns(
+        "cleaning_team", {"days_of_week": "VARCHAR(40)"}
+    )
+    return _TEAM_COLUMNS_READY
+
+
+def normalize_workdays(days: Any) -> list[int]:
+    """Weekday ints (Mon=0) a team works; an empty list means every school day."""
+    cleaned: list[int] = []
+    for value in days or []:
+        try:
+            day = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= day <= 6 and day not in cleaned:
+            cleaned.append(day)
+    return sorted(cleaned)
+
+
+def workday_labels(days: list[int]) -> list[str]:
+    return [WEEKDAY_LABELS[d] for d in days if 0 <= d < len(WEEKDAY_LABELS)]
+
+
+def _team_workdays(team: CleaningTeam) -> list[int]:
+    try:
+        return team.get_days_of_week()
+    except Exception:
+        return []
+
+
 _DUTY_COLUMNS_READY = False
 
 
@@ -562,7 +602,9 @@ def create_cleaning_team(
     description: str,
     team_type: str,
     student_ids: list[int] | None = None,
+    days_of_week: Any = None,
 ) -> dict[str, Any]:
+    ensure_team_columns()
     team_name = (name or "").strip()
     if not team_name:
         return {"success": False, "error": "Team name is required."}
@@ -581,6 +623,10 @@ def create_cleaning_team(
         team_type=normalized_type,
         is_active=True,
     )
+    try:
+        team.set_days_of_week(normalize_workdays(days_of_week))
+    except Exception:
+        pass
     db.session.add(team)
     db.session.flush()
 
@@ -624,8 +670,59 @@ def create_cleaning_team(
     }
 
 
+def update_cleaning_team(
+    *,
+    team_id: int,
+    name: Any = None,
+    description: Any = None,
+    team_type: Any = None,
+    days_of_week: Any = None,
+) -> dict[str, Any]:
+    """Edit an existing team. Only the fields supplied are touched."""
+    ensure_team_columns()
+    team = CleaningTeam.query.filter_by(id=team_id, is_active=True).first()
+    if not team:
+        return {"success": False, "error": "Team not found or archived."}
+
+    if name is not None:
+        team_name = str(name).strip()
+        if not team_name:
+            return {"success": False, "error": "Team name is required."}
+        clash = CleaningTeam.query.filter(
+            CleaningTeam.team_name == team_name,
+            CleaningTeam.id != team.id,
+            CleaningTeam.is_active.is_(True),
+        ).first()
+        if clash:
+            return {"success": False, "error": "Another team already uses this name."}
+        team.team_name = team_name
+
+    if description is not None:
+        team.team_description = str(description).strip() or team.team_name
+
+    if team_type is not None:
+        normalized_type = str(team_type).strip().lower()
+        if normalized_type not in VALID_TEAM_TYPES:
+            return {
+                "success": False,
+                "error": f"Invalid team type. Choose one of: {', '.join(sorted(VALID_TEAM_TYPES))}.",
+            }
+        team.team_type = normalized_type
+
+    if days_of_week is not None:
+        try:
+            team.set_days_of_week(normalize_workdays(days_of_week))
+        except Exception:
+            return {"success": False, "error": "Could not save the working days."}
+
+    team.updated_at = datetime.utcnow()
+    db.session.commit()
+    return {"success": True, "team_id": team.id, "message": f'"{team.team_name}" updated.'}
+
+
 def query_student_jobs_hub(*, user) -> dict[str, Any]:
     role = canonical_role_label(getattr(user, "role", None))
+    ensure_team_columns()
     duties_ready = ensure_duty_columns()
     teams = _load_teams()
     team_payloads: list[dict[str, Any]] = []
@@ -668,12 +765,15 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             "computer" if "computer" in (team.team_name or "").lower() else "cleaning"
         )
 
+        workdays = _team_workdays(team)
         team_payloads.append(
             {
                 "id": team.id,
                 "name": team.team_name,
                 "description": team.team_description or "",
                 "team_type": team_type,
+                "days_of_week": workdays,
+                "day_labels": workday_labels(workdays),
                 "current_score": _team_current_score(team.id, recent_inspections),
                 "stats": _team_stats(team_inspections),
                 "members": member_list,

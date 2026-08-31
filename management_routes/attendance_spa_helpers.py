@@ -514,8 +514,8 @@ def query_take_class_attendance(class_id: int, date_str: str | None = None) -> d
     """Payload for class-period attendance (React SPA)."""
     from utils.attendance_status import (
         VALID_ATTENDANCE_STATUSES,
-        attendance_status_form_value,
         count_class_attendance_stats,
+        normalize_attendance_status,
     )
 
     class_obj = Class.query.get_or_404(class_id)
@@ -560,7 +560,10 @@ def query_take_class_attendance(class_id: int, date_str: str | None = None) -> d
                 "student_id": student.id,
                 "display_name": f"{student.first_name or ''} {student.last_name or ''}".strip(),
                 "grade_level": getattr(student, "grade_level", None),
-                "status": attendance_status_form_value(rec.status) if rec else "",
+                # Canonical casing so it matches the status buttons the SPA renders
+                # from VALID_ATTENDANCE_STATUSES; the lowercase form values are
+                # only for the legacy Jinja radios.
+                "status": (normalize_attendance_status(rec.status) or "") if rec else "",
                 "notes": (rec.notes or "") if rec else "",
                 "school_day_status": school_day.status if school_day else None,
             }

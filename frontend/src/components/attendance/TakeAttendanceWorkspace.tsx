@@ -55,6 +55,15 @@ const STATUS_STYLES: Record<string, { base: string; active: string; short: strin
   },
 }
 
+/** Older payloads sent lowercase form values ("present"), so match on case. */
+function canonicalStatus(raw: string | null | undefined, statuses: string[]): string {
+  const value = (raw || '').trim()
+  if (!value) return ''
+  const match = statuses.find((status) => status.toLowerCase() === value.toLowerCase())
+  if (match) return match
+  return value.toLowerCase() === 'absent' ? 'Unexcused Absence' : value
+}
+
 function studentInitials(name: string) {
   const parts = name.trim().split(/\s+/)
   return ((parts[0]?.[0] || '?') + (parts[parts.length - 1]?.[0] || '')).toUpperCase()
@@ -100,7 +109,10 @@ export function TakeAttendanceWorkspace({
       setData(payload)
       const next: Record<number, { status: string; notes: string }> = {}
       for (const row of payload.rows) {
-        next[row.student_id] = { status: row.status || '', notes: row.notes || '' }
+        next[row.student_id] = {
+          status: canonicalStatus(row.status, payload.statuses),
+          notes: row.notes || '',
+        }
       }
       setDrafts(next)
     } catch (err) {

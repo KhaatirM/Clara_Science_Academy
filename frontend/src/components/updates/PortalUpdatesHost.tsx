@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v7'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v8'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Class attendance shows Present again',
+    body: 'Marking students present saved correctly, but reopening the class period page showed nobody selected and counted them under Absent, because the page sent the status back in a different form than the buttons it draws. Saved attendance now highlights the right button and the Present, Late and Absent totals match what was recorded. Nothing that was already saved was lost — only the display was wrong.',
+  },
   {
     title: 'Tick off who has served lunch this week',
     body: 'The team that cleans also serves lunch, so each team now tracks whose turn has been used. Click a name on the team card, or the check box in the Members panel, to tick a student off — the card shows how many of the team have served. The checks are for the current week only and clear on Monday like the team score, and there is a Clear checks button if a rotation restarts early. Students see the same ticks on their Jobs page.',

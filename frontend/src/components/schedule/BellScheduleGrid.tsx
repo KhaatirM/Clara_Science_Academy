@@ -108,7 +108,7 @@ export function BellScheduleGrid({
                           <>
                             <div className="font-extrabold">{cell.name}</div>
                             <div className="opacity-90">{cell.time_str}</div>
-                            {usageLabel ? (
+                            {usageLabel && cell.classes.length === 0 ? (
                               <div className="mt-1 font-bold uppercase tracking-wide">
                                 {usageLabel}
                               </div>

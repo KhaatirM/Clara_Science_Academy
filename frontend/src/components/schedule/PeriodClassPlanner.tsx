@@ -149,8 +149,8 @@ export function PeriodClassPlanner({ grade }: Props) {
     return <p className="text-sm text-hub-muted">Loading class planner…</p>
   }
 
-  const classPeriods = periods.filter((p) => p.kind === 'class' && !p.usage_label?.trim())
-  const reservedPeriods = periods.filter((p) => p.kind !== 'class' || p.usage_label?.trim())
+  const classPeriods = periods.filter((p) => p.kind === 'class')
+  const reservedPeriods = periods.filter((p) => p.kind !== 'class')
   const pendingPeriodDays = pendingAssign
     ? periods.find((p) => p.id === pendingAssign.periodId)?.days_of_week
     : undefined
@@ -200,6 +200,11 @@ export function PeriodClassPlanner({ grade }: Props) {
                       {(period.day_labels || []).join(' · ')}
                       {(period.day_labels?.length ? ' · ' : '') +
                         (period.time_str || `${period.start_time}–${period.end_time}`)}
+                      {period.usage_label?.trim() ? (
+                        <span className="ms-1 font-semibold text-amber-800">
+                          · shows “{period.usage_label.trim()}” on days without a class
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                   <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-700">
@@ -208,7 +213,11 @@ export function PeriodClassPlanner({ grade }: Props) {
                 </div>
                 <div className="min-h-[3.5rem] space-y-1.5 p-2">
                   {(period.assigned_classes || []).length === 0 ? (
-                    <p className="mb-0 px-1 py-2 text-xs text-hub-muted">No class assigned</p>
+                    <p className="mb-0 px-1 py-2 text-xs text-hub-muted">
+                      {period.usage_label?.trim()
+                        ? `No class yet — “${period.usage_label.trim()}” shows on empty days`
+                        : 'No class assigned'}
+                    </p>
                   ) : (
                     (period.assigned_classes || []).map((c) => (
                       <AssignedClassChip

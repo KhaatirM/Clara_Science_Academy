@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v8'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v9'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Period labels fill in only when no class is scheduled',
+    body: 'A period can now have a default name like "Electives" and still take classes. On days a class is assigned, the class shows on the schedule; on days that period is empty, the label appears instead. You no longer have to clear the label before dragging a class in.',
+  },
   {
     title: 'Class attendance shows Present again',
     body: 'Marking students present saved correctly, but reopening the class period page showed nobody selected and counted them under Absent, because the page sent the status back in a different form than the buttons it draws. Saved attendance now highlights the right button and the Present, Late and Absent totals match what was recorded. Nothing that was already saved was lost — only the display was wrong.',

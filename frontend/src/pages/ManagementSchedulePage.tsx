@@ -500,18 +500,18 @@ export function ManagementSchedulePage() {
                     {period.kind === 'class' ? (
                       <div className="mt-2">
                         <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
-                          Reserved for (optional)
+                          Default label (optional)
                         </label>
                         <input
                           className={fieldInputSm}
-                          placeholder="e.g. Electives — leave blank to assign classes"
+                          placeholder="e.g. Electives — shows on days without a class"
                           value={period.usage_label || ''}
                           onChange={(e) => updatePeriod(index, { usage_label: e.target.value })}
                         />
                         {period.usage_label?.trim() ? (
                           <p className="mb-0 mt-1 text-[11px] text-amber-700">
-                            This period shows “{period.usage_label.trim()}” on schedules and cannot
-                            hold classes.
+                            “{period.usage_label.trim()}” appears on the schedule for any day this
+                            period has no class assigned. You can still drag classes in.
                           </p>
                         ) : null}
                       </div>

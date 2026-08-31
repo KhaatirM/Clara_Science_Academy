@@ -470,8 +470,9 @@ def _assigned_class_ids(period_ids: list[int]) -> set[int]:
 def _prune_assignments_outside_periods(periods: list[BellPeriod]) -> set[int]:
     """Drop or clamp assignments a period edit has invalidated.
 
-    Reserving a period with a usage label, changing its kind, or removing a
-    weekday all mean the classes sitting there can no longer meet then.
+    Changing a period's kind away from class, or removing a weekday, means the
+    classes sitting there can no longer meet then. A usage label is only a
+    display fallback and does not remove assignments.
     """
     affected: set[int] = set()
     for period in periods:
@@ -481,7 +482,7 @@ def _prune_assignments_outside_periods(periods: list[BellPeriod]) -> set[int]:
         if not assignments:
             continue
 
-        reserved = bool((period.usage_label or '').strip()) or (period.kind or 'class') != 'class'
+        reserved = (period.kind or 'class') != 'class'
         period_days = _normalize_weekdays(period.get_days_of_week())
         for assignment in assignments:
             affected.add(assignment.class_id)
@@ -608,7 +609,7 @@ def build_bell_grid_for_classes(
                 continue
             cell_classes: list[dict[str, Any]] = []
             usage_label = (period.usage_label or '').strip()
-            if (period.kind or 'class') == 'class' and not usage_label:
+            if (period.kind or 'class') == 'class':
                 explicit = assignments_by_period_day.get((period.id, day_index)) or []
                 if explicit:
                     for class_obj in explicit:
@@ -881,11 +882,6 @@ def assign_class_to_bell_period(
         raise ValueError('Period not found')
     if (period.kind or 'class') != 'class':
         raise ValueError('Only class periods accept class assignments')
-    if (period.usage_label or '').strip():
-        raise ValueError(
-            f'{period.name} is reserved for "{period.usage_label.strip()}". '
-            'Clear its label to assign classes.'
-        )
     class_obj = Class.query.get(class_id)
     if not class_obj:
         raise ValueError('Class not found')
@@ -1032,7 +1028,7 @@ def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
     placements_by_class: dict[int, list[dict[str, Any]]] = {}
     assigned_ids: set[int] = set()
     for period in periods:
-        if (period.kind or 'class') != 'class' or (period.usage_label or '').strip():
+        if (period.kind or 'class') != 'class':
             continue
         cards = []
         for row in period.class_assignments or []:

@@ -4,7 +4,7 @@ export interface BellPeriodDto {
   id?: number
   name: string
   kind: BellPeriodKind | string
-  /** When set, the period is reserved for this (e.g. "Electives") and holds no classes. */
+  /** Fallback label (e.g. "Electives") shown on days this period has no class. */
   usage_label?: string | null
   start_time: string
   end_time: string

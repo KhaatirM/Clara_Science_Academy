@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Saving bell periods keeps your class assignments',
+    body: 'Editing the bell schedule failed with a database error, and every save rebuilt the periods from scratch, which would have dropped the classes assigned to them. Periods are now updated in place: unrelated edits leave assignments alone, removing a weekday trims the affected classes to the days that remain, and labelling a period as reserved releases its classes and updates their schedules.',
+  },
   {
     title: 'Students can see what they have to clean',
     body: 'The Jobs page now opens with "What you have to clean" — your duty and the full instructions inspectors grade against, with the rest of your team\'s areas one tap away. Team cards list their areas too, so you can check any crew.',

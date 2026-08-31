@@ -378,19 +378,22 @@ def replace_bell_schedule_periods(
     title: str | None,
     periods_payload: list[dict[str, Any]],
 ) -> BellSchedule:
-    """Replace all periods on the schedule from a SPA editor payload."""
+    """Save the periods on a schedule from a SPA editor payload.
+
+    Periods are matched on id and updated in place so that editing the bell
+    schedule does not throw away the classes already assigned to its periods.
+    """
     if title is not None:
         cleaned = (title or '').strip()
         if cleaned:
             schedule.title = cleaned[:120]
 
-    # Clear existing
-    for existing in list(schedule.periods or []):
-        db.session.delete(existing)
-    db.session.flush()
-
     if not periods_payload:
         raise ValueError('At least one period is required')
+
+    existing = {period.id: period for period in list(schedule.periods or [])}
+    kept: list[BellPeriod] = []
+    seen_ids: set[int] = set()
 
     for idx, raw in enumerate(periods_payload):
         name = (raw.get('name') or '').strip()
@@ -415,22 +418,84 @@ def replace_bell_schedule_periods(
             raise ValueError(f'{name}: select at least one weekday (Mon–Fri)')
         sort_order = int(raw.get('sort_order') if raw.get('sort_order') is not None else idx)
         usage_label = (raw.get('usage_label') or '').strip()[:120] or None
-        period = BellPeriod(
-            bell_schedule_id=schedule.id,
-            name=name[:80],
-            kind=kind,
-            usage_label=usage_label,
-            start_time=start,
-            end_time=end,
-            color_hex=color,
-            sort_order=sort_order,
-        )
+
+        raw_id = raw.get('id')
+        period = existing.get(int(raw_id)) if str(raw_id or '').isdigit() else None
+        if period is None:
+            period = BellPeriod(bell_schedule_id=schedule.id)
+            db.session.add(period)
+        else:
+            seen_ids.add(period.id)
+
+        period.name = name[:80]
+        period.kind = kind
+        period.usage_label = usage_label
+        period.start_time = start
+        period.end_time = end
+        period.color_hex = color
+        period.sort_order = sort_order
         period.set_days_of_week(days)
-        db.session.add(period)
+        kept.append(period)
+
+    removed = [period for pid, period in existing.items() if pid not in seen_ids]
+    # Classes on a removed period lose their meeting times, so remember them.
+    affected_class_ids = _assigned_class_ids([period.id for period in removed])
+    for period in removed:
+        db.session.delete(period)
+    db.session.flush()
+
+    affected_class_ids |= _prune_assignments_outside_periods(kept)
 
     schedule.updated_at = datetime.utcnow()
+    db.session.flush()
+    db.session.expire(schedule, ['periods'])
+    for class_id in affected_class_ids:
+        class_obj = Class.query.get(class_id)
+        if class_obj:
+            _sync_class_from_bell_assignments(class_obj, schedule)
+
     db.session.commit()
     return schedule
+
+
+def _assigned_class_ids(period_ids: list[int]) -> set[int]:
+    if not period_ids:
+        return set()
+    rows = BellPeriodClassAssignment.query.filter(
+        BellPeriodClassAssignment.bell_period_id.in_(period_ids)
+    ).all()
+    return {row.class_id for row in rows}
+
+
+def _prune_assignments_outside_periods(periods: list[BellPeriod]) -> set[int]:
+    """Drop or clamp assignments a period edit has invalidated.
+
+    Reserving a period with a usage label, changing its kind, or removing a
+    weekday all mean the classes sitting there can no longer meet then.
+    """
+    affected: set[int] = set()
+    for period in periods:
+        if not period.id:
+            continue
+        assignments = BellPeriodClassAssignment.query.filter_by(bell_period_id=period.id).all()
+        if not assignments:
+            continue
+
+        reserved = bool((period.usage_label or '').strip()) or (period.kind or 'class') != 'class'
+        period_days = _normalize_weekdays(period.get_days_of_week())
+        for assignment in assignments:
+            affected.add(assignment.class_id)
+            if reserved:
+                db.session.delete(assignment)
+                continue
+            allowed = [day for day in assignment.get_days_of_week() if day in period_days]
+            if allowed:
+                assignment.set_days_of_week(allowed)
+            else:
+                db.session.delete(assignment)
+
+    db.session.flush()
+    return affected
 
 
 def _class_meeting_on_day(class_obj: Class, day_of_week: int) -> ClassSchedule | None:

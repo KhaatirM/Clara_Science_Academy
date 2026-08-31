@@ -622,7 +622,12 @@ class BellPeriodClassAssignment(db.Model):
     days_of_week_json = db.Column(db.String(80), nullable=False, default='[0,1,2,3,4]')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    bell_period = db.relationship('BellPeriod', backref=db.backref('class_assignments', lazy=True))
+    # An assignment cannot outlive its period, so deleting a period removes it
+    # rather than orphaning the row with a null foreign key.
+    bell_period = db.relationship(
+        'BellPeriod',
+        backref=db.backref('class_assignments', lazy=True, cascade='all, delete-orphan'),
+    )
     class_info = db.relationship('Class', backref=db.backref('bell_period_assignments', lazy=True))
 
     __table_args__ = (

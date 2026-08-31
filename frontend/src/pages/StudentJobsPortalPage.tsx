@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchStudentJobsHub } from '../api/studentTabs'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import { Modal } from '../components/ui/Modal'
-import type { StudentJobsHubResponse, StudentJobsTeam } from '../types/studentJobs'
+import type {
+  StudentJobsDuty,
+  StudentJobsHubResponse,
+  StudentJobsTeam,
+} from '../types/studentJobs'
 
 type PortalPayload = StudentJobsHubResponse & {
   can_manage?: boolean
@@ -60,6 +64,118 @@ function Sparkline({ scores }: { scores: number[] }) {
         />
       ))}
     </div>
+  )
+}
+
+function DutyCard({ duty, mine }: { duty: StudentJobsDuty; mine: boolean }) {
+  return (
+    <div
+      className={`rounded-xl border p-4 ${
+        mine ? 'border-teal-300 bg-teal-50/60' : 'border-slate-200 bg-white'
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-bold text-hub-text">{duty.name}</span>
+        {mine ? (
+          <span className="rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+            Your duty
+          </span>
+        ) : null}
+        {duty.area ? (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+            {duty.area}
+          </span>
+        ) : null}
+        {duty.scoring_type === 'lunch_hall' ? (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+            Scored on its own
+          </span>
+        ) : null}
+      </div>
+      {duty.description ? (
+        <p className="mb-0 mt-2 whitespace-pre-wrap text-sm leading-relaxed text-hub-text">
+          {duty.description}
+        </p>
+      ) : (
+        <p className="mb-0 mt-2 text-sm text-hub-muted">No instructions written for this area yet.</p>
+      )}
+      {duty.assigned.length > 0 ? (
+        <p className="mb-0 mt-2 text-xs text-hub-muted">
+          {duty.assigned.map((person) => person.name).join(', ')}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+/** What the signed-in student personally has to clean, up front. */
+function MyDutiesPanel({
+  teams,
+  studentId,
+}: {
+  teams: StudentJobsTeam[]
+  studentId: number | null | undefined
+}) {
+  if (teams.length === 0) return null
+
+  return (
+    <section className="mb-4 overflow-hidden rounded-2xl border border-teal-200 bg-white shadow-sm">
+      <div className="border-b border-teal-200 bg-teal-50 px-5 py-3">
+        <h2 className="mb-0 font-bold text-teal-900">
+          <i className="bi bi-clipboard-check me-2" aria-hidden />
+          What you have to clean
+        </h2>
+        <p className="mb-0 text-sm text-teal-800/80">
+          Your areas and exactly what inspectors look for.
+        </p>
+      </div>
+
+      <div className="space-y-4 p-4">
+        {teams.map((team) => {
+          const mine = team.duties.filter((duty) =>
+            duty.assigned.some((person) => person.student_id === studentId),
+          )
+          const others = team.duties.filter((duty) => !mine.includes(duty))
+
+          return (
+            <div key={team.id}>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                {team.name}
+              </h3>
+
+              {team.duties.length === 0 ? (
+                <p className="mb-0 rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-hub-muted">
+                  Your teacher has not listed this team's areas yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {mine.length > 0 ? (
+                    mine.map((duty) => <DutyCard key={duty.id} duty={duty} mine />)
+                  ) : (
+                    <p className="mb-0 rounded-xl border border-dashed border-slate-200 px-3 py-3 text-sm text-hub-muted">
+                      You have not been given a specific duty yet, so help with everything below.
+                    </p>
+                  )}
+
+                  {others.length > 0 ? (
+                    <details className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <summary className="cursor-pointer text-sm font-bold text-hub-text">
+                        Everything your team covers ({others.length})
+                      </summary>
+                      <div className="mt-3 space-y-2">
+                        {others.map((duty) => (
+                          <DutyCard key={duty.id} duty={duty} mine={false} />
+                        ))}
+                      </div>
+                    </details>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -133,6 +249,28 @@ function TeamCard({
           </div>
         </div>
 
+        {team.duties.length > 0 ? (
+          <div>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-hub-muted">
+              Areas
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {team.duties.map((duty) => (
+                <span
+                  key={duty.id}
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    duty.scoring_type === 'lunch_hall'
+                      ? 'bg-amber-100 text-amber-900'
+                      : 'bg-teal-50 text-teal-800'
+                  }`}
+                >
+                  {duty.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {team.members.length === 0 ? (
           <p className="mb-0 text-sm text-hub-muted">No members listed.</p>
         ) : (
@@ -190,6 +328,11 @@ export function StudentJobsPortalPage() {
 
   const myTeamIds = useMemo(() => new Set(data?.my_team_ids || []), [data?.my_team_ids])
 
+  const myTeams = useMemo(
+    () => (data?.teams || []).filter((team) => myTeamIds.has(team.id)),
+    [data?.teams, myTeamIds],
+  )
+
   const sortedTeams = useMemo(() => {
     if (!data) return []
     const needle = query.trim().toLowerCase()
@@ -243,6 +386,8 @@ export function StudentJobsPortalPage() {
                   <HeroStat label="Pass rate" value={passRate} />
                 </div>
               </header>
+
+              <MyDutiesPanel teams={myTeams} studentId={data.my_student_id} />
 
               <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">

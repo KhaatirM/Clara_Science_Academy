@@ -182,6 +182,10 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Students can see their areas:</strong> The student Jobs page opens with <strong>What you have to clean</strong> &mdash; their own duty with the full instructions inspectors grade against, and the rest of the team&rsquo;s areas one tap away. Team cards list their areas as well.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Stairway added:</strong> The stairway is now an area on every cleaning team and part of the normal inspection, with a new &ldquo;Stairway not swept or cleaned&rdquo; deduction worth 10 points.
                             </li>
                             <li class="mb-2">
@@ -2187,11 +2191,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug31_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug31_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug31_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownAug31_2026_v3', 'true');
         }, 500);
     }
 });

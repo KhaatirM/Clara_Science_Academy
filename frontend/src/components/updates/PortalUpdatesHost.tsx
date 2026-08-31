@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Students can see what they have to clean',
+    body: 'The Jobs page now opens with "What you have to clean" — your duty and the full instructions inspectors grade against, with the rest of your team\'s areas one tap away. Team cards list their areas too, so you can check any crew.',
+  },
   {
     title: 'Assign duties to a cleaning team',
     body: 'Each team now has an editable list of duties — a name, the area it covers, and what has to be done. Open a team and use Duties to add, edit, or remove them, then pick a duty for each student from the Members panel. The duties that used to be hardcoded per team were carried over automatically, and students see their own duty highlighted on the Jobs page.',

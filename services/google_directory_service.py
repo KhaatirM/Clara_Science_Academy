@@ -514,6 +514,10 @@ def sync_group_members(
             return canon.get(email_l) or member_key_by_lower.get(email_l, email_l)
 
         current = set(current_roles.keys())
+        # Per-member API errors used to be logged and then swallowed by an
+        # unconditional `return True`, so a group where every insert failed still
+        # reported success. Count them and report failure to the caller instead.
+        failures = 0
 
         # Add missing
         for email_l in sorted(desired - current):
@@ -528,6 +532,7 @@ def sync_group_members(
                 current_roles[email_l] = role
                 member_key_by_lower[email_l] = email_body
             except HttpError as e:
+                failures += 1
                 current_app.logger.error(
                     "Directory API error adding %s to %s: %s", email_l, group_email, e
                 )
@@ -547,6 +552,7 @@ def sync_group_members(
                 current_app.logger.info("Promoted %s to OWNER in %s", email_l, group_email)
                 current_roles[email_l] = "OWNER"
             except HttpError as e:
+                failures += 1
                 current_app.logger.error(
                     "Directory API error promoting %s in %s: %s", email_l, group_email, e
                 )
@@ -567,6 +573,7 @@ def sync_group_members(
                 current_app.logger.info("Demoted %s to MEMBER in %s", email_l, group_email)
                 current_roles[email_l] = "MEMBER"
             except HttpError as e:
+                failures += 1
                 current_app.logger.error(
                     "Directory API error demoting %s in %s: %s", email_l, group_email, e
                 )
@@ -586,10 +593,18 @@ def sync_group_members(
                     )
                     current_roles.pop(email_l, None)
                 else:
+                    failures += 1
                     current_app.logger.error(
                         "Directory API error removing %s from %s: %s", email_l, group_email, e
                     )
 
+        if failures:
+            current_app.logger.error(
+                "Group %s synced with %s membership error(s); roster is incomplete",
+                group_email,
+                failures,
+            )
+            return False
         return True
     except HttpError as e:
         current_app.logger.error(f"Directory API error syncing group {group_email}: {e}")

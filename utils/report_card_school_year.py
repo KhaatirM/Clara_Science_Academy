@@ -460,6 +460,67 @@ def repair_student_school_year_grades(
     }
 
 
+def _apply_closure_promotion_side_effects(promoted: list) -> None:
+    """Remap core classes and refresh Google membership after year-end promotions.
+
+    Without this the promotion only updates the database: students keep their old
+    core classes, their old class Google Groups, their old school-level group and
+    their old Workspace org unit.
+    """
+    if not promoted:
+        return
+
+    from flask import current_app
+    from services.school_year_class_setup import (
+        resync_student_core_enrollments_for_grade_change,
+    )
+    from utils.student_departure import sync_student_school_level_groups
+
+    touched_class_ids: set[int] = set()
+    for student, old_grade in promoted:
+        try:
+            resync = resync_student_core_enrollments_for_grade_change(
+                student, old_grade=old_grade, new_grade=int(student.grade_level)
+            )
+        except Exception:
+            current_app.logger.exception(
+                "Core class resync after year-end promotion failed for student %s", student.id
+            )
+            resync = None
+
+        if resync and not resync.get("skipped"):
+            ids = list(resync.get("touched_class_ids") or [])
+            if not ids:
+                ids = [
+                    int(row["class_id"])
+                    for row in (resync.get("dropped") or []) + (resync.get("enrolled") or [])
+                    if row.get("class_id") is not None
+                ]
+            touched_class_ids.update(ids)
+
+        try:
+            from management_routes.students import _apply_student_google_ou_lifecycle
+
+            _apply_student_google_ou_lifecycle(student, force_suspend=False)
+        except Exception:
+            current_app.logger.exception(
+                "Workspace org unit move after year-end promotion failed for student %s",
+                student.id,
+            )
+
+        sync_student_school_level_groups(student)
+
+    if touched_class_ids:
+        try:
+            from services.class_google_group import try_provision_class_google_groups_now
+
+            try_provision_class_google_groups_now(sorted(touched_class_ids))
+        except Exception:
+            current_app.logger.exception(
+                "Class Google sync after year-end promotion failed"
+            )
+
+
 def promote_students_still_on_prior_year_grade(
     closed_school_year_id: int,
     *,
@@ -497,7 +558,7 @@ def promote_students_still_on_prior_year_grade(
 
     promoted = 0
     skipped = 0
-    promoted_students: list[Student] = []
+    promoted_students: list[tuple[Student, int]] = []
     for sid in student_ids:
         student = Student.query.get(sid)
         if not student or getattr(student, "is_deleted", False):
@@ -526,21 +587,18 @@ def promote_students_still_on_prior_year_grade(
         if int(closed_grade) >= 12:
             skipped += 1
             continue
-        student.grade_level = int(closed_grade) + 1
+        old_grade = int(closed_grade)
+        student.grade_level = old_grade + 1
         student.year_end_intent = None
         upsert_student_school_year(
             sid, active.id, int(student.grade_level), enrolled=True
         )
-        promoted_students.append(student)
+        promoted_students.append((student, old_grade))
         promoted += 1
 
     if commit:
         db.session.commit()
-        # Move each promoted student into the Workspace group for their new school level.
-        from utils.student_departure import sync_student_school_level_groups
-
-        for student in promoted_students:
-            sync_student_school_level_groups(student)
+        _apply_closure_promotion_side_effects(promoted_students)
 
     return {
         "ok": True,

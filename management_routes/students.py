@@ -1647,6 +1647,67 @@ def download_students_template():
 # Function: upload_students_csv
 # ============================================================
 
+def _apply_csv_grade_change_side_effects(grade_changes: dict) -> None:
+    """Remap core classes and refresh Google membership after CSV grade changes.
+
+    Mirrors what the single-student edit route does after its commit.
+    """
+    if not grade_changes:
+        return
+
+    from services.school_year_class_setup import (
+        resync_student_core_enrollments_for_grade_change,
+    )
+
+    touched_class_ids: set[int] = set()
+    for student_id, (old_grade, new_grade) in grade_changes.items():
+        student = Student.query.get(student_id)
+        if not student or getattr(student, 'is_deleted', False):
+            continue
+        try:
+            resync = resync_student_core_enrollments_for_grade_change(
+                student, old_grade=old_grade, new_grade=new_grade
+            )
+        except Exception as e:
+            current_app.logger.warning(
+                "Core class resync after CSV grade change failed for student %s: %s",
+                student_id,
+                e,
+            )
+            resync = None
+
+        if resync and not resync.get('skipped'):
+            ids = list(resync.get('touched_class_ids') or [])
+            if not ids:
+                ids = [
+                    int(row['class_id'])
+                    for row in (resync.get('dropped') or []) + (resync.get('enrolled') or [])
+                    if row.get('class_id') is not None
+                ]
+            touched_class_ids.update(ids)
+
+        _apply_student_google_ou_lifecycle(student, force_suspend=False)
+        if getattr(student, 'user', None) and student.user.google_workspace_email:
+            try:
+                sync_single_user_to_google(student.user.id)
+            except Exception as e:
+                current_app.logger.warning(
+                    "Google Directory sync after CSV grade change failed for user %s: %s",
+                    student.user.id,
+                    e,
+                )
+
+    if touched_class_ids:
+        try:
+            from services.class_google_group import try_provision_class_google_groups_now
+
+            try_provision_class_google_groups_now(sorted(touched_class_ids))
+        except Exception as e:
+            current_app.logger.warning(
+                "Class Google sync after CSV grade change failed: %s", e
+            )
+
+
 @bp.route('/students/upload-csv', methods=['POST'])
 @login_required
 @management_required
@@ -1685,6 +1746,8 @@ def upload_students_csv():
         error_count = 0
         errors = []
         touched_student_ids = set()
+        # student_id -> (old_grade, new_grade); drives the post-commit Google sync.
+        csv_grade_changes: dict[int, tuple[int, int]] = {}
         
         for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header row
             try:
@@ -1730,7 +1793,10 @@ def upload_students_csv():
                     if row.get('Date of Birth'):
                         student.dob = row['Date of Birth'].strip()
                     if grade_level is not None:
+                        prev_grade = student.grade_level
                         student.grade_level = grade_level
+                        if prev_grade is not None and int(prev_grade) != int(grade_level):
+                            csv_grade_changes[student.id] = (int(prev_grade), int(grade_level))
                     if row.get('Email'):
                         student.email = row['Email'].strip()
                     if row.get('Street'):
@@ -1846,6 +1912,10 @@ def upload_students_csv():
                 else:
                     _provision_student_login_if_needed(st)
             db.session.commit()
+
+            # A CSV grade change used to update only the database, leaving students
+            # in their old core classes, class Google Groups and school-level group.
+            _apply_csv_grade_change_side_effects(csv_grade_changes)
             
             # Prepare success message
             message_parts = []

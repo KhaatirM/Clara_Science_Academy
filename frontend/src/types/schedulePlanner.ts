@@ -18,6 +18,7 @@ export interface PlannerPeriodRow {
   id: number
   name: string
   kind: string
+  usage_label?: string | null
   start_time: string
   end_time: string
   time_str?: string

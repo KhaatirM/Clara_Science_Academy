@@ -6,12 +6,23 @@ export type StudentJobsMember = {
   assignment_description: string
 }
 
+export type StudentJobsTeamStats = {
+  inspection_count: number
+  average_score: number | null
+  best_score: number | null
+  pass_rate: number | null
+  trend: number | null
+  last_inspected: string | null
+  sparkline: number[]
+}
+
 export type StudentJobsTeam = {
   id: number
   name: string
   description: string
   team_type: string
   current_score: number
+  stats: StudentJobsTeamStats
   members: StudentJobsMember[]
   detailed_description: Record<string, unknown>
   recent_inspections: Array<{
@@ -85,7 +96,44 @@ export type StudentJobsHubResponse = {
     max_bonus: number
     deduction_levels: string
   }
+  deduction_options: StudentJobsDeductionOption[]
+  bonus_options: StudentJobsBonusOption[]
+  team_type_options: Array<{ value: string; label: string }>
   urls: { home: string }
+}
+
+export type StudentJobsDeductionOption = {
+  key: keyof CleaningDeductionFlags
+  label: string
+  points: number
+  severity: 'major' | 'moderate' | 'minor'
+}
+
+export type StudentJobsBonusOption = {
+  key: keyof CleaningBonusFlags
+  label: string
+  points: number
+}
+
+export type CleaningDeductionFlags = {
+  bathroom_not_restocked: boolean
+  trash_can_left_full: boolean
+  floor_not_swept: boolean
+  materials_left_out: boolean
+  tables_missed: boolean
+  classroom_trash_full: boolean
+  bathroom_floor_poor: boolean
+  not_finished_on_time: boolean
+  small_debris_left: boolean
+  trash_spilled: boolean
+  dispensers_half_filled: boolean
+}
+
+export type CleaningBonusFlags = {
+  exceptional_finish: boolean
+  speed_efficiency: boolean
+  going_above_beyond: boolean
+  teamwork_award: boolean
 }
 
 export type StudentJobsStudentOption = {

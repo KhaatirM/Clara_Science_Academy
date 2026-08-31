@@ -18,7 +18,10 @@ from .shared import (
     serialize_announcement_for_panel,
 )
 from .helpers import get_user_full_name
-from utils.user_roles import user_primary_role_is_teaching_staff
+from utils.user_roles import (
+    user_has_management_entry_access,
+    user_primary_role_is_teaching_staff,
+)
 from werkzeug.exceptions import HTTPException
 
 api_bp = Blueprint('communications_api', __name__)
@@ -44,7 +47,7 @@ def get_channel_messages(channel_id):
             if group.class_id:
                 class_obj = Class.query.get(group.class_id)
                 if class_obj:
-                    if current_user.role in ['Director', 'School Administrator']:
+                    if user_has_management_entry_access(current_user):
                         pass  # Admins can access
                     elif user_primary_role_is_teaching_staff(current_user) and class_obj.teacher and class_obj.teacher.user_id == current_user.id:
                         pass  # Teacher can access
@@ -284,7 +287,7 @@ def send_message_api():
                 if group and group.class_id:
                     class_obj = Class.query.get(group.class_id)
                     if class_obj:
-                        if current_user.role in ['Director', 'School Administrator']:
+                        if user_has_management_entry_access(current_user):
                             pass
                         elif user_primary_role_is_teaching_staff(current_user) and class_obj.teacher and class_obj.teacher.user and class_obj.teacher.user.id == current_user.id:
                             pass
@@ -356,7 +359,7 @@ def class_announcement_panel():
         if not class_obj:
             return jsonify({'success': False, 'message': 'Class not found'}), 404
 
-        if current_user.role not in ['Director', 'School Administrator']:
+        if not user_has_management_entry_access(current_user):
             if not user_primary_role_is_teaching_staff(current_user):
                 return jsonify({'success': False, 'message': 'Unauthorized'}), 403
             from teacher_routes.utils import is_authorized_for_class
@@ -377,7 +380,7 @@ def class_announcement_panel():
 def announcement_compose_panel():
     """Broadcast options for home/class announcement compose (class_id optional)."""
     try:
-        if current_user.role not in ['Director', 'School Administrator'] and not user_primary_role_is_teaching_staff(current_user):
+        if not user_has_management_entry_access(current_user) and not user_primary_role_is_teaching_staff(current_user):
             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
         class_id = request.args.get('class_id', type=int)
@@ -385,7 +388,7 @@ def announcement_compose_panel():
             class_obj = Class.query.get(class_id)
             if not class_obj:
                 return jsonify({'success': False, 'message': 'Class not found'}), 404
-            if current_user.role not in ['Director', 'School Administrator']:
+            if not user_has_management_entry_access(current_user):
                 from teacher_routes.utils import is_authorized_for_class
                 if not is_authorized_for_class(class_obj):
                     return jsonify({'success': False, 'message': 'Access denied'}), 403
@@ -406,7 +409,7 @@ def announcement_compose_panel():
 def create_announcement():
     """Create a new announcement."""
     try:
-        if current_user.role not in ['Director', 'School Administrator'] and not user_primary_role_is_teaching_staff(current_user):
+        if not user_has_management_entry_access(current_user) and not user_primary_role_is_teaching_staff(current_user):
             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
         
         title = request.form.get('title', '').strip()
@@ -419,7 +422,7 @@ def create_announcement():
             return jsonify({'success': False, 'message': 'Title and message are required'}), 400
         
         # For teachers, validate they can only create announcements for their classes
-        is_teacher = user_primary_role_is_teaching_staff(current_user) and current_user.role not in ['Director', 'School Administrator']
+        is_teacher = user_primary_role_is_teaching_staff(current_user) and not user_has_management_entry_access(current_user)
         if is_teacher:
             # Teachers can only send to specific classes
             if target_group != 'class' or not class_id:
@@ -695,7 +698,7 @@ def mute_student(group_id, user_id):
     """Mute a student in a channel for a specified duration (teachers only)."""
     try:
         # Check if user is a teacher
-        is_teacher = user_primary_role_is_teaching_staff(current_user) or current_user.role in ['Director', 'School Administrator']
+        is_teacher = user_primary_role_is_teaching_staff(current_user) or user_has_management_entry_access(current_user)
         if not is_teacher:
             return jsonify({'success': False, 'message': 'Only teachers can mute students'}), 403
         
@@ -707,7 +710,7 @@ def mute_student(group_id, user_id):
             class_obj = Class.query.get(group.class_id)
             if class_obj:
                 teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
-                if teacher and class_obj.teacher_id != teacher.id and current_user.role not in ['Director', 'School Administrator']:
+                if teacher and class_obj.teacher_id != teacher.id and not user_has_management_entry_access(current_user):
                     return jsonify({'success': False, 'message': 'You can only mute students in your own classes'}), 403
         
         # Get mute duration from request
@@ -756,7 +759,7 @@ def unmute_student(group_id, user_id):
     """Unmute a student in a channel (teachers only)."""
     try:
         # Check if user is a teacher
-        is_teacher = user_primary_role_is_teaching_staff(current_user) or current_user.role in ['Director', 'School Administrator']
+        is_teacher = user_primary_role_is_teaching_staff(current_user) or user_has_management_entry_access(current_user)
         if not is_teacher:
             return jsonify({'success': False, 'message': 'Only teachers can unmute students'}), 403
         
@@ -768,7 +771,7 @@ def unmute_student(group_id, user_id):
             class_obj = Class.query.get(group.class_id)
             if class_obj:
                 teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
-                if teacher and class_obj.teacher_id != teacher.id and current_user.role not in ['Director', 'School Administrator']:
+                if teacher and class_obj.teacher_id != teacher.id and not user_has_management_entry_access(current_user):
                     return jsonify({'success': False, 'message': 'You can only unmute students in your own classes'}), 403
         
         # Get member record
@@ -801,7 +804,7 @@ def delete_message(message_id):
         is_owner = message.sender_id == current_user.id
         
         # Check if user is a teacher with access to this channel
-        is_teacher = user_primary_role_is_teaching_staff(current_user) or current_user.role in ['Director', 'School Administrator']
+        is_teacher = user_primary_role_is_teaching_staff(current_user) or user_has_management_entry_access(current_user)
         is_authorized = False
         
         if is_teacher and message.group_id:
@@ -812,7 +815,7 @@ def delete_message(message_id):
                     teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
                     if teacher and class_obj.teacher_id == teacher.id:
                         is_authorized = True
-                    elif current_user.role in ['Director', 'School Administrator']:
+                    elif user_has_management_entry_access(current_user):
                         is_authorized = True
         
         if not is_owner and not is_authorized:

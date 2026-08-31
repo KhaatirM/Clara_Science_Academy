@@ -4,6 +4,8 @@ export interface BellPeriodDto {
   id?: number
   name: string
   kind: BellPeriodKind | string
+  /** When set, the period is reserved for this (e.g. "Electives") and holds no classes. */
+  usage_label?: string | null
   start_time: string
   end_time: string
   time_str?: string
@@ -39,6 +41,7 @@ export interface BellGridCell {
   period_id: number
   name: string
   kind: string
+  usage_label?: string | null
   time_str: string
   start_time: string
   end_time: string

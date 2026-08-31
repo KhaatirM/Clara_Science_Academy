@@ -108,6 +108,23 @@ def _ensure_bell_schedule_grade_column() -> None:
         pass
 
 
+def _ensure_period_usage_label_column() -> None:
+    """Add bell_period.usage_label if missing."""
+    from sqlalchemy import inspect, text
+
+    try:
+        inspector = inspect(db.engine)
+        if 'bell_period' not in inspector.get_table_names():
+            return
+        cols = {c['name'] for c in inspector.get_columns('bell_period')}
+        if 'usage_label' in cols:
+            return
+        with db.engine.begin() as conn:
+            conn.execute(text('ALTER TABLE bell_period ADD COLUMN usage_label VARCHAR(120)'))
+    except Exception:
+        pass
+
+
 def _ensure_assignment_days_column() -> None:
     """Add bell_period_class_assignment.days_of_week_json if missing."""
     from sqlalchemy import inspect, text
@@ -207,6 +224,7 @@ def ensure_active_bell_schedule(
       3) create fresh seeded schedule for that grade
     """
     _ensure_bell_schedule_grade_column()
+    _ensure_period_usage_label_column()
     _ensure_assignment_days_column()
     _ensure_class_schedule_int_days()
     school_year = school_year or get_active_school_year()
@@ -278,6 +296,7 @@ def ensure_active_bell_schedule(
                 bell_schedule_id=schedule.id,
                 name=src.name,
                 kind=src.kind,
+                usage_label=src.usage_label,
                 start_time=src.start_time,
                 end_time=src.end_time,
                 color_hex=src.color_hex,
@@ -312,6 +331,7 @@ def serialize_period(period: BellPeriod) -> dict[str, Any]:
         'id': period.id,
         'name': period.name or '',
         'kind': period.kind or 'class',
+        'usage_label': (period.usage_label or '').strip() or None,
         'start_time': period.start_time.strftime('%H:%M') if period.start_time else '',
         'end_time': period.end_time.strftime('%H:%M') if period.end_time else '',
         'time_str': _fmt_range(period.start_time, period.end_time)
@@ -394,10 +414,12 @@ def replace_bell_schedule_periods(
         if not days:
             raise ValueError(f'{name}: select at least one weekday (Mon–Fri)')
         sort_order = int(raw.get('sort_order') if raw.get('sort_order') is not None else idx)
+        usage_label = (raw.get('usage_label') or '').strip()[:120] or None
         period = BellPeriod(
             bell_schedule_id=schedule.id,
             name=name[:80],
             kind=kind,
+            usage_label=usage_label,
             start_time=start,
             end_time=end,
             color_hex=color,
@@ -520,7 +542,8 @@ def build_bell_grid_for_classes(
             if day_index not in period.get_days_of_week():
                 continue
             cell_classes: list[dict[str, Any]] = []
-            if (period.kind or 'class') == 'class':
+            usage_label = (period.usage_label or '').strip()
+            if (period.kind or 'class') == 'class' and not usage_label:
                 explicit = assignments_by_period_day.get((period.id, day_index)) or []
                 if explicit:
                     for class_obj in explicit:
@@ -567,6 +590,7 @@ def build_bell_grid_for_classes(
                     'period_id': period.id,
                     'name': period.name or '',
                     'kind': period.kind or 'class',
+                    'usage_label': usage_label or None,
                     'time_str': _fmt_range(period.start_time, period.end_time),
                     'start_time': period.start_time.strftime('%H:%M') if period.start_time else '',
                     'end_time': period.end_time.strftime('%H:%M') if period.end_time else '',
@@ -740,6 +764,11 @@ def assign_class_to_bell_period(
         raise ValueError('Period not found')
     if (period.kind or 'class') != 'class':
         raise ValueError('Only class periods accept class assignments')
+    if (period.usage_label or '').strip():
+        raise ValueError(
+            f'{period.name} is reserved for "{period.usage_label.strip()}". '
+            'Clear its label to assign classes.'
+        )
     class_obj = Class.query.get(class_id)
     if not class_obj:
         raise ValueError('Class not found')
@@ -879,7 +908,7 @@ def build_schedule_planner_payload(grade_level: int) -> dict[str, Any]:
     assignments_by_period: dict[int, list[dict[str, Any]]] = {}
     assigned_ids: set[int] = set()
     for period in periods:
-        if (period.kind or 'class') != 'class':
+        if (period.kind or 'class') != 'class' or (period.usage_label or '').strip():
             continue
         cards = []
         for row in period.class_assignments or []:

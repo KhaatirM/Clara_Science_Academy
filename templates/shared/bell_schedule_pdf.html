@@ -121,7 +121,9 @@
             {% else %}
               <div class="cell-name">{{ cell.name }}</div>
               <div class="cell-time">{{ cell.time_str }}</div>
-              {% if cell.classes %}
+              {% if cell.usage_label %}
+                <div class="fixed-label" style="margin-top:4px;">{{ cell.usage_label }}</div>
+              {% elif cell.classes %}
                 {% for c in cell.classes %}
                 <div class="cell-class">
                   {{ c.class_name }}

@@ -87,6 +87,7 @@ export function BellScheduleGrid({
                 <div className="space-y-1.5">
                   {day.cells.map((cell) => {
                     const text = contrastText(cell.color_hex)
+                    const usageLabel = cell.usage_label?.trim() || ''
                     const isFixed = cell.kind !== 'class'
                     return (
                       <div
@@ -107,7 +108,11 @@ export function BellScheduleGrid({
                           <>
                             <div className="font-extrabold">{cell.name}</div>
                             <div className="opacity-90">{cell.time_str}</div>
-                            {cell.classes.length === 0 ? (
+                            {usageLabel ? (
+                              <div className="mt-1 font-bold uppercase tracking-wide">
+                                {usageLabel}
+                              </div>
+                            ) : cell.classes.length === 0 ? (
                               <div className="mt-1 opacity-70">—</div>
                             ) : (
                               <ul className="mb-0 mt-1 list-none space-y-1 p-0">

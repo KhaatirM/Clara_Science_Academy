@@ -165,13 +165,70 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 28, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 31, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 28</strong> (<strong>{{ app_version_display }}</strong>) merges Art and Music into one Art/Music class per grade, fixes graded redos stuck on Pending, adds archive/delete for inspections, connects Google Drive to Class Notes, and fixes grade colors that always showed green.</p>
+                        <p class="updates-intro-text mb-0"><strong>August 31</strong> (<strong>{{ app_version_display }}</strong>) rebuilds the Student Jobs page, lets School Administrators post announcements again, shows teachers their class mailing list, lets you label what a period is used for, and fixes students not moving to the right Google Group when their grade changes.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- August 31, 2026 - Student Jobs redesign + fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-briefcase me-2"></i>Student Jobs – August 31, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Completely rebuilt page:</strong> Team cards now show the current score, whether it went up or down, the average, pass rate, and a mini chart of recent inspections. Teams and inspection history are separate tabs with search and filters, and there is a new scoring guide.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Better inspection form:</strong> Each deduction and bonus is written in plain English with its point value, and the final score updates as you tick items.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>No more browser popups:</strong> Every confirm, prompt, and alert box was replaced with in-app dialogs, and results appear as toasts.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student view rebuilt to match:</strong> Students see the same design and their own team is highlighted and listed first.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- August 31, 2026 - Fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Fixes – August 31, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Announcements for School Administrators:</strong> An "Unauthorized" message appeared above the title box. Announcement permission checks now recognise every way the role is stored, including as a secondary role.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Class mailing list for teachers:</strong> The class page shows the Google Group address with a copy button so you can email the whole class.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Group moves on grade change:</strong> Promoting a student left them in their old school-level group. Grade changes now move students between the elementary, middle school, and high school groups.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Classroom roster gaps:</strong> Students enrolled without a school email were silently left off the Classroom roster. They are now named in the logs and in the roster repair tool, and failed adds are reported instead of ignored.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- August 31, 2026 - Schedule -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-calendar-week me-2"></i>Schedule – August 31, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Say what a period is used for:</strong> A class period can be labelled, for example Period 7 as "Electives". The label appears on student, teacher, and printed schedules instead of a blank slot, and the period no longer accepts classes.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- August 28, 2026 - Student Jobs hotfix -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Fix – August 28, 2026</h6>
@@ -2111,11 +2168,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug28_2026_v5')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug31_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug28_2026_v5', 'true');
+            sessionStorage.setItem('updateModalShownAug31_2026_v1', 'true');
         }, 500);
     }
 });

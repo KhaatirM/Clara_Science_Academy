@@ -146,26 +146,53 @@ def promote_student_one_grade(student: Student) -> bool:
     return True
 
 
-def schedule_pending_grade_resync_google(student: Student) -> None:
-    """After commit, sync class Google Groups for a promote/edit grade remapping."""
-    grade_resync = getattr(student, "_pending_grade_resync", None)
-    if not grade_resync or grade_resync.get("skipped"):
-        return
-    touched_ids = list(grade_resync.get("touched_class_ids") or [])
-    if not touched_ids:
-        touched_ids = [
-            int(row["class_id"])
-            for row in (grade_resync.get("dropped") or []) + (grade_resync.get("enrolled") or [])
-            if row.get("class_id") is not None
-        ]
-    if not touched_ids:
-        return
-    try:
-        from services.class_google_group import try_provision_class_google_groups_now
+def sync_student_school_level_groups(student: Student) -> None:
+    """Move the student between elementary/middle/high Workspace groups after a grade change.
 
-        try_provision_class_google_groups_now(touched_ids)
+    Per-class groups are handled separately; without this the student keeps their
+    old school-level group forever.
+    """
+    try:
+        from models import User
+
+        user = User.query.filter_by(student_id=student.id).first()
+        if not user or not (getattr(user, "google_workspace_email", "") or "").strip():
+            return
+        from services.google_sync_tasks import sync_single_user_to_google
+
+        sync_single_user_to_google(user.id)
     except Exception:
-        pass
+        try:
+            from flask import current_app
+
+            current_app.logger.exception(
+                "Google school-level group sync failed for student %s", getattr(student, "id", None)
+            )
+        except Exception:
+            pass
+
+
+def schedule_pending_grade_resync_google(student: Student) -> None:
+    """After commit, sync Google Groups for a promote/edit grade remapping."""
+    # School-level groups move even when no class enrollments changed.
+    sync_student_school_level_groups(student)
+
+    grade_resync = getattr(student, "_pending_grade_resync", None)
+    if grade_resync and not grade_resync.get("skipped"):
+        touched_ids = list(grade_resync.get("touched_class_ids") or [])
+        if not touched_ids:
+            touched_ids = [
+                int(row["class_id"])
+                for row in (grade_resync.get("dropped") or []) + (grade_resync.get("enrolled") or [])
+                if row.get("class_id") is not None
+            ]
+        if touched_ids:
+            try:
+                from services.class_google_group import try_provision_class_google_groups_now
+
+                try_provision_class_google_groups_now(touched_ids)
+            except Exception:
+                pass
     try:
         delattr(student, "_pending_grade_resync")
     except Exception:

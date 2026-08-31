@@ -89,6 +89,31 @@ def collect_classroom_student_emails(class_obj: Class) -> list[str]:
     return out
 
 
+def students_missing_workspace_email(class_obj: Class) -> list[str]:
+    """Enrolled students that cannot be added to Classroom because they have no school email.
+
+    These are silently excluded from the roster query, which is the usual reason a
+    class looks like it is "missing students" in Google Classroom.
+    """
+    rows = (
+        db.session.query(Student.first_name, Student.last_name)
+        .join(Enrollment, Enrollment.student_id == Student.id)
+        .outerjoin(User, User.student_id == Student.id)
+        .filter(
+            Enrollment.class_id == class_obj.id,
+            Enrollment.is_active.is_(True),
+            Student.is_deleted.is_(False),
+            db.or_(
+                User.id.is_(None),
+                User.google_workspace_email.is_(None),
+                User.google_workspace_email == "",
+            ),
+        )
+        .all()
+    )
+    return [f"{(r[0] or '').strip()} {(r[1] or '').strip()}".strip() for r in rows]
+
+
 def provision_and_sync_class_google_classroom(class_id: int) -> bool:
     """
     Ensure an active class has a school-managed Google Classroom and that
@@ -172,15 +197,37 @@ def provision_and_sync_class_google_classroom(class_id: int) -> bool:
         if low not in desired_teachers:
             remove_teacher(course_id, low)
 
+    failed_students: list[str] = []
     for low, email in desired_students.items():
         if low not in current_students:
-            add_student_direct(course_id, email)
+            if not add_student_direct(course_id, email):
+                failed_students.append(email)
 
     for low in current_students:
         if low not in desired_students:
             remove_student(course_id, low)
 
-    return True
+    # Surface the two ways a roster silently ends up incomplete.
+    missing_email = students_missing_workspace_email(c)
+    if missing_email:
+        current_app.logger.warning(
+            "Classroom roster for class %s (%s) is missing %d student(s) with no Google "
+            "Workspace email: %s",
+            c.id,
+            c.name,
+            len(missing_email),
+            ", ".join(missing_email),
+        )
+    if failed_students:
+        current_app.logger.error(
+            "Classroom roster for class %s (%s): %d student(s) could not be added: %s",
+            c.id,
+            c.name,
+            len(failed_students),
+            ", ".join(failed_students),
+        )
+
+    return not failed_students
 
 
 def try_provision_class_google_classroom(class_id: int) -> None:

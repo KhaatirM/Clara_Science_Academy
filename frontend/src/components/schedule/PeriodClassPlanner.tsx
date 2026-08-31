@@ -134,7 +134,8 @@ export function PeriodClassPlanner({ grade }: Props) {
     return <p className="text-sm text-hub-muted">Loading class planner…</p>
   }
 
-  const classPeriods = periods.filter((p) => p.kind === 'class')
+  const classPeriods = periods.filter((p) => p.kind === 'class' && !p.usage_label?.trim())
+  const reservedPeriods = periods.filter((p) => p.kind !== 'class' || p.usage_label?.trim())
   const pendingPeriodDays = pendingAssign
     ? periods.find((p) => p.id === pendingAssign.periodId)?.days_of_week
     : undefined
@@ -209,17 +210,18 @@ export function PeriodClassPlanner({ grade }: Props) {
               </div>
             ))
           )}
-          {periods
-            .filter((p) => p.kind !== 'class')
-            .map((period) => (
-              <div
-                key={period.id}
-                className="rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-700"
-                style={{ backgroundColor: period.color_hex }}
-              >
-                {period.name} · {period.time_str}
-              </div>
-            ))}
+          {reservedPeriods.map((period) => (
+            <div
+              key={period.id}
+              className="rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-700"
+              style={{ backgroundColor: period.color_hex }}
+            >
+              {period.name} · {period.time_str}
+              {period.usage_label?.trim() ? (
+                <span className="ml-1 font-extrabold">· {period.usage_label.trim()}</span>
+              ) : null}
+            </div>
+          ))}
         </div>
 
         <div className="min-w-0">

@@ -160,6 +160,18 @@ def build_student_jobs_payload() -> tuple[dict[str, Any] | None, str | None]:
         hub = query_student_jobs_hub(user=current_user)
         hub["can_manage"] = False
         hub["urls"] = {"home": "/app/student"}
+        # Lets the portal lead with the teams this student is actually on.
+        student_id = getattr(current_user, "student_id", None)
+        hub["my_student_id"] = student_id
+        hub["my_team_ids"] = (
+            [
+                team["id"]
+                for team in hub.get("teams", [])
+                if any(m["id"] == student_id for m in team["members"])
+            ]
+            if student_id
+            else []
+        )
         return hub, None
     except Exception as exc:
         return None, str(exc)

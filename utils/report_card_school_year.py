@@ -497,6 +497,7 @@ def promote_students_still_on_prior_year_grade(
 
     promoted = 0
     skipped = 0
+    promoted_students: list[Student] = []
     for sid in student_ids:
         student = Student.query.get(sid)
         if not student or getattr(student, "is_deleted", False):
@@ -530,10 +531,16 @@ def promote_students_still_on_prior_year_grade(
         upsert_student_school_year(
             sid, active.id, int(student.grade_level), enrolled=True
         )
+        promoted_students.append(student)
         promoted += 1
 
     if commit:
         db.session.commit()
+        # Move each promoted student into the Workspace group for their new school level.
+        from utils.student_departure import sync_student_school_level_groups
+
+        for student in promoted_students:
+            sync_student_school_level_groups(student)
 
     return {
         "ok": True,

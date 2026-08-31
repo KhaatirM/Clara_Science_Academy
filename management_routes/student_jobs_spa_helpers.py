@@ -77,6 +77,40 @@ def _team_current_score(team_id: int, recent_inspections: list[CleaningInspectio
     return int(latest.final_score or 100)
 
 
+def _team_stats(inspections: list[CleaningInspection]) -> dict[str, Any]:
+    """Rolling performance for a team, newest inspection first."""
+    scores = [int(i.final_score or 0) for i in inspections]
+    if not scores:
+        return {
+            "inspection_count": 0,
+            "average_score": None,
+            "best_score": None,
+            "pass_rate": None,
+            "trend": None,
+            "last_inspected": None,
+            "sparkline": [],
+        }
+
+    passed = sum(1 for s in scores if s >= 60)
+    trend = None
+    if len(scores) >= 2:
+        trend = scores[0] - scores[1]
+
+    latest_date = inspections[0].inspection_date
+    return {
+        "inspection_count": len(scores),
+        "average_score": round(sum(scores) / len(scores), 1),
+        "best_score": max(scores),
+        "pass_rate": round(100 * passed / len(scores)),
+        "trend": trend,
+        "last_inspected": latest_date.isoformat()
+        if hasattr(latest_date, "isoformat")
+        else str(latest_date),
+        # Oldest → newest so the UI can draw it left to right.
+        "sparkline": list(reversed(scores))[-10:],
+    }
+
+
 def _serialize_member(member: CleaningTeamMember) -> dict[str, Any] | None:
     from utils.student_roster import student_is_archived
 
@@ -120,6 +154,50 @@ INSPECTION_BONUS_LABELS: dict[str, str] = {
     "going_above_beyond": "Going above and beyond",
     "teamwork_award": "Teamwork award",
 }
+
+# Point values must stay in step with frontend/src/utils/studentJobsScoring.ts.
+INSPECTION_DEDUCTION_POINTS: dict[str, int] = {
+    "bathroom_not_restocked": 10,
+    "trash_can_left_full": 10,
+    "floor_not_swept": 10,
+    "materials_left_out": 10,
+    "tables_missed": 5,
+    "classroom_trash_full": 5,
+    "bathroom_floor_poor": 5,
+    "not_finished_on_time": 5,
+    "small_debris_left": 2,
+    "trash_spilled": 2,
+    "dispensers_half_filled": 2,
+}
+
+INSPECTION_BONUS_POINTS: dict[str, int] = {
+    "exceptional_finish": 5,
+    "speed_efficiency": 5,
+    "going_above_beyond": 3,
+    "teamwork_award": 2,
+}
+
+_SEVERITY_BY_POINTS = {10: "major", 5: "moderate", 2: "minor"}
+
+
+def inspection_deduction_options() -> list[dict[str, Any]]:
+    """Labelled, point-valued deduction checkboxes for the inspection form."""
+    return [
+        {
+            "key": key,
+            "label": label,
+            "points": INSPECTION_DEDUCTION_POINTS.get(key, 0),
+            "severity": _SEVERITY_BY_POINTS.get(INSPECTION_DEDUCTION_POINTS.get(key, 0), "minor"),
+        }
+        for key, label in INSPECTION_DEDUCTION_LABELS.items()
+    ]
+
+
+def inspection_bonus_options() -> list[dict[str, Any]]:
+    return [
+        {"key": key, "label": label, "points": INSPECTION_BONUS_POINTS.get(key, 0)}
+        for key, label in INSPECTION_BONUS_LABELS.items()
+    ]
 
 
 _INSPECTION_ARCHIVE_COLUMNS_READY = False
@@ -310,15 +388,16 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             members = []
 
         try:
-            recent_inspections = (
+            team_inspections = (
                 active_inspections_query()
                 .filter(CleaningInspection.team_id == team.id)
                 .order_by(CleaningInspection.inspection_date.desc())
-                .limit(5)
+                .limit(20)
                 .all()
             )
         except Exception:
-            recent_inspections = []
+            team_inspections = []
+        recent_inspections = team_inspections[:5]
 
         member_list = [m for m in (_serialize_member(member) for member in members) if m]
         total_members += len(member_list)
@@ -333,6 +412,7 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
                 "description": team.team_description or "",
                 "team_type": team_type,
                 "current_score": _team_current_score(team.id, recent_inspections),
+                "stats": _team_stats(team_inspections),
                 "members": member_list,
                 "detailed_description": get_team_detailed_description(team),
                 "recent_inspections": [
@@ -379,6 +459,15 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             "max_bonus": 15,
             "deduction_levels": "-10 / -5 / -2",
         },
+        "deduction_options": inspection_deduction_options(),
+        "bonus_options": inspection_bonus_options(),
+        "team_type_options": [
+            {"value": "cleaning", "label": "Cleaning"},
+            {"value": "computer", "label": "Computer"},
+            {"value": "lunch_duty", "label": "Lunch duty"},
+            {"value": "experiment_duty", "label": "Experiment duty"},
+            {"value": "other", "label": "Other"},
+        ],
         "urls": {"home": "/management"},
     }
 

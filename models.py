@@ -579,6 +579,9 @@ class BellPeriod(db.Model):
     bell_schedule_id = db.Column(db.Integer, db.ForeignKey('bell_schedule.id'), nullable=False)
     name = db.Column(db.String(80), nullable=False)
     kind = db.Column(db.String(20), nullable=False, default='class')  # class|break|lunch|tutorial|other
+    # Free-text note for a class period that is reserved rather than timetabled,
+    # e.g. "Electives". A period with a usage label never holds classes.
+    usage_label = db.Column(db.String(120), nullable=True)
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
     color_hex = db.Column(db.String(7), nullable=False, default='#4A90D9')

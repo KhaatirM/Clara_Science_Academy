@@ -93,6 +93,7 @@ def main() -> int:
         collect_classroom_student_emails,
         collect_classroom_teacher_emails,
         provision_and_sync_class_google_classroom,
+        students_missing_workspace_email,
     )
     from services.class_google_group import (
         class_needs_google_integration,
@@ -160,6 +161,7 @@ def main() -> int:
         skipped = 0
         students_missing_total = 0
         teachers_missing_total = 0
+        no_email_students: dict[str, list[str]] = {}
 
         for i, cid in enumerate(ids, start=1):
             class_obj = Class.query.get(cid)
@@ -183,6 +185,15 @@ def main() -> int:
 
             desired_students = collect_classroom_student_emails(class_obj)
             desired_teachers = collect_classroom_teacher_emails(class_obj)
+
+            # These students can never be added by any sync — they have no school email.
+            no_email = students_missing_workspace_email(class_obj)
+            if no_email:
+                no_email_students[f"{class_obj.name} (id={cid})"] = no_email
+                print(
+                    f"{label} NOTE {len(no_email)} enrolled student(s) have no Google "
+                    f"Workspace email and will be skipped: {', '.join(no_email)}"
+                )
 
             missing_students = 0
             missing_teachers = 0
@@ -244,6 +255,16 @@ def main() -> int:
             f"missing_teachers_before≈{teachers_missing_total} "
             f"dry_run={args.dry_run}"
         )
+
+        if no_email_students:
+            total = sum(len(v) for v in no_email_students.values())
+            print(
+                f"\n{total} enrollment(s) across {len(no_email_students)} class(es) could not be "
+                "synced because the student has no Google Workspace email. Provision their "
+                "school accounts, then re-run this script:"
+            )
+            for class_label, names in sorted(no_email_students.items()):
+                print(f"  {class_label}: {', '.join(names)}")
         return 0 if fail == 0 else 4
 
 

@@ -1,12 +1,32 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug28_2026_v5'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
-    title: 'Student Jobs page loads again',
-    body: 'The update that added inspection archiving tried to add a column the live database rejected, which made the Student Jobs page fail to load. The database update now runs correctly and the page works again.',
+    title: 'Student Jobs has been rebuilt',
+    body: 'New layout with team performance at a glance: score, trend, average, pass rate, and a mini chart of recent inspections. Teams and inspections are now separate tabs with search and filters, the inspection form shows plain-English items with their point values and a live score, and every browser alert/confirm popup has been replaced with proper in-app dialogs. The student view was rebuilt to match and puts your own team first.',
+  },
+  {
+    title: 'School Administrators can post announcements again',
+    body: 'An "Unauthorized" message appeared above the title box when a School Administrator opened the announcement composer. Announcement permission checks now recognise every way the role is stored, including when it is a secondary role.',
+  },
+  {
+    title: 'Teachers can see their class mailing list',
+    body: 'The class page now shows the Google Group address for the class with a copy button, so you can email the whole class from your own mail app.',
+  },
+  {
+    title: 'Mark what a period is used for',
+    body: 'In the schedule editor you can now label a class period, for example Period 7 as "Electives". Labelled periods show that label on student, teacher, and printed schedules instead of a blank slot, and no longer accept classes.',
+  },
+  {
+    title: 'Students move to the right Google Group when their grade changes',
+    body: 'Promoting a student updated the portal and their Workspace org unit but left them in their old school-level group. Grade changes now move students between the elementary, middle school, and high school groups automatically.',
+  },
+  {
+    title: 'Clearer Google Classroom roster problems',
+    body: 'Students enrolled without a school email were silently left off the Classroom roster. Those students are now named in the logs and in the roster repair tool, and failures to add a student are reported instead of ignored.',
   },
   {
     title: 'Art and Music are now one Art/Music class',
@@ -70,10 +90,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.518.2'
+  const display = version?.display || 'v 2.519.0'
   const releaseLabel = version?.release_label || 'August 28, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2711
+  const updatesEstimate = version?.updates_estimate ?? 2719
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

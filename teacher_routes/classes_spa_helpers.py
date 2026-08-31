@@ -128,7 +128,7 @@ def build_teacher_classes_payload() -> tuple[dict[str, Any] | None, str | None]:
                 {
                     **base,
                     "teacher_display": teacher_name if teacher_name and teacher_name != "N/A" else "Not Assigned",
-                    "google_group_email": (cls.google_group_email or None) if show_google else None,
+                    "google_group_email": cls.google_group_email or None,
                     "show_google_integration": show_google,
                     "features": features,
                     "links": _teacher_class_links(cls.id, features, cls.google_classroom_id),

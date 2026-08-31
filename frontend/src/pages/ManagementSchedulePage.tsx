@@ -15,6 +15,7 @@ import type { BellGridPayload, BellPeriodDto, BellPeriodKind } from '../types/be
 const EMPTY_PERIOD = (): BellPeriodDto => ({
   name: 'Period',
   kind: 'class',
+  usage_label: null,
   start_time: '08:00',
   end_time: '09:00',
   color_hex: '#5B8DEE',
@@ -496,6 +497,25 @@ export function ManagementSchedulePage() {
                         )
                       })}
                     </div>
+                    {period.kind === 'class' ? (
+                      <div className="mt-2">
+                        <label className="mb-1 block text-[10px] font-bold uppercase text-hub-muted">
+                          Reserved for (optional)
+                        </label>
+                        <input
+                          className={fieldInputSm}
+                          placeholder="e.g. Electives — leave blank to assign classes"
+                          value={period.usage_label || ''}
+                          onChange={(e) => updatePeriod(index, { usage_label: e.target.value })}
+                        />
+                        {period.usage_label?.trim() ? (
+                          <p className="mb-0 mt-1 text-[11px] text-amber-700">
+                            This period shows “{period.usage_label.trim()}” on schedules and cannot
+                            hold classes.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
                 {periods.length === 0 ? (

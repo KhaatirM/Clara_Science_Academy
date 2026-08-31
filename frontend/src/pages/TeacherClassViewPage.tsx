@@ -63,6 +63,57 @@ function AssistantLogBadge({ log }: { log: TeacherClassViewAssistantLog }) {
   return <span className={`badge ${cls}`}>{log.action_label}</span>
 }
 
+function ClassMailingList({ email }: { email: string | null }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = useCallback(() => {
+    if (!email) return
+    navigator.clipboard.writeText(email).then(
+      () => {
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 2000)
+      },
+      () => setCopied(false),
+    )
+  }, [email])
+
+  return (
+    <div className="teacher-class-view-mailing-list">
+      <div className="teacher-class-view-mailing-list__icon">
+        <i className="bi bi-envelope-at" aria-hidden />
+      </div>
+      <div className="teacher-class-view-mailing-list__content">
+        <div className="teacher-class-view-mailing-list__label">
+          Class mailing list
+          <span className="teacher-class-view-mailing-list__hint">
+            Email this address to reach every student in the class.
+          </span>
+        </div>
+        {email ? (
+          <div className="teacher-class-view-mailing-list__row">
+            <a href={`mailto:${email}`} className="teacher-class-view-mailing-list__email">
+              {email}
+            </a>
+            <button
+              type="button"
+              className="teacher-class-view-mailing-list__copy"
+              onClick={copy}
+              title="Copy address"
+            >
+              <i className={`bi ${copied ? 'bi-check-lg' : 'bi-clipboard'}`} aria-hidden />
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        ) : (
+          <span className="teacher-class-view-mailing-list__pending">
+            Not set up yet — the group is created once the class is provisioned in Google.
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function TeacherClassViewPage() {
   const { classId } = useParams<{ classId: string }>()
   const id = Number(classId)
@@ -484,22 +535,8 @@ function TeacherClassViewBody({
             </button>
           </div>
           <div className="teacher-class-card-body teacher-class-announcements-body-tall">
-            {cls.show_google_integration ? (
-              <div className="teacher-class-view-mailing-list">
-                <div className="teacher-class-view-mailing-list__icon">
-                  <i className="bi bi-envelope-at" aria-hidden />
-                </div>
-                <div className="teacher-class-view-mailing-list__content">
-                  <div className="teacher-class-view-mailing-list__label">Class mailing list</div>
-                  {cls.google_group_email ? (
-                    <a href={`mailto:${cls.google_group_email}`} className="teacher-class-view-mailing-list__email">
-                      {cls.google_group_email}
-                    </a>
-                  ) : (
-                    <span className="teacher-class-view-mailing-list__pending">Not available yet</span>
-                  )}
-                </div>
-              </div>
+            {cls.show_google_integration || cls.google_group_email ? (
+              <ClassMailingList email={cls.google_group_email} />
             ) : null}
             {data.announcements.length > 0 ? (
               <div className="teacher-class-announcements">

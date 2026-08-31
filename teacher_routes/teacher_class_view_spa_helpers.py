@@ -221,9 +221,9 @@ def build_teacher_class_view_payload(class_id: int) -> tuple[dict[str, Any] | No
                     "school_year_name": school_year.name if school_year else None,
                     "room_display": class_obj.room_number or "N/A",
                     "schedule_display": class_obj.schedule or "TBD",
-                    "google_group_email": (class_obj.google_group_email or None)
-                    if show_google
-                    else None,
+                    # The address is shown whenever one exists so teachers can email
+                    # the class; show_google still gates the Classroom controls.
+                    "google_group_email": class_obj.google_group_email or None,
                     "show_google_integration": show_google,
                 },
                 "enrolled_students": [_serialize_teacher_class_roster_student(s) for s in enrolled],

@@ -16,6 +16,8 @@ from management_routes.student_jobs_spa_helpers import (
     get_inspection_detail,
     query_inspection_history,
     query_student_jobs_hub,
+    reset_lunch_service_checks,
+    set_lunch_service_check,
     update_cleaning_team,
     update_team_duty,
 )
@@ -175,6 +177,44 @@ def student_jobs_remove_members(team_id: int):
 @management_required
 def student_jobs_update_member(member_id: int):
     return api_team_member_update(member_id)
+
+
+@spa_api_blueprint.route("/student-jobs/members/<int:member_id>/lunch-check", methods=["POST"])
+@login_required
+@management_required
+def student_jobs_lunch_check(member_id: int):
+    data = request.get_json(silent=True) or {}
+    served = bool(data.get("served", True))
+    recorded_by = " ".join(
+        part
+        for part in [
+            getattr(current_user, "first_name", "") or "",
+            getattr(current_user, "last_name", "") or "",
+        ]
+        if part
+    )
+    try:
+        result = set_lunch_service_check(
+            member_id=member_id, served=served, recorded_by=recorded_by
+        )
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route("/student-jobs/teams/<int:team_id>/lunch-check/reset", methods=["POST"])
+@login_required
+@management_required
+def student_jobs_lunch_check_reset(team_id: int):
+    try:
+        result = reset_lunch_service_checks(team_id=team_id)
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(exc)}), 500
+    status = 200 if result.get("success") else 400
+    return jsonify(result), status
 
 
 @spa_api_blueprint.route("/student-jobs/teams/<team_identifier>/inspections")

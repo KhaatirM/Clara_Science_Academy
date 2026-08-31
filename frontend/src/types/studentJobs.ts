@@ -6,6 +6,9 @@ export type StudentJobsMember = {
   assignment_description: string
   task_id: number | null
   task_name: string | null
+  /** Whether this student already took a lunch turn during the current week. */
+  served_lunch: boolean
+  served_at: string | null
 }
 
 export type StudentJobsDuty = {
@@ -48,6 +51,7 @@ export type StudentJobsTeam = {
   /** Weekday numbers the team works, Mon=0. Empty means every school day. */
   days_of_week: number[]
   day_labels: string[]
+  lunch_served_count: number
   current_score: number
   stats: StudentJobsTeamStats
   members: StudentJobsMember[]
@@ -126,6 +130,8 @@ export type StudentJobsHubResponse = {
     passed: number
   }
   teams: StudentJobsTeam[]
+  /** Monday of the week the lunch checks apply to. */
+  lunch_week_start: string
   inspection_history: StudentJobsInspectionHistoryItem[]
   inspection_pagination: StudentJobsInspectionPagination
   point_system: {

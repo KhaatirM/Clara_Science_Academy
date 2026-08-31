@@ -3383,6 +3383,33 @@ class CleaningTask(db.Model):
         return f"CleaningTask('{self.task_name}', Team: {self.team_id})"
 
 
+class LunchServiceCheck(db.Model):
+    """
+    Marks that a student already took a lunch-serving turn during a given week.
+
+    The team cleaning that day also serves lunch, so these checks stop the same
+    students going twice. They are scoped to a week (Monday) and simply stop
+    applying once the week rolls over, the same way team scores reset.
+    """
+    __tablename__ = 'lunch_service_check'
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    week_start = db.Column(db.Date, nullable=False)  # Monday of the week the turn counts for
+    served_at = db.Column(db.DateTime, default=datetime.utcnow)
+    recorded_by = db.Column(db.String(120), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('team_id', 'student_id', 'week_start', name='uq_lunch_service_week'),
+    )
+
+    team = db.relationship('CleaningTeam', backref=db.backref('lunch_service_checks', cascade='all, delete-orphan'))
+    student = db.relationship('Student')
+
+    def __repr__(self):
+        return f"LunchServiceCheck(Team: {self.team_id}, Student: {self.student_id}, Week: {self.week_start})"
+
+
 class CleaningSchedule(db.Model):
     """
     Model for storing cleaning schedules and rotations.

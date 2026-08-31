@@ -30,6 +30,27 @@ export async function updateStudentJobsTeam(
   )
 }
 
+/** Tick or clear this week's lunch turn for one team member. */
+export async function setLunchServiceCheck(memberId: number, served: boolean) {
+  return apiFetch<{
+    success: boolean
+    member_id?: number
+    served_lunch?: boolean
+    message?: string
+    error?: string
+  }>(`/api/spa/student-jobs/members/${memberId}/lunch-check`, {
+    method: 'POST',
+    body: JSON.stringify({ served }),
+  })
+}
+
+export async function resetLunchServiceChecks(teamId: number) {
+  return apiFetch<{ success: boolean; message?: string; error?: string }>(
+    `/api/spa/student-jobs/teams/${teamId}/lunch-check/reset`,
+    { method: 'POST' },
+  )
+}
+
 export async function archiveStudentJobsTeam(teamId: number) {
   return apiFetch<{ success: boolean; message?: string; error?: string }>(
     `/api/spa/student-jobs/teams/${teamId}/archive`,

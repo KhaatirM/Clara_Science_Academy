@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v6'
+const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v7'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Tick off who has served lunch this week',
+    body: 'The team that cleans also serves lunch, so each team now tracks whose turn has been used. Click a name on the team card, or the check box in the Members panel, to tick a student off — the card shows how many of the team have served. The checks are for the current week only and clear on Monday like the team score, and there is a Clear checks button if a rotation restarts early. Students see the same ticks on their Jobs page.',
+  },
   {
     title: 'Set the days a cleaning team works, and edit teams',
     body: 'Creating a team now asks which weekdays it works, and every team card has an Edit button for renaming it, changing its type or description, and adjusting those days later. The working days show on the team card and on the student Jobs page, so students know which days they are on.',

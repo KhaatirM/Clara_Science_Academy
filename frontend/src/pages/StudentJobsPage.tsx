@@ -6,6 +6,8 @@ import {
   archiveStudentJobsTeam,
   createStudentJobsTeam,
   createTeamDuty,
+  resetLunchServiceChecks,
+  setLunchServiceCheck,
   updateStudentJobsTeam,
   deleteInspection,
   deleteTeamDuty,
@@ -864,21 +866,55 @@ export function StudentJobsPage() {
                           No students assigned yet.
                         </p>
                       ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {team.members.map((member) => (
-                            <span
-                              key={member.member_id}
-                              className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
-                            >
-                              {member.name}
-                              {member.task_name ? (
-                                <span className="ml-1 text-teal-700">· {member.task_name}</span>
-                              ) : member.role && member.role !== 'Team Member' ? (
-                                <span className="ml-1 text-slate-500">· {member.role}</span>
-                              ) : null}
-                            </span>
-                          ))}
-                        </div>
+                        <>
+                          <p className="mb-0 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                            <i className="bi bi-egg-fried me-1" aria-hidden />
+                            Lunch turns this week: {team.lunch_served_count} of{' '}
+                            {team.members.length} served · click a name to tick it off
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {team.members.map((member) => (
+                              <button
+                                key={member.member_id}
+                                type="button"
+                                disabled={busy}
+                                aria-pressed={member.served_lunch}
+                                title={
+                                  member.served_lunch
+                                    ? 'Already served this week — click to undo'
+                                    : 'Mark as having served lunch this week'
+                                }
+                                className={[
+                                  'rounded-full px-2.5 py-1 text-xs font-semibold',
+                                  member.served_lunch
+                                    ? 'bg-teal-600 text-white'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                                ].join(' ')}
+                                onClick={() =>
+                                  void runAction(() =>
+                                    setLunchServiceCheck(member.member_id, !member.served_lunch),
+                                  )
+                                }
+                              >
+                                {member.served_lunch ? (
+                                  <i className="bi bi-check-lg me-1" aria-hidden />
+                                ) : null}
+                                {member.name}
+                                {member.task_name ? (
+                                  <span
+                                    className={`ml-1 ${
+                                      member.served_lunch ? 'text-teal-100' : 'text-teal-700'
+                                    }`}
+                                  >
+                                    · {member.task_name}
+                                  </span>
+                                ) : member.role && member.role !== 'Team Member' ? (
+                                  <span className="ml-1 text-slate-500">· {member.role}</span>
+                                ) : null}
+                              </button>
+                            ))}
+                          </div>
+                        </>
                       )}
                     </div>
 
@@ -1634,9 +1670,24 @@ export function StudentJobsPage() {
       >
         {membersTeam ? (
           <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2">
+              <p className="mb-0 text-sm font-semibold text-teal-900">
+                <i className="bi bi-egg-fried me-1.5" aria-hidden />
+                Lunch turns this week: {membersTeam.lunch_served_count} of{' '}
+                {membersTeam.members.length} served
+              </p>
+              <button
+                type="button"
+                className="rounded-lg border border-teal-300 bg-white px-2.5 py-1 text-xs font-bold text-teal-800 hover:bg-teal-100 disabled:opacity-60"
+                disabled={busy || membersTeam.lunch_served_count === 0}
+                onClick={() => void runAction(() => resetLunchServiceChecks(membersTeam.id))}
+              >
+                Clear checks
+              </button>
+            </div>
             <div>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
-                On this team ({membersTeam.members.length})
+                On this team ({membersTeam.members.length}) — tick each student once they have served
               </h3>
               {membersTeam.members.length === 0 ? (
                 <p className="mb-0 rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-hub-muted">
@@ -1649,6 +1700,29 @@ export function StudentJobsPage() {
                       key={member.member_id}
                       className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2"
                     >
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-pressed={member.served_lunch}
+                        title={
+                          member.served_lunch
+                            ? 'Served lunch this week — click to undo'
+                            : 'Mark as having served lunch this week'
+                        }
+                        className={[
+                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-base',
+                          member.served_lunch
+                            ? 'border-teal-600 bg-teal-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent hover:border-teal-400 hover:text-teal-300',
+                        ].join(' ')}
+                        onClick={() =>
+                          void runAction(() =>
+                            setLunchServiceCheck(member.member_id, !member.served_lunch),
+                          )
+                        }
+                      >
+                        <i className="bi bi-check-lg" aria-hidden />
+                      </button>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold text-hub-text">
                           {member.name}

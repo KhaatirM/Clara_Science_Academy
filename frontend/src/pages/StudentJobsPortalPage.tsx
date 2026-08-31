@@ -285,11 +285,20 @@ function TeamCard({
           <p className="mb-0 text-sm text-hub-muted">No members listed.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
+            <span className="w-full text-[10px] font-bold uppercase tracking-wide text-hub-muted">
+              Lunch turns this week: {team.lunch_served_count} of {team.members.length} served
+            </span>
             {visibleMembers.map((member) => (
               <span
                 key={member.member_id}
-                className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
+                title={member.served_lunch ? 'Already served lunch this week' : undefined}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  member.served_lunch
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-100 text-slate-700'
+                }`}
               >
+                {member.served_lunch ? <i className="bi bi-check-lg me-1" aria-hidden /> : null}
                 {member.name}
               </span>
             ))}

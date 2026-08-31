@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from models import CleaningInspection, CleaningTask, CleaningTeam, CleaningTeamMember, db
+from models import (
+    CleaningInspection,
+    CleaningTask,
+    CleaningTeam,
+    CleaningTeamMember,
+    LunchServiceCheck,
+    db,
+)
 from management_routes.students import get_team_detailed_description
 from utils.student_jobs_catalog import (
     CLEANING,
@@ -120,8 +127,99 @@ def _team_stats(inspections: list[CleaningInspection]) -> dict[str, Any]:
     }
 
 
+_LUNCH_TABLE_READY = False
+
+
+def ensure_lunch_service_table() -> bool:
+    """Create the lunch-turn table on databases that predate it."""
+    global _LUNCH_TABLE_READY
+    if _LUNCH_TABLE_READY:
+        return True
+    try:
+        LunchServiceCheck.__table__.create(db.engine, checkfirst=True)
+        _LUNCH_TABLE_READY = True
+    except Exception:
+        from flask import current_app
+
+        current_app.logger.exception("Could not create the lunch_service_check table")
+        _LUNCH_TABLE_READY = False
+    return _LUNCH_TABLE_READY
+
+
+def current_lunch_week_start():
+    """Monday of the current school week, matching how team scores reset."""
+    return _current_week_start_est().date()
+
+
+def lunch_checks_for_week(team_ids: list[int] | None = None) -> dict[tuple[int, int], Any]:
+    """This week's turns, keyed by (team_id, student_id)."""
+    if not ensure_lunch_service_table():
+        return {}
+    try:
+        query = LunchServiceCheck.query.filter(
+            LunchServiceCheck.week_start == current_lunch_week_start()
+        )
+        if team_ids:
+            query = query.filter(LunchServiceCheck.team_id.in_(team_ids))
+        return {(row.team_id, row.student_id): row for row in query.all()}
+    except Exception:
+        db.session.rollback()
+        return {}
+
+
+def set_lunch_service_check(
+    *, member_id: int, served: bool, recorded_by: str | None = None
+) -> dict[str, Any]:
+    """Tick or clear a student's lunch turn for the current week."""
+    if not ensure_lunch_service_table():
+        return {"success": False, "error": "Lunch service tracking is unavailable."}
+
+    member = CleaningTeamMember.query.filter_by(id=member_id, is_active=True).first()
+    if not member:
+        return {"success": False, "error": "Team member not found."}
+
+    week_start = current_lunch_week_start()
+    existing = LunchServiceCheck.query.filter_by(
+        team_id=member.team_id, student_id=member.student_id, week_start=week_start
+    ).first()
+
+    if served and not existing:
+        db.session.add(
+            LunchServiceCheck(
+                team_id=member.team_id,
+                student_id=member.student_id,
+                week_start=week_start,
+                recorded_by=(recorded_by or "").strip() or None,
+            )
+        )
+    elif not served and existing:
+        db.session.delete(existing)
+
+    db.session.commit()
+    name = _member_name(member)
+    return {
+        "success": True,
+        "member_id": member.id,
+        "served_lunch": bool(served),
+        "message": f"{name} marked as {'having served' if served else 'not having served'} this week.",
+    }
+
+
+def reset_lunch_service_checks(*, team_id: int) -> dict[str, Any]:
+    """Clear this week's turns for one team, for when the rotation restarts early."""
+    if not ensure_lunch_service_table():
+        return {"success": False, "error": "Lunch service tracking is unavailable."}
+    removed = LunchServiceCheck.query.filter_by(
+        team_id=team_id, week_start=current_lunch_week_start()
+    ).delete(synchronize_session=False)
+    db.session.commit()
+    return {"success": True, "message": f"Cleared {removed} lunch turn(s) for this week."}
+
+
 def _serialize_member(
-    member: CleaningTeamMember, duty_names: dict[int, str] | None = None
+    member: CleaningTeamMember,
+    duty_names: dict[int, str] | None = None,
+    lunch_checks: dict[tuple[int, int], Any] | None = None,
 ) -> dict[str, Any] | None:
     from utils.student_roster import student_is_archived
 
@@ -133,6 +231,8 @@ def _serialize_member(
     except Exception:
         pass
     task_id = getattr(member, "task_id", None)
+    lunch_row = (lunch_checks or {}).get((member.team_id, member.student_id))
+    served_at = getattr(lunch_row, "served_at", None)
     return {
         "id": member.student.id,
         "member_id": member.id,
@@ -141,6 +241,8 @@ def _serialize_member(
         "assignment_description": assignment_desc,
         "task_id": task_id,
         "task_name": (duty_names or {}).get(task_id) if task_id else None,
+        "served_lunch": lunch_row is not None,
+        "served_at": served_at.isoformat() if hasattr(served_at, "isoformat") else None,
     }
 
 
@@ -725,6 +827,8 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
     ensure_team_columns()
     duties_ready = ensure_duty_columns()
     teams = _load_teams()
+    lunch_checks = lunch_checks_for_week([team.id for team in teams])
+    lunch_week_start = current_lunch_week_start().isoformat()
     team_payloads: list[dict[str, Any]] = []
     total_members = 0
 
@@ -758,7 +862,11 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
         recent_inspections = team_inspections[:5]
 
         member_list = [
-            m for m in (_serialize_member(member, duty_names) for member in members) if m
+            m
+            for m in (
+                _serialize_member(member, duty_names, lunch_checks) for member in members
+            )
+            if m
         ]
         total_members += len(member_list)
         team_type = getattr(team, "team_type", None) or (
@@ -774,6 +882,7 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
                 "team_type": team_type,
                 "days_of_week": workdays,
                 "day_labels": workday_labels(workdays),
+                "lunch_served_count": sum(1 for m in member_list if m["served_lunch"]),
                 "current_score": _team_current_score(team.id, recent_inspections),
                 "stats": _team_stats(team_inspections),
                 "members": member_list,
@@ -815,6 +924,7 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
             "passed": passed_count,
         },
         "teams": team_payloads,
+        "lunch_week_start": lunch_week_start,
         "inspection_history": inspection_page["items"],
         "inspection_pagination": inspection_page["pagination"],
         "point_system": {

@@ -104,17 +104,21 @@ function formatSyncedAt(value: string | null) {
 function DrivePanel({
   links,
   busy,
+  scope,
   onLink,
   onSync,
   onUnlink,
 }: {
   links: ClassNotesDriveLink[]
   busy: boolean
+  scope: Scope
   onLink: (url: string) => void
   onSync: (link: ClassNotesDriveLink) => void
   onUnlink: (link: ClassNotesDriveLink) => void
 }) {
   const [url, setUrl] = useState('')
+  const connectHref =
+    scope === 'management' ? '/management/google-account/connect' : '/teacher/google-account/connect'
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -136,7 +140,7 @@ function DrivePanel({
             {link.needs_reauth ? (
               <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                 Google access expired for this folder.{' '}
-                <a className="font-semibold underline" href="/teacher/google-account/connect">
+                <a className="font-semibold underline" href={connectHref}>
                   Reconnect Google account
                 </a>
               </div>
@@ -198,7 +202,8 @@ function DrivePanel({
             Link folder
           </button>
           <p className="mb-0 mt-2 text-xs text-hub-muted">
-            Files stay in Drive. Students see and download them here without needing Drive access.
+            Uses the Google account connected in Settings (signing in with Google alone is not
+            enough). Files stay in Drive; students see and download them here.
           </p>
         </div>
       </div>
@@ -589,6 +594,8 @@ export function ClassNotesPage() {
 
   const driveLinks = data?.drive_links || []
   const needsReauth = canManage && driveLinks.some((link) => link.needs_reauth)
+  const googleConnectHref =
+    scope === 'management' ? '/management/google-account/connect' : '/teacher/google-account/connect'
 
   const body = (
     <>
@@ -596,7 +603,7 @@ export function ClassNotesPage() {
       {needsReauth ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Google access for a linked Drive folder has expired, so its files are not refreshing.{' '}
-          <a className="font-semibold underline" href="/teacher/google-account/connect">
+          <a className="font-semibold underline" href={googleConnectHref}>
             Reconnect your Google account
           </a>
           .
@@ -724,6 +731,7 @@ export function ClassNotesPage() {
               <DrivePanel
                 links={driveLinks}
                 busy={busy}
+                scope={scope}
                 onLink={(url) => void onLinkDrive(url)}
                 onSync={(link) => void onSyncDrive(link)}
                 onUnlink={(link) => void onUnlinkDrive(link)}

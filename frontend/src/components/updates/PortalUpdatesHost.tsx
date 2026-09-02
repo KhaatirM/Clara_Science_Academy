@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownAug31_2026_v9'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Syllabus PDF upload and Drive folder linking fixed',
+    body: 'Uploading a syllabus PDF failed with a missing library error, and linking a Google Drive folder to Class Notes said the Google account was not connected even when Settings showed it was. PDF/DOCX reading libraries are installed again, and Drive now reloads your saved Google connection (or the class teacher\'s), with clearer instructions when Settings → Connect Google is still needed — signing in with Google alone is not enough.',
+  },
   {
     title: 'Period labels fill in only when no class is scheduled',
     body: 'A period can now have a default name like "Electives" and still take classes. On days a class is assigned, the class shows on the schedule; on days that period is empty, the label appears instead. You no longer have to clear the label before dragging a class in.',

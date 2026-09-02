@@ -300,7 +300,8 @@ export default function SettingsPage() {
               <>
                 <p className="text-sm text-emerald-700">
                   <i className="bi bi-check-circle-fill mr-1" aria-hidden />
-                  Your Google account is linked and ready to manage classrooms.
+                  Your Google account is linked and ready for Classroom, Forms, and Drive folders in
+                  Class Notes.
                 </p>
                 <button
                   type="button"
@@ -313,14 +314,16 @@ export default function SettingsPage() {
             ) : (
               <>
                 <p className="text-sm text-hub-muted">
-                  Connect your Google account to enable classroom integration for all classes.
+                  {data.google.needs_reconnect
+                    ? 'Your previous Google connection could not be read. Disconnect is not needed — connect again below (approve Drive when asked). Signing in with Google alone is not enough.'
+                    : 'Connect your Google account in Settings to use Classroom, Forms, and Drive folders in Class Notes. Signing in with Google alone is not enough.'}
                 </p>
                 <a
                   href={data.google.connect_url}
                   className="spa-mgmt-btn-primary px-4 py-2 text-sm hover:brightness-105"
                 >
                   <i className="bi bi-google" aria-hidden />
-                  Connect Google account
+                  {data.google.needs_reconnect ? 'Reconnect Google account' : 'Connect Google account'}
                 </a>
               </>
             )}

@@ -72,12 +72,32 @@ def extract_drive_folder_id(raw: str) -> str | None:
 def get_drive_service(user):
     """Build a Drive v3 client authenticated as ``user``.
 
-    Raises DriveAuthError when the account is not connected or the stored
-    refresh token cannot be used (for example after an ENCRYPTION_KEY change).
+    Reloads the user from the database so Flask-Login session objects cannot
+    hide a freshly saved refresh token. Raises DriveAuthError with a specific
+    message when the account is not connected, the stored token cannot be
+    decrypted, or Google rejects the refresh.
     """
-    refresh_token = getattr(user, 'google_refresh_token', None)
+    from models import User
+
+    user_id = getattr(user, 'id', None)
+    db_user = User.query.get(user_id) if user_id else None
+    if db_user is None:
+        raise DriveAuthError(
+            'Could not load your account to use Google Drive. Sign out and back in, then try again.'
+        )
+
+    if not db_user.has_google_token_stored:
+        raise DriveAuthError(
+            'Your portal Google account is not connected in Settings. '
+            'Signing in with Google is not enough — open Settings and click Connect Google account.'
+        )
+
+    refresh_token = db_user.google_refresh_token
     if not refresh_token:
-        raise DriveAuthError('This Google account is not connected.')
+        raise DriveAuthError(
+            'Your saved Google connection could not be read. '
+            'Open Settings, disconnect Google, then Connect again.'
+        )
 
     token_uri = 'https://oauth2.googleapis.com/token'
     client_id = current_app.config.get('GOOGLE_CLIENT_ID')
@@ -102,9 +122,18 @@ def get_drive_service(user):
 
     if 'access_token' not in payload:
         current_app.logger.error(
-            'Drive token refresh failed for user %s: %s', getattr(user, 'id', '?'), payload
+            'Drive token refresh failed for user %s: %s', getattr(db_user, 'id', '?'), payload
         )
-        raise DriveAuthError('Google access has expired. Reconnect the Google account.')
+        error_code = (payload or {}).get('error')
+        if error_code in ('invalid_grant', 'invalid_client'):
+            raise DriveAuthError(
+                'Google access has expired or was revoked. '
+                'Open Settings, disconnect Google, then Connect again (Drive access is included).'
+            )
+        raise DriveAuthError(
+            'Google would not refresh Drive access. '
+            'Open Settings and reconnect your Google account, approving Drive when asked.'
+        )
 
     creds = Credentials(
         token=payload['access_token'],

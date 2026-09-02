@@ -23,6 +23,7 @@ export type SettingsHubResponse = {
   }
   google: {
     connected: boolean
+    needs_reconnect?: boolean
     connect_url: string
     disconnect_url: string
   }

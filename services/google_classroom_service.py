@@ -23,9 +23,15 @@ def get_google_service(user):
         Google Classroom service object, or None if the user has no token
         or if token refresh fails
     """
-    refresh_token = user.google_refresh_token
+    from models import User
+
+    user_id = getattr(user, 'id', None)
+    db_user = User.query.get(user_id) if user_id else None
+    refresh_token = db_user.google_refresh_token if db_user else None
     if not refresh_token:
-        current_app.logger.warning(f"User {user.id} has no refresh token. Cannot build service.")
+        current_app.logger.warning(
+            f"User {user_id} has no usable refresh token. Cannot build service."
+        )
         return None
 
     try:
@@ -43,7 +49,7 @@ def get_google_service(user):
         
         response_data = response.json()
         if 'access_token' not in response_data:
-            current_app.logger.error(f"Failed to refresh token for user {user.id}: {response_data}")
+            current_app.logger.error(f"Failed to refresh token for user {user_id}: {response_data}")
             return None
 
         access_token = response_data['access_token']
@@ -62,7 +68,7 @@ def get_google_service(user):
         return service
         
     except Exception as e:
-        current_app.logger.error(f"Failed to build Google service for user {user.id}: {e}")
+        current_app.logger.error(f"Failed to build Google service for user {user_id}: {e}")
         return None
 
 

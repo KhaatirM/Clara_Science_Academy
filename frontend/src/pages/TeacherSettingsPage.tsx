@@ -248,8 +248,10 @@ export function TeacherSettingsPage() {
               <h2>Google account</h2>
               <p>
                 {data.google.connected
-                  ? 'Your Google account is connected for Classroom and Forms.'
-                  : 'Connect Google to link Classroom courses and export quizzes.'}
+                  ? 'Your Google account is connected for Classroom, Forms, and Drive folders in Class Notes.'
+                  : data.google.needs_reconnect
+                    ? 'Your previous Google connection could not be read. Connect again below and approve Drive when asked. Signing in with Google alone is not enough.'
+                    : 'Connect Google in Settings to link Classroom, Forms, and Drive folders. Signing in with Google alone is not enough.'}
               </p>
               {data.google.connected ? (
                 <button
@@ -261,7 +263,7 @@ export function TeacherSettingsPage() {
                 </button>
               ) : (
                 <a href={data.google.connect_url} className="teacher-class-card__btn teacher-class-card__btn--google-link">
-                  Connect Google account
+                  {data.google.needs_reconnect ? 'Reconnect Google account' : 'Connect Google account'}
                 </a>
               )}
             </section>

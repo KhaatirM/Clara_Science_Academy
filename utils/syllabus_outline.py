@@ -32,7 +32,13 @@ def extract_text_from_file(path: str | Path) -> str:
 
 
 def _extract_pdf(path: Path) -> str:
-    # Prefer pdfplumber for layout-aware text; fall back to PyPDF2.
+    """Pull text from a PDF using whichever extractor is installed.
+
+    Prefers pdfplumber for layout, then the maintained ``pypdf`` package, then
+    the legacy ``PyPDF2`` import name still used by older installs.
+    """
+    errors: list[str] = []
+
     try:
         import pdfplumber
 
@@ -44,21 +50,37 @@ def _extract_pdf(path: Path) -> str:
                     chunks.append(text)
         if chunks:
             return '\n\n'.join(chunks)
-    except Exception:
-        pass
-
-    try:
-        from PyPDF2 import PdfReader
-
-        reader = PdfReader(str(path))
-        chunks = []
-        for page in reader.pages:
-            text = page.extract_text() or ''
-            if text.strip():
-                chunks.append(text)
-        return '\n\n'.join(chunks)
+        # Empty extract is still "success" — fall through to another reader.
     except Exception as exc:
-        raise ValueError(f'Could not read PDF text: {exc}') from exc
+        errors.append(f'pdfplumber: {exc}')
+
+    for importer in (_import_pypdf, _import_pypdf2):
+        try:
+            PdfReader = importer()
+            reader = PdfReader(str(path))
+            chunks = []
+            for page in reader.pages:
+                text = page.extract_text() or ''
+                if text.strip():
+                    chunks.append(text)
+            return '\n\n'.join(chunks)
+        except Exception as exc:
+            errors.append(str(exc))
+
+    detail = '; '.join(errors) if errors else 'no PDF library available'
+    raise ValueError(f'Could not read PDF text: {detail}')
+
+
+def _import_pypdf():
+    from pypdf import PdfReader
+
+    return PdfReader
+
+
+def _import_pypdf2():
+    from PyPDF2 import PdfReader
+
+    return PdfReader
 
 
 def _extract_docx(path: Path) -> str:

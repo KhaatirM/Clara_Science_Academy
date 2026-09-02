@@ -35,7 +35,10 @@ THEME_OPTIONS = [
 def query_settings_hub(*, user) -> dict[str, Any]:
     db_user = User.query.get(user.id) if getattr(user, "id", None) else None
     role = canonical_role_label(getattr(user, "role", None))
-    google_connected = bool(db_user and db_user.google_refresh_token)
+    token_usable = bool(db_user and db_user.google_refresh_token)
+    token_stored = bool(db_user and db_user.has_google_token_stored)
+    # Treat a stored-but-unreadable token as disconnected so the UI offers reconnect.
+    google_connected = token_usable
     site_override = get_site_theme_override()
     saved_theme = (db_user.theme_preference if db_user else None) or "default"
 
@@ -58,6 +61,7 @@ def query_settings_hub(*, user) -> dict[str, Any]:
         },
         "google": {
             "connected": google_connected,
+            "needs_reconnect": token_stored and not token_usable,
             "connect_url": "/management/google-account/connect",
             "disconnect_url": "/management/google-account/disconnect",
         },

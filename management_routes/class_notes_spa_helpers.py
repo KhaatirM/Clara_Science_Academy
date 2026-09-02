@@ -41,6 +41,12 @@ def ensure_class_notes_tables() -> None:
         ClassNotesDriveItem.__table__.create(db.engine, checkfirst=True)
         _ensure_parent_id_column()
         _ensure_folder_drive_columns()
+        try:
+            from management_routes.class_notes_drive_helpers import ensure_google_token_column_wide
+
+            ensure_google_token_column_wide()
+        except Exception:
+            current_app.logger.exception('Could not widen Google token column')
     except Exception:
         current_app.logger.exception('Could not ensure class notes tables')
 

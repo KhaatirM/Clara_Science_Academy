@@ -45,8 +45,10 @@ class User(db.Model, UserMixin):
     # JSON list of strings, e.g. '["Tech"]' alongside primary ``role`` == 'School Administrator'.
     secondary_roles = db.Column(db.Text, nullable=True)
     
-    # Google OAuth tokens (encrypted)
-    _google_refresh_token = db.Column(db.String(512), nullable=True)
+    # Google OAuth tokens (encrypted). TEXT — Fernet output is longer than the
+    # raw refresh token, and VARCHAR(512) was truncating some saved tokens so
+    # decrypt quietly failed and Drive/Classroom looked "not connected".
+    _google_refresh_token = db.Column(db.Text, nullable=True)
     
     @property
     def google_refresh_token(self):
@@ -58,7 +60,14 @@ class User(db.Model, UserMixin):
         try:
             from flask import current_app
             from cryptography.fernet import Fernet
-            f = Fernet(current_app.config['ENCRYPTION_KEY'].encode('utf-8') if isinstance(current_app.config['ENCRYPTION_KEY'], str) else current_app.config['ENCRYPTION_KEY'])
+            key = current_app.config.get('ENCRYPTION_KEY')
+            if not key:
+                current_app.logger.error(
+                    'ENCRYPTION_KEY is not set; cannot decrypt Google token for user %s',
+                    self.id,
+                )
+                return None
+            f = Fernet(key.encode('utf-8') if isinstance(key, str) else key)
             return f.decrypt(self._google_refresh_token.encode('utf-8')).decode('utf-8')
         except Exception as e:
             from flask import current_app
@@ -75,8 +84,16 @@ class User(db.Model, UserMixin):
         else:
             from flask import current_app
             from cryptography.fernet import Fernet
-            f = Fernet(current_app.config['ENCRYPTION_KEY'].encode('utf-8') if isinstance(current_app.config['ENCRYPTION_KEY'], str) else current_app.config['ENCRYPTION_KEY'])
+            key = current_app.config.get('ENCRYPTION_KEY')
+            if not key:
+                raise RuntimeError('ENCRYPTION_KEY is not set; cannot store Google tokens.')
+            f = Fernet(key.encode('utf-8') if isinstance(key, str) else key)
             self._google_refresh_token = f.encrypt(token.encode('utf-8')).decode('utf-8')
+
+    @property
+    def has_google_token_stored(self) -> bool:
+        """True when a (possibly undecryptable) encrypted token blob is present."""
+        return bool(getattr(self, '_google_refresh_token', None))
 
     def __repr__(self):
         return f"User('{self.username}', '{self.role}')"

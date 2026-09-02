@@ -49,6 +49,87 @@ from .class_notes_spa_helpers import (
 DRIVE_SYNC_STALE_AFTER = timedelta(minutes=10)
 
 
+def ensure_google_token_column_wide() -> None:
+    """Widen user._google_refresh_token so Fernet blobs are not truncated."""
+    from sqlalchemy import inspect as sa_inspect, text
+
+    try:
+        cols = {c['name']: c for c in sa_inspect(db.engine).get_columns('user')}
+        col = cols.get('_google_refresh_token')
+        if not col:
+            return
+        col_type = str(col.get('type') or '').upper()
+        # Already TEXT / unbounded — nothing to do.
+        if 'TEXT' in col_type or 'CLOB' in col_type or col_type in ('', 'NULL'):
+            return
+        if 'VARCHAR' in col_type or 'CHARACTER VARYING' in col_type:
+            dialect = db.engine.dialect.name
+            if dialect == 'postgresql':
+                ddl = 'ALTER TABLE "user" ALTER COLUMN _google_refresh_token TYPE TEXT'
+            elif dialect == 'sqlite':
+                # SQLite ignores VARCHAR length; leave alone.
+                return
+            else:
+                ddl = 'ALTER TABLE user MODIFY _google_refresh_token TEXT'
+            with db.engine.begin() as conn:
+                conn.execute(text(ddl))
+    except Exception:
+        current_app.logger.exception('Could not widen user._google_refresh_token')
+
+
+def _users_for_class_drive(class_obj: Class) -> list[User]:
+    """Users whose Google token may open this class's Drive folder.
+
+    Prefer the person doing the action, then the primary teacher, then any
+    additional teachers — so an admin linking notes still works when the class
+    teacher has Google connected.
+    """
+    seen: set[int] = set()
+    ordered: list[User] = []
+
+    def add(user: User | None) -> None:
+        if user is None or user.id in seen:
+            return
+        seen.add(user.id)
+        ordered.append(user)
+
+    add(User.query.get(getattr(current_user, 'id', None)))
+
+    teacher_ids: list[int] = []
+    if getattr(class_obj, 'teacher_id', None):
+        teacher_ids.append(class_obj.teacher_id)
+    try:
+        for staff in class_obj.additional_teachers.all():
+            if staff and staff.id:
+                teacher_ids.append(staff.id)
+    except Exception:
+        pass
+
+    if teacher_ids:
+        for user in User.query.filter(User.teacher_staff_id.in_(teacher_ids)).all():
+            add(user)
+
+    return ordered
+
+
+def _drive_service_for_class(class_obj: Class):
+    """Build a Drive client using the first usable OAuth token for this class."""
+    ensure_google_token_column_wide()
+    errors: list[str] = []
+    for user in _users_for_class_drive(class_obj):
+        try:
+            return get_drive_service(user), user
+        except DriveAuthError as exc:
+            errors.append(str(exc))
+    if errors:
+        # Prefer the most actionable message from the signed-in user.
+        raise DriveAuthError(errors[0])
+    raise DriveAuthError(
+        'Your portal Google account is not connected in Settings. '
+        'Open Settings and click Connect Google account, then try again.'
+    )
+
+
 def _link_owner(link: ClassNotesDriveLink) -> User | None:
     if link.linked_by:
         return link.linked_by
@@ -268,9 +349,9 @@ def link_drive_folder(
         return None, 'That Drive folder is already linked to this class.', 400
 
     try:
-        service = get_drive_service(current_user)
+        service, oauth_user = _drive_service_for_class(class_obj)
     except DriveAuthError as exc:
-        return None, f'{exc} Connect your Google account in Settings, then try again.', 400
+        return None, str(exc), 400
 
     try:
         meta = get_folder_metadata(service, drive_folder_id)
@@ -284,7 +365,7 @@ def link_drive_folder(
     link.folder_id = folder_id
     link.drive_folder_name = (meta.get('name') or 'Drive folder')[:255]
     link.drive_web_view_link = meta.get('webViewLink')
-    link.linked_by_user_id = current_user.id
+    link.linked_by_user_id = oauth_user.id
     link.include_subfolders = bool(include_subfolders)
     link.is_active = True
     link.needs_reauth = False

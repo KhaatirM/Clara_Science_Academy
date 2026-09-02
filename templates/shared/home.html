@@ -165,13 +165,28 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – August 31, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 2, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>August 31</strong> (<strong>{{ app_version_display }}</strong>) fixes class period attendance showing marked students as absent, lets a class meet in different periods on different days, adds weekly lunch-turn checks plus working days and an edit button for cleaning teams, adds duty assignments for cleaning teams, brings in the Stairway and Lunch Hall areas with Lunch Hall scored on its own checklist, rebuilds the Student Jobs page, lets School Administrators post announcements again, shows teachers their class mailing list, lets you label what a period is used for, and fixes students not moving to the right Google Group when their grade changes.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) fixes syllabus PDF uploads (missing PDF libraries) and Class Notes Drive folder linking that wrongly said Google was not connected, plus earlier August 31 work on attendance, schedules, and Student Jobs.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 2, 2026 - Syllabus + Drive -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>Syllabus &amp; Drive – September 2, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Syllabus PDF upload works again:</strong> Uploading a syllabus failed with &ldquo;No module named PyPDF2&rdquo; because the PDF libraries were commented out of the server requirements. They are installed again, and the outline reader tries pdfplumber, then pypdf.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Drive folder linking:</strong> Class Notes said Google was not connected even when Settings showed it was. Drive now reloads the saved connection (and can use the class teacher&rsquo;s token), widens the encrypted token column that was truncating some saved tokens, and tells you clearly when you still need Settings &rarr; Connect Google &mdash; signing in with Google alone is not enough.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- August 31, 2026 - Attendance fix -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Attendance Fix – August 31, 2026</h6>
@@ -2229,11 +2244,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownAug31_2026_v9')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownAug31_2026_v9', 'true');
+            sessionStorage.setItem('updateModalShownSep2_2026_v1', 'true');
         }, 500);
     }
 });

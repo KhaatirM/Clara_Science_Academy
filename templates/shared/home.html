@@ -167,11 +167,22 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 3, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) fixes repair desk card details and click-to-open, redesigns the Tech repair desk (ticket IDs, active bench vs closed archive), improves repair notes/View/names, scales grading presets, and polishes student assistant grading.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) lets students request redos on past-due work, fixes repair desk card details and click-to-open, redesigns the Tech repair desk, and polishes student assistant grading.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 3, 2026 - Redo requests -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Student redo requests – September 3, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Past-due assignments accept redo requests:</strong> Request Redo used to fail if the assignment still said Active in the database even after it was past due or closed on the student list. It now follows the same past/closed rules as the Assignments tab (including quizzes with no attempts left).
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 3, 2026 - Repair desk card fix -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-ticket-perforated me-2"></i>Tech Devices – Repair cards – September 3, 2026</h6>
@@ -2392,11 +2403,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v5')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep3_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownSep3_2026_v5', 'true');
         }, 500);
     }
 });

@@ -3374,7 +3374,7 @@ def request_extension():
 @login_required
 @student_required
 def request_redo():
-    """Student submits a redo request for an inactive assignment."""
+    """Student submits a redo request for an assignment that is closed for them."""
     try:
         student = Student.query.get_or_404(current_user.student_id)
         assignment_id = request.form.get('assignment_id', type=int)
@@ -3387,9 +3387,35 @@ def request_redo():
         if not assignment_visible_to_students(assignment):
             return jsonify({'success': False, 'message': 'This assignment is not available.'}), 403
 
-        # Must be inactive (students can't submit; they request redo to get a second chance)
-        if assignment.status != 'Inactive':
-            return jsonify({'success': False, 'message': 'Redo requests are only for inactive assignments.'}), 400
+        # Match the student Assignments tab: redo is for work that is closed *for this student*
+        # (past due / effective Inactive, or a quiz with no attempts left). Stored status can
+        # still be Active even after the close date, which used to reject valid requests.
+        from models import AssignmentReopening
+
+        lifecycle = get_effective_assignment_status(assignment)
+        can_submit_now = is_assignment_open_for_student(assignment, student.id)
+        quiz_lockout = False
+        if assignment.assignment_type == 'quiz' and assignment.max_attempts:
+            submissions_count = Submission.query.filter_by(
+                student_id=student.id, assignment_id=assignment.id
+            ).count()
+            active_reopening = AssignmentReopening.query.filter_by(
+                assignment_id=assignment.id, student_id=student.id, is_active=True
+            ).first()
+            effective_max = assignment.max_attempts
+            if active_reopening and active_reopening.additional_attempts > 0:
+                effective_max = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+            attempts_remaining = max(0, (effective_max or 0) - submissions_count) if effective_max else None
+            quiz_lockout = bool(submissions_count) and attempts_remaining == 0
+            if quiz_lockout:
+                can_submit_now = False
+
+        eligible = quiz_lockout or (lifecycle == 'Inactive' and not can_submit_now)
+        if not eligible:
+            return jsonify({
+                'success': False,
+                'message': 'Redo requests are only for assignments that are past due, closed, or out of quiz attempts.',
+            }), 400
 
         # Check enrollment
         enrollment = Enrollment.query.filter_by(

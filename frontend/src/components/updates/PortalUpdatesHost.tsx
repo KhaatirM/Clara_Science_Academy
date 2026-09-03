@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Redo requests work on past-due assignments',
+    body: 'Request Redo failed when an assignment was past due or closed in the student list but still marked Active in the database. Students can now request a redo for work that is past due, closed, or out of quiz attempts.',
+  },
   {
     title: 'Repair desk cards show computer, student, and date',
     body: 'Active bench cards were getting squashed so details disappeared. Cards now keep their full height, show computer / student / opened date, and open the ticket popup when you click them. Inventory also lets you collapse Students pending a device.',
@@ -210,10 +214,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.24'
+  const display = version?.display || 'v 2.520.25'
   const releaseLabel = version?.release_label || 'September 3, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2750
+  const updatesEstimate = version?.updates_estimate ?? 2751
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

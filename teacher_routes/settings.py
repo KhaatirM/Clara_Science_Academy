@@ -37,58 +37,12 @@ def google_connect_account():
     """
     Route 1: Starts the OAuth flow for getting a REFRESH token.
     """
-    try:
-        # Build client config from environment variables
-        client_config = {
-            "web": {
-                "client_id": os.environ.get('GOOGLE_CLIENT_ID'),
-                "client_secret": os.environ.get('GOOGLE_CLIENT_SECRET'),
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "redirect_uris": [url_for('teacher.google_connect_callback', _external=True)]
-            }
-        }
-        
-        # Check if credentials are available
-        if not client_config["web"]["client_id"] or not client_config["web"]["client_secret"]:
-            flash("Google OAuth credentials not configured. Please contact administrator.", "warning")
-            return redirect(url_for('teacher.settings'))
-        
-        flow = Flow.from_client_config(
-            client_config,
-            scopes=[
-                'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile',
-                'openid',
-                'https://www.googleapis.com/auth/classroom.courses',
-                'https://www.googleapis.com/auth/classroom.rosters',
-                'https://www.googleapis.com/auth/forms.responses.readonly',  # Read Google Forms responses
-                'https://www.googleapis.com/auth/forms.body',  # Read/write Google Forms structure (needed for export)
-                'https://www.googleapis.com/auth/drive'  # Create forms in Drive
-            ],
-            redirect_uri=url_for('teacher.google_connect_callback', _external=True)
-        )
-        
-        # 'access_type=offline' is what gives us the refresh_token
-        # 'prompt=consent' forces Google to show the consent screen
-        authorization_url, state = flow.authorization_url(
-            access_type='offline',
-            prompt='consent',
-        )
-        
-        session['oauth_state'] = state
-        from services.google_drive_service import safe_google_oauth_next
-        safe_next = safe_google_oauth_next(request.args.get('next'))
-        if safe_next:
-            session['google_oauth_next'] = safe_next
-        else:
-            session.pop('google_oauth_next', None)
-        return redirect(authorization_url)
-    except Exception as e:
-        current_app.logger.error(f"Error starting Google OAuth flow: {e}")
-        flash(f"An error occurred while connecting to Google: {e}", "danger")
-        return redirect(url_for('teacher.settings'))
+    from utils.google_oauth import begin_google_connect
+
+    return begin_google_connect(
+        next_url=request.args.get('next'),
+        fallback_url='/app/teacher/settings',
+    )
 
 
 @bp.route('/google-account/callback')

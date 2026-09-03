@@ -14,6 +14,7 @@ from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 from decorators import is_teacher_role, has_any_permission
 from utils.user_roles import canonical_role_label, user_has_teacher_spa_entry
 from utils.password_policy import validate_new_password_against_old
+from utils.google_oauth import finish_google_connect, google_oauth_redirect_uri
 from services.login_security import handle_failed_login
 
 # Application imports - lazy import to avoid circular dependency
@@ -914,7 +915,7 @@ def get_google_oauth_flow():
     import tempfile
     
     # Build redirect_uri from current request so it works on live server (Render, etc.)
-    redirect_uri = url_for('auth.google_callback', _external=True)
+    redirect_uri = google_oauth_redirect_uri()
     
     # Try to get client secret from environment variable first (for production)
     client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
@@ -994,7 +995,7 @@ def google_login():
         get_log_activity()(
             user_id=None,
             action='google_login_initiated',
-            details={'redirect_uri': url_for('auth.google_callback', _external=True)},
+            details={'redirect_uri': google_oauth_redirect_uri()},
             ip_address=request.remote_addr,
             user_agent=request.headers.get('User-Agent')
         )
@@ -1041,7 +1042,7 @@ def google_callback():
         
         flow_kwargs = {
             'state': state,
-            'redirect_uri': url_for('auth.google_callback', _external=True),
+            'redirect_uri': google_oauth_redirect_uri(),
         }
         if code_verifier:
             flow_kwargs['code_verifier'] = code_verifier
@@ -1075,6 +1076,10 @@ def google_callback():
         
         # Get user credentials
         credentials = flow.credentials
+
+        # Settings → Connect Google uses this same callback (the URI Google allows).
+        if session.get('google_oauth_mode') == 'connect':
+            return finish_google_connect(credentials)
         
         # Verify the token and get user info
         request_session = google_requests.Request()

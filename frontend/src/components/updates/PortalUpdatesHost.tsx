@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v8'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v9'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Reconnect Google no longer blocked by Google',
+    body: 'Settings → Reconnect Google used a callback URL Google had not allowed, so you saw Access blocked / redirect_uri_mismatch. Connecting now uses the same Google return URL as Sign in.',
+  },
   {
     title: 'Reconnect Google when Drive access expires',
     body: 'A revoked Google token still looked “connected” in Settings, so linking a Class Notes folder failed. Expired tokens are cleared, Class Notes has a Reconnect button, and Settings lets you reconnect even while linked.',
@@ -170,10 +174,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.16'
+  const display = version?.display || 'v 2.520.17'
   const releaseLabel = version?.release_label || 'September 2, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2742
+  const updatesEstimate = version?.updates_estimate ?? 2743
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -279,11 +283,11 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  Google Drive reconnect – {releaseLabel}
+                  Google reconnect – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  If Class Notes says Google access expired, reconnect in Settings or from the notes
-                  page and approve Drive access. Signing in with Google on the login page is not enough.
+                  Reconnect Google in Settings now completes instead of Google blocking the app.
+                  Approve Drive access, then link the Class Notes folder again.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

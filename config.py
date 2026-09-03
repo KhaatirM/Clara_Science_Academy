@@ -179,4 +179,6 @@ class TestingConfig(Config):
 # 3. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables (optional, can use file)
 # 4. Configure authorized redirect URIs in Google Cloud Console:
 #    - http://127.0.0.1:5000/auth/google/callback (development)
-#    - https://your-domain.com/auth/google/callback (production)
+#    - https://clarascienceacademy.org/auth/google/callback (production)
+#    Settings → Connect Google uses this same callback (do not add a separate
+#    /management/google-account/callback URI unless you also change the app).

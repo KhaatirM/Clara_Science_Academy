@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v9'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v10'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Class Notes Drive link says when the Drive API is off',
+    body: 'Linking a folder failed with a sharing error even after Google was reconnected. If Google Drive API is not enabled on the school Cloud project, Class Notes now says so instead of blaming folder sharing.',
+  },
   {
     title: 'Reconnect Google no longer blocked by Google',
     body: 'Settings → Reconnect Google used a callback URL Google had not allowed, so you saw Access blocked / redirect_uri_mismatch. Connecting now uses the same Google return URL as Sign in.',
@@ -174,10 +178,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.17'
+  const display = version?.display || 'v 2.520.18'
   const releaseLabel = version?.release_label || 'September 2, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2743
+  const updatesEstimate = version?.updates_estimate ?? 2744
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -283,11 +287,11 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  Google reconnect – {releaseLabel}
+                  Google Drive API – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  Reconnect Google in Settings now completes instead of Google blocking the app.
-                  Approve Drive access, then link the Class Notes folder again.
+                  Linking a Class Notes folder needs Google Drive API enabled on the school Cloud
+                  project. Reconnecting your account is not enough if that API is off.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

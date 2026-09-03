@@ -55,6 +55,41 @@ class DriveAccessError(Exception):
     """The folder or file could not be read with these credentials."""
 
 
+DRIVE_API_NOT_ENABLED = (
+    'Google Drive API is not enabled for this app. Reconnecting your account will not fix it. '
+    'A tech admin must enable "Google Drive API" in Google Cloud Console '
+    '(APIs & Services → Library), wait a minute, then try linking the folder again.'
+)
+
+
+def _http_error_blob(exc: Exception) -> str:
+    parts = [str(exc)]
+    content = getattr(exc, 'content', None)
+    if content:
+        if isinstance(content, bytes):
+            parts.append(content.decode('utf-8', errors='replace'))
+        else:
+            parts.append(str(content))
+    return ' '.join(parts)
+
+
+def _drive_access_message(exc: Exception, fallback: str) -> str:
+    blob = _http_error_blob(exc).lower()
+    if 'accessnotconfigured' in blob or 'drive api has not been used' in blob:
+        return DRIVE_API_NOT_ENABLED
+    if 'invalid_grant' in blob:
+        return (
+            'Google access has expired or was revoked. '
+            'Click Reconnect Google account, approve Drive access, then try again.'
+        )
+    return fallback
+
+
+def _raise_drive_access(exc: Exception, fallback: str) -> None:
+    current_app.logger.warning('Drive API call failed: %s', exc)
+    raise DriveAccessError(_drive_access_message(exc, fallback)) from exc
+
+
 def _clear_revoked_google_token(user) -> None:
     """Drop a refresh token Google has rejected so Settings shows Connect, not Connected."""
     try:
@@ -178,9 +213,10 @@ def get_file_metadata(service, file_id: str) -> dict[str, Any]:
             .execute()
         )
     except Exception as exc:
-        raise DriveAccessError(
-            'Could not open that Drive item. Make sure it is shared with your school account.'
-        ) from exc
+        _raise_drive_access(
+            exc,
+            'Could not open that Drive item. Make sure it is shared with your school account.',
+        )
 
 
 def get_folder_metadata(service, folder_id: str) -> dict[str, Any]:
@@ -213,7 +249,7 @@ def list_folder_children(service, folder_id: str, *, page_limit: int = 20) -> li
                 .execute()
             )
         except Exception as exc:
-            raise DriveAccessError('Could not list that Drive folder.') from exc
+            _raise_drive_access(exc, 'Could not list that Drive folder.')
 
         children.extend(response.get('files', []) or [])
         page_token = response.get('nextPageToken')
@@ -334,10 +370,11 @@ def convert_office_file_to_google(
             .execute()
         )
     except Exception as exc:
-        raise DriveAccessError(
+        _raise_drive_access(
+            exc,
             'Could not convert that file to Google Docs/Slides. '
-            'Make sure it is shared with your school account.'
-        ) from exc
+            'Make sure it is shared with your school account.',
+        )
     copied_id = copied.get('id')
     if copied_id:
         share_file_with_school_domain(service, copied_id)
@@ -373,7 +410,7 @@ def download_file_bytes(service, file_id: str, *, mime_type: str | None = None) 
             _, done = downloader.next_chunk()
         return buffer.getvalue(), content_type
     except Exception as exc:
-        raise DriveAccessError('Could not download that file from Drive.') from exc
+        _raise_drive_access(exc, 'Could not download that file from Drive.')
 
 
 def partition_children(entries: Iterable[dict[str, Any]]) -> tuple[list[dict], list[dict]]:

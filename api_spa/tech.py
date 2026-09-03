@@ -96,6 +96,7 @@ def tech_spa_repair_tickets_list():
             category=request.args.get("category", ""),
             search=request.args.get("q", ""),
             device_id=device_id,
+            board=request.args.get("board", ""),
         )
     )
 

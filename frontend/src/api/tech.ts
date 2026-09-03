@@ -64,12 +64,14 @@ export async function fetchTechRepairTickets(query: {
   category?: string
   q?: string
   device_id?: number
+  board?: 'active' | 'closed' | ''
 } = {}) {
   const params = new URLSearchParams()
   if (query.status) params.set('status', query.status)
   if (query.category) params.set('category', query.category)
   if (query.q) params.set('q', query.q)
   if (query.device_id != null) params.set('device_id', String(query.device_id))
+  if (query.board) params.set('board', query.board)
   const qs = params.toString()
   return apiFetch<any>(`/api/spa/tech/devices/repair-tickets${qs ? `?${qs}` : ''}`)
 }

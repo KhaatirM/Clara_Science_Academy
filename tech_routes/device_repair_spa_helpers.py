@@ -22,6 +22,33 @@ CATEGORY_LABELS = {
 }
 
 
+def format_ticket_code(ticket_id: int | None) -> str:
+    """Student-facing ticket ID (stable from DB id; no extra column)."""
+    try:
+        return f"RT-{int(ticket_id):04d}"
+    except (TypeError, ValueError):
+        return "RT-????"
+
+
+def _parse_ticket_code_search(search: str) -> int | None:
+    """Return ticket id if search looks like RT-42 / rt42 / #42."""
+    raw = (search or "").strip().upper().replace(" ", "")
+    if not raw:
+        return None
+    if raw.startswith("#"):
+        raw = raw[1:]
+    if raw.startswith("RT-"):
+        raw = raw[3:]
+    elif raw.startswith("RT"):
+        raw = raw[2:]
+    if raw.isdigit():
+        try:
+            return int(raw)
+        except ValueError:
+            return None
+    return None
+
+
 def _fmt(value) -> str | None:
     if not value:
         return None
@@ -105,6 +132,7 @@ def _serialize_ticket(ticket: DeviceRepairTicket) -> dict[str, Any]:
     category = _normalize_category(getattr(ticket, "category", None))
     return {
         "id": ticket.id,
+        "ticket_code": format_ticket_code(ticket.id),
         "device_id": ticket.device_id,
         "title": ticket.title,
         "description": ticket.description,
@@ -112,6 +140,7 @@ def _serialize_ticket(ticket: DeviceRepairTicket) -> dict[str, Any]:
         "category_label": CATEGORY_LABELS.get(category, "Hardware Issues"),
         "severity": ticket.severity,
         "status": ticket.status,
+        "is_closed": ticket.status == "closed",
         "resolution_notes": ticket.resolution_notes,
         "created_display": _fmt(ticket.created_at),
         "updated_display": _fmt(ticket.updated_at),
@@ -128,44 +157,57 @@ def build_repair_tickets_list_payload(
     category: str = "",
     search: str = "",
     device_id: int | None = None,
+    board: str = "",
 ) -> dict[str, Any]:
     status = (status or "").strip().lower()
     category = (category or "").strip().lower()
     search = (search or "").strip()
+    board = (board or "").strip().lower()
 
     q = DeviceRepairTicket.query.options(
         joinedload(DeviceRepairTicket.device).joinedload(StudentDevice.student),
         *_ticket_user_options(),
     )
-    if status in REPAIR_STATUSES:
-        q = q.filter(DeviceRepairTicket.status == status)
     if category in REPAIR_CATEGORIES:
         q = q.filter(DeviceRepairTicket.category == category)
     if device_id is not None:
         q = q.filter(DeviceRepairTicket.device_id == int(device_id))
     if search:
         like = f"%{search}%"
+        code_id = _parse_ticket_code_search(search)
+        filters = [
+            DeviceRepairTicket.title.ilike(like),
+            DeviceRepairTicket.description.ilike(like),
+            StudentDevice.asset_name.ilike(like),
+            StudentDevice.device_name.ilike(like),
+            Student.first_name.ilike(like),
+            Student.last_name.ilike(like),
+            Student.student_id.ilike(like),
+        ]
+        if code_id is not None:
+            filters.append(DeviceRepairTicket.id == code_id)
         q = (
             q.join(StudentDevice, DeviceRepairTicket.device_id == StudentDevice.id)
             .outerjoin(Student, StudentDevice.student_id == Student.id)
-            .filter(
-                or_(
-                    DeviceRepairTicket.title.ilike(like),
-                    DeviceRepairTicket.description.ilike(like),
-                    StudentDevice.asset_name.ilike(like),
-                    StudentDevice.device_name.ilike(like),
-                    Student.first_name.ilike(like),
-                    Student.last_name.ilike(like),
-                    Student.student_id.ilike(like),
-                )
-            )
+            .filter(or_(*filters))
         )
 
+    # Counts across the filtered set before board/status split (so archive badge stays accurate).
+    status_rows = [row[0] for row in q.with_entities(DeviceRepairTicket.status).all()]
+    open_count = sum(1 for s in status_rows if s == "open")
+    in_progress_count = sum(1 for s in status_rows if s == "in_progress")
+    repaired_count = sum(1 for s in status_rows if s == "repaired")
+    closed_count = sum(1 for s in status_rows if s == "closed")
+    active_count = open_count + in_progress_count + repaired_count
+
+    if board == "active":
+        q = q.filter(DeviceRepairTicket.status != "closed")
+    elif board == "closed" or status == "closed":
+        q = q.filter(DeviceRepairTicket.status == "closed")
+    elif status in REPAIR_STATUSES:
+        q = q.filter(DeviceRepairTicket.status == status)
+
     tickets = q.order_by(DeviceRepairTicket.created_at.desc()).all()
-    open_count = sum(1 for t in tickets if t.status == "open")
-    in_progress_count = sum(1 for t in tickets if t.status == "in_progress")
-    repaired_count = sum(1 for t in tickets if t.status == "repaired")
-    closed_count = sum(1 for t in tickets if t.status == "closed")
     hardware_count = sum(1 for t in tickets if _normalize_category(t.category) == "hardware")
     software_count = sum(1 for t in tickets if _normalize_category(t.category) == "software")
 
@@ -178,13 +220,15 @@ def build_repair_tickets_list_payload(
     return {
         "tickets": [_serialize_ticket(t) for t in tickets],
         "counts": {
-            "total": len(tickets),
+            "total": len(status_rows),
+            "active": active_count,
             "open": open_count,
             "in_progress": in_progress_count,
             "repaired": repaired_count,
             "closed": closed_count,
             "hardware": hardware_count,
             "software": software_count,
+            "shown": len(tickets),
         },
         "devices": [_device_brief(d) for d in devices],
         "categories": [

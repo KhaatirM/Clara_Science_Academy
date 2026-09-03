@@ -214,8 +214,109 @@ def resolve_shortcut(service, entry: dict[str, Any]) -> dict[str, Any]:
     return target
 
 
+WORKSPACE_DOMAIN = 'clarascienceacademy.org'
+
+# Office / text files that students cannot open locally — convert to Google Docs/Slides/Sheets.
+OFFICE_TO_GOOGLE_MIME: dict[str, str] = {
+    'application/msword': 'application/vnd.google-apps.document',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': (
+        'application/vnd.google-apps.document'
+    ),
+    'application/rtf': 'application/vnd.google-apps.document',
+    'text/plain': 'application/vnd.google-apps.document',
+    'application/vnd.ms-powerpoint': 'application/vnd.google-apps.presentation',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': (
+        'application/vnd.google-apps.presentation'
+    ),
+    'application/vnd.ms-excel': 'application/vnd.google-apps.spreadsheet',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': (
+        'application/vnd.google-apps.spreadsheet'
+    ),
+}
+
+GOOGLE_APP_OPEN_LABELS: dict[str, str] = {
+    'application/vnd.google-apps.document': 'Open in Google Docs',
+    'application/vnd.google-apps.presentation': 'Open in Google Slides',
+    'application/vnd.google-apps.spreadsheet': 'Open in Google Sheets',
+    'application/vnd.google-apps.drawing': 'Open in Google Drawings',
+}
+
+
 def is_google_native(mime_type: str | None) -> bool:
-    return bool(mime_type) and mime_type in GOOGLE_NATIVE_EXPORTS
+    mime = (mime_type or '').lower()
+    return mime.startswith('application/vnd.google-apps.') and mime != FOLDER_MIME_TYPE
+
+
+def google_convert_mime_for(mime_type: str | None) -> str | None:
+    if not mime_type:
+        return None
+    return OFFICE_TO_GOOGLE_MIME.get(mime_type.lower())
+
+
+def open_label_for_mime(mime_type: str | None) -> str:
+    mime = (mime_type or '').lower()
+    if mime in GOOGLE_APP_OPEN_LABELS:
+        return GOOGLE_APP_OPEN_LABELS[mime]
+    converted = google_convert_mime_for(mime)
+    if converted:
+        return GOOGLE_APP_OPEN_LABELS.get(converted, 'Open')
+    if mime == 'application/pdf' or mime.startswith('image/') or mime.startswith('video/'):
+        return 'Open'
+    return 'Open'
+
+
+def share_file_with_school_domain(service, file_id: str) -> None:
+    """Let anyone on the school Workspace domain view the file (no email blast)."""
+    try:
+        service.permissions().create(
+            fileId=file_id,
+            body={
+                'type': 'domain',
+                'domain': WORKSPACE_DOMAIN,
+                'role': 'reader',
+                'allowFileDiscovery': False,
+            },
+            fields='id',
+            sendNotificationEmail=False,
+            supportsAllDrives=True,
+        ).execute()
+    except Exception:
+        # Already shared, or the owner restricted sharing — Open can still work for staff.
+        current_app.logger.info('Could not domain-share Drive file %s', file_id)
+
+
+def convert_office_file_to_google(
+    service,
+    file_id: str,
+    *,
+    name: str,
+    mime_type: str | None,
+) -> dict[str, Any]:
+    """Copy an Office file into Google Docs/Slides/Sheets in the teacher's Drive."""
+    target_mime = google_convert_mime_for(mime_type)
+    if not target_mime:
+        raise DriveAccessError('That file type cannot be opened as a Google Doc or Slide.')
+    stem = (name or 'Untitled').rsplit('.', 1)[0][:200] or 'Untitled'
+    try:
+        copied = (
+            service.files()
+            .copy(
+                fileId=file_id,
+                body={'name': stem, 'mimeType': target_mime},
+                fields='id,name,mimeType,webViewLink',
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+    except Exception as exc:
+        raise DriveAccessError(
+            'Could not convert that file to Google Docs/Slides. '
+            'Make sure it is shared with your school account.'
+        ) from exc
+    copied_id = copied.get('id')
+    if copied_id:
+        share_file_with_school_domain(service, copied_id)
+    return copied
 
 
 def export_target_for(mime_type: str | None) -> tuple[str, str] | None:

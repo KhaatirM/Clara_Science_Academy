@@ -6,6 +6,7 @@ through the permission-checked download route.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -23,15 +24,20 @@ from models import (
 from services.google_drive_service import (
     DriveAccessError,
     DriveAuthError,
+    convert_office_file_to_google,
     download_file_bytes,
     export_target_for,
     extract_drive_folder_id,
     get_drive_service,
+    get_file_metadata,
     get_folder_metadata,
+    google_convert_mime_for,
     is_google_native,
     list_folder_children,
+    open_label_for_mime,
     partition_children,
     resolve_shortcut,
+    share_file_with_school_domain,
 )
 from utils.class_notes_media import notes_media_kind_for_drive
 
@@ -47,6 +53,9 @@ from .class_notes_spa_helpers import (
 
 # How stale a link may be before opening the notes page refreshes it.
 DRIVE_SYNC_STALE_AFTER = timedelta(minutes=10)
+# Keep in-request Drive walks under Render's ~30s worker timeout.
+DRIVE_SYNC_TIME_BUDGET_SECONDS = 18
+DRIVE_SYNC_MAX_FOLDERS = 40
 
 
 def ensure_google_token_column_wide() -> None:
@@ -112,9 +121,26 @@ def _users_for_class_drive(class_obj: Class) -> list[User]:
     return ordered
 
 
+def _ensure_converted_file_column() -> None:
+    """Add converted_drive_file_id if this database is older than the column."""
+    try:
+        from sqlalchemy import inspect as sa_inspect, text
+
+        cols = {c['name'] for c in sa_inspect(db.engine).get_columns('class_notes_drive_item')}
+        if 'converted_drive_file_id' in cols:
+            return
+        dialect = db.engine.dialect.name
+        col = 'VARCHAR(120)' if dialect != 'postgresql' else 'VARCHAR(120)'
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                f'ALTER TABLE class_notes_drive_item ADD COLUMN converted_drive_file_id {col}'
+            ))
+    except Exception:
+        current_app.logger.exception('Could not add converted_drive_file_id column')
+
+
 def _drive_service_for_class(class_obj: Class):
     """Build a Drive client using the first usable OAuth token for this class."""
-    ensure_google_token_column_wide()
     errors: list[str] = []
     for user in _users_for_class_drive(class_obj):
         try:
@@ -213,7 +239,12 @@ def _upsert_drive_item(
 
 
 def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
-    """Walk the linked Drive folder and refresh mirrored folders and files."""
+    """Walk the linked Drive folder and refresh mirrored folders and files.
+
+    Stops after a short time budget so a large curriculum folder cannot kill
+    the Gunicorn worker. Incomplete imports stay in the database; click Sync
+    again to continue. Stale files are only deleted after a full walk.
+    """
     owner = _link_owner(link)
     if not owner:
         link.needs_reauth = True
@@ -231,6 +262,9 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
 
     seen_file_ids: set[str] = set()
     seen_folder_ids: set[str] = set()
+    deadline = time.monotonic() + DRIVE_SYNC_TIME_BUDGET_SECONDS
+    folders_visited = 0
+    incomplete = False
 
     # (drive folder id, notes folder id, depth of the notes folder)
     base_depth = _folder_depth(link.folder) if link.folder else 0
@@ -240,8 +274,12 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
 
     try:
         while queue:
+            if time.monotonic() >= deadline or folders_visited >= DRIVE_SYNC_MAX_FOLDERS:
+                incomplete = True
+                break
             drive_folder_id, notes_folder_id, depth = queue.pop(0)
-            children = list_folder_children(service, drive_folder_id)
+            folders_visited += 1
+            children = list_folder_children(service, drive_folder_id, page_limit=2)
             resolved = [resolve_shortcut(service, entry) for entry in children]
             subfolders, files = partition_children(resolved)
 
@@ -259,8 +297,6 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
                 if not sub_id or sub_id in seen_folder_ids:
                     continue
                 if depth >= NOTES_MAX_FOLDER_DEPTH:
-                    # Deeper Drive folders collapse into the current level rather
-                    # than breaking the notes depth limit.
                     queue.append((sub_id, notes_folder_id, depth))
                     seen_folder_ids.add(sub_id)
                     continue
@@ -272,6 +308,9 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
                 )
                 seen_folder_ids.add(sub_id)
                 queue.append((sub_id, mirror.id, depth + 1))
+            if queue and time.monotonic() >= deadline:
+                incomplete = True
+                break
     except DriveAccessError as exc:
         db.session.rollback()
         link.last_error = str(exc)
@@ -283,6 +322,15 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
         link.last_error = f'Sync failed: {exc}'
         db.session.commit()
         return False, link.last_error
+
+    if incomplete:
+        db.session.commit()
+        link.last_error = (
+            'Imported some files, but the Drive folder is large. Click Sync now to continue.'
+        )
+        link.needs_reauth = False
+        db.session.commit()
+        return True, link.last_error
 
     # Drop anything that disappeared from Drive since the last sync.
     for stale in ClassNotesDriveItem.query.filter_by(link_id=link.id).all():
@@ -383,15 +431,14 @@ def link_drive_folder(
     db.session.add(link)
     db.session.commit()
 
-    ok, error = sync_drive_link(link)
     payload, _, _ = get_class_notes_payload(class_id)
     return {
         'success': True,
         'message': (
-            f'Linked "{link.drive_folder_name}".'
-            if ok
-            else f'Linked "{link.drive_folder_name}", but the first sync failed: {error}'
+            f'Linked "{link.drive_folder_name}". Importing files next — '
+            'large folders may need a second Sync now.'
         ),
+        'needs_sync': True,
         'drive_link': serialize_drive_link(link),
         **(payload or {}),
     }, None, 201
@@ -413,9 +460,15 @@ def sync_drive_link_by_id(
 
     ok, error = sync_drive_link(link)
     payload, _, _ = get_class_notes_payload(class_id)
+    if ok and error:
+        message = error
+    elif ok:
+        message = 'Drive folder synced.'
+    else:
+        message = error or 'Sync failed.'
     return {
         'success': ok,
-        'message': 'Drive folder synced.' if ok else (error or 'Sync failed.'),
+        'message': message,
         'drive_link': serialize_drive_link(link),
         **(payload or {}),
     }, None, 200 if ok else 400
@@ -451,6 +504,90 @@ def unlink_drive_folder(
         'message': f'Unlinked "{name}". Files remain in Google Drive.',
         **(payload or {}),
     }, None, 200
+
+
+def _google_open_url_for_item(service, item: ClassNotesDriveItem) -> str:
+    """Convert Office files to Docs/Slides/Sheets and return a view URL."""
+    _ensure_converted_file_column()
+    converted_id = getattr(item, 'converted_drive_file_id', None)
+
+    if converted_id:
+        try:
+            meta = get_file_metadata(service, converted_id)
+            url = meta.get('webViewLink')
+            if url:
+                share_file_with_school_domain(service, converted_id)
+                return url
+        except DriveAccessError:
+            item.converted_drive_file_id = None
+
+    if is_google_native(item.mime_type):
+        share_file_with_school_domain(service, item.drive_file_id)
+        if item.web_view_link:
+            return item.web_view_link
+        meta = get_file_metadata(service, item.drive_file_id)
+        url = meta.get('webViewLink')
+        if url:
+            item.web_view_link = url
+            db.session.commit()
+            return url
+
+    if google_convert_mime_for(item.mime_type):
+        copied = convert_office_file_to_google(
+            service,
+            item.drive_file_id,
+            name=item.name,
+            mime_type=item.mime_type,
+        )
+        item.converted_drive_file_id = copied.get('id')
+        url = copied.get('webViewLink')
+        if url:
+            item.web_view_link = url
+        db.session.commit()
+        if url:
+            return url
+
+    share_file_with_school_domain(service, item.drive_file_id)
+    if item.web_view_link:
+        return item.web_view_link
+    meta = get_file_metadata(service, item.drive_file_id)
+    url = meta.get('webViewLink')
+    if url:
+        item.web_view_link = url
+        db.session.commit()
+        return url
+    raise DriveAccessError('Could not open that file in Google Drive.')
+
+
+def open_drive_item(class_id: int, item_id: int) -> tuple[str | None, str | None, int]:
+    """Return a Google Docs/Slides/Sheets (or Drive preview) URL for one file."""
+    ensure_class_notes_tables()
+    class_obj = Class.query.get(class_id)
+    if not class_obj:
+        return None, 'Class not found', 404
+    if not _user_can_view_class_notes(class_obj):
+        return None, 'Access denied', 403
+
+    item = ClassNotesDriveItem.query.filter_by(id=item_id, class_id=class_id).first()
+    if not item:
+        return None, 'File not found', 404
+    link = item.link
+    if not link:
+        return None, 'Drive link not found', 404
+    owner = _link_owner(link)
+    if not owner:
+        return None, 'The Google account for this folder is no longer connected.', 400
+
+    try:
+        service = get_drive_service(owner)
+        url = _google_open_url_for_item(service, item)
+    except DriveAuthError as exc:
+        link.needs_reauth = True
+        db.session.commit()
+        return None, str(exc), 400
+    except DriveAccessError as exc:
+        return None, str(exc), 400
+    return url, None, 200
 
 
 def download_drive_item(class_id: int, item_id: int):

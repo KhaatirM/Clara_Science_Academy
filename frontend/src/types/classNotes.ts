@@ -14,6 +14,8 @@ export type ClassNotesItem = {
   media_kind: ClassNotesMediaKind
   duration_seconds: number | null
   download_url: string
+  open_url?: string | null
+  open_label?: string | null
   web_view_link?: string | null
   uploaded_at: string | null
   uploaded_by: string | null
@@ -63,6 +65,8 @@ export type ClassNotesResponse = {
   root_items: ClassNotesItem[]
   drive_links?: ClassNotesDriveLink[]
   drive_link?: ClassNotesDriveLink
+  needs_sync?: boolean
+  success?: boolean
   can_manage: boolean
   allowed_extensions: string[]
   max_video_seconds: number

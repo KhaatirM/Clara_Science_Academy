@@ -3743,6 +3743,7 @@ class ClassNotesDriveItem(db.Model):
     drive_modified_time = db.Column(db.String(64), nullable=True)
     web_view_link = db.Column(db.String(500), nullable=True)
     is_google_native = db.Column(db.Boolean, nullable=False, default=False)
+    converted_drive_file_id = db.Column(db.String(120), nullable=True)
     synced_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     link = db.relationship('ClassNotesDriveLink', backref=db.backref('items', lazy=True))

@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 2, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) adds class period attendance filters, fixes Class Notes timeouts on large Drive folders, and includes redo score totals, student assignment status, void roster, and Classroom roster improvements.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) links Class Notes Drive folders without crashing the server, opens Word/PowerPoint as Google Docs or Slides, and includes attendance filters plus earlier roster and grading fixes.</p>
                     </div>
                 </div>
 
@@ -182,7 +182,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Class Notes loads without timing out:</strong> Large linked Google Drive folders no longer block the page on open. Use Sync now when you want a fresh copy from Drive.
+                                <strong>Drive files open as Docs/Slides:</strong> Linking a folder no longer times out the server. Word and PowerPoint open in Google Docs or Slides in the browser so students do not need Microsoft Office.
                             </li>
                         </ul>
                     </div>
@@ -2296,11 +2296,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v5')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep2_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownSep2_2026_v5', 'true');
         }, 500);
     }
 });

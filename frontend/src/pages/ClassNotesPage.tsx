@@ -207,7 +207,8 @@ function DrivePanel({
           </button>
           <p className="mb-0 mt-2 text-xs text-hub-muted">
             Uses the Google account connected in Settings (signing in with Google alone is not
-            enough). Files stay in Drive; students see and download them here.
+            enough). Files stay in Drive. Students open Word/PowerPoint as Google Docs or Slides
+            in the browser — they do not need Microsoft Office.
           </p>
         </div>
       </div>
@@ -556,7 +557,15 @@ export function ClassNotesPage() {
         folder_id: selectedKey === 'root' ? null : selectedKey,
       })
       applyNotesResponse(res)
-      setMessage(res.message || 'Drive folder linked.')
+      const linked = res.drive_link
+      if (linked?.id) {
+        setMessage(`Linked “${linked.drive_folder_name}”. Importing files…`)
+        const synced = await syncClassNotesDriveLink(id, linked.id)
+        applyNotesResponse(synced)
+        setMessage(synced.message || 'Drive folder synced.')
+      } else {
+        setMessage(res.message || 'Drive folder linked.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not link that Drive folder')
     } finally {
@@ -876,7 +885,8 @@ export function ClassNotesPage() {
                 {canManage ? (
                   <p className="mb-4 text-xs text-hub-muted">
                     Drop multiple files here or use Upload. Nest folders up to {maxDepth} levels
-                    (Unit → Lesson → Homework / Slides). Videos max 10 minutes.
+                    (Unit → Lesson → Homework / Slides). Drive files open in Google Docs or Slides.
+                    Videos max 10 minutes.
                   </p>
                 ) : null}
 
@@ -887,6 +897,8 @@ export function ClassNotesPage() {
                     {items.map((item) => {
                       const fromDrive = item.source === 'drive'
                       const downloadUrl = item.download_url || classNotesItemDownloadUrl(id, item.id)
+                      const openUrl = item.open_url || item.web_view_link || (item.media_kind === 'video' ? downloadUrl : null)
+                      const openLabel = item.open_label || 'Open'
                       return (
                         <li
                           key={`${item.source || 'upload'}-${item.id}`}
@@ -915,30 +927,22 @@ export function ClassNotesPage() {
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {item.media_kind === 'video' ? (
+                            {openUrl ? (
                               <a
-                                href={downloadUrl}
+                                href={openUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                                className="rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
                               >
-                                Open
+                                {openLabel}
                               </a>
                             ) : null}
-                            <a
-                              href={downloadUrl}
-                              className="rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
-                            >
-                              Download
-                            </a>
-                            {fromDrive && canManage && item.web_view_link ? (
+                            {canManage ? (
                               <a
-                                href={item.web_view_link}
-                                target="_blank"
-                                rel="noreferrer"
+                                href={downloadUrl}
                                 className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
                               >
-                                Open in Drive
+                                Download
                               </a>
                             ) : null}
                             {canManage && !fromDrive ? (

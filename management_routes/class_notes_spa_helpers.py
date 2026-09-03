@@ -194,6 +194,8 @@ def _serialize_item(item: ClassNotesItem) -> dict[str, Any]:
 
 
 def _serialize_drive_item(item: ClassNotesDriveItem) -> dict[str, Any]:
+    from services.google_drive_service import open_label_for_mime
+
     return {
         'id': item.id,
         'source': 'drive',
@@ -208,6 +210,10 @@ def _serialize_drive_item(item: ClassNotesDriveItem) -> dict[str, Any]:
         'download_url': (
             f'/api/spa/classes/{item.class_id}/notes/drive/items/{item.id}/download'
         ),
+        'open_url': (
+            f'/api/spa/classes/{item.class_id}/notes/drive/items/{item.id}/open'
+        ),
+        'open_label': open_label_for_mime(item.mime_type),
         'web_view_link': item.web_view_link,
         'uploaded_at': item.synced_at.isoformat() if item.synced_at else None,
         'uploaded_by': None,

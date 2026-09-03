@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import io
 
-from flask import jsonify, request, send_file
+from flask import jsonify, redirect, request, send_file
 from flask_login import login_required
 
 from management_routes.class_notes_drive_helpers import (
     download_drive_item,
     link_drive_folder,
+    open_drive_item,
     sync_drive_link_by_id,
     unlink_drive_folder,
 )
@@ -221,6 +222,15 @@ def spa_class_notes_drive_unlink(class_id: int, link_id: int):
     if error:
         return jsonify({'error': error}), status
     return jsonify(payload), status
+
+
+@spa_api_blueprint.route('/classes/<int:class_id>/notes/drive/items/<int:item_id>/open')
+@login_required
+def spa_class_notes_drive_item_open(class_id: int, item_id: int):
+    url, error, status = open_drive_item(class_id, item_id)
+    if error:
+        return jsonify({'error': error}), status
+    return redirect(url)
 
 
 @spa_api_blueprint.route('/classes/<int:class_id>/notes/drive/items/<int:item_id>/download')

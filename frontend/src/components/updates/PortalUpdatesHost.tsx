@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v6'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v7'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Class Notes Drive folders link without crashing, and files open in Google Docs/Slides',
+    body: 'Linking a Google Drive folder no longer walks the whole tree in one request (that was killing the server). Word and PowerPoint files open in Google Docs or Slides in the browser so students do not need Microsoft Office. Staff can still download.',
+  },
   {
     title: 'Class Notes opens without blocking the server',
     body: 'The notes page no longer runs database migrations or widens OAuth columns on every first open (that was freezing the worker for 30+ seconds). Folder and root files load in small requests after the page shell appears.',

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Tech repair tickets: notes, View, and creator names',
+    body: 'Resolution notes now save reliably (including a Save notes button). The title column is narrower, View opens full ticket details, and Created by shows first and last name instead of username.',
+  },
   {
     title: 'Score presets match the assignment point total',
     body: 'On paper grading, the 100 / 90 / 80 / 70 / 0 buttons used absolute points, so a 50-point assignment still offered 100. Those presets (and student assistant letter buttons) now scale to the assignment total.',
@@ -198,10 +202,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.21'
+  const display = version?.display || 'v 2.520.22'
   const releaseLabel = version?.release_label || 'September 3, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2747
+  const updatesEstimate = version?.updates_estimate ?? 2748
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

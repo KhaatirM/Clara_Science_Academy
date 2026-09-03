@@ -167,11 +167,30 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 3, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) scales grading score presets to the assignment point total, redesigns student assistant individual grading into teacher-style cards, and polishes the assistant console and class hub.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) improves Tech repair tickets (resolution notes, View details, creator names), scales grading score presets to the assignment point total, redesigns student assistant individual grading into teacher-style cards, and polishes the assistant console and class hub.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 3, 2026 - Tech repair tickets -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-wrench-adjustable me-2"></i>Tech Devices – Repair tickets – September 3, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Resolution notes save correctly:</strong> Notes load into the field, save on blur or with Save notes, and work for any ticket status.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Narrower title + View:</strong> The title column stays compact; View opens full ticket details (description, notes, asset, student, dates).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Created by shows names:</strong> Repair tickets show the creator&rsquo;s first and last name instead of username.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 3, 2026 - Grading presets + assistant -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Grading &amp; Student assistant – September 3, 2026</h6>
@@ -2335,11 +2354,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep3_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep3_2026_v2', 'true');
         }, 500);
     }
 });

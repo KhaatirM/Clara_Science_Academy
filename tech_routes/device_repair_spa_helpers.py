@@ -64,7 +64,34 @@ def _device_brief(device: StudentDevice | None) -> dict[str, Any] | None:
 def _user_brief(user: User | None) -> dict[str, Any] | None:
     if not user:
         return None
-    return {"id": user.id, "username": user.username}
+    first_name = ""
+    last_name = ""
+    staff = getattr(user, "teacher_staff_profile", None)
+    if staff:
+        first_name = (staff.first_name or "").strip()
+        last_name = (staff.last_name or "").strip()
+    if not first_name and not last_name:
+        student = getattr(user, "student_profile", None)
+        if student:
+            first_name = (student.first_name or "").strip()
+            last_name = (student.last_name or "").strip()
+    name = f"{first_name} {last_name}".strip() or (user.username or "Unknown")
+    return {
+        "id": user.id,
+        "username": user.username,
+        "first_name": first_name or None,
+        "last_name": last_name or None,
+        "name": name,
+    }
+
+
+def _ticket_user_options():
+    return (
+        joinedload(DeviceRepairTicket.creator).joinedload(User.teacher_staff_profile),
+        joinedload(DeviceRepairTicket.creator).joinedload(User.student_profile),
+        joinedload(DeviceRepairTicket.resolver).joinedload(User.teacher_staff_profile),
+        joinedload(DeviceRepairTicket.resolver).joinedload(User.student_profile),
+    )
 
 
 def _normalize_category(raw) -> str:
@@ -108,8 +135,7 @@ def build_repair_tickets_list_payload(
 
     q = DeviceRepairTicket.query.options(
         joinedload(DeviceRepairTicket.device).joinedload(StudentDevice.student),
-        joinedload(DeviceRepairTicket.creator),
-        joinedload(DeviceRepairTicket.resolver),
+        *_ticket_user_options(),
     )
     if status in REPAIR_STATUSES:
         q = q.filter(DeviceRepairTicket.status == status)
@@ -204,7 +230,7 @@ def create_repair_ticket(body: dict[str, Any]) -> tuple[dict[str, Any] | None, s
     ticket = (
         DeviceRepairTicket.query.options(
             joinedload(DeviceRepairTicket.device).joinedload(StudentDevice.student),
-            joinedload(DeviceRepairTicket.creator),
+            *_ticket_user_options(),
         )
         .filter_by(id=ticket.id)
         .first()
@@ -227,16 +253,14 @@ def update_repair_ticket_status(
     if new_status not in REPAIR_STATUSES:
         return None, "Invalid status.", 400
 
-    notes = (body.get("resolution_notes") or "").strip()
     ticket.status = new_status
-    if notes:
-        ticket.resolution_notes = notes
+    if "resolution_notes" in body:
+        notes_raw = body.get("resolution_notes")
+        ticket.resolution_notes = (notes_raw or "").strip() or None
 
     if new_status in RESOLVED_STATUSES:
         ticket.resolved_at = datetime.utcnow()
         ticket.resolved_by = current_user.id
-        if notes:
-            ticket.resolution_notes = notes
     elif new_status in ("open", "in_progress"):
         ticket.resolved_at = None
         ticket.resolved_by = None
@@ -245,8 +269,7 @@ def update_repair_ticket_status(
     ticket = (
         DeviceRepairTicket.query.options(
             joinedload(DeviceRepairTicket.device).joinedload(StudentDevice.student),
-            joinedload(DeviceRepairTicket.creator),
-            joinedload(DeviceRepairTicket.resolver),
+            *_ticket_user_options(),
         )
         .filter_by(id=ticket_id)
         .first()

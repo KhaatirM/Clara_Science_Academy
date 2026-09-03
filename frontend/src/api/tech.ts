@@ -89,7 +89,7 @@ export async function createTechRepairTicket(payload: {
 
 export async function updateTechRepairTicketStatus(
   ticketId: number,
-  payload: { status: string; resolution_notes?: string },
+  payload: { status: string; resolution_notes?: string | null },
 ) {
   return apiFetch<any>(`/api/spa/tech/devices/repair-tickets/${ticketId}/status`, {
     method: 'POST',

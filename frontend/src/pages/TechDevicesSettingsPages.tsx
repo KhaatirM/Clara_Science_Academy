@@ -551,12 +551,20 @@ function DevicesRepairTicketsPanel({
   })
   const [saving, setSaving] = useState(false)
   const [statusNotes, setStatusNotes] = useState<Record<number, string>>({})
+  const [viewTicket, setViewTicket] = useState<any | null>(null)
+  const [savingTicketId, setSavingTicketId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchTechRepairTickets({ status, category, q }))
+      const payload = await fetchTechRepairTickets({ status, category, q })
+      setData(payload)
+      const seeded: Record<number, string> = {}
+      for (const ticket of payload?.tickets || []) {
+        seeded[ticket.id] = ticket.resolution_notes || ''
+      }
+      setStatusNotes(seeded)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load repair tickets')
     } finally {
@@ -585,6 +593,11 @@ function DevicesRepairTicketsPanel({
       label: `${d.asset_name}${d.student?.name ? ` · ${d.student.name}` : ''}`,
     }))
   }, [devices])
+
+  function creatorLabel(person: { name?: string; username?: string } | null | undefined) {
+    if (!person) return null
+    return (person.name || person.username || '').trim() || null
+  }
 
   async function submitTicket(e: FormEvent) {
     e.preventDefault()
@@ -618,19 +631,43 @@ function DevicesRepairTicketsPanel({
     }
   }
 
-  async function changeStatus(ticketId: number, nextStatus: string) {
+  async function persistTicket(
+    ticketId: number,
+    nextStatus: string,
+    notesOverride?: string,
+  ) {
+    setSavingTicketId(ticketId)
     setMessage(null)
     try {
-      const notes = (statusNotes[ticketId] || '').trim()
+      const notes =
+        notesOverride !== undefined
+          ? notesOverride.trim()
+          : (statusNotes[ticketId] || '').trim()
       const res = await updateTechRepairTicketStatus(ticketId, {
         status: nextStatus,
-        resolution_notes: notes || undefined,
+        resolution_notes: notes,
       })
-      setMessage(res.message || 'Status updated.')
+      setMessage(res.message || 'Ticket updated.')
+      if (viewTicket?.id === ticketId && res.ticket) {
+        setViewTicket(res.ticket)
+      }
       await load()
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Could not update status')
+      setMessage(err instanceof Error ? err.message : 'Could not update ticket')
+    } finally {
+      setSavingTicketId(null)
     }
+  }
+
+  async function changeStatus(ticketId: number, nextStatus: string) {
+    await persistTicket(ticketId, nextStatus)
+  }
+
+  async function saveResolutionNotes(ticket: any, notesValue?: string) {
+    const notes = (notesValue ?? statusNotes[ticket.id] ?? '').trim()
+    const previous = (ticket.resolution_notes || '').trim()
+    if (notes === previous) return
+    await persistTicket(ticket.id, ticket.status, notes)
   }
 
   return (
@@ -840,7 +877,7 @@ function DevicesRepairTicketsPanel({
       ) : (
         <div className="spa-mgmt-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[64rem] border-collapse text-left text-sm">
+            <table className="w-full min-w-[56rem] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--spa-mgmt-border)] bg-[color-mix(in_srgb,var(--spa-mgmt-accent-soft)_55%,var(--spa-mgmt-surface))]">
                   <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
@@ -849,7 +886,7 @@ function DevicesRepairTicketsPanel({
                   <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
                     Student
                   </th>
-                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                  <th className="w-40 max-w-[10rem] px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
                     Title
                   </th>
                   <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
@@ -897,16 +934,10 @@ function DevicesRepairTicketsPanel({
                         <span className="text-hub-muted">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-top">
-                      <div className="font-semibold text-hub-text">{ticket.title}</div>
-                      <div className="mt-0.5 line-clamp-2 text-xs text-hub-muted">
-                        {ticket.description}
+                    <td className="w-40 max-w-[10rem] px-4 py-3 align-top">
+                      <div className="truncate font-semibold text-hub-text" title={ticket.title}>
+                        {ticket.title}
                       </div>
-                      {ticket.resolution_notes ? (
-                        <div className="mt-1 text-xs text-emerald-800">
-                          Notes: {ticket.resolution_notes}
-                        </div>
-                      ) : null}
                     </td>
                     <td className="px-4 py-3 align-top">
                       <span
@@ -934,15 +965,24 @@ function DevicesRepairTicketsPanel({
                     </td>
                     <td className="px-4 py-3 align-top text-hub-muted">
                       <div>{ticket.created_display || '—'}</div>
-                      {ticket.creator?.username ? (
-                        <div className="mt-0.5 text-xs">by {ticket.creator.username}</div>
+                      {creatorLabel(ticket.creator) ? (
+                        <div className="mt-0.5 text-xs">by {creatorLabel(ticket.creator)}</div>
                       ) : null}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <div className="flex min-w-[12rem] flex-col gap-2">
+                      <div className="flex min-w-[13rem] flex-col gap-2">
+                        <button
+                          type="button"
+                          className="spa-mgmt-btn-ghost px-3 py-2 text-sm"
+                          onClick={() => setViewTicket(ticket)}
+                        >
+                          <i className="bi bi-eye me-1" aria-hidden />
+                          View
+                        </button>
                         <select
                           className={fieldClass}
                           value={ticket.status}
+                          disabled={savingTicketId === ticket.id}
                           onChange={(e) => void changeStatus(ticket.id, e.target.value)}
                         >
                           {REPAIR_STATUSES.map((s) => (
@@ -951,23 +991,27 @@ function DevicesRepairTicketsPanel({
                             </option>
                           ))}
                         </select>
-                        <input
-                          className={fieldClass}
+                        <textarea
+                          className={`${fieldClass} min-h-[4.5rem] resize-y`}
                           placeholder="Resolution notes…"
-                          value={statusNotes[ticket.id] || ''}
+                          rows={2}
+                          value={statusNotes[ticket.id] ?? ''}
+                          disabled={savingTicketId === ticket.id}
                           onChange={(e) =>
                             setStatusNotes((prev) => ({ ...prev, [ticket.id]: e.target.value }))
                           }
-                          onBlur={() => {
-                            const notes = (statusNotes[ticket.id] || '').trim()
-                            if (
-                              notes &&
-                              (ticket.status === 'repaired' || ticket.status === 'closed')
-                            ) {
-                              void changeStatus(ticket.id, ticket.status)
-                            }
+                          onBlur={(e) => {
+                            void saveResolutionNotes(ticket, e.target.value)
                           }}
                         />
+                        <button
+                          type="button"
+                          className="spa-mgmt-btn-primary px-3 py-2 text-sm disabled:opacity-60"
+                          disabled={savingTicketId === ticket.id}
+                          onClick={() => void saveResolutionNotes(ticket)}
+                        >
+                          {savingTicketId === ticket.id ? 'Saving…' : 'Save notes'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -977,6 +1021,134 @@ function DevicesRepairTicketsPanel({
           </div>
         </div>
       )}
+
+      {viewTicket ? (
+        <div
+          className="fixed inset-0 z-[1600] flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[2px]"
+          onClick={() => setViewTicket(null)}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[var(--spa-mgmt-surface)] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`repair-ticket-${viewTicket.id}-title`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-[var(--spa-mgmt-border)] px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">
+                  Repair ticket #{viewTicket.id}
+                </p>
+                <h2
+                  id={`repair-ticket-${viewTicket.id}-title`}
+                  className="mt-1 text-lg font-bold text-hub-text"
+                >
+                  {viewTicket.title}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="spa-mgmt-btn-ghost shrink-0 px-3 py-2 text-sm"
+                onClick={() => setViewTicket(null)}
+                aria-label="Close"
+              >
+                <i className="bi bi-x-lg" aria-hidden />
+              </button>
+            </div>
+            <div className="space-y-4 overflow-y-auto px-5 py-4 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${categoryBadgeClass(viewTicket.category)}`}
+                >
+                  {viewTicket.category_label || viewTicket.category}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${severityBadgeClass(viewTicket.severity)}`}
+                >
+                  {viewTicket.severity}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${statusBadgeClass(viewTicket.status)}`}
+                >
+                  {String(viewTicket.status || '').replace('_', ' ')}
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <div className={labelClass}>Asset</div>
+                  <div className="mt-1 font-semibold text-hub-text">
+                    {viewTicket.device?.asset_name || '—'}
+                  </div>
+                  <div className="text-xs capitalize text-hub-muted">
+                    {viewTicket.device?.device_type || ''}
+                    {viewTicket.device?.color_label ? ` · ${viewTicket.device.color_label}` : ''}
+                  </div>
+                </div>
+                <div>
+                  <div className={labelClass}>Student</div>
+                  <div className="mt-1 font-semibold text-hub-text">
+                    {viewTicket.device?.student?.name || '—'}
+                  </div>
+                  {viewTicket.device?.student ? (
+                    <div className="text-xs text-hub-muted">
+                      Grade {viewTicket.device.student.grade_level ?? '—'}
+                      {viewTicket.device.student.student_id
+                        ? ` · ${viewTicket.device.student.student_id}`
+                        : ''}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <div>
+                <div className={labelClass}>Description</div>
+                <p className="mt-1 whitespace-pre-wrap text-hub-text">
+                  {viewTicket.description || '—'}
+                </p>
+              </div>
+              <div>
+                <div className={labelClass}>Resolution notes</div>
+                <p className="mt-1 whitespace-pre-wrap text-hub-text">
+                  {viewTicket.resolution_notes || 'No resolution notes yet.'}
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <div className={labelClass}>Created</div>
+                  <div className="mt-1 text-hub-text">{viewTicket.created_display || '—'}</div>
+                  {creatorLabel(viewTicket.creator) ? (
+                    <div className="text-xs text-hub-muted">
+                      by {creatorLabel(viewTicket.creator)}
+                    </div>
+                  ) : null}
+                </div>
+                <div>
+                  <div className={labelClass}>Resolved</div>
+                  <div className="mt-1 text-hub-text">{viewTicket.resolved_display || '—'}</div>
+                  {creatorLabel(viewTicket.resolver) ? (
+                    <div className="text-xs text-hub-muted">
+                      by {creatorLabel(viewTicket.resolver)}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              {viewTicket.updated_display ? (
+                <div className="text-xs text-hub-muted">
+                  Last updated {viewTicket.updated_display}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex justify-end border-t border-[var(--spa-mgmt-border)] px-5 py-3">
+              <button
+                type="button"
+                className="spa-mgmt-btn-primary px-4 py-2.5 text-sm"
+                onClick={() => setViewTicket(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }

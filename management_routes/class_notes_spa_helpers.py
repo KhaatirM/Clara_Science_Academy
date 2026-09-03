@@ -353,7 +353,7 @@ def serialize_drive_link(link: ClassNotesDriveLink) -> dict[str, Any]:
 
     item_count = (
         db.session.query(db.func.count(ClassNotesDriveItem.id))
-        .filter_by(drive_link_id=link.id)
+        .filter(ClassNotesDriveItem.link_id == link.id)
         .scalar()
         or 0
     )

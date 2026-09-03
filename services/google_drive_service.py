@@ -74,10 +74,17 @@ def _http_error_blob(exc: Exception) -> str:
 
 
 def _drive_access_message(exc: Exception, fallback: str) -> str:
-    blob = _http_error_blob(exc).lower()
-    if 'accessnotconfigured' in blob or 'drive api has not been used' in blob:
+    blob = _http_error_blob(exc)
+    blob_lower = blob.lower()
+    if 'accessnotconfigured' in blob_lower or 'drive api has not been used' in blob_lower:
+        match = re.search(
+            r'https://console\.(?:developers|cloud)\.google\.com/[^\s"\'<>]+',
+            blob,
+        )
+        if match:
+            return f'{DRIVE_API_NOT_ENABLED} Enable here: {match.group(0)}'
         return DRIVE_API_NOT_ENABLED
-    if 'invalid_grant' in blob:
+    if 'invalid_grant' in blob_lower:
         return (
             'Google access has expired or was revoked. '
             'Click Reconnect Google account, approve Drive access, then try again.'

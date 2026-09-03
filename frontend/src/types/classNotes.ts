@@ -67,7 +67,8 @@ export type ClassNotesResponse = {
   allowed_extensions: string[]
   max_video_seconds: number
   max_folder_depth?: number
-  success?: boolean
+  root_item_count?: number
+  lazy_folder_items?: boolean
   message?: string
   results?: ClassNotesBulkResult[]
 }

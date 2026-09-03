@@ -35,8 +35,21 @@ _NOTES_SCHEMA_ENSURED = False
 
 
 def ensure_class_notes_tables() -> None:
+    """Ensure class-notes tables exist without blocking requests on DDL.
+
+    Production databases already have these tables from ``db.create_all`` /
+    release migrations. Running ``inspect`` + ``ALTER TABLE`` here (especially
+    widening ``user._google_refresh_token``) has caused Gunicorn worker timeouts.
+    """
     global _NOTES_SCHEMA_ENSURED
     if _NOTES_SCHEMA_ENSURED:
+        return
+    _NOTES_SCHEMA_ENSURED = True
+    try:
+        if inspect(db.engine).has_table('class_notes_folder'):
+            return
+    except Exception:
+        current_app.logger.exception('Could not probe class_notes_folder table')
         return
     try:
         ClassNotesFolder.__table__.create(db.engine, checkfirst=True)
@@ -45,13 +58,6 @@ def ensure_class_notes_tables() -> None:
         ClassNotesDriveItem.__table__.create(db.engine, checkfirst=True)
         _ensure_parent_id_column()
         _ensure_folder_drive_columns()
-        try:
-            from management_routes.class_notes_drive_helpers import ensure_google_token_column_wide
-
-            ensure_google_token_column_wide()
-        except Exception:
-            current_app.logger.exception('Could not widen Google token column')
-        _NOTES_SCHEMA_ENSURED = True
     except Exception:
         current_app.logger.exception('Could not ensure class notes tables')
 
@@ -394,7 +400,6 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
     item_counts = _item_counts_by_folder(class_id)
     depth_by_id = _folder_depths(folders)
     tree = _build_folder_tree(folders, item_counts, depth_by_id)
-    root_payload = query_class_notes_folder_items(class_id, None)
 
     try:
         links = (
@@ -405,6 +410,8 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
     except Exception:
         links = []
 
+    root_count = int(item_counts.get(None, 0))
+
     return {
         'class': {
             'id': class_obj.id,
@@ -413,7 +420,8 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
         },
         'folders': tree,
         'folders_flat': _flatten_folders(tree),
-        'root_items': root_payload,
+        'root_items': [],
+        'root_item_count': root_count,
         'drive_links': [serialize_drive_link(link) for link in links],
         'can_manage': can_manage,
         'allowed_extensions': sorted(NOTES_ALLOWED_EXTENSIONS),

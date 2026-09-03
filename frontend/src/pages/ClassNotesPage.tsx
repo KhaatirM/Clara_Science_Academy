@@ -382,10 +382,8 @@ export function ClassNotesPage() {
   const applyNotesResponse = useCallback(
     (res: ClassNotesResponse) => {
       setData(res)
-      setItemCache({ root: res.root_items || [] })
-      if (selectedKey !== 'root') {
-        void loadFolderItems(selectedKey)
-      }
+      setItemCache({})
+      void loadFolderItems(selectedKey)
     },
     [loadFolderItems, selectedKey],
   )
@@ -397,13 +395,14 @@ export function ClassNotesPage() {
     try {
       const next = await fetchClassNotes(id)
       setData(next)
-      setItemCache({ root: next.root_items || [] })
+      setItemCache({})
+      void loadFolderItems('root')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load class notes')
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, loadFolderItems])
 
   useEffect(() => {
     void load()
@@ -743,7 +742,7 @@ export function ClassNotesPage() {
                     Class notes
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-hub-muted">
-                    {data.root_items.length}
+                    {itemCache.root?.length ?? data.root_item_count ?? data.root_items.length}
                   </span>
                 </button>
 

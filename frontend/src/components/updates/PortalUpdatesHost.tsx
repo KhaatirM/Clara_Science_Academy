@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v5'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v6'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Class Notes opens without blocking the server',
+    body: 'The notes page no longer runs database migrations or widens OAuth columns on every first open (that was freezing the worker for 30+ seconds). Folder and root files load in small requests after the page shell appears.',
+  },
   {
     title: 'Class period attendance filters',
     body: 'The Class Period tab on Attendance now has filters for search, teacher, grade, subject, completion status, and sort. Summary stats update to match the filtered list.',

@@ -31,9 +31,13 @@ from utils.class_notes_media import (
 from utils.user_roles import user_has_management_entry_access
 
 NOTES_MAX_FOLDER_DEPTH = 3
+_NOTES_SCHEMA_ENSURED = False
 
 
 def ensure_class_notes_tables() -> None:
+    global _NOTES_SCHEMA_ENSURED
+    if _NOTES_SCHEMA_ENSURED:
+        return
     try:
         ClassNotesFolder.__table__.create(db.engine, checkfirst=True)
         ClassNotesItem.__table__.create(db.engine, checkfirst=True)
@@ -47,6 +51,7 @@ def ensure_class_notes_tables() -> None:
             ensure_google_token_column_wide()
         except Exception:
             current_app.logger.exception('Could not widen Google token column')
+        _NOTES_SCHEMA_ENSURED = True
     except Exception:
         current_app.logger.exception('Could not ensure class notes tables')
 
@@ -203,6 +208,73 @@ def _serialize_drive_item(item: ClassNotesDriveItem) -> dict[str, Any]:
     }
 
 
+def _item_counts_by_folder(class_id: int) -> dict[int | None, int]:
+    """Upload + mirrored Drive file counts per folder (None = class notes root)."""
+    counts: dict[int | None, int] = {}
+    upload_rows = (
+        db.session.query(ClassNotesItem.folder_id, db.func.count(ClassNotesItem.id))
+        .filter_by(class_id=class_id)
+        .group_by(ClassNotesItem.folder_id)
+        .all()
+    )
+    for folder_id, cnt in upload_rows:
+        counts[folder_id] = counts.get(folder_id, 0) + int(cnt or 0)
+    try:
+        drive_rows = (
+            db.session.query(ClassNotesDriveItem.folder_id, db.func.count(ClassNotesDriveItem.id))
+            .filter_by(class_id=class_id)
+            .group_by(ClassNotesDriveItem.folder_id)
+            .all()
+        )
+        for folder_id, cnt in drive_rows:
+            counts[folder_id] = counts.get(folder_id, 0) + int(cnt or 0)
+    except Exception:
+        pass
+    return counts
+
+
+def _folder_depths(folders: list[ClassNotesFolder]) -> dict[int, int]:
+    by_id = {int(f.id): f for f in folders}
+    cache: dict[int, int] = {}
+
+    def depth(folder_id: int) -> int:
+        if folder_id in cache:
+            return cache[folder_id]
+        folder = by_id.get(folder_id)
+        if folder is None or folder.parent_id is None:
+            cache[folder_id] = 1
+        else:
+            cache[folder_id] = depth(int(folder.parent_id)) + 1
+        return cache[folder_id]
+
+    for folder in folders:
+        depth(int(folder.id))
+    return cache
+
+
+def query_class_notes_folder_items(
+    class_id: int,
+    folder_id: int | None,
+) -> list[dict[str, Any]]:
+    """Items for one folder (or class root when folder_id is None)."""
+    upload_items = (
+        ClassNotesItem.query.filter_by(class_id=class_id, folder_id=folder_id)
+        .order_by(ClassNotesItem.uploaded_at.desc())
+        .all()
+    )
+    payload = [_serialize_item(i) for i in upload_items]
+    try:
+        drive_rows = (
+            ClassNotesDriveItem.query.filter_by(class_id=class_id, folder_id=folder_id)
+            .order_by(ClassNotesDriveItem.name.asc())
+            .all()
+        )
+        payload.extend(_serialize_drive_item(row) for row in drive_rows)
+    except Exception:
+        pass
+    return payload
+
+
 def _drive_items_by_folder(class_id: int) -> dict[int | None, list[dict[str, Any]]]:
     """Mirrored Drive files grouped by the notes folder they belong to."""
     grouped: dict[int | None, list[dict[str, Any]]] = {}
@@ -222,15 +294,11 @@ def _drive_items_by_folder(class_id: int) -> dict[int | None, list[dict[str, Any
 def _serialize_folder_node(
     folder: ClassNotesFolder,
     children_by_parent: dict[int | None, list[ClassNotesFolder]],
-    drive_by_folder: dict[int | None, list[dict[str, Any]]] | None = None,
+    item_counts: dict[int | None, int],
+    depth_by_id: dict[int, int],
+    folder_items: dict[int, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
-    folder_items = sorted(
-        folder.items or [],
-        key=lambda i: i.uploaded_at or datetime.min,
-        reverse=True,
-    )
-    items = [_serialize_item(i) for i in folder_items]
-    items.extend((drive_by_folder or {}).get(folder.id, []))
+    items = list((folder_items or {}).get(folder.id, []))
     kids = children_by_parent.get(folder.id, [])
     return {
         'id': folder.id,
@@ -238,12 +306,13 @@ def _serialize_folder_node(
         'name': folder.name,
         'description': folder.description or '',
         'sort_order': folder.sort_order or 0,
-        'depth': _folder_depth(folder),
-        'item_count': len(items),
+        'depth': depth_by_id.get(int(folder.id), 1),
+        'item_count': item_counts.get(folder.id, len(items)),
         'is_drive_folder': bool(getattr(folder, 'drive_folder_id', None)),
         'items': items,
         'children': [
-            _serialize_folder_node(c, children_by_parent, drive_by_folder) for c in kids
+            _serialize_folder_node(c, children_by_parent, item_counts, depth_by_id, folder_items)
+            for c in kids
         ],
         'created_at': folder.created_at.isoformat() if folder.created_at else None,
     }
@@ -251,7 +320,9 @@ def _serialize_folder_node(
 
 def _build_folder_tree(
     folders: list[ClassNotesFolder],
-    drive_by_folder: dict[int | None, list[dict[str, Any]]] | None = None,
+    item_counts: dict[int | None, int],
+    depth_by_id: dict[int, int],
+    folder_items: dict[int, list[dict[str, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
     by_parent: dict[int | None, list[ClassNotesFolder]] = {}
     for f in folders:
@@ -259,10 +330,21 @@ def _build_folder_tree(
     for kids in by_parent.values():
         kids.sort(key=lambda x: (x.sort_order or 0, (x.name or '').lower()))
     roots = by_parent.get(None, [])
-    return [_serialize_folder_node(f, by_parent, drive_by_folder) for f in roots]
+    return [
+        _serialize_folder_node(f, by_parent, item_counts, depth_by_id, folder_items)
+        for f in roots
+    ]
 
 
 def serialize_drive_link(link: ClassNotesDriveLink) -> dict[str, Any]:
+    from .class_notes_drive_helpers import drive_link_is_stale
+
+    item_count = (
+        db.session.query(db.func.count(ClassNotesDriveItem.id))
+        .filter_by(drive_link_id=link.id)
+        .scalar()
+        or 0
+    )
     return {
         'id': link.id,
         'class_id': link.class_id,
@@ -274,8 +356,9 @@ def serialize_drive_link(link: ClassNotesDriveLink) -> dict[str, Any]:
         'last_synced_at': link.last_synced_at.isoformat() if link.last_synced_at else None,
         'last_error': link.last_error,
         'needs_reauth': bool(link.needs_reauth),
+        'is_stale': drive_link_is_stale(link),
         'linked_by': link.linked_by.username if link.linked_by else None,
-        'item_count': len(link.items or []),
+        'item_count': int(item_count),
     }
 
 
@@ -299,28 +382,19 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
 
     can_manage = _user_can_manage_class_notes(class_obj)
 
-    # Imported lazily: the drive helpers import from this module.
-    try:
-        from .class_notes_drive_helpers import refresh_stale_drive_links
-
-        refresh_stale_drive_links(class_id)
-    except Exception:
-        current_app.logger.exception('Could not refresh Drive links for class %s', class_id)
+    # Drive folder sync is explicit (POST …/drive/links/<id>/sync) so opening notes
+    # never blocks on a full Google Drive tree walk — large linked folders were
+    # causing Gunicorn worker timeouts in production.
 
     folders = (
         ClassNotesFolder.query.filter_by(class_id=class_id)
         .order_by(ClassNotesFolder.sort_order.asc(), ClassNotesFolder.name.asc())
         .all()
     )
-    drive_by_folder = _drive_items_by_folder(class_id)
-    tree = _build_folder_tree(folders, drive_by_folder)
-    root_items = (
-        ClassNotesItem.query.filter_by(class_id=class_id, folder_id=None)
-        .order_by(ClassNotesItem.uploaded_at.desc())
-        .all()
-    )
-    root_payload = [_serialize_item(i) for i in root_items]
-    root_payload.extend(drive_by_folder.get(None, []))
+    item_counts = _item_counts_by_folder(class_id)
+    depth_by_id = _folder_depths(folders)
+    tree = _build_folder_tree(folders, item_counts, depth_by_id)
+    root_payload = query_class_notes_folder_items(class_id, None)
 
     try:
         links = (
@@ -345,6 +419,27 @@ def get_class_notes_payload(class_id: int) -> tuple[dict[str, Any] | None, str |
         'allowed_extensions': sorted(NOTES_ALLOWED_EXTENSIONS),
         'max_video_seconds': NOTES_MAX_VIDEO_SECONDS,
         'max_folder_depth': NOTES_MAX_FOLDER_DEPTH,
+        'lazy_folder_items': True,
+    }, None, 200
+
+
+def get_class_notes_folder_items_payload(
+    class_id: int,
+    folder_id: int | None,
+) -> tuple[dict[str, Any] | None, str | None, int]:
+    ensure_class_notes_tables()
+    class_obj = Class.query.get(class_id)
+    if not class_obj:
+        return None, 'Class not found', 404
+    if not _user_can_view_class_notes(class_obj):
+        return None, 'Access denied', 403
+    if folder_id is not None:
+        folder = ClassNotesFolder.query.filter_by(id=folder_id, class_id=class_id).first()
+        if not folder:
+            return None, 'Folder not found', 404
+    return {
+        'folder_id': folder_id,
+        'items': query_class_notes_folder_items(class_id, folder_id),
     }, None, 200
 
 

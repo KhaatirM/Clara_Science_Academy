@@ -402,6 +402,8 @@ export function AssignmentViewPage() {
 
       <VoidAssignmentModal
         target={voidTarget}
+        classId={numericClassId}
+        workspaceScope={workspaceScope}
         students={students}
         onClose={() => setVoidTarget(null)}
         onSuccess={(msg) => {

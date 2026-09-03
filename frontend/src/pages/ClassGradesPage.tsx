@@ -419,6 +419,7 @@ export function ClassGradesPage() {
 
       <VoidAssignmentModal
         target={voidTarget}
+        classId={id}
         students={data?.rows.map((r) => r.student) ?? []}
         onClose={() => setVoidTarget(null)}
         onSuccess={(msg) => {

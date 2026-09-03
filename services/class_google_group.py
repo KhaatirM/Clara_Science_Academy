@@ -16,7 +16,7 @@ import threading
 from flask import current_app
 
 from extensions import db
-from models import Class, Enrollment, Student, TeacherStaff, User
+from models import Class, TeacherStaff, User
 from services.google_directory_service import (
     create_google_group,
     delete_google_group,
@@ -28,13 +28,22 @@ CLASS_GROUP_DOMAIN = "clarascienceacademy.org"
 
 
 def class_needs_google_integration(class_obj: Class | None) -> bool:
-    """K–2 classes do not need Google Groups or Classroom (no student Gmail yet)."""
+    """Grade 3+ **core catalog** classes get Google Groups and Classroom.
+
+    K–2 are excluded (no student Workspace accounts). Electives and other
+    manually created classes (e.g. Programming) are excluded — only rows that
+    match School Year Class Setup's core catalog are synced.
+    """
     if class_obj is None:
         return False
     levels = class_obj.get_grade_levels() if hasattr(class_obj, "get_grade_levels") else []
     if not levels:
-        return True
-    return any(g > 2 for g in levels)
+        return False
+    if not any(g > 2 for g in levels):
+        return False
+    from services.school_year_class_setup import class_is_core_catalog_class
+
+    return class_is_core_catalog_class(class_obj)
 
 # School-wide Workspace groups — never delete during year-end class group cleanup.
 PROTECTED_SCHOOL_GROUP_EMAILS = frozenset({
@@ -92,25 +101,15 @@ def _workspace_emails_for_staff(ts: TeacherStaff | None) -> list[str]:
 
 def collect_class_group_member_emails(class_obj: Class) -> list[str]:
     """Active enrolled students (with school email) + primary/additional/substitute teachers."""
+    from management_routes.students import _student_workspace_email
+    from utils.student_roster import active_class_roster_students_query
+
     raw: list[str] = []
 
-    roster_rows = (
-        db.session.query(User.google_workspace_email)
-        .join(Student, Student.id == User.student_id)
-        .join(Enrollment, Enrollment.student_id == Student.id)
-        .filter(
-            Enrollment.class_id == class_obj.id,
-            Enrollment.is_active == True,
-            Student.is_deleted == False,
-            Student.marked_for_removal == False,
-            Student.is_active == True,
-            User.google_workspace_email.isnot(None),
-        )
-        .all()
-    )
-    for r in roster_rows:
-        if r and r[0]:
-            raw.append(str(r[0]).strip())
+    for student in active_class_roster_students_query(class_obj.id).all():
+        e = (_student_workspace_email(student) or "").strip()
+        if e:
+            raw.append(e)
 
     if class_obj.teacher:
         raw.extend(_workspace_emails_for_staff(class_obj.teacher))
@@ -153,6 +152,18 @@ def provision_and_sync_class_google_group(class_id: int) -> bool:
 
     if not class_needs_google_integration(c):
         return True
+
+    # Keep Group membership aligned with Classroom: fill blank school emails first.
+    try:
+        from services.class_google_classroom import ensure_roster_workspace_emails
+
+        ensure_roster_workspace_emails(c)
+    except Exception as exc:
+        current_app.logger.warning(
+            "Could not backfill workspace emails before Group sync for class %s: %s",
+            class_id,
+            exc,
+        )
 
     group_email_stored = (c.google_group_email or "").strip()
 

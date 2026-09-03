@@ -338,6 +338,31 @@ def _core_class_ids_for_grade(school_year_id: int, grade_level: int) -> set[int]
     return ids
 
 
+def class_is_core_catalog_class(class_obj: Class | None) -> bool:
+    """
+    True when ``class_obj`` matches a School Year Class Setup core catalog row
+    (Language Arts, Math, Science, History/Social Studies, Art/Music, PE, etc.).
+
+    Electives and manually added classes (e.g. Programming) return False.
+    """
+    if class_obj is None:
+        return False
+    if is_elective_subject(getattr(class_obj, 'subject', None)):
+        return False
+    levels = _class_grade_levels(class_obj)
+    if not levels:
+        return False
+    for grade in levels:
+        for spec in catalog_entries_for_grade(int(grade)):
+            entry = {
+                'subject': spec['subject'],
+                'match_tokens': spec['match_tokens'],
+            }
+            if _entry_matches_class(class_obj, int(grade), entry):
+                return True
+    return False
+
+
 def resync_student_core_enrollments_for_grade_change(
     student: Student,
     *,

@@ -73,7 +73,6 @@ def _teacher_school_email(teacher: TeacherStaff) -> str | None:
 
 def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | None, str | None, int]:
     from .routes import (
-        _get_points_earned,
         calculate_gpa,
         get_letter_grade,
         get_student_assignment_status,
@@ -157,7 +156,9 @@ def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | 
                     if isinstance(grade.grade_data, str)
                     else grade.grade_data
                 )
-                points_earned = _get_points_earned(gdata)
+                from student_routes.routes import _parse_numeric_grade_score
+
+                points_earned = _parse_numeric_grade_score(gdata)
                 if points_earned is not None:
                     points_earned = float(points_earned)
                     total_points = (

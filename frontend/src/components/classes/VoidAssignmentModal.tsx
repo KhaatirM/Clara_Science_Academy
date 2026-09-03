@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getCsrfToken } from '../../api/client'
 import type { StudentBrief } from '../../types/classDetail'
+import type { AssignmentWorkspaceScope } from '../../utils/assignmentWorkspaceScope'
 
 export type VoidAssignmentTarget = {
   id: number
@@ -10,14 +11,43 @@ export type VoidAssignmentTarget = {
 
 type VoidScope = 'all' | 'specific'
 
+type EnrolledStudentJson = {
+  id: number
+  first_name?: string
+  last_name?: string
+  display_name?: string
+  grade_level?: number | null
+  student_id?: string | null
+}
+
+function toStudentBrief(raw: EnrolledStudentJson): StudentBrief {
+  const first = raw.first_name || ''
+  const last = raw.last_name || ''
+  const display = (raw.display_name || `${first} ${last}`).trim() || `Student ${raw.id}`
+  return {
+    id: raw.id,
+    student_id: raw.student_id ?? null,
+    first_name: first,
+    last_name: last,
+    display_name: display,
+    grade_level: raw.grade_level ?? null,
+    initial: `${(first || '?')[0]}${(last || '?')[0]}`.toUpperCase(),
+    photo_url: null,
+  }
+}
+
 export function VoidAssignmentModal({
   target,
-  students,
+  students: studentsProp = [],
+  classId,
+  workspaceScope = 'management',
   onClose,
   onSuccess,
 }: {
   target: VoidAssignmentTarget | null
-  students: StudentBrief[]
+  students?: StudentBrief[]
+  classId?: number | null
+  workspaceScope?: AssignmentWorkspaceScope
   onClose: () => void
   onSuccess: (message: string) => void
 }) {
@@ -26,6 +56,8 @@ export function VoidAssignmentModal({
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [students, setStudents] = useState<StudentBrief[]>(studentsProp)
+  const [loadingStudents, setLoadingStudents] = useState(false)
 
   useEffect(() => {
     if (!target) return
@@ -34,7 +66,53 @@ export function VoidAssignmentModal({
     setSelectedIds([])
     setError(null)
     setSubmitting(false)
-  }, [target])
+
+    if (!classId) {
+      setStudents(studentsProp)
+      setLoadingStudents(false)
+      return
+    }
+
+    let cancelled = false
+    setLoadingStudents(true)
+    const url =
+      workspaceScope === 'teacher'
+        ? `/teacher/class/${classId}/enrolled-students-json`
+        : `/management/class/${classId}/enrolled-students-json`
+
+    void (async () => {
+      try {
+        const response = await fetch(url, {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        const data = (await response.json()) as {
+          success?: boolean
+          students?: EnrolledStudentJson[]
+          message?: string
+        }
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Could not load enrolled students')
+        }
+        if (!cancelled) {
+          setStudents((data.students || []).map(toStudentBrief))
+        }
+      } catch {
+        if (!cancelled) {
+          // Fall back to any students the parent already had (e.g. grades matrix rows).
+          setStudents(studentsProp)
+        }
+      } finally {
+        if (!cancelled) setLoadingStudents(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // Intentionally omit studentsProp: callers often pass a fresh [] each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id, classId, workspaceScope])
 
   if (!target) return null
 
@@ -59,7 +137,11 @@ export function VoidAssignmentModal({
       if (scope === 'specific') {
         selectedIds.forEach((id) => formData.append('student_ids', String(id)))
       }
-      const response = await fetch(`/management/void-assignment/${target.id}`, {
+      const voidUrl =
+        workspaceScope === 'teacher'
+          ? `/teacher/void-assignment/${target.id}`
+          : `/management/void-assignment/${target.id}`
+      const response = await fetch(voidUrl, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
@@ -147,7 +229,9 @@ export function VoidAssignmentModal({
             <div>
               <p className="mb-2 text-sm font-bold text-hub-text">Select students</p>
               <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-3">
-                {students.length ? (
+                {loadingStudents ? (
+                  <p className="text-sm text-hub-muted">Loading enrolled students…</p>
+                ) : students.length ? (
                   <ul className="space-y-2">
                     {students.map((student) => (
                       <li key={student.id}>
@@ -201,7 +285,7 @@ export function VoidAssignmentModal({
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={submitting}
+            disabled={submitting || (scope === 'specific' && loadingStudents)}
             className="inline-flex items-center gap-1.5 rounded-full bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60"
           >
             {submitting ? (

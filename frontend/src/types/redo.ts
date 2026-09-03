@@ -12,6 +12,7 @@ export interface RedoStudentRef {
 export interface RedoAssignmentRef {
   id: number | null
   title: string
+  total_points?: number | null
 }
 
 export interface RedoClassRef {
@@ -45,9 +46,13 @@ export interface ActiveRedoItem {
   id: number
   assignment_id: number
   reason: string
+  total_points: number
   original_grade: number | null
+  original_percent: number | null
   redo_grade: number | null
+  redo_percent: number | null
   final_grade: number | null
+  final_percent: number | null
   was_redo_late: boolean
   is_used: boolean
   is_overdue: boolean

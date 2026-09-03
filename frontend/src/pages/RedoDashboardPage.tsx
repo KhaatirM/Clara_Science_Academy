@@ -48,6 +48,22 @@ function statusLabel(status: string) {
   return 'Pending'
 }
 
+/** Redo scores are stored as points; show percent using the assignment's total. */
+function formatRedoScore(points: number | null | undefined, percent: number | null | undefined, totalPoints: number | null | undefined) {
+  if (points == null && percent == null) return '—'
+  const total = totalPoints != null && totalPoints > 0 ? totalPoints : 100
+  const pct =
+    percent != null && !Number.isNaN(Number(percent))
+      ? Number(percent)
+      : points != null
+        ? Math.round((Number(points) / total) * 1000) / 10
+        : null
+  if (pct == null) return '—'
+  if (total === 100) return `${pct}%`
+  const ptsLabel = points != null ? String(points) : '—'
+  return `${ptsLabel}/${total} (${pct}%)`
+}
+
 function matchesFilters(
   item: { class: { id: number | null }; search_text: string; status?: string },
   classId: string,
@@ -323,12 +339,16 @@ export function RedoDashboardPage() {
                   r.student.display_name,
                   r.assignment.title,
                   r.class.name,
-                  r.original_grade != null ? `${r.original_grade}%` : 'N/A',
+                  r.original_grade != null
+                    ? formatRedoScore(r.original_grade, r.original_percent, r.total_points ?? r.assignment.total_points)
+                    : 'N/A',
                   <span key={`st-${r.id}`} className={`rounded-full px-2 py-0.5 text-xs font-bold ${statusBadge(r.status, r.is_overdue)}`}>
                     {statusLabel(r.status)}
                   </span>,
                   formatDate(r.redo_deadline),
-                  r.final_grade != null ? `${r.final_grade}%` : '—',
+                  r.final_grade != null
+                    ? formatRedoScore(r.final_grade, r.final_percent, r.total_points ?? r.assignment.total_points)
+                    : '—',
                   <div key={`act-${r.id}`} className="flex gap-1">
                     {r.grade_url ? (
                       <a href={r.grade_url} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">

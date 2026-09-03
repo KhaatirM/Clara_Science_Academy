@@ -1,8 +1,23 @@
 import { apiFetch, getCsrfToken } from './client'
-import type { ClassNotesResponse } from '../types/classNotes'
+import type { ClassNotesItem, ClassNotesResponse } from '../types/classNotes'
+
+export type ClassNotesFolderItemsResponse = {
+  folder_id: number | null
+  items: ClassNotesItem[]
+}
 
 export async function fetchClassNotes(classId: number) {
   return apiFetch<ClassNotesResponse>(`/api/spa/classes/${classId}/notes`)
+}
+
+export async function fetchClassNotesFolderItems(
+  classId: number,
+  folderId: number | 'root',
+) {
+  const segment = folderId === 'root' ? 'root' : String(folderId)
+  return apiFetch<ClassNotesFolderItemsResponse>(
+    `/api/spa/classes/${classId}/notes/folders/${segment}/items`,
+  )
 }
 
 export async function createClassNotesFolder(

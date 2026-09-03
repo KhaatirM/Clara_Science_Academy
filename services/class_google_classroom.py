@@ -10,7 +10,7 @@ from __future__ import annotations
 from flask import current_app
 
 from extensions import db
-from models import Class, Enrollment, Student, TeacherStaff, User
+from models import Class, TeacherStaff, User
 from services.class_google_group import (
     class_needs_google_integration,
     primary_teacher_group_owner_email,
@@ -63,22 +63,20 @@ def collect_classroom_teacher_emails(class_obj: Class) -> list[str]:
 
 
 def collect_classroom_student_emails(class_obj: Class) -> list[str]:
-    rows = (
-        db.session.query(User.google_workspace_email)
-        .join(Student, Student.id == User.student_id)
-        .join(Enrollment, Enrollment.student_id == Student.id)
-        .filter(
-            Enrollment.class_id == class_obj.id,
-            Enrollment.is_active.is_(True),
-            Student.is_deleted.is_(False),
-            User.google_workspace_email.isnot(None),
-        )
-        .all()
-    )
+    """School emails for active enrolled students who can be added to Classroom.
+
+    Prefer ``User.google_workspace_email``. When that field is blank but the student
+    has a portal account and a generated school address, use the generated address
+    so roster sync matches Directory naming (common for students rostered before
+    Workspace email was backfilled onto their User row).
+    """
+    from management_routes.students import _student_workspace_email
+    from utils.student_roster import active_class_roster_students_query
+
     seen: set[str] = set()
     out: list[str] = []
-    for r in rows:
-        e = (str(r[0]).strip() if r and r[0] else "")
+    for student in active_class_roster_students_query(class_obj.id).all():
+        e = (_student_workspace_email(student) or "").strip()
         if not e:
             continue
         low = e.lower()
@@ -92,26 +90,62 @@ def collect_classroom_student_emails(class_obj: Class) -> list[str]:
 def students_missing_workspace_email(class_obj: Class) -> list[str]:
     """Enrolled students that cannot be added to Classroom because they have no school email.
 
-    These are silently excluded from the roster query, which is the usual reason a
-    class looks like it is "missing students" in Google Classroom.
+    After ``ensure_roster_workspace_emails``, this should mainly catch students with
+    no portal User / no generatable address (e.g. K–2 without login).
     """
-    rows = (
-        db.session.query(Student.first_name, Student.last_name)
-        .join(Enrollment, Enrollment.student_id == Student.id)
-        .outerjoin(User, User.student_id == Student.id)
-        .filter(
-            Enrollment.class_id == class_obj.id,
-            Enrollment.is_active.is_(True),
-            Student.is_deleted.is_(False),
-            db.or_(
-                User.id.is_(None),
-                User.google_workspace_email.is_(None),
-                User.google_workspace_email == "",
-            ),
+    from management_routes.students import _student_workspace_email
+    from utils.student_roster import active_class_roster_students_query
+
+    missing: list[str] = []
+    for student in active_class_roster_students_query(class_obj.id).all():
+        if (_student_workspace_email(student) or "").strip():
+            continue
+        missing.append(
+            f"{(student.first_name or '').strip()} {(student.last_name or '').strip()}".strip()
+            or f"Student {student.id}"
         )
-        .all()
-    )
-    return [f"{(r[0] or '').strip()} {(r[1] or '').strip()}".strip() for r in rows]
+    return missing
+
+
+def ensure_roster_workspace_emails(class_obj: Class) -> int:
+    """Persist blank ``User.google_workspace_email`` values for enrolled students.
+
+    Returns how many User rows were updated. Commits when any were filled.
+    """
+    from management_routes.students import _ensure_student_google_workspace_email
+    from utils.student_roster import active_class_roster_students_query
+
+    filled = 0
+    for student in active_class_roster_students_query(class_obj.id).all():
+        try:
+            if _ensure_student_google_workspace_email(student):
+                filled += 1
+        except Exception as exc:
+            current_app.logger.warning(
+                "Could not ensure workspace email for student %s in class %s: %s",
+                getattr(student, "id", None),
+                class_obj.id,
+                exc,
+            )
+    if not filled:
+        return 0
+    try:
+        db.session.commit()
+        current_app.logger.info(
+            "Filled google_workspace_email for %d enrolled student(s) in class %s (%s)",
+            filled,
+            class_obj.id,
+            class_obj.name,
+        )
+        return filled
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error(
+            "Failed committing workspace email backfill for class %s: %s",
+            class_obj.id,
+            exc,
+        )
+        return 0
 
 
 def provision_and_sync_class_google_classroom(class_id: int) -> bool:
@@ -136,6 +170,10 @@ def provision_and_sync_class_google_classroom(class_id: int) -> bool:
             class_id,
         )
         return False
+
+    # Students rostered on the site often have a portal User but a blank
+    # google_workspace_email; fill from naming rules before collecting the roster.
+    ensure_roster_workspace_emails(c)
 
     course_id = (c.google_classroom_id or "").strip() or None
     if course_id:

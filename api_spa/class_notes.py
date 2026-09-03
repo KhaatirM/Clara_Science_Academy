@@ -18,6 +18,7 @@ from management_routes.class_notes_spa_helpers import (
     delete_class_notes_folder,
     delete_class_notes_item,
     download_class_notes_item,
+    get_class_notes_folder_items_payload,
     get_class_notes_payload,
     update_class_notes_folder,
     upload_class_notes_item,
@@ -31,6 +32,22 @@ from . import spa_api_blueprint
 @login_required
 def spa_class_notes_get(class_id: int):
     payload, error, status = get_class_notes_payload(class_id)
+    if error:
+        return jsonify({'error': error}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route('/classes/<int:class_id>/notes/folders/<folder_id>/items')
+@login_required
+def spa_class_notes_folder_items(class_id: int, folder_id: str):
+    if folder_id == 'root':
+        resolved_folder_id = None
+    else:
+        try:
+            resolved_folder_id = int(folder_id)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid folder id.'}), 400
+    payload, error, status = get_class_notes_folder_items_payload(class_id, resolved_folder_id)
     if error:
         return jsonify({'error': error}), status
     return jsonify(payload)

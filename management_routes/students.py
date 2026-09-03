@@ -66,10 +66,13 @@ def enrolled_students_payload_for_class(class_id, *, include_archived_fallback=T
         if student.id in seen_ids:
             continue
         seen_ids.add(student.id)
+        first = student.first_name or ''
+        last = student.last_name or ''
         students_data.append({
             'id': student.id,
-            'first_name': student.first_name or '',
-            'last_name': student.last_name or '',
+            'first_name': first,
+            'last_name': last,
+            'display_name': f'{first} {last}'.strip(),
             'grade_level': student.grade_level,
             'student_id': student.student_id,
             'enrollment_active': bool(enrollment.is_active),

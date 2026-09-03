@@ -295,6 +295,25 @@ def _recorded_grade_scores(redos: list[AssignmentRedo]) -> dict[tuple[int, int],
     return scores
 
 
+def _assignment_total_points(assignment) -> float:
+    try:
+        total = float(getattr(assignment, "total_points", None) or 0)
+    except (TypeError, ValueError):
+        total = 0.0
+    return total if total > 0 else 100.0
+
+
+def _points_to_percent(points: float | None, total_points: float) -> float | None:
+    if points is None:
+        return None
+    try:
+        pts = float(points)
+        total = float(total_points) if total_points and float(total_points) > 0 else 100.0
+        return round(pts / total * 100.0, 1)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
 def _serialize_redo(
     redo: AssignmentRedo,
     *,
@@ -304,11 +323,13 @@ def _serialize_redo(
     assignment = redo.assignment
     student = redo.student
     class_info = assignment.class_info if assignment else None
+    total_points = _assignment_total_points(assignment)
 
     final_grade = redo.final_grade
     if final_grade is None and recorded_scores is not None:
         final_grade = recorded_scores.get((redo.assignment_id, redo.student_id))
     has_final = final_grade is not None
+    redo_grade = redo.redo_grade if redo.redo_grade is not None else final_grade
 
     is_overdue = bool(
         (not redo.is_used)
@@ -328,9 +349,14 @@ def _serialize_redo(
         "id": redo.id,
         "assignment_id": redo.assignment_id,
         "reason": redo.reason or "",
+        # Scores are stored as points earned (not percent). Expose both.
+        "total_points": total_points,
         "original_grade": redo.original_grade,
-        "redo_grade": redo.redo_grade if redo.redo_grade is not None else final_grade,
+        "original_percent": _points_to_percent(redo.original_grade, total_points),
+        "redo_grade": redo_grade,
+        "redo_percent": _points_to_percent(redo_grade, total_points),
         "final_grade": final_grade,
+        "final_percent": _points_to_percent(final_grade, total_points),
         "was_redo_late": bool(redo.was_redo_late),
         "is_used": bool(redo.is_used),
         "is_overdue": is_overdue,
@@ -345,6 +371,7 @@ def _serialize_redo(
         "assignment": {
             "id": assignment.id if assignment else None,
             "title": assignment.title if assignment else "Unknown",
+            "total_points": total_points,
         },
         "class": {
             "id": class_info.id if class_info else None,
@@ -459,10 +486,10 @@ def query_redo_dashboard() -> dict[str, Any]:
 
     improvements: list[float] = []
     for row in serialized_redos:
-        original = row.get("original_grade")
-        final = row.get("final_grade")
-        if original is not None and final is not None:
-            improvement = final - original
+        original_pct = row.get("original_percent")
+        final_pct = row.get("final_percent")
+        if original_pct is not None and final_pct is not None:
+            improvement = float(final_pct) - float(original_pct)
             if improvement > 0:
                 improvements.append(improvement)
     improvement_rate = round(sum(improvements) / len(improvements), 1) if improvements else 0

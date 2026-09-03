@@ -1177,6 +1177,58 @@ def get_enrolled_students_json(class_id):
         current_app.logger.exception('get_enrolled_students_json failed for class %s', class_id)
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@bp.route('/void-assignment/<int:assignment_id>', methods=['POST'])
+@login_required
+@teacher_required
+def void_assignment_for_students(assignment_id):
+    """Void an assignment for all or specific students (SPA void modal; teacher-authorized classes)."""
+    try:
+        from management_routes.students import _void_one_assignment_impl
+
+        assignment_type = request.form.get('assignment_type', 'individual')
+        student_ids = request.form.getlist('student_ids')
+        reason = request.form.get('reason', 'Voided by teacher')
+        void_all = request.form.get('void_all', '').lower() == 'true'
+        void_type = request.form.get('void_type', '')
+        if not void_all and void_type == 'all':
+            void_all = True
+
+        if assignment_type == 'group':
+            ga = GroupAssignment.query.get_or_404(assignment_id)
+            class_obj = Class.query.get(ga.class_id) if ga.class_id else None
+        else:
+            assignment = Assignment.query.get_or_404(assignment_id)
+            class_obj = assignment.class_info
+        if not class_obj or not is_authorized_for_class(class_obj):
+            return jsonify({'success': False, 'message': 'Not authorized for this class.'}), 403
+
+        voided_count, affected = _void_one_assignment_impl(
+            assignment_id, assignment_type, student_ids, void_all, reason
+        )
+        db.session.commit()
+        from utils.quarter_grade_calculator import update_quarter_grade
+
+        seen = set()
+        for (sid, cid, syid, q) in affected:
+            key = (sid, cid, q)
+            if key not in seen:
+                seen.add(key)
+                try:
+                    update_quarter_grade(
+                        student_id=int(sid), class_id=cid, school_year_id=syid, quarter=q, force=True
+                    )
+                except Exception as e:
+                    current_app.logger.warning(
+                        'Could not update quarter grade for student %s after teacher void: %s', sid, e
+                    )
+        message = f'Voided assignment for {voided_count} grade(s).'
+        return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception('teacher void_assignment_for_students failed for %s', assignment_id)
+        return jsonify({'success': False, 'message': f'Error voiding assignment: {str(e)}'}), 500
+
+
 @bp.route('/bulk-void-assignments', methods=['POST'])
 @login_required
 @teacher_required

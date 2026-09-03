@@ -94,7 +94,7 @@ def _type_label(assignment_type: str | None) -> str:
 
 
 def _grade_info(grade_obj, total_points) -> dict[str, Any]:
-    from .routes import _get_points_earned, get_letter_grade
+    from .routes import _parse_numeric_grade_score, get_letter_grade
 
     empty = {
         "has_grade": False,
@@ -113,24 +113,7 @@ def _grade_info(grade_obj, total_points) -> dict[str, Any]:
     if not isinstance(data, dict):
         data = {}
 
-    raw_score = _get_points_earned(data)
-    score: float | None
-    if raw_score is None:
-        score = None
-    elif isinstance(raw_score, str):
-        cleaned = raw_score.strip()
-        if not cleaned or cleaned.upper() in {"N/A", "NA", "NONE", "-", "NULL"}:
-            score = None
-        else:
-            try:
-                score = float(cleaned)
-            except ValueError:
-                score = None
-    else:
-        try:
-            score = float(raw_score)
-        except (TypeError, ValueError):
-            score = None
+    score = _parse_numeric_grade_score(data)
 
     # Placeholder rows (score "N/A") are not graded — keep Submit/Extension available.
     if score is None:

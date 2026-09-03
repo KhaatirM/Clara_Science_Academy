@@ -301,6 +301,16 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
     return True, None
 
 
+def drive_link_is_stale(link: ClassNotesDriveLink) -> bool:
+    """True when a linked Drive folder should be refreshed (never synced or older than cutoff)."""
+    if link.needs_reauth:
+        return False
+    if not link.last_synced_at:
+        return True
+    cutoff = datetime.utcnow() - DRIVE_SYNC_STALE_AFTER
+    return link.last_synced_at <= cutoff
+
+
 def refresh_stale_drive_links(class_id: int) -> None:
     """Best-effort refresh when the notes page is opened."""
     try:

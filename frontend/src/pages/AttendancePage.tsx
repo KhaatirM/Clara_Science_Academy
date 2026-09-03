@@ -16,6 +16,17 @@ import type {
   SchoolDayStudentRow,
 } from '../types/attendance'
 import { spaRoute } from '../utils/spaRoute'
+import {
+  CLASS_PERIOD_GRADE_OPTIONS,
+  CLASS_PERIOD_SORT_OPTIONS,
+  classPeriodFiltersActive,
+  computeClassPeriodStats,
+  defaultClassPeriodFilters,
+  filterAndSortClassPeriods,
+  subjectOptionsForPeriod,
+  teacherOptionsForPeriod,
+  type ClassPeriodFilters,
+} from '../utils/classPeriodFilters'
 
 type AttendanceTab = 'school-day' | 'class-period' | 'reports'
 
@@ -255,11 +266,40 @@ export default function AttendancePage() {
   const [draftDate, setDraftDate] = useState(schoolDate)
   const [draftClassDate, setDraftClassDate] = useState(classDate)
   const [rows, setRows] = useState<SchoolDayStudentRow[]>([])
+  const [classPeriodFilters, setClassPeriodFilters] = useState<ClassPeriodFilters>(
+    defaultClassPeriodFilters,
+  )
+  const [showClassPeriodFilters, setShowClassPeriodFilters] = useState(true)
 
   const statusOptions = useMemo(
     () => (hub?.status_options || ['Present', 'Unexcused Absence', 'Late', 'Excused Absence']) as SchoolDayStatus[],
     [hub?.status_options],
   )
+
+  const classPeriodSubjectChoices = useMemo(
+    () => subjectOptionsForPeriod(hub?.classes || []),
+    [hub?.classes],
+  )
+  const classPeriodTeacherChoices = useMemo(
+    () => teacherOptionsForPeriod(hub?.classes || []),
+    [hub?.classes],
+  )
+  const filteredClassPeriods = useMemo(
+    () => filterAndSortClassPeriods(hub?.classes || [], classPeriodFilters),
+    [hub?.classes, classPeriodFilters],
+  )
+  const filteredClassPeriodStats = useMemo(
+    () => computeClassPeriodStats(filteredClassPeriods),
+    [filteredClassPeriods],
+  )
+  const classPeriodFiltersApplied = classPeriodFiltersActive(classPeriodFilters)
+
+  function patchClassPeriodFilter<K extends keyof ClassPeriodFilters>(
+    key: K,
+    value: ClassPeriodFilters[K],
+  ) {
+    setClassPeriodFilters((prev) => ({ ...prev, [key]: value }))
+  }
 
   const loadHub = useCallback(async () => {
     setLoading(true)
@@ -672,15 +712,168 @@ export default function AttendancePage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StatCard icon="bi-journal-check" value={hub.class_period_stats.classes_completed} label="Completed" />
-              <StatCard icon="bi-hourglass-split" value={hub.class_period_stats.pending_classes} label="Pending" />
-              <StatCard icon="bi-percent" value={`${hub.class_period_stats.overall_rate}%`} label="Overall rate" />
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wide text-hub-text">Filter classes</h2>
+                  <p className="mt-0.5 text-xs text-hub-muted">
+                    Narrow the list by teacher, grade, subject, or attendance status.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowClassPeriodFilters((open) => !open)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-hub-text hover:bg-white"
+                >
+                  <i className={`bi ${showClassPeriodFilters ? 'bi-chevron-up' : 'bi-chevron-down'}`} aria-hidden />
+                  {showClassPeriodFilters ? 'Hide filters' : 'Show filters'}
+                </button>
+              </div>
+
+              {showClassPeriodFilters ? (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="md:col-span-2 xl:col-span-3">
+                    <label htmlFor="class-period-search" className="mb-1 block text-xs font-semibold uppercase text-hub-muted">
+                      Search
+                    </label>
+                    <div className="relative">
+                      <i className="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-hub-muted" aria-hidden />
+                      <input
+                        id="class-period-search"
+                        type="search"
+                        value={classPeriodFilters.search}
+                        onChange={(e) => patchClassPeriodFilter('search', e.target.value)}
+                        placeholder="Class, teacher, subject…"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-hub-text"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-period-subject" className="mb-1 block text-xs font-semibold uppercase text-hub-muted">
+                      Subject
+                    </label>
+                    <select
+                      id="class-period-subject"
+                      value={classPeriodFilters.subject}
+                      onChange={(e) => patchClassPeriodFilter('subject', e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-hub-text"
+                    >
+                      <option value="">All subjects</option>
+                      {classPeriodSubjectChoices.map((subject) => (
+                        <option key={subject} value={subject}>
+                          {subject}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-period-teacher" className="mb-1 block text-xs font-semibold uppercase text-hub-muted">
+                      Teacher
+                    </label>
+                    <select
+                      id="class-period-teacher"
+                      value={classPeriodFilters.teacherKey}
+                      onChange={(e) => patchClassPeriodFilter('teacherKey', e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-hub-text"
+                    >
+                      <option value="">All teachers</option>
+                      {classPeriodTeacherChoices.map((teacher) => (
+                        <option key={teacher.value} value={teacher.value}>
+                          {teacher.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-period-grade" className="mb-1 block text-xs font-semibold uppercase text-hub-muted">
+                      Grade
+                    </label>
+                    <select
+                      id="class-period-grade"
+                      value={classPeriodFilters.grade}
+                      onChange={(e) => patchClassPeriodFilter('grade', e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-hub-text"
+                    >
+                      {CLASS_PERIOD_GRADE_OPTIONS.map((option) => (
+                        <option key={option.value || 'all'} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-period-completion" className="mb-1 block text-xs font-semibold uppercase text-hub-muted">
+                      Attendance status
+                    </label>
+                    <select
+                      id="class-period-completion"
+                      value={classPeriodFilters.completion}
+                      onChange={(e) =>
+                        patchClassPeriodFilter(
+                          'completion',
+                          e.target.value as ClassPeriodFilters['completion'],
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-hub-text"
+                    >
+                      <option value="">All classes</option>
+                      <option value="completed">Completed today</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-period-sort" className="mb-1 block text-xs font-semibold uppercase text-hub-muted">
+                      Sort
+                    </label>
+                    <select
+                      id="class-period-sort"
+                      value={classPeriodFilters.sort}
+                      onChange={(e) =>
+                        patchClassPeriodFilter('sort', e.target.value as ClassPeriodFilters['sort'])
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-hub-text"
+                    >
+                      {CLASS_PERIOD_SORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+
+              {classPeriodFiltersApplied ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <p className="text-sm text-hub-muted">
+                    Showing <strong className="text-hub-text">{filteredClassPeriods.length}</strong> of{' '}
+                    <strong className="text-hub-text">{hub.classes.length}</strong> classes
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setClassPeriodFilters(defaultClassPeriodFilters)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-hub-text hover:bg-white"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              ) : null}
             </div>
 
-            {hub.classes.length ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatCard icon="bi-journal-check" value={filteredClassPeriodStats.classes_completed} label="Completed" />
+              <StatCard icon="bi-hourglass-split" value={filteredClassPeriodStats.pending_classes} label="Pending" />
+              <StatCard icon="bi-percent" value={`${filteredClassPeriodStats.overall_rate}%`} label="Overall rate" />
+            </div>
+
+            {filteredClassPeriods.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {hub.classes.map((item) => (
+                {filteredClassPeriods.map((item) => (
                   <ClassPeriodCard
                     key={item.id}
                     item={item}
@@ -694,12 +887,18 @@ export default function AttendancePage() {
               <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-16 text-center text-hub-muted">
                 <i className="bi bi-inbox mb-3 block text-4xl text-slate-300" aria-hidden />
                 <p className="font-semibold text-hub-text">
-                  {hub.meta.has_active_school_year ? 'No classes available' : 'Class period attendance unavailable'}
+                  {classPeriodFiltersApplied
+                    ? 'No classes match these filters'
+                    : hub.meta.has_active_school_year
+                      ? 'No classes available'
+                      : 'Class period attendance unavailable'}
                 </p>
                 <p className="mt-1 text-sm">
-                  {hub.meta.has_active_school_year
-                    ? "You don't have any classes in the active school year to take attendance for."
-                    : 'Activate a school year to manage class period attendance.'}
+                  {classPeriodFiltersApplied
+                    ? 'Try clearing filters or choosing a different teacher, grade, or status.'
+                    : hub.meta.has_active_school_year
+                      ? "You don't have any classes in the active school year to take attendance for."
+                      : 'Activate a school year to manage class period attendance.'}
                 </p>
               </div>
             )}

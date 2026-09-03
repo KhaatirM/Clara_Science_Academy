@@ -585,7 +585,8 @@ export function AssignmentsClassPage({ scope = 'management' }: { scope?: Assignm
 
       <VoidAssignmentModal
         target={voidTarget}
-        students={[]}
+        classId={id}
+        workspaceScope={workspaceScope}
         onClose={() => setVoidTarget(null)}
         onSuccess={(msg) => {
           setMessage(msg)

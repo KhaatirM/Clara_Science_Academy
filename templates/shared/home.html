@@ -167,11 +167,63 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 2, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) fixes syllabus PDF uploads (missing PDF libraries) and Class Notes Drive folder linking that wrongly said Google was not connected, plus earlier August 31 work on attendance, schedules, and Student Jobs.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) adds class period attendance filters, fixes Class Notes timeouts on large Drive folders, and includes redo score totals, student assignment status, void roster, and Classroom roster improvements.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 2, 2026 - Attendance filters + Class notes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-funnel me-2"></i>Attendance &amp; Class Notes – September 2, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Class period filters:</strong> Filter by teacher, grade, subject, completion status, or search on the Class Period attendance tab. Stats update for the filtered list.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Class Notes loads without timing out:</strong> Large linked Google Drive folders no longer block the page on open. Use Sync now when you want a fresh copy from Drive.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 2, 2026 - Redo point totals -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Redo scores – September 2, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Original and Final use the assignment&rsquo;s point total:</strong> The redo dashboard treated every score as a percent out of 100. Assignments worth 20 or 50 points now show points out of that total (and the correct percent), and average improvement uses percentage points.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 2, 2026 - Student completed-without-grade -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Student assignments – September 2, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Closed work is not &ldquo;Completed&rdquo; without a grade:</strong> Past or closed assignments on the student Assignments tab were labeled Completed even when no score was entered. They now say Past due / Closed &mdash; not graded until a real grade exists.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 2, 2026 - Void + Classroom roster -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-people me-2"></i>Assignments &amp; Classroom – September 2, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Void for specific students:</strong> Choosing Specific students from Assignments &amp; Grades or the grades view said &ldquo;No enrolled students&rdquo; even when the class had a roster. The void dialog now loads the enrolled list for that class.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Classroom roster:</strong> Students rostered on the site but missing a saved school email on their account were skipped by Classroom sync. Sync now fills that email from the school naming pattern and adds them to the class Classroom and Google Group.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 2, 2026 - Syllabus + Drive -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>Syllabus &amp; Drive – September 2, 2026</h6>
@@ -2244,11 +2296,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep2_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep2_2026_v4', 'true');
         }, 500);
     }
 });

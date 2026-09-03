@@ -14,10 +14,10 @@ function statusLabel(status: string) {
   const s = (status || '').trim()
   if (!s) return '—'
   if (s === 'Un-Submitted') return 'To do'
-  if (s === 'Submitted or Awaiting Grade') return 'Submitted'
+  if (s === 'Submitted or Awaiting Grade') return 'Submitted — awaiting grade'
   if (s === 'submitted_in_person') return 'Graded (in person)'
-  if (s === 'completed') return 'Completed'
-  if (s === 'Past Due') return 'Past due'
+  if (s === 'completed') return 'Graded'
+  if (s === 'Past Due') return 'Past due — not graded'
   if (s === 'Extended') return 'Extended'
   if (s === 'Voided') return 'Voided'
   return s.replace(/_/g, ' ')

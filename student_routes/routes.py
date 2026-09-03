@@ -64,13 +64,44 @@ def _get_points_earned(grade_data):
     return grade_data.get('score')
 
 
+def _parse_numeric_grade_score(grade_data) -> float | None:
+    """Return a numeric score from grade_data, or None for placeholders / missing scores."""
+    raw = _get_points_earned(grade_data)
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        cleaned = raw.strip()
+        if not cleaned or cleaned.upper() in {"N/A", "NA", "NONE", "-", "NULL"}:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _grade_has_entered_score(grade) -> bool:
+    """True only when the grade row has a real numeric score (not merely graded_at)."""
+    if not grade or getattr(grade, "is_voided", False) or not getattr(grade, "grade_data", None):
+        return False
+    try:
+        grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return False
+    if not isinstance(grade_data, dict):
+        return False
+    return _parse_numeric_grade_score(grade_data) is not None
+
+
 def _pick_best_quiz_grade_row(grade_rows, assignment_total_points):
     """
     Choose the best (highest percentage) Grade row from multiple attempts.
     Tie-breaker: newest graded_at, then highest id.
     """
     from datetime import datetime
-    import json
 
     total_points = assignment_total_points if (assignment_total_points and assignment_total_points > 0) else 100.0
     best = None
@@ -84,7 +115,7 @@ def _pick_best_quiz_grade_row(grade_rows, assignment_total_points):
             gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
         except Exception:
             continue
-        pts = _get_points_earned(gdata)
+        pts = _parse_numeric_grade_score(gdata)
         if pts is None:
             continue
         try:
@@ -138,11 +169,10 @@ def calculate_gpa(grades):
 def get_student_assignment_status(assignment, submission, grade, student_id=None):
     """Determine the student-facing status for an assignment.
     
-    Submission status logic: If a grade is entered, status is 'submitted_in_person' unless
+    Submission status logic: If a numeric grade is entered, status is 'submitted_in_person' unless
     the student turned in online (has Submission with file_path or submission_type='online').
+    A Grade row with only graded_at / placeholder data is not treated as completed.
     """
-    from datetime import datetime
-    
     # Check if assignment is voided
     if assignment.status == 'Voided':
         return 'Voided'
@@ -162,7 +192,7 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
         
         if extension:
             # Check if extension deadline has passed and assignment is not graded
-            if not grade:
+            if not _grade_has_entered_score(grade):
                 extension_due_date = extension.extended_due_date.date() if hasattr(extension.extended_due_date, 'date') else extension.extended_due_date
                 today = get_school_today()
                 
@@ -173,42 +203,26 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
                     # Extension deadline has passed and not graded
                     return 'Past Due'
     
-    # Check if assignment has been graded - grade entered = submitted (in person unless online)
-    # Consider graded if: graded_at set OR grade_data exists with meaningful content
+    # Check if assignment has been graded — require a real numeric score, not merely graded_at
     if grade and grade.grade_data:
         try:
-            import json
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
             if isinstance(grade_data, dict):
                 grading_status = (grade_data.get('grading_status') or '').strip().lower()
                 if assignment.assignment_type == 'quiz' and grading_status == 'pending':
                     return 'Submitted or Awaiting Grade'
-            # Has score/points_earned = actual grade entered (covers legacy grades without graded_at)
-            has_score = (
-                grade.graded_at or
-                (isinstance(grade_data, dict) and (
-                    grade_data.get('score') is not None or
-                    grade_data.get('points_earned') is not None
-                ))
-            )
-            if has_score or grade.graded_at:
-                # Grade was entered - show completed or submitted_in_person based on submission type
-                has_online_submission = (
-                    submission and
-                    (submission.file_path or (getattr(submission, 'submission_type', None) == 'online'))
-                )
-                if has_online_submission:
-                    return 'completed'
-                # No online submission - teacher entered grade for in-person/paper submission
-                return 'submitted_in_person'
+                if _parse_numeric_grade_score(grade_data) is not None:
+                    # Grade was entered - show completed or submitted_in_person based on submission type
+                    has_online_submission = (
+                        submission and
+                        (submission.file_path or (getattr(submission, 'submission_type', None) == 'online'))
+                    )
+                    if has_online_submission:
+                        return 'completed'
+                    # No online submission - teacher entered grade for in-person/paper submission
+                    return 'submitted_in_person'
         except (json.JSONDecodeError, TypeError, AttributeError):
-            if grade.graded_at:
-                # Has graded_at, treat as graded
-                has_online_submission = (
-                    submission and
-                    (submission.file_path or (getattr(submission, 'submission_type', None) == 'online'))
-                )
-                return 'completed' if has_online_submission else 'submitted_in_person'
+            pass
     
     # Check if assignment has been submitted
     if submission:
@@ -323,12 +337,11 @@ def resolve_student_group_for_group_assignment(student_id, group_assignment):
 
 def get_student_group_assignment_status(group_assignment, group_submission, group_grade, student_id=None):
     """Determine the student-facing status for a group assignment."""
-    from datetime import datetime
     if group_assignment.status == 'Voided':
         return 'Voided'
     if group_grade and group_grade.is_voided:
         return 'Voided'
-    if group_grade and group_grade.graded_at:
+    if _grade_has_entered_score(group_grade):
         return 'completed'
     if group_submission:
         return 'Submitted or Awaiting Grade'

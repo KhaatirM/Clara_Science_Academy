@@ -30,6 +30,7 @@ export type ClassNotesDriveLink = {
   last_synced_at: string | null
   last_error: string | null
   needs_reauth: boolean
+  is_stale?: boolean
   linked_by: string | null
   item_count: number
 }

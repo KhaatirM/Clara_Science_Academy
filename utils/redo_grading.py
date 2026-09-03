@@ -50,6 +50,18 @@ def finalize_redo_for_grade(
         total_points = float(grade_data.get('total_points') or 0)
     except (TypeError, ValueError):
         total_points = 0.0
+    if total_points <= 0:
+        # Fall back to the assignment's configured total so non-100-point work
+        # is not treated as out of 100 during redo finalization.
+        try:
+            from models import Assignment
+
+            assignment = Assignment.query.get(assignment_id)
+            total_points = float(getattr(assignment, 'total_points', None) or 0)
+        except (TypeError, ValueError):
+            total_points = 0.0
+    if total_points <= 0:
+        total_points = 100.0
 
     redo.redo_grade = _round(awarded)
 

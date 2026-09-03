@@ -243,7 +243,7 @@ export function StudentAssignmentsPage() {
                   <option value="">All</option>
                   <option value="Active">To do (Active)</option>
                   <option value="Upcoming">Upcoming</option>
-                  <option value="Inactive">Completed / Past</option>
+                  <option value="Inactive">Past & closed</option>
                 </select>
               </label>
               <button
@@ -353,11 +353,11 @@ export function StudentAssignmentsPage() {
                 onPrimary={handlePrimaryAction}
               />
               <AssignmentSection
-                title="Completed / Past"
+                title="Past & closed"
                 icon="bi-archive text-slate-500"
                 count={data.counts.inactive}
                 accent="border-slate-300"
-                empty="No completed or past assignments."
+                empty="No past or closed assignments."
                 items={data.inactive}
                 bucket="inactive"
                 defaultOpen
@@ -535,14 +535,6 @@ function cardGradeTone(card: StudentAssignmentCard): GradeTone {
 }
 
 function statusBanner(card: StudentAssignmentCard) {
-  if (card.bucket === 'inactive' && !card.grade.has_grade) {
-    return {
-      tone: 'bg-slate-100 text-slate-800 border-slate-200',
-      title: 'Completed / past',
-      message: 'This assignment is no longer active. You can still review details here.',
-      pill: 'Inactive',
-    }
-  }
   if (card.grade.has_grade) {
     return {
       tone: GRADE_TONES[cardGradeTone(card)].badge,
@@ -551,12 +543,23 @@ function statusBanner(card: StudentAssignmentCard) {
       pill: card.grade.letter || 'Graded',
     }
   }
-  if (card.has_submission) {
+  if (card.has_submission || card.student_status === 'Submitted or Awaiting Grade') {
     return {
       tone: 'bg-amber-50 text-amber-950 border-amber-200',
       title: 'Under review',
-      message: 'Your teacher is reviewing your submission.',
+      message: 'Your teacher is reviewing your submission. A grade has not been entered yet.',
       pill: 'Submitted',
+    }
+  }
+  if (card.bucket === 'inactive') {
+    const pastDue = card.student_status === 'Past Due'
+    return {
+      tone: pastDue ? 'bg-rose-50 text-rose-950 border-rose-200' : 'bg-slate-100 text-slate-800 border-slate-200',
+      title: pastDue ? 'Past due — not graded' : 'Closed — not graded',
+      message: pastDue
+        ? 'This assignment is past due and does not have a grade yet.'
+        : 'This assignment is closed. It is not marked complete until your teacher enters a grade.',
+      pill: pastDue ? 'Past due' : 'Not graded',
     }
   }
   if (card.bucket === 'upcoming') {
@@ -575,6 +578,18 @@ function statusBanner(card: StudentAssignmentCard) {
     message: 'Use the actions below to begin this assignment.',
     pill: 'Not started',
   }
+}
+
+function formatStudentStatus(status: string) {
+  const s = (status || '').trim()
+  if (s === 'Un-Submitted') return 'To do'
+  if (s === 'Submitted or Awaiting Grade') return 'Submitted — awaiting grade'
+  if (s === 'submitted_in_person') return 'Graded (in person)'
+  if (s === 'completed') return 'Graded'
+  if (s === 'Past Due') return 'Past due — not graded'
+  if (s === 'Extended') return 'Extended'
+  if (s === 'Voided') return 'Voided'
+  return s.replace(/_/g, ' ')
 }
 
 function AssignmentCard({
@@ -959,7 +974,7 @@ function AssignmentDetailModal({
                 <dl className="space-y-2 text-sm">
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
                     <dt className="text-hub-muted">Status</dt>
-                    <dd className="mb-0 font-semibold text-hub-text">{card.student_status}</dd>
+                    <dd className="mb-0 font-semibold text-hub-text">{formatStudentStatus(card.student_status)}</dd>
                   </div>
                   {card.total_points != null ? (
                     <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">

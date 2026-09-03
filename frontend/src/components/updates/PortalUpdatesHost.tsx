@@ -1,9 +1,33 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Class period attendance filters',
+    body: 'The Class Period tab on Attendance now has filters for search, teacher, grade, subject, completion status, and sort. Summary stats update to match the filtered list.',
+  },
+  {
+    title: 'Class notes opens instantly again',
+    body: 'Opening Class Notes no longer runs a full Google Drive sync in the background, which was timing out on large linked folders (e.g. Introduction to Physics). Cached files load immediately; use Sync now on a linked Drive folder when you want a refresh.',
+  },
+  {
+    title: 'Redo Original and Final scores respect assignment point totals',
+    body: 'The redo dashboard treated every score as a percent out of 100. Assignments worth 20 or 50 points now show points out of that total (and the correct percent), and average improvement uses percentage points.',
+  },
+  {
+    title: 'Closed assignments no longer look “Completed” without a grade',
+    body: 'Past or closed work on the student Assignments tab was labeled Completed even when the teacher had never entered a score. Those now say Past due / Closed — not graded until a real grade exists, and “Completed” is reserved for graded work.',
+  },
+  {
+    title: 'Void assignment shows the class roster again',
+    body: 'Choosing "Specific students" when voiding from Assignments & Grades or the grades view said "No enrolled students" even when the class had a full roster. The void dialog now loads the enrolled list for that class.',
+  },
+  {
+    title: 'Google Classroom picks up rostered students without a saved school email',
+    body: 'Many students had a portal account but a blank school email field, so Classroom sync skipped them even though the site already knew the naming pattern (e.g. FirstLastMMYY@…). Sync now fills that field and includes those students when adding them to the class Classroom and Google Group.',
+  },
   {
     title: 'Syllabus PDF upload and Drive folder linking fixed',
     body: 'Uploading a syllabus PDF failed with a missing library error, and linking a Google Drive folder to Class Notes said the Google account was not connected even when Settings showed it was. PDF/DOCX reading libraries are installed again, and Drive now reloads your saved Google connection (or the class teacher\'s), with clearer instructions when Settings → Connect Google is still needed — signing in with Google alone is not enough.',
@@ -134,10 +158,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.519.0'
-  const releaseLabel = version?.release_label || 'August 28, 2026'
+  const display = version?.display || 'v 2.520.11'
+  const releaseLabel = version?.release_label || 'September 2, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2719
+  const updatesEstimate = version?.updates_estimate ?? 2735
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

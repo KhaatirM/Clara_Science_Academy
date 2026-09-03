@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
 One-time / on-demand: sync Google Classroom membership so every enrolled
-grade 3+ student (with a Workspace email) is on their class course.
+grade 3+ student (with a Workspace email) is on their **core catalog** class course.
 
 Also adds missing teachers and removes people who are no longer on the Clara
 roster. Classes without a Classroom yet are provisioned, then synced.
+
+Electives and non-core classes (e.g. Introduction to Programming) are skipped.
+Only classes that match School Year Class Setup's core catalog are included.
 
 Run from the Render Shell (same DATABASE_URL + Google env as the web service):
 
@@ -179,7 +182,7 @@ def main() -> int:
             )
 
             if not class_needs_google_integration(class_obj):
-                print(f"{label} SKIP (K–2 / no Google needed)")
+                print(f"{label} SKIP (K–2, elective, or not a core catalog class)")
                 skipped += 1
                 continue
 

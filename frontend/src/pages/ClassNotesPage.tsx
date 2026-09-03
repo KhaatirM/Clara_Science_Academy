@@ -6,6 +6,7 @@ import {
   deleteClassNotesFolder,
   deleteClassNotesItem,
   fetchClassNotes,
+  fetchClassNotesFolderItems,
   linkClassNotesDriveFolder,
   readVideoDurationSeconds,
   syncClassNotesDriveLink,
@@ -136,6 +137,9 @@ function DrivePanel({
             </div>
             <div className="mt-0.5 text-xs text-hub-muted">
               {link.item_count} file{link.item_count === 1 ? '' : 's'} · {formatSyncedAt(link.last_synced_at)}
+              {link.is_stale && !link.needs_reauth ? (
+                <span className="ms-1 font-semibold text-amber-700">· update available</span>
+              ) : null}
             </div>
             {link.needs_reauth ? (
               <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -329,6 +333,10 @@ function FolderTreeNode({
   )
 }
 
+function folderCacheKey(key: 'root' | number): string {
+  return key === 'root' ? 'root' : String(key)
+}
+
 export function ClassNotesPage() {
   const { classId = '' } = useParams()
   const id = Number(classId)
@@ -350,13 +358,46 @@ export function ClassNotesPage() {
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [dragOver, setDragOver] = useState(false)
+  const [itemCache, setItemCache] = useState<Record<string, ClassNotesItem[]>>({})
+  const [loadingFolderItems, setLoadingFolderItems] = useState(false)
+
+  const loadFolderItems = useCallback(
+    async (folderKey: 'root' | number) => {
+      if (!Number.isFinite(id) || id <= 0) return
+      const cacheKey = folderCacheKey(folderKey)
+      setLoadingFolderItems(true)
+      setError(null)
+      try {
+        const res = await fetchClassNotesFolderItems(id, folderKey)
+        setItemCache((prev) => ({ ...prev, [cacheKey]: res.items || [] }))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load folder files')
+      } finally {
+        setLoadingFolderItems(false)
+      }
+    },
+    [id],
+  )
+
+  const applyNotesResponse = useCallback(
+    (res: ClassNotesResponse) => {
+      setData(res)
+      setItemCache({ root: res.root_items || [] })
+      if (selectedKey !== 'root') {
+        void loadFolderItems(selectedKey)
+      }
+    },
+    [loadFolderItems, selectedKey],
+  )
 
   const load = useCallback(async () => {
     if (!Number.isFinite(id) || id <= 0) return
     setLoading(true)
     setError(null)
     try {
-      setData(await fetchClassNotes(id))
+      const next = await fetchClassNotes(id)
+      setData(next)
+      setItemCache({ root: next.root_items || [] })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load class notes')
     } finally {
@@ -367,6 +408,16 @@ export function ClassNotesPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!data || loading) return
+    const cacheKey = folderCacheKey(selectedKey)
+    if (itemCache[cacheKey]) return
+    if (selectedKey === 'root') return
+    const folder = findFolder(data.folders, selectedKey)
+    if ((folder?.item_count ?? 0) <= 0) return
+    void loadFolderItems(selectedKey)
+  }, [data, itemCache, loadFolderItems, loading, selectedKey])
 
   const canManage = Boolean(data?.can_manage)
   const maxVideoSeconds = data?.max_video_seconds ?? 600
@@ -385,9 +436,8 @@ export function ClassNotesPage() {
 
   const items: ClassNotesItem[] = useMemo(() => {
     if (!data) return []
-    if (selectedKey === 'root') return data.root_items
-    return selectedFolder?.items || []
-  }, [data, selectedKey, selectedFolder])
+    return itemCache[folderCacheKey(selectedKey)] ?? (selectedKey === 'root' ? data.root_items : [])
+  }, [data, itemCache, selectedKey])
 
   function openNewFolder(parentId: number | null) {
     setNewFolderParentId(parentId)
@@ -405,7 +455,7 @@ export function ClassNotesPage() {
         name: newFolderName.trim(),
         parent_id: newFolderParentId,
       })
-      setData(res)
+      applyNotesResponse(res)
       setMessage(res.message || 'Folder created.')
       setNewFolderName('')
       setShowNewFolder(false)
@@ -429,7 +479,7 @@ export function ClassNotesPage() {
     setBusy(true)
     setError(null)
     try {
-      setData(await updateClassNotesFolder(id, folder.id, { name: name.trim() }))
+      applyNotesResponse(await updateClassNotesFolder(id, folder.id, { name: name.trim() }))
       setMessage('Folder updated.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update folder')
@@ -450,7 +500,7 @@ export function ClassNotesPage() {
     setBusy(true)
     setError(null)
     try {
-      setData(await deleteClassNotesFolder(id, folder.id))
+      applyNotesResponse(await deleteClassNotesFolder(id, folder.id))
       setSelectedKey('root')
       setMessage('Folder removed.')
     } catch (err) {
@@ -479,7 +529,7 @@ export function ClassNotesPage() {
       const res = await uploadClassNotesItemsBulk(id, files, {
         folderId: selectedKey === 'root' ? null : selectedKey,
       })
-      setData(res)
+      applyNotesResponse(res)
       const failed = (res.results || []).filter((r) => !r.ok)
       if (failed.length) {
         setError(
@@ -506,7 +556,7 @@ export function ClassNotesPage() {
         folder_url: folderUrl,
         folder_id: selectedKey === 'root' ? null : selectedKey,
       })
-      setData(res)
+      applyNotesResponse(res)
       setMessage(res.message || 'Drive folder linked.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not link that Drive folder')
@@ -522,7 +572,7 @@ export function ClassNotesPage() {
     setMessage(null)
     try {
       const res = await syncClassNotesDriveLink(id, link.id)
-      setData(res)
+      applyNotesResponse(res)
       setMessage(res.message || 'Drive folder synced.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sync that Drive folder')
@@ -544,7 +594,7 @@ export function ClassNotesPage() {
     setError(null)
     try {
       const res = await unlinkClassNotesDriveFolder(id, link.id)
-      setData(res)
+      applyNotesResponse(res)
       setSelectedKey('root')
       setMessage(res.message || 'Drive folder unlinked.')
     } catch (err) {
@@ -560,7 +610,7 @@ export function ClassNotesPage() {
     setBusy(true)
     setError(null)
     try {
-      setData(await deleteClassNotesItem(id, item.id))
+      applyNotesResponse(await deleteClassNotesItem(id, item.id))
       setMessage('File removed.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not remove file')
@@ -594,6 +644,7 @@ export function ClassNotesPage() {
 
   const driveLinks = data?.drive_links || []
   const needsReauth = canManage && driveLinks.some((link) => link.needs_reauth)
+  const staleDriveLinks = canManage && driveLinks.some((link) => link.is_stale && !link.needs_reauth)
   const googleConnectHref =
     scope === 'management' ? '/management/google-account/connect' : '/teacher/google-account/connect'
 
@@ -607,6 +658,11 @@ export function ClassNotesPage() {
             Reconnect your Google account
           </a>
           .
+        </div>
+      ) : staleDriveLinks ? (
+        <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          One or more linked Drive folders are out of date. Use <strong>Sync now</strong> in the Google Drive
+          panel to refresh files without slowing down the page.
         </div>
       ) : null}
       {error ? (
@@ -825,7 +881,9 @@ export function ClassNotesPage() {
                   </p>
                 ) : null}
 
-                {items.length ? (
+                {loadingFolderItems ? (
+                  <p className="text-sm text-hub-muted">Loading files…</p>
+                ) : items.length ? (
                   <ul className="mb-0 space-y-2">
                     {items.map((item) => {
                       const fromDrive = item.source === 'drive'

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v11'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v12'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Drive Sync now creates the missing database column',
+    body: 'Syncing a Class Notes Drive folder failed on production because converted_drive_file_id was never added to Postgres. Sync adds that column on first run and shortens error text so it fits in the database.',
+  },
   {
     title: 'Class Notes page loads again after linking Drive',
     body: 'After a Drive folder was linked, Class Notes crashed counting files because it looked for the wrong database column. That count now uses link_id, so the notes page and folder link response work again.',
@@ -182,10 +186,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.19'
+  const display = version?.display || 'v 2.520.20'
   const releaseLabel = version?.release_label || 'September 2, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2745
+  const updatesEstimate = version?.updates_estimate ?? 2746
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -291,11 +295,11 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  Class Notes Drive fix – {releaseLabel}
+                  Drive Sync – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  Linking a Drive folder no longer breaks the Class Notes page. Enable Google Drive
-                  API in Cloud Console if linking still says the API is off.
+                  Syncing a linked Drive folder no longer fails on a missing database column. Click
+                  Sync now again after this update deploys.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

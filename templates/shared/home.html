@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 2, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) fixes Class Notes crashing after a Drive folder is linked, explains when Google Drive API is not enabled, fixes Reconnect Google, and includes attendance filters plus earlier roster and grading fixes.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) fixes Drive Sync on production (missing column), Class Notes crashing after a Drive folder is linked, Google Drive API messaging, Reconnect Google, and earlier attendance/roster fixes.</p>
                     </div>
                 </div>
 
@@ -176,6 +176,10 @@
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-funnel me-2"></i>Attendance &amp; Class Notes – September 2, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Drive Sync column:</strong> Sync failed because Postgres was missing <code>converted_drive_file_id</code>. Sync now adds that column automatically.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Class Notes loads after linking Drive:</strong> Counting linked Drive files used the wrong column name and crashed the notes page with a 500. That count is fixed.
@@ -2312,11 +2316,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v9')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v10')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep2_2026_v9', 'true');
+            sessionStorage.setItem('updateModalShownSep2_2026_v10', 'true');
         }, 500);
     }
 });

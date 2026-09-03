@@ -121,22 +121,38 @@ def _users_for_class_drive(class_obj: Class) -> list[User]:
     return ordered
 
 
+_CONVERTED_COL_ENSURED = False
+
+
 def _ensure_converted_file_column() -> None:
     """Add converted_drive_file_id if this database is older than the column."""
+    global _CONVERTED_COL_ENSURED
+    if _CONVERTED_COL_ENSURED:
+        return
     try:
         from sqlalchemy import inspect as sa_inspect, text
 
-        cols = {c['name'] for c in sa_inspect(db.engine).get_columns('class_notes_drive_item')}
-        if 'converted_drive_file_id' in cols:
+        if not sa_inspect(db.engine).has_table('class_notes_drive_item'):
             return
-        dialect = db.engine.dialect.name
-        col = 'VARCHAR(120)' if dialect != 'postgresql' else 'VARCHAR(120)'
-        with db.engine.begin() as conn:
-            conn.execute(text(
-                f'ALTER TABLE class_notes_drive_item ADD COLUMN converted_drive_file_id {col}'
-            ))
+        cols = {c['name'] for c in sa_inspect(db.engine).get_columns('class_notes_drive_item')}
+        if 'converted_drive_file_id' not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    'ALTER TABLE class_notes_drive_item '
+                    'ADD COLUMN converted_drive_file_id VARCHAR(120)'
+                ))
+            current_app.logger.info('Added class_notes_drive_item.converted_drive_file_id')
+        _CONVERTED_COL_ENSURED = True
     except Exception:
         current_app.logger.exception('Could not add converted_drive_file_id column')
+
+
+def _set_drive_link_error(link: ClassNotesDriveLink, message: str) -> None:
+    """Persist a short sync error (last_error is VARCHAR(500))."""
+    text = (message or '').strip().replace('\n', ' ')
+    if len(text) > 500:
+        text = text[:497] + '...'
+    link.last_error = text or None
 
 
 def _drive_service_for_class(class_obj: Class):
@@ -247,10 +263,11 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
     the Gunicorn worker. Incomplete imports stay in the database; click Sync
     again to continue. Stale files are only deleted after a full walk.
     """
+    _ensure_converted_file_column()
     owner = _link_owner(link)
     if not owner:
         link.needs_reauth = True
-        link.last_error = 'The account that linked this folder is no longer available.'
+        _set_drive_link_error(link, 'The account that linked this folder is no longer available.')
         db.session.commit()
         return False, link.last_error
 
@@ -258,7 +275,7 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
         service = get_drive_service(owner)
     except DriveAuthError as exc:
         link.needs_reauth = True
-        link.last_error = str(exc)
+        _set_drive_link_error(link, str(exc))
         db.session.commit()
         return False, link.last_error
 
@@ -315,20 +332,23 @@ def sync_drive_link(link: ClassNotesDriveLink) -> tuple[bool, str | None]:
                 break
     except DriveAccessError as exc:
         db.session.rollback()
-        link.last_error = str(exc)
+        link = ClassNotesDriveLink.query.get(link.id) or link
+        _set_drive_link_error(link, str(exc))
         db.session.commit()
         return False, link.last_error
     except Exception as exc:
         db.session.rollback()
         current_app.logger.exception('Drive sync failed for link %s', link.id)
-        link.last_error = f'Sync failed: {exc}'
+        link = ClassNotesDriveLink.query.get(link.id) or link
+        _set_drive_link_error(link, f'Sync failed: {exc}')
         db.session.commit()
         return False, link.last_error
 
     if incomplete:
         db.session.commit()
-        link.last_error = (
-            'Imported some files, but the Drive folder is large. Click Sync now to continue.'
+        _set_drive_link_error(
+            link,
+            'Imported some files, but the Drive folder is large. Click Sync now to continue.',
         )
         link.needs_reauth = False
         db.session.commit()

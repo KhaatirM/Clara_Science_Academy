@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Repair desk cards show computer, student, and date',
+    body: 'Active bench cards were getting squashed so details disappeared. Cards now keep their full height, show computer / student / opened date, and open the ticket popup when you click them. Inventory also lets you collapse Students pending a device.',
+  },
   {
     title: 'Tech repair desk redesign',
     body: 'Repair tickets are now a workbench: Active bench vs Closed archive, student-facing ticket IDs (RT-0042) you can copy, and a lighter card layout instead of one giant mixed table.',
@@ -206,10 +210,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.23'
+  const display = version?.display || 'v 2.520.24'
   const releaseLabel = version?.release_label || 'September 3, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2749
+  const updatesEstimate = version?.updates_estimate ?? 2750
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

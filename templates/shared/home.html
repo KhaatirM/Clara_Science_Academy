@@ -167,11 +167,30 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 3, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) redesigns the Tech repair desk (ticket IDs, active bench vs closed archive), improves repair ticket notes/View/names, scales grading score presets, redesigns student assistant grading, and polishes the assistant console.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) fixes repair desk card details and click-to-open, redesigns the Tech repair desk (ticket IDs, active bench vs closed archive), improves repair notes/View/names, scales grading presets, and polishes student assistant grading.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 3, 2026 - Repair desk card fix -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-ticket-perforated me-2"></i>Tech Devices – Repair cards – September 3, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Click a card to open details:</strong> Tickets on the active bench open the popup when you click them. Ticket ID copy and status still work on their own controls.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Computer, student, and date visible:</strong> Cards were getting squashed so that info was cut off. They now show ticket ID, computer, assigned student, and opened date clearly.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Collapse pending students:</strong> On Devices &rarr; Inventory, the Students pending a device list can be collapsed (preference is remembered).
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 3, 2026 - Tech repair desk -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-kanban me-2"></i>Tech Devices – Repair desk – September 3, 2026</h6>
@@ -2373,11 +2392,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep3_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownSep3_2026_v4', 'true');
         }, 500);
     }
 });

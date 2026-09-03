@@ -222,6 +222,25 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [pendingCollapsed, setPendingCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem('techDevicesPendingCollapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  function togglePendingCollapsed() {
+    setPendingCollapsed((prev) => {
+      const next = !prev
+      try {
+        window.localStorage.setItem('techDevicesPendingCollapsed', next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -380,66 +399,88 @@ function DevicesInventoryPanel({ onFileRepair }: { onFileRepair: (deviceId: numb
 
       {pendingStudents.length > 0 ? (
         <section className="spa-mgmt-card mb-4 overflow-hidden shadow-sm">
-          <div className="border-b border-[var(--spa-mgmt-border)] px-4 py-3">
-            <h2 className="mb-0 text-sm font-bold text-hub-text">
-              Students pending a device{' '}
-              <span className="font-normal text-hub-muted">({pendingStudents.length})</span>
-            </h2>
-            <p className="mb-0 mt-1 text-xs text-hub-muted">
-              Active students on the roster who do not have a school device assigned yet.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--spa-mgmt-border)] bg-[color-mix(in_srgb,var(--spa-mgmt-accent-soft)_55%,var(--spa-mgmt-surface))]">
-                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
-                    Student
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
-                    Grade
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
-                    Expected
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingStudents.slice(0, 40).map((s) => (
-                  <tr
-                    key={s.id}
-                    className="border-b border-[color-mix(in_srgb,var(--spa-mgmt-border)_70%,transparent)] last:border-b-0"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-hub-text">{s.name}</div>
-                      <div className="mt-0.5 text-xs text-hub-muted">
-                        {s.student_id ? `ID ${s.student_id}` : '—'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-hub-muted">{s.grade_level ?? '—'}</td>
-                    <td className="px-4 py-3 capitalize text-hub-muted">
-                      {s.expected_device_type || '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/tech/devices/new?student_id=${s.id}`}
-                        className="spa-mgmt-btn-ghost px-3 py-1.5 text-xs no-underline"
-                      >
-                        Assign device
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {pendingStudents.length > 40 ? (
-            <div className="border-t border-[var(--spa-mgmt-border)] px-4 py-2 text-xs text-hub-muted">
-              Showing first 40 of {pendingStudents.length}. Use Assign / Add device to continue.
+          <button
+            type="button"
+            className="flex w-full items-start justify-between gap-3 border-0 border-b border-[var(--spa-mgmt-border)] bg-transparent px-4 py-3 text-left transition hover:bg-[color-mix(in_srgb,var(--spa-mgmt-accent-soft)_35%,transparent)]"
+            aria-expanded={!pendingCollapsed}
+            onClick={togglePendingCollapsed}
+          >
+            <div className="min-w-0">
+              <h2 className="mb-0 text-sm font-bold text-hub-text">
+                Students pending a device{' '}
+                <span className="font-normal text-hub-muted">({pendingStudents.length})</span>
+              </h2>
+              {!pendingCollapsed ? (
+                <p className="mb-0 mt-1 text-xs text-hub-muted">
+                  Active students on the roster who do not have a school device assigned yet.
+                </p>
+              ) : (
+                <p className="mb-0 mt-1 text-xs text-hub-muted">Collapsed — click to expand.</p>
+              )}
             </div>
+            <span
+              className="spa-mgmt-btn-ghost shrink-0 px-2.5 py-1.5 text-xs"
+              aria-hidden
+            >
+              <i className={`bi ${pendingCollapsed ? 'bi-chevron-down' : 'bi-chevron-up'}`} />
+              {pendingCollapsed ? 'Expand' : 'Collapse'}
+            </span>
+          </button>
+          {!pendingCollapsed ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--spa-mgmt-border)] bg-[color-mix(in_srgb,var(--spa-mgmt-accent-soft)_55%,var(--spa-mgmt-surface))]">
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                        Student
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                        Grade
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                        Expected
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wide text-hub-muted">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingStudents.slice(0, 40).map((s) => (
+                      <tr
+                        key={s.id}
+                        className="border-b border-[color-mix(in_srgb,var(--spa-mgmt-border)_70%,transparent)] last:border-b-0"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-hub-text">{s.name}</div>
+                          <div className="mt-0.5 text-xs text-hub-muted">
+                            {s.student_id ? `ID ${s.student_id}` : '—'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-hub-muted">{s.grade_level ?? '—'}</td>
+                        <td className="px-4 py-3 capitalize text-hub-muted">
+                          {s.expected_device_type || '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            to={`/tech/devices/new?student_id=${s.id}`}
+                            className="spa-mgmt-btn-ghost px-3 py-1.5 text-xs no-underline"
+                          >
+                            Assign device
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {pendingStudents.length > 40 ? (
+                <div className="border-t border-[var(--spa-mgmt-border)] px-4 py-2 text-xs text-hub-muted">
+                  Showing first 40 of {pendingStudents.length}. Use Assign / Add device to continue.
+                </div>
+              ) : null}
+            </>
           ) : null}
         </section>
       ) : null}
@@ -757,22 +798,37 @@ function DevicesRepairTicketsPanel({
   function renderTicketCard(ticket: any) {
     const code = ticketCodeOf(ticket)
     const busy = savingTicketId === ticket.id
+    const assetName = ticket.device?.asset_name || 'Unassigned device'
+    const studentName = ticket.device?.student?.name || 'No student assigned'
+    const createdLabel = ticket.created_display || 'Date unknown'
     return (
       <article
         key={ticket.id}
-        className="group relative overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--spa-mgmt-border)_85%,transparent)] bg-[var(--spa-mgmt-surface)] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        role="button"
+        tabIndex={0}
+        className="group relative shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--spa-mgmt-border)_85%,transparent)] bg-[var(--spa-mgmt-surface)] shadow-sm transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--spa-mgmt-accent)_35%,var(--spa-mgmt-border))] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--spa-mgmt-accent)]"
+        onClick={() => setViewTicket(ticket)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setViewTicket(ticket)
+          }
+        }}
       >
         <div
           className={`absolute inset-y-0 left-0 w-1.5 ${severityStripeClass(ticket.severity)}`}
           aria-hidden
         />
-        <div className="space-y-3 p-3.5 pl-4">
+        <div className="space-y-2.5 p-3.5 pl-4">
           <div className="flex items-start justify-between gap-2">
             <button
               type="button"
               className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-2.5 py-1 font-mono text-xs font-bold tracking-wide text-amber-300 shadow-sm transition hover:bg-slate-800"
               title="Copy ticket ID for the student"
-              onClick={() => void copyTicketCode(code)}
+              onClick={(e) => {
+                e.stopPropagation()
+                void copyTicketCode(code)
+              }}
             >
               <i className="bi bi-ticket-perforated" aria-hidden />
               {code}
@@ -788,42 +844,38 @@ function DevicesRepairTicketsPanel({
             </span>
           </div>
 
-          <div>
-            <h3 className="line-clamp-2 text-sm font-bold leading-snug text-hub-text">
-              {ticket.title}
-            </h3>
-            <p className="mt-1 text-xs text-hub-muted">
-              <span className="font-semibold text-hub-text">
-                {ticket.device?.asset_name || 'Device'}
-              </span>
-              {ticket.device?.student?.name ? ` · ${ticket.device.student.name}` : ''}
-            </p>
-          </div>
+          <h3 className="text-sm font-bold leading-snug text-hub-text">{ticket.title}</h3>
 
-          <div className="flex flex-wrap gap-1.5">
+          <dl className="space-y-1 text-xs text-hub-muted">
+            <div className="flex items-start gap-1.5">
+              <dt className="sr-only">Computer</dt>
+              <i className="bi bi-laptop mt-0.5 shrink-0" aria-hidden />
+              <dd className="m-0 min-w-0 font-semibold text-hub-text">{assetName}</dd>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <dt className="sr-only">Student</dt>
+              <i className="bi bi-person mt-0.5 shrink-0" aria-hidden />
+              <dd className="m-0 min-w-0">{studentName}</dd>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <dt className="sr-only">Opened</dt>
+              <i className="bi bi-calendar3 mt-0.5 shrink-0" aria-hidden />
+              <dd className="m-0 min-w-0">{createdLabel}</dd>
+            </div>
+          </dl>
+
+          <div
+            className="flex flex-wrap items-center gap-2 border-t border-[color-mix(in_srgb,var(--spa-mgmt-border)_70%,transparent)] pt-2"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <span
               className={`inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-bold ${categoryBadgeClass(ticket.category)}`}
             >
               {ticket.category === 'software' ? 'Software' : 'Hardware'}
             </span>
-            <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-bold capitalize ${statusBadgeClass(ticket.status)}`}
-            >
-              {String(ticket.status || '').replace('_', ' ')}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="spa-mgmt-btn-ghost flex-1 px-2.5 py-2 text-xs"
-              onClick={() => setViewTicket(ticket)}
-            >
-              <i className="bi bi-eye me-1" aria-hidden />
-              Open
-            </button>
             <select
-              className={`${fieldClass} flex-[1.4] py-2 text-xs`}
+              className={`${fieldClass} min-w-0 flex-1 py-1.5 text-xs`}
               value={ticket.status}
               disabled={busy}
               aria-label={`Status for ${code}`}

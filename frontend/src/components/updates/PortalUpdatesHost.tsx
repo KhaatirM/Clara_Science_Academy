@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v7'
+const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v8'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Reconnect Google when Drive access expires',
+    body: 'A revoked Google token still looked “connected” in Settings, so linking a Class Notes folder failed. Expired tokens are cleared, Class Notes has a Reconnect button, and Settings lets you reconnect even while linked.',
+  },
   {
     title: 'Class Notes Drive folders link without crashing, and files open in Google Docs/Slides',
     body: 'Linking a Google Drive folder no longer walks the whole tree in one request (that was killing the server). Word and PowerPoint files open in Google Docs or Slides in the browser so students do not need Microsoft Office. Staff can still download.',
@@ -166,10 +170,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.11'
+  const display = version?.display || 'v 2.520.16'
   const releaseLabel = version?.release_label || 'September 2, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2735
+  const updatesEstimate = version?.updates_estimate ?? 2742
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {
@@ -275,11 +279,11 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
                 <h3 className="mb-2 text-sm font-bold text-teal-950">
-                  Redos, Inspections &amp; Grade Colors – {releaseLabel}
+                  Google Drive reconnect – {releaseLabel}
                 </h3>
                 <p className="mb-0 text-sm text-teal-900/90">
-                  Graded redos close out properly instead of sitting at Pending, inspections can be
-                  archived or deleted, and grade colors follow the actual score.
+                  If Class Notes says Google access expired, reconnect in Settings or from the notes
+                  page and approve Drive access. Signing in with Google on the login page is not enough.
                 </p>
               </div>
               <ul className="m-0 list-none space-y-3 p-0">

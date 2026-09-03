@@ -303,13 +303,26 @@ export default function SettingsPage() {
                   Your Google account is linked and ready for Classroom, Forms, and Drive folders in
                   Class Notes.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => void handleGoogleDisconnect()}
-                  className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-                >
-                  Disconnect Google account
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={data.google.connect_url}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
+                  >
+                    <i className="bi bi-google mr-1" aria-hidden />
+                    Reconnect Google account
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void handleGoogleDisconnect()}
+                    className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    Disconnect Google account
+                  </button>
+                </div>
+                <p className="text-xs text-hub-muted">
+                  If Class Notes says access expired, use Reconnect and approve Drive access. Signing in
+                  with Google on the login page is not enough.
+                </p>
               </>
             ) : (
               <>

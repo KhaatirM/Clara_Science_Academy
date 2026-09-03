@@ -524,7 +524,7 @@ def build_teacher_settings_payload(*, user) -> dict[str, Any]:
         "google": {
             "connected": google_connected,
             "needs_reconnect": token_stored and not google_connected,
-            "connect_url": url_for("teacher.google_connect_account"),
+            "connect_url": url_for("teacher.google_connect_account", next="/app/teacher/settings"),
             "disconnect_url": url_for("teacher.google_disconnect_account"),
         },
         "urls": {

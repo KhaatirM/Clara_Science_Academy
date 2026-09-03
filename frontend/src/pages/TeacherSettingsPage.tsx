@@ -248,19 +248,24 @@ export function TeacherSettingsPage() {
               <h2>Google account</h2>
               <p>
                 {data.google.connected
-                  ? 'Your Google account is connected for Classroom, Forms, and Drive folders in Class Notes.'
+                  ? 'Your Google account is connected for Classroom, Forms, and Drive folders in Class Notes. If linking a folder fails, use Reconnect and approve Drive access.'
                   : data.google.needs_reconnect
                     ? 'Your previous Google connection could not be read. Connect again below and approve Drive when asked. Signing in with Google alone is not enough.'
                     : 'Connect Google in Settings to link Classroom, Forms, and Drive folders. Signing in with Google alone is not enough.'}
               </p>
               {data.google.connected ? (
-                <button
-                  type="button"
-                  className="teacher-class-card__btn teacher-class-card__btn--google-unlink"
-                  onClick={() => void handleGoogleDisconnect()}
-                >
-                  Disconnect Google
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <a href={data.google.connect_url} className="teacher-class-card__btn teacher-class-card__btn--google-link">
+                    Reconnect Google
+                  </a>
+                  <button
+                    type="button"
+                    className="teacher-class-card__btn teacher-class-card__btn--google-unlink"
+                    onClick={() => void handleGoogleDisconnect()}
+                  >
+                    Disconnect Google
+                  </button>
+                </div>
               ) : (
                 <a href={data.google.connect_url} className="teacher-class-card__btn teacher-class-card__btn--google-link">
                   {data.google.needs_reconnect ? 'Reconnect Google account' : 'Connect Google account'}

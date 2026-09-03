@@ -102,24 +102,27 @@ function formatSyncedAt(value: string | null) {
   return `synced ${when.toLocaleDateString()}`
 }
 
+function spaReturnPath(pathname: string) {
+  if (pathname.startsWith('/app/') || pathname === '/app') return pathname
+  return `/app${pathname.startsWith('/') ? pathname : `/${pathname}`}`
+}
+
 function DrivePanel({
   links,
   busy,
-  scope,
+  connectHref,
   onLink,
   onSync,
   onUnlink,
 }: {
   links: ClassNotesDriveLink[]
   busy: boolean
-  scope: Scope
+  connectHref: string
   onLink: (url: string) => void
   onSync: (link: ClassNotesDriveLink) => void
   onUnlink: (link: ClassNotesDriveLink) => void
 }) {
   const [url, setUrl] = useState('')
-  const connectHref =
-    scope === 'management' ? '/management/google-account/connect' : '/teacher/google-account/connect'
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -653,8 +656,10 @@ export function ClassNotesPage() {
   const driveLinks = data?.drive_links || []
   const needsReauth = canManage && driveLinks.some((link) => link.needs_reauth)
   const staleDriveLinks = canManage && driveLinks.some((link) => link.is_stale && !link.needs_reauth)
-  const googleConnectHref =
+  const googleConnectHref = `${
     scope === 'management' ? '/management/google-account/connect' : '/teacher/google-account/connect'
+  }?next=${encodeURIComponent(spaReturnPath(location.pathname))}`
+  const googleError = Boolean(error && /google|drive/i.test(error))
 
   const body = (
     <>
@@ -674,7 +679,18 @@ export function ClassNotesPage() {
         </div>
       ) : null}
       {error ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="mb-0">{error}</p>
+          {googleError ? (
+            <a
+              href={googleConnectHref}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+            >
+              <i className="bi bi-google" aria-hidden />
+              Reconnect Google account
+            </a>
+          ) : null}
+        </div>
       ) : null}
       {message ? (
         <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
@@ -795,7 +811,7 @@ export function ClassNotesPage() {
               <DrivePanel
                 links={driveLinks}
                 busy={busy}
-                scope={scope}
+                connectHref={googleConnectHref}
                 onLink={(url) => void onLinkDrive(url)}
                 onSync={(link) => void onSyncDrive(link)}
                 onUnlink={(link) => void onUnlinkDrive(link)}

@@ -143,6 +143,8 @@ def _drive_service_for_class(class_obj: Class):
     """Build a Drive client using the first usable OAuth token for this class."""
     errors: list[str] = []
     for user in _users_for_class_drive(class_obj):
+        if not getattr(user, 'has_google_token_stored', False):
+            continue
         try:
             return get_drive_service(user), user
         except DriveAuthError as exc:

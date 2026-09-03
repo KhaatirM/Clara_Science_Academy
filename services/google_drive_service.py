@@ -55,6 +55,30 @@ class DriveAccessError(Exception):
     """The folder or file could not be read with these credentials."""
 
 
+def _clear_revoked_google_token(user) -> None:
+    """Drop a refresh token Google has rejected so Settings shows Connect, not Connected."""
+    try:
+        from extensions import db
+
+        user.google_refresh_token = None
+        db.session.commit()
+        current_app.logger.info('Cleared revoked Google refresh token for user %s', getattr(user, 'id', None))
+    except Exception:
+        current_app.logger.exception(
+            'Could not clear revoked Google token for user %s', getattr(user, 'id', None)
+        )
+
+
+def safe_google_oauth_next(raw: str | None) -> str | None:
+    """Allow only same-site relative return paths after Google OAuth."""
+    value = (raw or '').strip()
+    if not value.startswith('/') or value.startswith('//'):
+        return None
+    if '\\' in value or value.startswith('/\\'):
+        return None
+    return value[:500]
+
+
 def extract_drive_folder_id(raw: str) -> str | None:
     """Accept a full Drive URL or a bare folder id."""
     value = (raw or '').strip()
@@ -126,13 +150,14 @@ def get_drive_service(user):
         )
         error_code = (payload or {}).get('error')
         if error_code in ('invalid_grant', 'invalid_client'):
+            _clear_revoked_google_token(db_user)
             raise DriveAuthError(
                 'Google access has expired or was revoked. '
-                'Open Settings, disconnect Google, then Connect again (Drive access is included).'
+                'Click Reconnect Google account, approve Drive access, then link the folder again.'
             )
         raise DriveAuthError(
             'Google would not refresh Drive access. '
-            'Open Settings and reconnect your Google account, approving Drive when asked.'
+            'Click Reconnect Google account and approve Drive when asked.'
         )
 
     creds = Credentials(

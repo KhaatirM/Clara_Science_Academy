@@ -62,7 +62,7 @@ def query_settings_hub(*, user) -> dict[str, Any]:
         "google": {
             "connected": google_connected,
             "needs_reconnect": token_stored and not token_usable,
-            "connect_url": "/management/google-account/connect",
+            "connect_url": "/management/google-account/connect?next=/app/management/settings",
             "disconnect_url": "/management/google-account/disconnect",
         },
         "urls": {

@@ -179,11 +179,17 @@ def google_connect_account():
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             prompt='consent',
-            include_granted_scopes='true'
         )
         
         from flask import session
         session['oauth_state'] = state
+        next_url = request.args.get('next')
+        from services.google_drive_service import safe_google_oauth_next
+        safe_next = safe_google_oauth_next(next_url)
+        if safe_next:
+            session['google_oauth_next'] = safe_next
+        else:
+            session.pop('google_oauth_next', None)
         return redirect(authorization_url)
     except Exception as e:
         current_app.logger.error(f"Error starting Google OAuth flow: {e}")
@@ -252,6 +258,9 @@ def google_connect_callback():
         current_app.logger.error(f"Error in Google connect callback: {e}")
         flash(f"An error occurred: {e}", "danger")
 
+    next_url = session.pop('google_oauth_next', None)
+    if next_url:
+        return redirect(next_url)
     return redirect(url_for('management.settings'))
 
 

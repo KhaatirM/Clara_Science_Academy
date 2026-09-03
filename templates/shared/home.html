@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 2, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) links Class Notes Drive folders without crashing the server, opens Word/PowerPoint as Google Docs or Slides, and includes attendance filters plus earlier roster and grading fixes.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) lets you reconnect Google when Drive access expires, links Class Notes folders without crashing the server, opens Word/PowerPoint as Google Docs or Slides, and includes attendance filters plus earlier roster and grading fixes.</p>
                     </div>
                 </div>
 
@@ -176,6 +176,10 @@
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-funnel me-2"></i>Attendance &amp; Class Notes – September 2, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Reconnect Google for Class Notes:</strong> An expired Drive token still looked connected in Settings, so linking a folder failed. Expired tokens are cleared, Class Notes has a Reconnect button, and Settings lets you reconnect even while linked.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Class period filters:</strong> Filter by teacher, grade, subject, completion status, or search on the Class Period attendance tab. Stats update for the filtered list.
@@ -2296,11 +2300,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v5')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v6')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep2_2026_v5', 'true');
+            sessionStorage.setItem('updateModalShownSep2_2026_v6', 'true');
         }, 500);
     }
 });

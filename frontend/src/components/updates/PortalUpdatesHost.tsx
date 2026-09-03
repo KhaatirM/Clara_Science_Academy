@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep2_2026_v12'
+const SESSION_KEY = 'spaUpdateModalShownSep3_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Score presets match the assignment point total',
+    body: 'On paper grading, the 100 / 90 / 80 / 70 / 0 buttons used absolute points, so a 50-point assignment still offered 100. Those presets (and student assistant letter buttons) now scale to the assignment total.',
+  },
+  {
+    title: 'Student assistant grading looks like teacher cards',
+    body: 'Individual assistant grading is no longer a plain table. Each student has a card with A–D, scaled presets, score bar, and feedback — same idea as group grading.',
+  },
+  {
+    title: 'Assistant console and class hub polish',
+    body: 'The multi-class console and class workspace use clearer section labels and denser assignment rows for Enter grades.',
+  },
   {
     title: 'Drive Sync now creates the missing database column',
     body: 'Syncing a Class Notes Drive folder failed on production because converted_drive_file_id was never added to Postgres. Sync adds that column on first run and shortens error text so it fits in the database.',
@@ -186,10 +198,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.20'
-  const releaseLabel = version?.release_label || 'September 2, 2026'
+  const display = version?.display || 'v 2.520.21'
+  const releaseLabel = version?.release_label || 'September 3, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2746
+  const updatesEstimate = version?.updates_estimate ?? 2747
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

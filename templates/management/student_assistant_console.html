@@ -15,10 +15,11 @@
                     <i class="bi bi-grid-1x2-fill"></i>
                 </div>
                 <div>
+                    <p class="sa-section-eyebrow text-white-50 mb-1">Workspace</p>
                     <h1 class="sa-console-hero-title">Student assistant console</h1>
                     <p class="sa-console-hero-subtitle">
                         You assist <strong>{{ assistant_classes|length }}</strong> class{% if assistant_classes|length != 1 %}es{% endif %}.
-                        Choose where to work — attendance and grading stay separate per class.
+                        Open a class workspace for attendance and grading.
                     </p>
                 </div>
             </div>
@@ -28,7 +29,8 @@
         </div>
     </div>
 
-    <div class="row g-4 sa-console-grid">
+    <p class="sa-section-label">Your classes</p>
+    <div class="row g-3 sa-console-grid">
         {% for c in assistant_classes %}
         <div class="col-12 {% if assistant_classes|length > 1 %}col-lg-6{% else %}col-lg-8 mx-lg-auto{% endif %}">
             <article class="sa-console-class-card sa-console-class-card-{{ (loop.index0 % 2) + 1 }}">
@@ -45,14 +47,11 @@
                             {% endif %}
                         </p>
                     </header>
-                    <p class="sa-console-class-hint text-muted small mb-4">
-                        Workspace: take attendance and enter grades for this class only.
-                    </p>
-                    <div class="d-flex flex-wrap gap-2 sa-console-actions">
+                    <div class="d-flex flex-wrap gap-2 sa-console-actions mt-3">
                         <a href="{{ url_for('student_assistant.class_hub', class_id=c.id) }}" class="btn sa-console-btn-primary">
                             <i class="bi bi-box-arrow-in-right me-1"></i>Open workspace
                         </a>
-                        <a href="{{ url_for('student_assistant.take_attendance', class_id=c.id) }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('student_assistant.take_attendance', class_id=c.id) }}" class="btn btn-outline-secondary btn-sm sa-console-btn-secondary">
                             <i class="bi bi-calendar-check me-1"></i>Attendance
                         </a>
                     </div>

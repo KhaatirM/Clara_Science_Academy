@@ -1,6 +1,7 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
 {% endblock %}
 
@@ -8,7 +9,6 @@
 
 {% block dashboard_content %}
 <div class="student-assistant-container">
-    <!-- Hero header -->
     <div class="student-assistant-grade-hero">
         <div class="student-assistant-grade-hero-inner">
             <div class="student-assistant-grade-hero-content">
@@ -40,68 +40,142 @@
         </button>
     </div>
 
-    <form method="POST" class="card student-assistant-grade-card">
-        <div class="card-body">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Student</th>
-                            <th style="width: 180px;">Submitted?</th>
-                            <th style="width: 140px;">Score (0–{{ total_points }})</th>
-                            <th>Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in students %}
-                        {% set g = grades_by_student.get(s.id) %}
-                        {% set sub = submissions.get(s.id) %}
-                        {% set grade_data = (g.grade_data|from_json) if g and g.grade_data else {} %}
-                        <tr>
-                            <td>
-                                <span class="fw-medium">{{ s.first_name }} {{ s.last_name }}</span>
-                            </td>
-                            <td>
-                                <select name="submission_type_{{ s.id }}" class="form-select form-select-sm">
+    <form method="POST" id="assistantGradeForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="sa-grade-cards">
+            {% for s in students %}
+            {% set g = grades_by_student.get(s.id) %}
+            {% set sub = submissions.get(s.id) %}
+            {% set grade_data = (g.grade_data|from_json) if g and g.grade_data else {} %}
+            {% set raw_score = grade_data.get('score', grade_data.get('points_earned')) %}
+            {% set score_value = (raw_score|float) if raw_score not in (None, '') else 0 %}
+            {% set score_pct = (score_value / (total_points|float) * 100) if (total_points|float) > 0 and score_value else 0 %}
+            {% set performance_class = 'excellent' if score_pct >= 90 else ('good' if score_pct >= 80 else ('warning' if score_pct >= 70 else ('failing' if score_pct > 0 else 'ungraded'))) %}
+            {% set notes_val = sub.submission_notes if sub and sub.submission_notes else '' %}
+            {% set notes_is_other = notes_val and notes_val not in ['On-Time', 'Late'] %}
+            {% set comment_val = grade_data.get('feedback', '') or grade_data.get('comment', '') %}
+            {% set pts_a = (total_points|float * 0.95)|round(1) %}
+            {% set pts_b = (total_points|float * 0.85)|round(1) %}
+            {% set pts_c = (total_points|float * 0.75)|round(1) %}
+            {% set pts_d = (total_points|float * 0.65)|round(1) %}
+            {% set pts_90 = (total_points|float * 0.9)|round(1) %}
+            {% set pts_80 = (total_points|float * 0.8)|round(1) %}
+            {% set pts_70 = (total_points|float * 0.7)|round(1) %}
+
+            <div class="student-grade-card {{ performance_class }}" data-student-id="{{ s.id }}" style="animation-delay: {{ loop.index0 * 0.04 }}s">
+                <div class="student-grade-header">
+                    <div class="student-grade-avatar">
+                        {{ s.first_name[0] if s.first_name else '?' }}{{ s.last_name[0] if s.last_name else '?' }}
+                    </div>
+                    <div class="student-grade-info">
+                        <div class="student-grade-name">{{ s.first_name }} {{ s.last_name }}</div>
+                        <div class="student-grade-email">{{ s.email or 'No email' }}</div>
+                    </div>
+                    <div class="student-grade-badges">
+                        {% if raw_score not in (None, '') %}
+                        <span class="submission-badge badge-submitted">
+                            <i class="bi bi-check-circle-fill"></i> Graded
+                        </span>
+                        {% else %}
+                        <span class="submission-badge badge-not-submitted">
+                            <i class="bi bi-hourglass-split"></i> Not Graded
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="student-grade-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="grade-input-group">
+                                <label class="grade-label"><i class="bi bi-clipboard-check"></i> Submission</label>
+                                <select name="submission_type_{{ s.id }}" class="form-select form-select-sm mb-2">
                                     <option value="not_submitted" {% if not sub or sub.submission_type == 'not_submitted' %}selected{% endif %}>Not submitted</option>
                                     <option value="in_person" {% if sub and sub.submission_type == 'in_person' %}selected{% endif %}>Yes (paper/in-person)</option>
                                     <option value="online" {% if sub and sub.submission_type == 'online' %}selected{% endif %}>Yes (online)</option>
                                 </select>
-                                {% set notes_val = sub.submission_notes if sub and sub.submission_notes else '' %}
-                                {% set notes_is_other = notes_val and notes_val not in ['On-Time', 'Late'] %}
-                                <select class="form-select form-select-sm mt-1 submission-notes-type" name="submission_notes_type_{{ s.id }}" data-student-id="{{ s.id }}" onchange="toggleNotesOther(this)">
+                                <select class="form-select form-select-sm submission-notes-type" name="submission_notes_type_{{ s.id }}" data-student-id="{{ s.id }}" onchange="toggleNotesOther(this)">
                                     <option value="On-Time" {% if notes_val == 'On-Time' or (not notes_val) %}selected{% endif %}>On-Time</option>
                                     <option value="Late" {% if notes_val == 'Late' %}selected{% endif %}>Late</option>
                                     <option value="Other" {% if notes_is_other %}selected{% endif %}>Other</option>
                                 </select>
-                                <input type="text" name="submission_notes_{{ s.id }}" class="form-control form-control-sm mt-1 submission-notes-other" placeholder="Specify..."
+                                <input type="text" name="submission_notes_{{ s.id }}" class="form-control form-control-sm mt-1 submission-notes-other" placeholder="Specify…"
                                        value="{{ notes_val if notes_is_other else '' }}" id="notes_other_{{ s.id }}" style="display:{{ 'block' if notes_is_other else 'none' }};">
-                            </td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="{{ total_points }}" name="score_{{ s.id }}"
-                                       class="form-control form-control-sm" placeholder="—"
-                                       value="{{ grade_data.get('score', grade_data.get('points_earned')) }}">
-                            </td>
-                            <td>
-                                <input type="text" name="comment_{{ s.id }}" class="form-control form-control-sm"
-                                       placeholder="Optional feedback" value="{{ grade_data.get('feedback', '') }}">
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="grade-input-group">
+                                <label class="grade-label"><i class="bi bi-star"></i> Score (0–{{ total_points }})</label>
+                                <div class="letter-grade-buttons mb-2">
+                                    <button type="button" class="btn-letter-grade btn-grade-a" onclick="setAssistantGrade({{ s.id }}, {{ pts_a }})" title="A (95%)">A</button>
+                                    <button type="button" class="btn-letter-grade btn-grade-b" onclick="setAssistantGrade({{ s.id }}, {{ pts_b }})" title="B (85%)">B</button>
+                                    <button type="button" class="btn-letter-grade btn-grade-c" onclick="setAssistantGrade({{ s.id }}, {{ pts_c }})" title="C (75%)">C</button>
+                                    <button type="button" class="btn-letter-grade btn-grade-d" onclick="setAssistantGrade({{ s.id }}, {{ pts_d }})" title="D (65%)">D</button>
+                                </div>
+                                <div class="grade-presets mb-2">
+                                    <button type="button" class="btn-preset" onclick="setAssistantGrade({{ s.id }}, {{ total_points|float }})" title="100%">💯</button>
+                                    <button type="button" class="btn-preset" onclick="setAssistantGrade({{ s.id }}, {{ pts_90 }})" title="90%">{{ pts_90 }}</button>
+                                    <button type="button" class="btn-preset" onclick="setAssistantGrade({{ s.id }}, {{ pts_80 }})" title="80%">{{ pts_80 }}</button>
+                                    <button type="button" class="btn-preset" onclick="setAssistantGrade({{ s.id }}, {{ pts_70 }})" title="70%">{{ pts_70 }}</button>
+                                    <button type="button" class="btn-preset" onclick="setAssistantGrade({{ s.id }}, 0)" title="0%">0</button>
+                                </div>
+                                <div class="score-input-wrapper">
+                                    <input type="number"
+                                           step="0.1"
+                                           min="0"
+                                           max="{{ total_points }}"
+                                           name="score_{{ s.id }}"
+                                           id="score_{{ s.id }}"
+                                           class="score-input"
+                                           placeholder="—"
+                                           value="{{ raw_score if raw_score not in (None, '') else '' }}"
+                                           data-total-points="{{ total_points }}"
+                                           oninput="updateAssistantScoreVisual(this)">
+                                    <div class="score-visual-bar">
+                                        <div class="score-visual-fill" style="width: {{ score_pct if score_pct <= 100 else 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="grade-input-group">
+                                <label class="grade-label"><i class="bi bi-chat-left-text"></i> Feedback</label>
+                                <textarea name="comment_{{ s.id }}"
+                                          class="comment-input"
+                                          rows="4"
+                                          maxlength="500"
+                                          placeholder="Optional feedback for the student…"
+                                          oninput="updateAssistantCharCount(this)">{{ comment_val }}</textarea>
+                                <div class="char-counter"><span class="char-count">{{ comment_val|length }}</span>/500</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mt-4 pt-2">
-                <button type="submit" class="btn btn-primary btn-save">
-                    <i class="bi bi-check-circle me-1"></i>Save Grades
-                </button>
+            {% else %}
+            <div class="student-assistant-assignments-empty">
+                <i class="bi bi-people fs-4 d-block mb-2"></i>
+                No students enrolled in this class.
             </div>
+            {% endfor %}
         </div>
+
+        {% if students %}
+        <div class="sa-grade-footer mt-4">
+            <button type="submit" class="btn btn-primary btn-lg btn-save">
+                <i class="bi bi-check-circle me-1"></i>Save Grades
+            </button>
+            <a href="{{ url_for('student_assistant.class_hub', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-lg">
+                Cancel
+            </a>
+        </div>
+        {% endif %}
     </form>
 </div>
 
-<!-- Grading Help Modal -->
 <div class="modal fade" id="gradingHelpModal" tabindex="-1" aria-labelledby="gradingHelpModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -114,18 +188,18 @@
             <div class="modal-body">
                 <p class="text-muted mb-4">Use this guide to correctly record grades so the teacher doesn't have to double-check.</p>
                 <div class="mb-3">
-                    <h6><i class="bi bi-clipboard-check text-primary me-2"></i>Submitted?</h6>
-                    <p class="mb-1"><strong>Not submitted</strong> — The student did not turn in the assignment. Leave score blank or enter 0. The teacher will know not to look for it.</p>
-                    <p class="mb-1"><strong>Yes (paper/in-person)</strong> — The student turned in a physical paper or handed it in during class.</p>
-                    <p class="mb-0"><strong>Yes (online)</strong> — The student submitted digitally through the app.</p>
+                    <h6><i class="bi bi-clipboard-check text-primary me-2"></i>Submission</h6>
+                    <p class="mb-1"><strong>Not submitted</strong> — Leave score blank or enter 0.</p>
+                    <p class="mb-1"><strong>Yes (paper/in-person)</strong> — Physical paper or handed in during class.</p>
+                    <p class="mb-0"><strong>Yes (online)</strong> — Submitted digitally through the app.</p>
                 </div>
                 <div class="mb-3">
                     <h6><i class="bi bi-star text-primary me-2"></i>Score</h6>
-                    <p class="mb-0">Points the student earned out of {{ total_points }}. Only enter a score if the student submitted work. Use 0 for not submitted or no credit.</p>
+                    <p class="mb-0">Points out of {{ total_points }}. Letter buttons and presets use a percentage of that total (for example 90% of {{ total_points }}).</p>
                 </div>
                 <div class="mb-0">
-                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Comment</h6>
-                    <p class="mb-0">Optional feedback visible to the student. Add notes like "Great work!" or "Needs improvement on section 2."</p>
+                    <h6><i class="bi bi-chat-left-text text-primary me-2"></i>Feedback</h6>
+                    <p class="mb-0">Optional notes visible to the student.</p>
                 </div>
             </div>
         </div>
@@ -142,8 +216,46 @@ function toggleNotesOther(selectEl) {
         if (selectEl.value !== 'Other') otherInput.value = '';
     }
 }
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.submission-notes-type').forEach(function(sel) { toggleNotesOther(sel); });
+
+function setAssistantGrade(studentId, score) {
+    const input = document.getElementById('score_' + studentId);
+    if (!input) return;
+    input.value = score;
+    updateAssistantScoreVisual(input);
+}
+
+function updateAssistantScoreVisual(input) {
+    const score = parseFloat(input.value) || 0;
+    const totalPoints = parseFloat(input.dataset.totalPoints) || 100;
+    const pct = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+    const visualFill = input.parentElement.querySelector('.score-visual-fill');
+    if (visualFill) {
+        visualFill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    }
+    const card = input.closest('.student-grade-card');
+    if (card) {
+        const base = 'student-grade-card ';
+        card.className = base + (
+            pct >= 90 ? 'excellent' :
+            pct >= 80 ? 'good' :
+            pct >= 70 ? 'warning' :
+            pct > 0 ? 'failing' : 'ungraded'
+        );
+    }
+}
+
+function updateAssistantCharCount(textarea) {
+    const counter = textarea.parentElement.querySelector('.char-count');
+    if (counter) counter.textContent = String(textarea.value.length);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.submission-notes-type').forEach(function (sel) {
+        toggleNotesOther(sel);
+    });
+    document.querySelectorAll('.score-input').forEach(function (input) {
+        updateAssistantScoreVisual(input);
+    });
 });
 </script>
 {% endblock %}

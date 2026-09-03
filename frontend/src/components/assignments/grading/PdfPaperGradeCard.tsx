@@ -36,7 +36,8 @@ const LETTER_PRESETS = [
   { letter: 'D', pct: 65, cls: 'bg-orange-500 hover:bg-orange-600' },
 ]
 
-const SCORE_PRESETS = [100, 90, 80, 70, 0]
+/** Percent of assignment total (not absolute points). */
+const SCORE_PRESET_PCTS = [100, 90, 80, 70, 0]
 
 function submissionBadge(type: string | undefined, submittedAt: string | null | undefined) {
   if (type === 'in_person') {
@@ -212,17 +213,22 @@ export function PdfPaperGradeCard({
             ))}
           </div>
           <div className="mt-1.5 grid grid-cols-5 gap-1.5">
-            {SCORE_PRESETS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                disabled={disabled}
-                onClick={() => onChange({ score: String(n) })}
-                className="flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
-              >
-                {n === 100 ? '💯' : n}
-              </button>
-            ))}
+            {SCORE_PRESET_PCTS.map((pct) => {
+              const pts = scoreFromPercent(pct, totalPoints)
+              const label = pct === 100 ? '💯' : pct === 0 ? '0' : pts
+              return (
+                <button
+                  key={pct}
+                  type="button"
+                  disabled={disabled}
+                  title={`${pct}% (${pts} pts)`}
+                  onClick={() => onChange({ score: pts })}
+                  className="flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
           <div className="mt-2 flex items-center gap-1">
             <input

@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated August 28, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 3, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,32 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 2, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 3, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 2</strong> (<strong>{{ app_version_display }}</strong>) fixes Drive Sync on production (missing column), Class Notes crashing after a Drive folder is linked, Google Drive API messaging, Reconnect Google, and earlier attendance/roster fixes.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) scales grading score presets to the assignment point total, redesigns student assistant individual grading into teacher-style cards, and polishes the assistant console and class hub.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 3, 2026 - Grading presets + assistant -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Grading &amp; Student assistant – September 3, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Score presets match the point total:</strong> The 100 / 90 / 80 / 70 / 0 buttons on paper grading used absolute points (so a 50-point assignment still offered 100). Presets and assistant letter buttons now scale to the assignment total.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assistant individual grading cards:</strong> Entering grades as a student assistant is no longer a plain table. Each student has a card with A&ndash;D, scaled presets, score bar, and feedback.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assistant console and hub:</strong> Clearer section labels and denser assignment rows on the multi-class console and class workspace.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 2, 2026 - Attendance filters + Class notes -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-funnel me-2"></i>Attendance &amp; Class Notes – September 2, 2026</h6>
@@ -2316,11 +2335,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep2_2026_v10')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep2_2026_v10', 'true');
+            sessionStorage.setItem('updateModalShownSep3_2026_v1', 'true');
         }, 500);
     }
 });

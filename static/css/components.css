@@ -4945,6 +4945,66 @@
     box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
 
+/* Letter / preset quick-grade buttons */
+.letter-grade-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: space-between;
+}
+
+.btn-letter-grade {
+    flex: 1;
+    border: 2px solid #e5e7eb;
+    background: white;
+    padding: 0.375rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-letter-grade:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-grade-a { color: #10b981; border-color: #10b981; }
+.btn-grade-a:hover { background: #10b981; color: white; }
+
+.btn-grade-b { color: #3b82f6; border-color: #3b82f6; }
+.btn-grade-b:hover { background: #3b82f6; color: white; }
+
+.btn-grade-c { color: #f59e0b; border-color: #f59e0b; }
+.btn-grade-c:hover { background: #f59e0b; color: white; }
+
+.btn-grade-d { color: #ef4444; border-color: #ef4444; }
+.btn-grade-d:hover { background: #ef4444; color: white; }
+
+.grade-presets {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-preset {
+    flex: 1;
+    border: 2px solid #e5e7eb;
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6b7280;
+}
+
+.btn-preset:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
 .student-grade-card.excellent {
     border-left: 5px solid #28a745;
     background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);

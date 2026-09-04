@@ -123,6 +123,28 @@ def finalize_redo_for_grade(
     }
 
 
+def finalize_reopening_for_grade(*, assignment_id: int, student_id: int) -> int:
+    """Deactivate active reopenings once the teacher records a grade.
+
+    No-submission redo grants create ``AssignmentReopening`` (not ``AssignmentRedo``).
+    Without this, graded reopenings stay on the Active reopenings list forever.
+    """
+    from models import AssignmentReopening
+
+    rows = (
+        AssignmentReopening.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student_id,
+            is_active=True,
+        ).all()
+    )
+    if not rows:
+        return 0
+    for row in rows:
+        row.is_active = False
+    return len(rows)
+
+
 def redo_final_grade_for(assignment_id: int, student_id: int) -> float | None:
     """Final grade recorded for a student's redo, if any."""
     from models import AssignmentRedo
@@ -135,4 +157,9 @@ def redo_final_grade_for(assignment_id: int, student_id: int) -> float | None:
     return redo.final_grade if redo else None
 
 
-__all__ = ['finalize_redo_for_grade', 'redo_final_grade_for', 'REDO_LATE_PENALTY_RATE']
+__all__ = [
+    'finalize_redo_for_grade',
+    'finalize_reopening_for_grade',
+    'redo_final_grade_for',
+    'REDO_LATE_PENALTY_RATE',
+]

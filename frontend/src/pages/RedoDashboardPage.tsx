@@ -314,16 +314,23 @@ export function RedoDashboardPage() {
             )}
           </RedoSection>
 
-          <RedoSection title="Active reopenings" subtitle="Assignments opened again so students can submit." tone="border-violet-300 bg-violet-50">
+          <RedoSection title="Active reopenings" subtitle="Assignments opened again so students can submit. Graded reopenings leave this list automatically." tone="border-violet-300 bg-violet-50">
             {filteredReopenings.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Class', 'Reopened', 'Attempts']}
+                headers={['Student', 'Assignment', 'Class', 'Reopened', 'Attempts', 'Actions']}
                 rows={filteredReopenings.map((r: ReopeningItem) => [
                   r.student.display_name,
                   r.assignment.title,
                   r.class.name,
                   formatDate(r.reopened_at),
-                  String(r.additional_attempts),
+                  r.attempts_label ?? (r.additional_attempts > 0 ? String(r.additional_attempts) : '—'),
+                  r.grade_url ? (
+                    <a key={`g-${r.id}`} href={r.grade_url} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">
+                      Grade
+                    </a>
+                  ) : (
+                    '—'
+                  ),
                 ])}
               />
             ) : (

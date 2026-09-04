@@ -1158,6 +1158,15 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
             "graded_at": datetime.utcnow().isoformat(),
             "grading_status": "final",
         }
+        from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
+
+        finalize_redo_for_grade(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            grade_data=grade_data_dict,
+            late_penalty_already_applied=bool(adjusted["late_penalty_applied"]),
+        )
+        finalize_reopening_for_grade(assignment_id=assignment_id, student_id=student.id)
         grade_json = json.dumps(grade_data_dict)
         if existing_grade:
             existing_grade.grade_data = grade_json

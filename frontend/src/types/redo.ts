@@ -35,10 +35,13 @@ export interface ReopeningItem {
   id: number
   reopened_at: string | null
   additional_attempts: number
+  attempts_label?: string
+  assignment_type?: string | null
   student: RedoStudentRef
   assignment: RedoAssignmentRef
   class: RedoClassRef
   status: string
+  grade_url?: string | null
   search_text: string
 }
 

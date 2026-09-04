@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 3, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 4, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,28 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 3, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 4, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 3</strong> (<strong>{{ app_version_display }}</strong>) lets students request redos on past-due work, fixes repair desk card details and click-to-open, redesigns the Tech repair desk, and polishes student assistant grading.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 4</strong> (<strong>{{ app_version_display }}</strong>) fixes the Redo dashboard for graded reopenings and Final scores, lets students request redos on past-due work, fixes repair desk card details and click-to-open, redesigns the Tech repair desk, and polishes student assistant grading.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 4, 2026 - Redo dashboard -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Redo dashboard – September 4, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Graded reopenings leave Active reopenings:</strong> Students who never turned work in, asked for a redo, and were reopened no longer stay stuck at &ldquo;0 attempts&rdquo; after you grade them. Paper reopenings show &mdash; for attempts when quiz attempts do not apply.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Final stays blank until re-graded:</strong> On Active redo opportunities, Final shows &mdash; until you save a new grade for the redo — it no longer copies the original score.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 3, 2026 - Redo requests -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Student redo requests – September 3, 2026</h6>
@@ -2403,11 +2418,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep3_2026_v5')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep4_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep3_2026_v5', 'true');
+            sessionStorage.setItem('updateModalShownSep4_2026_v1', 'true');
         }, 500);
     }
 });

@@ -165,6 +165,16 @@ def grade_assignment(assignment_id):
                         # Teacher manual grading finalizes mixed-question quizzes.
                         'grading_status': 'final',
                     }
+
+                    from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
+
+                    finalize_redo_for_grade(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        grade_data=grade_data,
+                        late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
+                    )
+                    finalize_reopening_for_grade(assignment_id=assignment_id, student_id=student_id)
                     
                     if existing_grade:
                         existing_grade.grade_data = json.dumps(grade_data)
@@ -264,6 +274,16 @@ def grade_assignment(assignment_id):
                         'feedback': comments,
                         'graded_at': datetime.now().isoformat()
                     }
+
+                    from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
+
+                    finalize_redo_for_grade(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        grade_data=grade_data,
+                        late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
+                    )
+                    finalize_reopening_for_grade(assignment_id=assignment_id, student_id=student_id)
 
                     if existing_grade:
                         existing_grade.grade_data = json.dumps(grade_data)
@@ -581,7 +601,7 @@ def save_student_grade(assignment_id, student_id):
             # If a teacher is saving a quiz score here, treat it as finalized.
             **({'grading_status': 'final'} if assignment.assignment_type == 'quiz' else {}),
         }
-        from utils.redo_grading import finalize_redo_for_grade
+        from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
 
         finalize_redo_for_grade(
             assignment_id=assignment_id,
@@ -589,6 +609,7 @@ def save_student_grade(assignment_id, student_id):
             grade_data=grade_data,
             late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
         )
+        finalize_reopening_for_grade(assignment_id=assignment_id, student_id=student_id)
 
         if existing_grade:
             existing_grade.grade_data = json.dumps(grade_data)

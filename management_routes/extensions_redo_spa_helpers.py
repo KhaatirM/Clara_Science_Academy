@@ -224,10 +224,15 @@ def _serialize_reopening(r: AssignmentReopening) -> dict[str, Any]:
     assignment = r.assignment
     student = r.student
     class_info = assignment.class_info if assignment else None
+    attempts = r.additional_attempts or 0
+    assignment_type = (getattr(assignment, "assignment_type", None) or "").lower()
     return {
         "id": r.id,
         "reopened_at": _iso(r.reopened_at),
-        "additional_attempts": r.additional_attempts or 0,
+        "additional_attempts": attempts,
+        # PDF/paper reopenings grant access, not quiz attempts — UI should not show "0".
+        "attempts_label": str(attempts) if attempts > 0 else "—",
+        "assignment_type": assignment_type or None,
         "student": {
             "id": student.id if student else None,
             "display_name": _student_name(student),
@@ -241,6 +246,7 @@ def _serialize_reopening(r: AssignmentReopening) -> dict[str, Any]:
             "name": class_info.name if class_info else "Unknown",
         },
         "status": "reopened",
+        "grade_url": f"/management/grade/assignment/{r.assignment_id}" if assignment else None,
         "search_text": " ".join(
             filter(
                 None,
@@ -254,11 +260,74 @@ def _serialize_reopening(r: AssignmentReopening) -> dict[str, Any]:
     }
 
 
-def _recorded_grade_scores(redos: list[AssignmentRedo]) -> dict[tuple[int, int], float]:
-    """Actual graded scores keyed by (assignment_id, student_id).
+def _grade_row_has_score(row: Grade) -> bool:
+    if getattr(row, "is_voided", False):
+        return False
+    try:
+        data = json.loads(row.grade_data) if isinstance(row.grade_data, str) else row.grade_data
+    except (TypeError, ValueError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    value = data.get("score")
+    if value is None:
+        value = data.get("points_earned")
+    if value is None:
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
 
-    Redos granted before grading closed them out have ``final_grade = NULL``;
-    reading the real Grade row keeps those from being reported as pending.
+
+def _close_graded_reopenings(reopenings: list[AssignmentReopening]) -> list[AssignmentReopening]:
+    """Drop reopenings that already have a grade; deactivate them so they stay off the list.
+
+    Older grade saves never closed ``AssignmentReopening`` rows, so Active reopenings
+    could keep showing after the teacher graded.
+    """
+    if not reopenings:
+        return []
+    pairs = {(r.assignment_id, r.student_id) for r in reopenings}
+    assignment_ids = {a for a, _ in pairs}
+    student_ids = {s for _, s in pairs}
+    graded_pairs: set[tuple[int, int]] = set()
+    rows = Grade.query.filter(
+        Grade.assignment_id.in_(assignment_ids), Grade.student_id.in_(student_ids)
+    ).all()
+    for row in rows:
+        key = (row.assignment_id, row.student_id)
+        if key in pairs and _grade_row_has_score(row):
+            graded_pairs.add(key)
+
+    still_open: list[AssignmentReopening] = []
+    closed = 0
+    for r in reopenings:
+        if (r.assignment_id, r.student_id) in graded_pairs:
+            if r.is_active:
+                r.is_active = False
+                closed += 1
+            continue
+        still_open.append(r)
+    if closed:
+        try:
+            from extensions import db
+
+            db.session.commit()
+        except Exception:
+            from extensions import db
+
+            db.session.rollback()
+            # Still hide graded rows for this response even if persist failed.
+    return still_open
+
+
+def _recorded_grade_scores(redos: list[AssignmentRedo]) -> dict[tuple[int, int], float]:
+    """Redo-finalized Grade scores keyed by (assignment_id, student_id).
+
+    Only grades marked ``is_redo_final`` count. Using any live Grade score would
+    copy the original score into Final before the teacher re-grades the redo.
     """
     if not redos:
         return {}
@@ -281,7 +350,7 @@ def _recorded_grade_scores(redos: list[AssignmentRedo]) -> dict[tuple[int, int],
             data = json.loads(row.grade_data) if isinstance(row.grade_data, str) else row.grade_data
         except (TypeError, ValueError):
             continue
-        if not isinstance(data, dict):
+        if not isinstance(data, dict) or not data.get("is_redo_final"):
             continue
         value = data.get("score")
         if value is None:
@@ -325,11 +394,13 @@ def _serialize_redo(
     class_info = assignment.class_info if assignment else None
     total_points = _assignment_total_points(assignment)
 
+    # Final only from the redo row (or a Grade explicitly marked is_redo_final).
+    # Do not copy the original Grade score into Final while the redo is still open.
     final_grade = redo.final_grade
     if final_grade is None and recorded_scores is not None:
         final_grade = recorded_scores.get((redo.assignment_id, redo.student_id))
     has_final = final_grade is not None
-    redo_grade = redo.redo_grade if redo.redo_grade is not None else final_grade
+    redo_grade = redo.redo_grade
 
     is_overdue = bool(
         (not redo.is_used)
@@ -473,6 +544,7 @@ def query_redo_dashboard() -> dict[str, Any]:
 
     redos = [r for r in redos if r.assignment and r.student]
     reopenings = [r for r in reopenings if r.assignment and r.student]
+    reopenings = _close_graded_reopenings(reopenings)
     redo_requests = [r for r in redo_requests if r.assignment and r.student]
 
     recorded_scores = _recorded_grade_scores(redos)

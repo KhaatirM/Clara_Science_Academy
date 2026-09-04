@@ -2164,7 +2164,7 @@ def _save_single_student_grade(assignment_id, student_id):
         'percentage': adjusted['percentage'], 'comment': comment, 'feedback': comment,
         'graded_at': datetime.utcnow().isoformat()
     }
-    from utils.redo_grading import finalize_redo_for_grade
+    from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
 
     finalize_redo_for_grade(
         assignment_id=assignment_id,
@@ -2172,6 +2172,7 @@ def _save_single_student_grade(assignment_id, student_id):
         grade_data=grade_data_dict,
         late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
     )
+    finalize_reopening_for_grade(assignment_id=assignment_id, student_id=student_id)
     grade_data = json.dumps(grade_data_dict)
 
     if existing_grade:
@@ -2506,7 +2507,7 @@ def grade_assignment(assignment_id):
                         check_and_void_grade(grade)
 
                     # Close out a granted redo so it stops showing as pending
-                    from utils.redo_grading import finalize_redo_for_grade
+                    from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
 
                     if not grade.is_voided and finalize_redo_for_grade(
                         assignment_id=assignment_id,
@@ -2515,6 +2516,10 @@ def grade_assignment(assignment_id):
                         late_penalty_already_applied=bool(adjusted['late_penalty_applied']),
                     ):
                         grade.grade_data = json.dumps(grade_data_dict)
+                    if not grade.is_voided:
+                        finalize_reopening_for_grade(
+                            assignment_id=assignment_id, student_id=student.id
+                        )
 
                     # Auto-create in_person submission when a positive grade is saved and none exists yet
                     if adjusted['points_earned'] > 0:

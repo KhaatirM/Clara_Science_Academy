@@ -156,7 +156,7 @@ def _primary_action(
     if atype == "quiz":
         label = (
             f"Retake quiz ({attempts_remaining} left)"
-            if attempts_remaining and attempts_remaining > 0
+            if has_submission and attempts_remaining is not None and attempts_remaining > 0
             else "Take quiz"
         )
         return {"label": label, "url": f"/app/student/take-quiz/{assignment.id}", "kind": "quiz", "disabled": False}

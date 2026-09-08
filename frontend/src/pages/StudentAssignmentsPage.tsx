@@ -47,7 +47,9 @@ function resolvePrimaryAction(
   if (atype === 'quiz' || atype.includes('quiz')) {
     const attempts = card.attempts_remaining
     const label =
-      attempts != null && attempts > 0 ? `Retake quiz (${attempts} left)` : 'Take quiz'
+      card.has_submission && attempts != null && attempts > 0
+        ? `Retake quiz (${attempts} left)`
+        : 'Take quiz'
     return {
       label: card.primary_action?.kind === 'quiz' ? card.primary_action.label : label,
       url: `/student/take-quiz/${card.id}`,

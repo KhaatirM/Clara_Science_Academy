@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep8_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep8_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Quizzes say Take quiz until you submit',
+    body: 'Untaken quizzes no longer show Retake with attempts left. That label appears only after you have submitted at least once and still have tries remaining.',
+  },
   {
     title: 'Quiz multiple-select questions',
     body: 'When creating a quiz you can now choose Multiple select (select all). Mark more than one correct option; students answer with checkboxes, and the quiz auto-grades when their selections match exactly.',
@@ -226,10 +230,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.28'
+  const display = version?.display || 'v 2.520.29'
   const releaseLabel = version?.release_label || 'September 8, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2754
+  const updatesEstimate = version?.updates_estimate ?? 2755
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

@@ -167,11 +167,22 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 8, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 8</strong> (<strong>{{ app_version_display }}</strong>) adds quiz Multiple select questions, shows Homework vs In-class on Assignments &amp; Grades, and includes recent Redo and repair desk polish.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 8</strong> (<strong>{{ app_version_display }}</strong>) fixes quiz Take vs Retake labels, adds quiz Multiple select questions, shows Homework vs In-class on Assignments &amp; Grades, and includes recent Redo and repair desk polish.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 8, 2026 - Quiz take label -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-//-play me-2"></i>Student quizzes – September 8, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Take quiz until you submit:</strong> Quizzes you have not started no longer say Retake with attempts left. Retake appears only after a submission when tries remain.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 8, 2026 - Quiz multiple select -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-ui-checks me-2"></i>Quiz authoring – September 8, 2026</h6>
@@ -2440,11 +2451,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep8_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep8_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep8_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep8_2026_v3', 'true');
         }, 500);
     }
 });

@@ -227,6 +227,16 @@ def export_quiz_to_google_form(service, quiz_assignment, questions):
                     'type': 'RADIO',
                     'options': options
                 }
+
+            elif question.question_type == 'multiple_select':
+                options = []
+                for option in question.options:
+                    options.append({'value': option.option_text})
+
+                question_item['question']['choiceQuestion'] = {
+                    'type': 'CHECKBOX',
+                    'options': options
+                }
                 
             elif question.question_type == 'true_false':
                 # True/False as multiple choice with True/False options

@@ -39,6 +39,8 @@ export interface AssignmentWorkspaceItem {
   title: string
   type: 'individual' | 'group'
   assignment_type: string | null
+  /** homework | in-class */
+  assignment_context?: string | null
   due_date: string | null
   quarter: string | null
   status: string | null

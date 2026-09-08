@@ -3242,26 +3242,54 @@ def admin_create_group_quiz_assignment(class_id):
                 db.session.add(question)
                 db.session.flush()  # Get the question ID
                 
-                # Save options for multiple choice and true/false
-                if question_type in ['multiple_choice', 'true_false']:
+                # Save options for multiple choice, multiple select, and true/false
+                if question_type in ['multiple_choice', 'multiple_select']:
+                    # Group quizzes use GroupQuizOption — mirror individual option marking.
+                    from utils.quiz_multi_select import correct_indices_from_form
+                    from models import GroupQuizOption
+
+                    option_values = request.form.getlist(f'option_text_{question_id}[]')
+                    correct = correct_indices_from_form(
+                        request.form,
+                        question_id,
+                        multi=(question_type == 'multiple_select'),
+                    )
                     option_count = 0
-                    # Iterate through all form items to find options for the current question
-                    for option_key, option_value in request.form.items():
-                        if option_key.startswith(f'option_text_{question_id}[]'):
-                            option_text = option_value
-                            # Find the correct answer for this question
-                            correct_answer = request.form.get(f'correct_answer_{question_id}')
-                            # Compare option_count as string with correct_answer
-                            is_correct = str(option_count) == correct_answer
-                            
-                            option = GroupQuizOption(
+                    for option_text in option_values:
+                        option_text = (option_text or '').strip()
+                        if not option_text:
+                            continue
+                        db.session.add(
+                            GroupQuizOption(
                                 question_id=question.id,
                                 option_text=option_text,
-                                is_correct=is_correct,
-                                order=option_count
+                                is_correct=str(option_count) in correct,
+                                order=option_count,
                             )
-                            db.session.add(option)
-                            option_count += 1
+                        )
+                        option_count += 1
+                elif question_type == 'true_false':
+                    from models import GroupQuizOption
+
+                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                    # Group form may send 0/1 or true/false.
+                    true_correct = correct_answer in ('0', 'true', 'True')
+                    db.session.add(
+                        GroupQuizOption(
+                            question_id=question.id,
+                            option_text='True',
+                            is_correct=true_correct,
+                            order=0,
+                        )
+                    )
+                    db.session.add(
+                        GroupQuizOption(
+                            question_id=question.id,
+                            option_text='False',
+                            is_correct=not true_correct,
+                            order=1,
+                        )
+                    )
                 
                 question_count += 1
 

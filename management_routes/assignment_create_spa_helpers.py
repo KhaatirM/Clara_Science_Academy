@@ -303,6 +303,7 @@ def query_quiz_assignment_form(
         "save_to_bank_url": save_to_bank_url,
         "question_types": [
             {"value": "multiple_choice", "label": "Multiple choice"},
+            {"value": "multiple_select", "label": "Multiple select (select all)"},
             {"value": "true_false", "label": "True / false"},
             {"value": "short_answer", "label": "Short answer"},
             {"value": "essay", "label": "Long essay"},

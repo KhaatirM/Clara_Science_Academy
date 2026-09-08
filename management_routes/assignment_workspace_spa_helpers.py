@@ -457,6 +457,20 @@ def _quiz_questions_payload(assignment_id: int, student_id: int) -> tuple[list[d
                     answer_display = opt.option_text if opt else ""
                 if not needs_manual:
                     auto_points += points_earned
+            elif qtype == "multiple_select":
+                from utils.quiz_multi_select import parse_selected_option_ids
+
+                selected_ids = parse_selected_option_ids(answer.answer_text)
+                if not selected_ids and answer.selected_option_id:
+                    selected_ids = [int(answer.selected_option_id)]
+                labels = []
+                for oid in selected_ids:
+                    opt = QuizOption.query.get(oid)
+                    if opt and opt.option_text:
+                        labels.append(opt.option_text)
+                answer_display = "; ".join(labels) if labels else (answer.answer_text or "")
+                if not needs_manual:
+                    auto_points += points_earned
             else:
                 answer_display = answer.answer_text or ""
         elif not needs_manual:

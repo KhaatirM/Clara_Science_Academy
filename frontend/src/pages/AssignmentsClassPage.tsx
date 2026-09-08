@@ -51,6 +51,18 @@ function assignmentTypeBadgeClass(raw: string | null | undefined) {
   return 'border-slate-300 bg-slate-50 text-slate-700'
 }
 
+function formatAssignmentContextLabel(raw: string | null | undefined) {
+  const c = (raw || 'homework').toLowerCase().replace(/[_\s]+/g, '-')
+  if (c === 'in-class' || c === 'inclass') return 'In-class'
+  return 'Homework'
+}
+
+function assignmentContextBadgeClass(raw: string | null | undefined) {
+  const c = (raw || 'homework').toLowerCase().replace(/[_\s]+/g, '-')
+  if (c === 'in-class' || c === 'inclass') return 'border-rose-300 bg-rose-50 text-rose-900'
+  return 'border-cyan-300 bg-cyan-50 text-cyan-900'
+}
+
 function AssignmentActionButtons({
   item,
   classId,
@@ -158,6 +170,7 @@ function GradesByAssignmentTable({
           <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-hub-muted">
             <th className="px-3 py-2.5">Assignment</th>
             <th className="px-2 py-2.5 text-center">Type</th>
+            <th className="px-2 py-2.5 text-center">Context</th>
             <th className="px-2 py-2.5 text-center">Due</th>
             <th className="px-2 py-2.5 text-center">Quarter</th>
             <th className="px-2 py-2.5 text-center">Submissions</th>
@@ -197,6 +210,13 @@ function GradesByAssignmentTable({
                     className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold ${assignmentTypeBadgeClass(item.assignment_type)}`}
                   >
                     {formatAssignmentTypeLabel(item.assignment_type)}
+                  </span>
+                </td>
+                <td className="px-2 py-2.5 text-center">
+                  <span
+                    className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold ${assignmentContextBadgeClass(item.assignment_context)}`}
+                  >
+                    {formatAssignmentContextLabel(item.assignment_context)}
                   </span>
                 </td>
                 <td className="px-2 py-2.5 text-center text-xs text-hub-muted">
@@ -258,9 +278,24 @@ function AssignmentCards({
           <article key={item.key} className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className={`border-b px-4 py-3 ${item.type === 'group' ? 'border-sky-100 bg-sky-600 text-white' : 'border-indigo-100 bg-indigo-700 text-white'}`}>
               <h3 className="font-bold">{item.title}</h3>
-              <p className="text-xs opacity-85">{item.type === 'group' ? 'Group assignment' : item.assignment_type || 'Assignment'}</p>
+              <p className="text-xs opacity-85">
+                {item.type === 'group' ? 'Group' : 'Individual'} · {formatAssignmentTypeLabel(item.assignment_type)} ·{' '}
+                {formatAssignmentContextLabel(item.assignment_context)}
+              </p>
             </div>
             <div className="flex-1 space-y-2 p-4 text-sm">
+              <div className="flex flex-wrap gap-1">
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold ${assignmentTypeBadgeClass(item.assignment_type)}`}
+                >
+                  {formatAssignmentTypeLabel(item.assignment_type)}
+                </span>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold ${assignmentContextBadgeClass(item.assignment_context)}`}
+                >
+                  {formatAssignmentContextLabel(item.assignment_context)}
+                </span>
+              </div>
               <p className="text-hub-muted">
                 Due: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
               </p>

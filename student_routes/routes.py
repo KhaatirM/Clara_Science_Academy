@@ -3118,6 +3118,33 @@ def submit_quiz(assignment_id):
                     except (ValueError, TypeError):
                         # Handle invalid option ID
                         pass
+
+            elif question.question_type == 'multiple_select':
+                from utils.quiz_multi_select import (
+                    encode_selected_option_ids,
+                    grade_multiple_select,
+                    parse_selected_option_ids,
+                )
+
+                raw_ids = request.form.getlist(f'question_{question.id}')
+                if not raw_ids:
+                    raw_ids = request.form.get(f'question_{question.id}', '')
+                selected_ids = parse_selected_option_ids(raw_ids)
+                is_correct, points_earned = grade_multiple_select(
+                    options=question.options or [],
+                    selected_ids=selected_ids,
+                    question_points=question.points,
+                )
+                db.session.add(QuizAnswer(
+                    student_id=student.id,
+                    question_id=question.id,
+                    selected_option_id=selected_ids[0] if selected_ids else None,
+                    answer_text=encode_selected_option_ids(selected_ids) if selected_ids else None,
+                    is_correct=is_correct,
+                    points_earned=points_earned,
+                ))
+                if is_correct:
+                    earned_points += points_earned
                 
             elif question.question_type in ['short_answer', 'essay']:
                 # Get text answer

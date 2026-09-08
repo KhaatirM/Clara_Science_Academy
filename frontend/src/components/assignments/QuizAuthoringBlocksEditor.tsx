@@ -38,6 +38,7 @@ function bankQuestionToDraft(q: BankQuestion): QuizQuestionDraft {
   draft.questionText = q.question_text
   const allowed: QuizQuestionDraft['questionType'][] = [
     'multiple_choice',
+    'multiple_select',
     'true_false',
     'short_answer',
     'essay',
@@ -46,12 +47,18 @@ function bankQuestionToDraft(q: BankQuestion): QuizQuestionDraft {
     ? (q.question_type as QuizQuestionDraft['questionType'])
     : 'multiple_choice'
   draft.points = String(q.points || 1)
-  if (q.question_type === 'multiple_choice' && q.options?.length) {
+  if (
+    (q.question_type === 'multiple_choice' || q.question_type === 'multiple_select') &&
+    q.options?.length
+  ) {
     const opts = q.options.map((o) => o.option_text)
     while (opts.length < 4) opts.push('')
     draft.options = opts.slice(0, 8)
-    const correctIdx = q.options.findIndex((o) => o.is_correct)
-    draft.correctIndex = String(correctIdx >= 0 ? correctIdx : 0)
+    const correctIdxs = q.options
+      .map((o, i) => (o.is_correct ? String(i) : null))
+      .filter((v): v is string => v != null)
+    draft.correctIndexes = correctIdxs.length ? correctIdxs : ['0']
+    draft.correctIndex = draft.correctIndexes[0] || '0'
   } else if (q.question_type === 'true_false' && q.options?.length) {
     const trueOpt = q.options.find((o) => o.option_text.toLowerCase() === 'true')
     draft.correctTrueFalse = trueOpt?.is_correct ? 'true' : 'false'
@@ -64,8 +71,9 @@ type BulkTab = 'count' | 'paste' | 'csv'
 const QUIZ_CSV_TEMPLATE =
   'question_number,section,question_text,question_type,points,option_a,option_b,option_c,option_d,correct\n' +
   '1,"Part A","What is 2+2?",multiple_choice,1,3,4,5,6,B\n' +
-  '2,"Part A","The sky is blue.",true_false,1,,,,,true\n' +
-  '3,"Part B","Explain your reasoning.",short_answer,2,,,,,\n'
+  '2,"Part A","Which are even?",multiple_select,1,1,2,3,4,"B;D"\n' +
+  '3,"Part A","The sky is blue.",true_false,1,,,,,true\n' +
+  '4,"Part B","Explain your reasoning.",short_answer,2,,,,,\n'
 
 function parseCsvLine(line: string): string[] {
   const out: string[] = []
@@ -107,6 +115,7 @@ type ParsedCsvQuestion = {
   points: number
   options: string[]
   correctIndex: string
+  correctIndexes: string[]
   correctTrueFalse: 'true' | 'false'
 }
 
@@ -189,6 +198,7 @@ function parseQuizCsv(text: string): QuizBlock[] {
       .replace(/\s+/g, '_')
     const allowed: QuizQuestionDraft['questionType'][] = [
       'multiple_choice',
+      'multiple_select',
       'true_false',
       'short_answer',
       'essay',
@@ -201,11 +211,19 @@ function parseQuizCsv(text: string): QuizBlock[] {
 
     let options: string[] = ['', '', '', '']
     let correctIndex = '0'
+    let correctIndexes: string[] = ['0']
     let correctTrueFalse: 'true' | 'false' = 'true'
 
-    if (questionType === 'multiple_choice') {
+    if (questionType === 'multiple_choice' || questionType === 'multiple_select') {
       const correctRaw = (correctIdx >= 0 ? row[correctIdx] || '' : '').trim()
-      const correctLetter = (correctRaw || 'A').toUpperCase().charAt(0)
+      const correctLetters = new Set(
+        correctRaw
+          .toUpperCase()
+          .split(/[;,|\s]+/)
+          .map((p) => p.trim().charAt(0))
+          .filter(Boolean),
+      )
+      if (!correctLetters.size) correctLetters.add('A')
       const colsToUse =
         optionCols.length > 0
           ? optionCols
@@ -216,16 +234,19 @@ function parseQuizCsv(text: string): QuizBlock[] {
               { idx: 7, label: 'D' },
             ]
       options = []
+      const idxs: string[] = []
       colsToUse.forEach((c, optIdx) => {
         const opt = (row[c.idx] || '').trim()
         if (opt) {
-          if (c.label === correctLetter) correctIndex = String(options.length)
+          if (correctLetters.has(c.label)) idxs.push(String(options.length))
           options.push(opt)
         } else if (optIdx < 4) {
           options.push('')
         }
       })
       while (options.length < 4) options.push('')
+      correctIndexes = idxs.length ? idxs : ['0']
+      correctIndex = correctIndexes[0] || '0'
     } else if (questionType === 'true_false') {
       const correctRaw = (correctIdx >= 0 ? row[correctIdx] || '' : 'true').trim().toLowerCase()
       correctTrueFalse =
@@ -240,6 +261,7 @@ function parseQuizCsv(text: string): QuizBlock[] {
       points,
       options,
       correctIndex,
+      correctIndexes,
       correctTrueFalse,
     })
   }
@@ -265,6 +287,7 @@ function parseQuizCsv(text: string): QuizBlock[] {
     draft.points = String(item.points)
     draft.options = item.options
     draft.correctIndex = item.correctIndex
+    draft.correctIndexes = item.correctIndexes || [item.correctIndex]
     draft.correctTrueFalse = item.correctTrueFalse
     newBlocks.push({ kind: 'question', question: draft })
   }
@@ -302,6 +325,12 @@ export function appendQuizBlocksToForm(form: FormData, blocks: QuizBlock[]) {
     form.append(`question_points_${q.id}`, q.points || '1')
     if (q.questionType === 'multiple_choice') {
       form.append(`correct_answer_${q.id}`, q.correctIndex)
+      q.options.forEach((opt) => {
+        if (opt.trim()) form.append(`option_text_${q.id}[]`, opt.trim())
+      })
+    } else if (q.questionType === 'multiple_select') {
+      const idxs = (q.correctIndexes || []).length ? q.correctIndexes : [q.correctIndex]
+      idxs.forEach((idx) => form.append(`correct_answer_${q.id}[]`, idx))
       q.options.forEach((opt) => {
         if (opt.trim()) form.append(`option_text_${q.id}[]`, opt.trim())
       })
@@ -484,12 +513,15 @@ export function QuizAuthoringBlocksEditor({
           question_type: question.questionType,
           points: Number(question.points) || 1,
           options:
-            question.questionType === 'multiple_choice'
+            question.questionType === 'multiple_choice' || question.questionType === 'multiple_select'
               ? question.options
                   .filter((o) => o.trim())
                   .map((option_text, idx) => ({
                     option_text,
-                    is_correct: String(idx) === question.correctIndex,
+                    is_correct:
+                      question.questionType === 'multiple_select'
+                        ? (question.correctIndexes || []).includes(String(idx))
+                        : String(idx) === question.correctIndex,
                   }))
               : question.questionType === 'true_false'
                 ? [
@@ -665,6 +697,7 @@ export function QuizAuthoringBlocksEditor({
                   }
                 >
                   <option value="multiple_choice">Multiple choice</option>
+                  <option value="multiple_select">Multiple select (select all)</option>
                   <option value="true_false">True / false</option>
                   <option value="short_answer">Short answer</option>
                   <option value="essay">Long essay</option>
@@ -686,7 +719,7 @@ export function QuizAuthoringBlocksEditor({
 
             {q.questionType === 'multiple_choice' ? (
               <div className="mt-3 space-y-2">
-                <p className="text-xs font-semibold text-slate-600">Answer options (mark correct)</p>
+                <p className="text-xs font-semibold text-slate-600">Answer options (mark one correct)</p>
                 {q.options.map((opt, optIdx) => (
                   <label key={`${q.id}-opt-${optIdx}`} className="flex items-center gap-2">
                     <input
@@ -703,6 +736,38 @@ export function QuizAuthoringBlocksEditor({
                     />
                   </label>
                 ))}
+              </div>
+            ) : null}
+
+            {q.questionType === 'multiple_select' ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-semibold text-slate-600">
+                  Answer options (check all that are correct)
+                </p>
+                {q.options.map((opt, optIdx) => {
+                  const key = String(optIdx)
+                  const checked = (q.correctIndexes || []).includes(key)
+                  return (
+                    <label key={`${q.id}-ms-${optIdx}`} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const current = new Set(q.correctIndexes || [])
+                          if (current.has(key)) current.delete(key)
+                          else current.add(key)
+                          updateQuestion(q.id, { correctIndexes: Array.from(current).sort() })
+                        }}
+                      />
+                      <input
+                        className={`${inputClass()} flex-1`}
+                        value={opt}
+                        onChange={(e) => updateOption(q.id, optIdx, e.target.value)}
+                        placeholder={`Option ${String.fromCharCode(65 + optIdx)}`}
+                      />
+                    </label>
+                  )
+                })}
               </div>
             ) : null}
 
@@ -850,6 +915,7 @@ export function QuizAuthoringBlocksEditor({
                       }
                     >
                       <option value="multiple_choice">Multiple Choice</option>
+                      <option value="multiple_select">Multiple Select</option>
                       <option value="true_false">True/False</option>
                       <option value="short_answer">Short Answer</option>
                       <option value="essay">Essay</option>
@@ -924,8 +990,8 @@ export function QuizAuthoringBlocksEditor({
                         </li>
                         <li>
                           <code>question_type</code> – one of:{' '}
-                          <code>multiple_choice</code>, <code>true_false</code>,{' '}
-                          <code>short_answer</code>, <code>essay</code>
+                          <code>multiple_choice</code>, <code>multiple_select</code>,{' '}
+                          <code>true_false</code>, <code>short_answer</code>, <code>essay</code>
                         </li>
                         <li>
                           <code>points</code> – number (e.g. 1 or 2.5)
@@ -939,15 +1005,16 @@ export function QuizAuthoringBlocksEditor({
                           value changes.
                         </li>
                       </ul>
-                      <p className="font-bold text-hub-text">For multiple choice only:</p>
+                      <p className="font-bold text-hub-text">For multiple choice / multiple select:</p>
                       <ul className="mb-2 list-disc space-y-0.5 ps-4">
                         <li>
                           <code>option_a</code>, <code>option_b</code>, <code>option_c</code>,{' '}
                           <code>option_d</code> – answer choices
                         </li>
                         <li>
-                          <code>correct</code> – letter of correct answer: <code>A</code>,{' '}
-                          <code>B</code>, <code>C</code>, or <code>D</code>
+                          <code>correct</code> – letter of correct answer (<code>A</code>–<code>D</code>
+                          ). For <code>multiple_select</code>, use several letters like{' '}
+                          <code>B;D</code> or <code>B,D</code>.
                         </li>
                       </ul>
                       <p className="font-bold text-hub-text">Example (first row = headers):</p>

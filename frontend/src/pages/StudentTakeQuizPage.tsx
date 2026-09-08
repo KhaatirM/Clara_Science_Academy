@@ -73,7 +73,9 @@ export function StudentTakeQuizPage() {
       if (payload.mode === 'results' && payload.questions) {
         const seeded: Record<string, string> = {}
         for (const q of payload.questions) {
-          if (q.student_answer?.selected_option_id != null) {
+          if (q.question_type === 'multiple_select' && q.student_answer?.answer_text) {
+            seeded[String(q.id)] = q.student_answer.answer_text
+          } else if (q.student_answer?.selected_option_id != null) {
             seeded[String(q.id)] = String(q.student_answer.selected_option_id)
           } else if (q.student_answer?.answer_text) {
             seeded[String(q.id)] = q.student_answer.answer_text
@@ -162,7 +164,9 @@ export function StudentTakeQuizPage() {
       if (payload.mode === 'results' && payload.questions) {
         const seeded: Record<string, string> = {}
         for (const q of payload.questions) {
-          if (q.student_answer?.selected_option_id != null) {
+          if (q.question_type === 'multiple_select' && q.student_answer?.answer_text) {
+            seeded[String(q.id)] = q.student_answer.answer_text
+          } else if (q.student_answer?.selected_option_id != null) {
             seeded[String(q.id)] = String(q.student_answer.selected_option_id)
           } else if (q.student_answer?.answer_text) {
             seeded[String(q.id)] = q.student_answer.answer_text
@@ -526,9 +530,11 @@ function QuizResults({
               index={i}
               total={questions.length}
               value={
-                q.student_answer?.selected_option_id != null
-                  ? String(q.student_answer.selected_option_id)
-                  : q.student_answer?.answer_text || ''
+                q.question_type === 'multiple_select' && q.student_answer?.answer_text
+                  ? q.student_answer.answer_text
+                  : q.student_answer?.selected_option_id != null
+                    ? String(q.student_answer.selected_option_id)
+                    : q.student_answer?.answer_text || ''
               }
               onChange={() => undefined}
               onPrev={() => undefined}
@@ -621,6 +627,57 @@ function QuizQuestionCard({
                         {optionLetter(oi)}
                       </span>
                     ) : null}
+                    {opt.option_text}
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+        ) : question.question_type === 'multiple_select' ? (
+          <div className="space-y-2">
+            <p className="mb-1 text-sm font-semibold text-slate-600">Select all that apply</p>
+            {question.options.map((opt, oi) => {
+              const selectedIds = new Set(
+                String(value || '')
+                  .replace(/[\[\]\s]/g, '')
+                  .split(',')
+                  .filter(Boolean),
+              )
+              const selected = selectedIds.has(String(opt.id))
+              const isCorrect = opt.is_correct === true
+              const tone = resultsMode
+                ? isCorrect
+                  ? 'border-emerald-400 bg-emerald-50'
+                  : selected
+                    ? 'border-rose-300 bg-rose-50'
+                    : 'border-slate-200 bg-white'
+                : selected
+                  ? 'border-teal-500 bg-teal-50'
+                  : 'border-slate-200 bg-white hover:border-teal-400'
+              return (
+                <label
+                  key={opt.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-3 py-3 ${tone} ${
+                    resultsMode ? 'cursor-default' : ''
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selected}
+                    disabled={resultsMode}
+                    onChange={() => {
+                      const next = new Set(selectedIds)
+                      const key = String(opt.id)
+                      if (next.has(key)) next.delete(key)
+                      else next.add(key)
+                      onChange(Array.from(next).join(','))
+                    }}
+                  />
+                  <span className="flex-1">
+                    <span className="me-2 inline-flex h-6 w-6 items-center justify-center rounded bg-teal-700 text-xs font-bold text-white">
+                      {optionLetter(oi)}
+                    </span>
                     {opt.option_text}
                   </span>
                 </label>

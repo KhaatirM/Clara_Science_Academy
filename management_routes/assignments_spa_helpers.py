@@ -210,12 +210,18 @@ def _serialize_assignment_item(
         else:
             links["view"] = f"/management/assignments/{class_id}/individual/{aid}/view"
             links["grade"] = f"/management/assignments/{class_id}/individual/{aid}/grade"
+    raw_context = (getattr(assignment, "assignment_context", None) or "homework").strip().lower()
+    if raw_context in ("in-class", "in_class", "inclass"):
+        assignment_context = "in-class"
+    else:
+        assignment_context = "homework"
     return {
         "id": aid,
         "key": f"group_{aid}" if is_group else str(aid),
         "title": assignment.title,
         "type": item_type,
         "assignment_type": getattr(assignment, "assignment_type", None),
+        "assignment_context": assignment_context,
         "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
         "quarter": getattr(assignment, "quarter", None),
         "status": assignment.status,

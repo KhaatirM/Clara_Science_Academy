@@ -1105,7 +1105,7 @@ class QuizQuestion(db.Model):
     assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
     section_id = db.Column(db.Integer, db.ForeignKey('quiz_section.id'), nullable=True)
     question_text = db.Column(db.Text, nullable=False)
-    question_type = db.Column(db.String(20), nullable=False)  # multiple_choice, true_false, short_answer, essay
+    question_type = db.Column(db.String(20), nullable=False)  # multiple_choice, multiple_select, true_false, short_answer, essay
     points = db.Column(db.Float, default=1.0, nullable=False)
     order = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -1118,7 +1118,7 @@ class QuizQuestion(db.Model):
 
 class QuizOption(db.Model):
     """
-    Model for storing quiz question options (for multiple choice and true/false).
+    Model for storing quiz question options (for multiple choice, multiple select, and true/false).
     """
     id = db.Column(db.Integer, primary_key=True)
     question_id = db.Column(db.Integer, db.ForeignKey('quiz_question.id'), nullable=False)

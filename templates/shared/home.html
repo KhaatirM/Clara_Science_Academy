@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 4, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 8, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,35 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 4, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 8, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 4</strong> (<strong>{{ app_version_display }}</strong>) fixes the Redo dashboard for graded reopenings and Final scores, lets students request redos on past-due work, fixes repair desk card details and click-to-open, redesigns the Tech repair desk, and polishes student assistant grading.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 8</strong> (<strong>{{ app_version_display }}</strong>) adds quiz Multiple select questions, shows Homework vs In-class on Assignments &amp; Grades, and includes recent Redo and repair desk polish.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 8, 2026 - Quiz multiple select -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-ui-checks me-2"></i>Quiz authoring – September 8, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Multiple select (select all):</strong> Quiz questions can now allow more than one correct option. Students use checkboxes; grading requires an exact match.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 8, 2026 - Assignment context -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Assignments &amp; Grades – September 8, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Homework vs In-class labels:</strong> Grades view has a Context column, and Assignments view cards show whether each assignment is Homework or In-class.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 4, 2026 - Redo dashboard -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Redo dashboard – September 4, 2026</h6>
@@ -2418,11 +2440,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep4_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep8_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep4_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep8_2026_v2', 'true');
         }, 500);
     }
 });

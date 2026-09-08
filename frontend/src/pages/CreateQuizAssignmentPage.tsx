@@ -108,6 +108,7 @@ export function CreateQuizAssignmentPage() {
               q.questionText = block.question_text || ''
               const allowed: Array<typeof q.questionType> = [
                 'multiple_choice',
+                'multiple_select',
                 'true_false',
                 'short_answer',
                 'essay',
@@ -116,12 +117,18 @@ export function CreateQuizAssignmentPage() {
                 ? (block.question_type as typeof q.questionType)
                 : 'multiple_choice'
               q.points = String(block.points ?? 1)
-              if (q.questionType === 'multiple_choice' && block.options?.length) {
+              if (
+                (q.questionType === 'multiple_choice' || q.questionType === 'multiple_select') &&
+                block.options?.length
+              ) {
                 const opts = block.options.map((o) => o.option_text)
                 while (opts.length < 4) opts.push('')
                 q.options = opts.slice(0, 8)
-                const correctIdx = block.options.findIndex((o) => o.is_correct)
-                q.correctIndex = String(correctIdx >= 0 ? correctIdx : 0)
+                const correctIdxs = block.options
+                  .map((o, i) => (o.is_correct ? String(i) : null))
+                  .filter((v): v is string => v != null)
+                q.correctIndexes = correctIdxs.length ? correctIdxs : ['0']
+                q.correctIndex = q.correctIndexes[0] || '0'
               } else if (q.questionType === 'true_false' && block.options?.length) {
                 const trueOpt = block.options.find((o) => o.option_text.toLowerCase() === 'true')
                 q.correctTrueFalse = trueOpt?.is_correct ? 'true' : 'false'

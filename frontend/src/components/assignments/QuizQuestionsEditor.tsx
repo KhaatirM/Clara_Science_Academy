@@ -4,10 +4,12 @@ import { FieldLabel, inputClass } from './AssignmentCreateLayout'
 export type QuizQuestionDraft = {
   id: string
   questionText: string
-  questionType: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay'
+  questionType: 'multiple_choice' | 'multiple_select' | 'true_false' | 'short_answer' | 'essay'
   points: string
   options: string[]
   correctIndex: string
+  /** Indices of correct options for multiple_select (select all that apply). */
+  correctIndexes: string[]
   correctTrueFalse: 'true' | 'false'
 }
 
@@ -19,6 +21,7 @@ export function createEmptyQuestion(id: string): QuizQuestionDraft {
     points: '1',
     options: ['', '', '', ''],
     correctIndex: '0',
+    correctIndexes: ['0'],
     correctTrueFalse: 'true',
   }
 }
@@ -94,6 +97,7 @@ export function QuizQuestionsEditor({
                 }
               >
                 <option value="multiple_choice">Multiple choice</option>
+                <option value="multiple_select">Multiple select (select all)</option>
                 <option value="true_false">True / false</option>
                 <option value="short_answer">Short answer</option>
                 <option value="essay">Long essay</option>
@@ -115,7 +119,7 @@ export function QuizQuestionsEditor({
 
           {q.questionType === 'multiple_choice' ? (
             <div className="mt-3 space-y-2">
-              <p className="text-xs font-semibold text-slate-600">Answer options (mark correct)</p>
+              <p className="text-xs font-semibold text-slate-600">Answer options (mark one correct)</p>
               {q.options.map((opt, optIdx) => (
                 <label key={`${q.id}-opt-${optIdx}`} className="flex items-center gap-2">
                   <input
@@ -132,6 +136,38 @@ export function QuizQuestionsEditor({
                   />
                 </label>
               ))}
+            </div>
+          ) : null}
+
+          {q.questionType === 'multiple_select' ? (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-semibold text-slate-600">
+                Answer options (check all that are correct)
+              </p>
+              {q.options.map((opt, optIdx) => {
+                const key = String(optIdx)
+                const checked = (q.correctIndexes || []).includes(key)
+                return (
+                  <label key={`${q.id}-ms-${optIdx}`} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        const current = new Set(q.correctIndexes || [])
+                        if (current.has(key)) current.delete(key)
+                        else current.add(key)
+                        updateQuestion(q.id, { correctIndexes: Array.from(current).sort() })
+                      }}
+                    />
+                    <input
+                      className={inputClass('flex-1')}
+                      value={opt}
+                      onChange={(e) => updateOption(q.id, optIdx, e.target.value)}
+                      placeholder={`Option ${String.fromCharCode(65 + optIdx)}`}
+                    />
+                  </label>
+                )
+              })}
             </div>
           ) : null}
 
@@ -194,6 +230,12 @@ export function appendQuizQuestionsToForm(form: FormData, questions: QuizQuestio
       q.options.forEach((opt) => {
         if (opt.trim()) form.append(`option_text_${q.id}[]`, opt.trim())
       })
+    } else if (q.questionType === 'multiple_select') {
+      const idxs = (q.correctIndexes || []).length ? q.correctIndexes : [q.correctIndex]
+      idxs.forEach((idx) => form.append(`correct_answer_${q.id}[]`, idx))
+      q.options.forEach((opt) => {
+        if (opt.trim()) form.append(`option_text_${q.id}[]`, opt.trim())
+      })
     } else if (q.questionType === 'true_false') {
       form.append(`correct_answer_${q.id}`, q.correctTrueFalse)
     }
@@ -207,6 +249,12 @@ export function appendGroupQuizQuestionsToForm(form: FormData, questions: QuizQu
     form.append(`question_points_${q.id}`, q.points || '1')
     if (q.questionType === 'multiple_choice') {
       form.append(`correct_answer_${q.id}`, q.correctIndex)
+      q.options.forEach((opt) => {
+        if (opt.trim()) form.append(`option_text_${q.id}[]`, opt.trim())
+      })
+    } else if (q.questionType === 'multiple_select') {
+      const idxs = (q.correctIndexes || []).length ? q.correctIndexes : [q.correctIndex]
+      idxs.forEach((idx) => form.append(`correct_answer_${q.id}[]`, idx))
       q.options.forEach((opt) => {
         if (opt.trim()) form.append(`option_text_${q.id}[]`, opt.trim())
       })

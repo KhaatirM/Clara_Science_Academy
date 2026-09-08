@@ -399,22 +399,14 @@ def create_quiz_assignment():
                         )
                         db.session.add(question)
                         db.session.flush()
-                        if question_type == 'multiple_choice':
-                            option_count = 0
-                            correct_answer = request.form.get(f'correct_answer_{question_id}', '')
-                            option_values = request.form.getlist(f'option_text_{question_id}[]')
-                            for option_text in option_values:
-                                option_text = option_text.strip()
-                                if not option_text:
-                                    continue
-                                is_correct = str(option_count) == correct_answer
-                                db.session.add(QuizOption(
-                                    question_id=question.id,
-                                    option_text=option_text,
-                                    is_correct=is_correct,
-                                    order=option_count
-                                ))
-                                option_count += 1
+                        if question_type in ('multiple_choice', 'multiple_select'):
+                            from utils.quiz_multi_select import add_choice_options_from_form
+                            add_choice_options_from_form(
+                                question=question,
+                                question_type=question_type,
+                                form=request.form,
+                                question_id=question_id,
+                            )
                         elif question_type == 'true_false':
                             correct_answer = request.form.get(f'correct_answer_{question_id}', '')
                             db.session.add(QuizOption(
@@ -454,22 +446,14 @@ def create_quiz_assignment():
                     )
                     db.session.add(question)
                     db.session.flush()
-                    if question_type == 'multiple_choice':
-                        option_count = 0
-                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
-                        option_values = request.form.getlist(f'option_text_{question_id}[]')
-                        for option_text in option_values:
-                            option_text = option_text.strip()
-                            if not option_text:
-                                continue
-                            is_correct = str(option_count) == correct_answer
-                            db.session.add(QuizOption(
-                                question_id=question.id,
-                                option_text=option_text,
-                                is_correct=is_correct,
-                                order=option_count
-                            ))
-                            option_count += 1
+                    if question_type in ('multiple_choice', 'multiple_select'):
+                        from utils.quiz_multi_select import add_choice_options_from_form
+                        add_choice_options_from_form(
+                            question=question,
+                            question_type=question_type,
+                            form=request.form,
+                            question_id=question_id,
+                        )
                     elif question_type == 'true_false':
                         correct_answer = request.form.get(f'correct_answer_{question_id}', '')
                         db.session.add(QuizOption(
@@ -1225,7 +1209,7 @@ def assignments_and_grades():
                         quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
                         if quiz_questions:
                             # Check if all questions are auto-gradeable
-                            auto_gradeable_types = ['multiple_choice', 'true_false']
+                            auto_gradeable_types = ['multiple_choice', 'multiple_select', 'true_false']
                             is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
                             has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
 

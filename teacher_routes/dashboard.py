@@ -1056,7 +1056,7 @@ def assignments_and_grades():
                             from models import QuizQuestion
                             quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
                             if quiz_questions:
-                                auto_gradeable_types = ['multiple_choice', 'true_false']
+                                auto_gradeable_types = ['multiple_choice', 'multiple_select', 'true_false']
                                 is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
                         
                         total_score = 0

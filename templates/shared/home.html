@@ -167,11 +167,22 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 8, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 8</strong> (<strong>{{ app_version_display }}</strong>) fixes quiz Take vs Retake labels, adds quiz Multiple select questions, shows Homework vs In-class on Assignments &amp; Grades, and includes recent Redo and repair desk polish.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 8</strong> (<strong>{{ app_version_display }}</strong>) adds pending-grades alerts for teachers and admins, fixes quiz Take vs Retake labels, adds quiz Multiple select questions, and shows Homework vs In-class on Assignments &amp; Grades.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 8, 2026 - Pending grades -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Pending grades – September 8, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Alert for ungraded submissions:</strong> Teachers and admins get a toast and review panel for submitted work that still needs a score. Assignments &amp; Grades hubs show a Pending grades count (your classes as a teacher; school-wide for admins).
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 8, 2026 - Quiz take label -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-//-play me-2"></i>Student quizzes – September 8, 2026</h6>
@@ -2451,11 +2462,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep8_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep8_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep8_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownSep8_2026_v4', 'true');
         }, 500);
     }
 });

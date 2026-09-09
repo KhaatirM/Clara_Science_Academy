@@ -266,6 +266,17 @@ def build_teacher_assignments_hub_payload() -> tuple[dict[str, Any] | None, str 
             else (school_years[0]["id"] if school_years else None)
         )
 
+        pending_grades_total = 0
+        pending_grades_assignment_count = 0
+        try:
+            from utils.pending_grade_alerts import get_pending_grade_alerts_for_user
+
+            pending = get_pending_grade_alerts_for_user(force_scope="teacher")
+            pending_grades_total = int(pending.get("total_pending") or 0)
+            pending_grades_assignment_count = int(pending.get("assignment_count") or 0)
+        except Exception:
+            pass
+
         return (
             {
                 "items": items,
@@ -280,6 +291,8 @@ def build_teacher_assignments_hub_payload() -> tuple[dict[str, Any] | None, str 
                 "hub": {
                     "extension_request_count": count_pending_extension_requests(),
                     "redo_request_count": count_pending_redo_requests(),
+                    "pending_grades_total": pending_grades_total,
+                    "pending_grades_assignment_count": pending_grades_assignment_count,
                 },
                 "stats": {
                     "total_classes": len(items),

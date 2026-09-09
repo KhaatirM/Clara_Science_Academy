@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep8_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownSep8_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Pending grades alert for teachers and admins',
+    body: 'A corner toast and review panel now list assignments with submitted work that still needs a score. Assignments & Grades hubs also show a Pending grades count. Scope follows your shell: your classes as a teacher, school-wide for admins.',
+  },
   {
     title: 'Quizzes say Take quiz until you submit',
     body: 'Untaken quizzes no longer show Retake with attempts left. That label appears only after you have submitted at least once and still have tries remaining.',
@@ -230,10 +234,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.29'
+  const display = version?.display || 'v 2.520.30'
   const releaseLabel = version?.release_label || 'September 8, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2755
+  const updatesEstimate = version?.updates_estimate ?? 2756
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

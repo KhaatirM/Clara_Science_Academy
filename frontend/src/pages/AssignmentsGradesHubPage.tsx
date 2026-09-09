@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { fetchAssignmentsHub } from '../api/assignments'
+import { openPendingGradesModal } from '../api/pendingGrades'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ClassListItem, SchoolYearOption } from '../types/classes'
@@ -147,6 +148,8 @@ export function AssignmentsGradesHubPage() {
     redo_request_count: number
     pending_assistant_by_class: Record<number, number>
     total_pending_assistant_proposals: number
+    pending_grades_total?: number
+    pending_grades_assignment_count?: number
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -260,6 +263,24 @@ export function AssignmentsGradesHubPage() {
         </div>
       </header>
 
+      {hubMeta && (hubMeta.pending_grades_total || 0) > 0 ? (
+        <button
+          type="button"
+          onClick={() => openPendingGradesModal()}
+          className="mb-4 w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950 hover:border-amber-400"
+        >
+          <i className="bi bi-pencil-square me-2" aria-hidden />
+          <strong>{hubMeta.pending_grades_total}</strong> submission
+          {hubMeta.pending_grades_total === 1 ? '' : 's'} awaiting a grade
+          {hubMeta.pending_grades_assignment_count
+            ? ` across ${hubMeta.pending_grades_assignment_count} assignment${
+                hubMeta.pending_grades_assignment_count === 1 ? '' : 's'
+              }`
+            : ''}
+          . Click to review.
+        </button>
+      ) : null}
+
       {hubMeta && hubMeta.total_pending_assistant_proposals > 0 ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <i className="bi bi-stars me-2" aria-hidden />
@@ -271,11 +292,16 @@ export function AssignmentsGradesHubPage() {
       {error ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">{error}</div> : null}
 
       {yearChosen ? (
-        <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <InsightCard icon="bi-house-door-fill" value={stats.total_classes} label="In view" />
           <InsightCard icon="bi-journal-check" value={stats.total_assignments} label="Assignments" />
           <InsightCard icon="bi-people-fill" value={stats.total_enrollments} label="Enrollments" />
           <InsightCard icon="bi-person-badge" value={stats.unique_teachers} label="Teachers" />
+          <InsightCard
+            icon="bi-pencil-square"
+            value={hubMeta?.pending_grades_total ?? 0}
+            label="Pending grades"
+          />
         </div>
       ) : null}
 

@@ -7,6 +7,7 @@ import {
 } from '../../config/navTypes'
 import { useLegacyMgmtShell } from '../../hooks/useLegacyStyles'
 import { AcademicConcernsHost } from '../academic/AcademicConcernsHost'
+import { PendingGradesHost } from '../grading/PendingGradesHost'
 import { AppToastHost } from '../toasts/AppToastHost'
 import { PortalUpdatesHost } from '../updates/PortalUpdatesHost'
 import { IdleSessionGuard } from '../session/IdleSessionGuard'
@@ -50,6 +51,7 @@ export function AppLayout({
       <AppToastHost />
       <PortalUpdatesHost version={appVersion} />
       {showAcademicConcerns ? <AcademicConcernsHost scope={academicScope} /> : null}
+      {showAcademicConcerns ? <PendingGradesHost scope={academicScope} /> : null}
       <ForcePasswordChangeHost
         user={user}
         onChanged={async () => {

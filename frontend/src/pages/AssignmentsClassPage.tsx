@@ -504,7 +504,7 @@ export function AssignmentsClassPage({ scope = 'management' }: { scope?: Assignm
 
       {data && cls ? (
         <>
-          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <InsightCard icon="bi-journal-text" value={data.stats.total_assignments} label="Total assignments" />
             <InsightCard icon="bi-check-circle" value={data.stats.active_assignments} label="Active" />
             <InsightCard icon="bi-people-fill" value={data.stats.students} label="Students" />
@@ -512,6 +512,11 @@ export function AssignmentsClassPage({ scope = 'management' }: { scope?: Assignm
               icon="bi-graph-up"
               value={data.stats.average_score != null ? `${data.stats.average_score}%` : 'N/A'}
               label="Avg score"
+            />
+            <InsightCard
+              icon="bi-pencil-square"
+              value={data.stats.pending_grades ?? 0}
+              label="Pending grades"
             />
           </div>
 

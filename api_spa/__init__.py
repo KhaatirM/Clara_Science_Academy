@@ -186,6 +186,7 @@ from api_spa import student_tabs as _spa_student_tabs  # noqa: F401, E402
 from api_spa import student_activities as _spa_student_activities  # noqa: F401, E402
 from api_spa import tech as _spa_tech  # noqa: F401, E402
 from api_spa import academic_concerns as _spa_academic_concerns  # noqa: F401, E402
+from api_spa import pending_grades as _spa_pending_grades  # noqa: F401, E402
 from api_spa import class_syllabus as _spa_class_syllabus  # noqa: F401, E402
 from api_spa import class_notes as _spa_class_notes  # noqa: F401, E402
 from api_spa import parent_dashboard as _spa_parent_dashboard  # noqa: F401, E402

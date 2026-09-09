@@ -257,7 +257,17 @@ def query_assignments_hub(args: Any = None) -> dict[str, Any]:
         "redo_request_count": count_pending_redo_requests(),
         "pending_assistant_by_class": pending_assistant_by_class,
         "total_pending_assistant_proposals": sum(pending_assistant_by_class.values()),
+        "pending_grades_total": 0,
+        "pending_grades_assignment_count": 0,
     }
+    try:
+        from utils.pending_grade_alerts import get_pending_grade_alerts_for_user
+
+        pending = get_pending_grade_alerts_for_user(force_scope="management")
+        payload["hub"]["pending_grades_total"] = int(pending.get("total_pending") or 0)
+        payload["hub"]["pending_grades_assignment_count"] = int(pending.get("assignment_count") or 0)
+    except Exception:
+        pass
     return payload
 
 
@@ -338,7 +348,7 @@ def query_assignments_class(
             "assistant_proposals_url": f"/app/management/classes/{class_id}/assistant-approvals",
         }
 
-    return {
+    payload = {
         "class": {
             **serialize_class_list_item(
                 class_obj,
@@ -356,6 +366,19 @@ def query_assignments_class(
             "active_assignments": active_count,
             "students": enrollment_count,
             "average_score": round(sum(avg_scores) / len(avg_scores), 1) if avg_scores else None,
+            "pending_grades": 0,
         },
         "toolbar": toolbar,
     }
+    try:
+        from utils.pending_grade_alerts import get_pending_grade_alerts_for_user
+
+        pending = get_pending_grade_alerts_for_user(force_scope=scope)
+        payload["stats"]["pending_grades"] = sum(
+            int(a.get("pending_count") or 0)
+            for a in (pending.get("assignments") or [])
+            if a.get("class_id") == class_id
+        )
+    except Exception:
+        pass
+    return payload

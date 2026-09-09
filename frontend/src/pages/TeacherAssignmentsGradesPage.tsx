@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchTeacherAssignmentsHub } from '../api/teacherTabs'
+import { openPendingGradesModal } from '../api/pendingGrades'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ClassListItem } from '../types/classes'
 import type { TeacherAssignmentsClassItem, TeacherAssignmentsHubResponse } from '../types/teacherTabs'
@@ -235,6 +236,24 @@ export function TeacherAssignmentsGradesPage() {
             </div>
           </header>
 
+          {hub && (hub.pending_grades_total || 0) > 0 ? (
+            <button
+              type="button"
+              onClick={() => openPendingGradesModal()}
+              className="mb-4 w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950 hover:border-amber-400"
+            >
+              <i className="bi bi-pencil-square me-2" aria-hidden />
+              <strong>{hub.pending_grades_total}</strong> submission
+              {hub.pending_grades_total === 1 ? '' : 's'} awaiting a grade
+              {hub.pending_grades_assignment_count
+                ? ` across ${hub.pending_grades_assignment_count} assignment${
+                    hub.pending_grades_assignment_count === 1 ? '' : 's'
+                  }`
+                : ''}
+              . Click to review.
+            </button>
+          ) : null}
+
           {error ? (
             <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">{error}</div>
           ) : null}
@@ -246,11 +265,16 @@ export function TeacherAssignmentsGradesPage() {
           ) : null}
 
           {yearChosen ? (
-            <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               <InsightCard icon="bi-house-door-fill" value={stats.total_classes} label="Classes" />
               <InsightCard icon="bi-journal-check" value={stats.total_assignments} label="Assignments" />
               <InsightCard icon="bi-people-fill" value={stats.total_enrollments} label="Enrollments" />
               <InsightCard icon="bi-person-badge" value={stats.unique_teachers} label="Teachers" />
+              <InsightCard
+                icon="bi-pencil-square"
+                value={hub?.pending_grades_total ?? 0}
+                label="Pending grades"
+              />
             </div>
           ) : null}
 

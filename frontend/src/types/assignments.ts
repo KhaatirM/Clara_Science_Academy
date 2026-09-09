@@ -14,6 +14,8 @@ export interface AssignmentsHubResponse {
     redo_request_count: number
     pending_assistant_by_class: Record<number, number>
     total_pending_assistant_proposals: number
+    pending_grades_total?: number
+    pending_grades_assignment_count?: number
   }
   meta: {
     default_school_year_id: number | null
@@ -65,6 +67,7 @@ export interface AssignmentsClassResponse {
     active_assignments: number
     students: number
     average_score: number | null
+    pending_grades?: number
   }
   toolbar: {
     extension_request_count: number

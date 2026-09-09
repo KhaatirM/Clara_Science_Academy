@@ -65,6 +65,8 @@ export interface TeacherAssignmentsHubResponse {
   hub: {
     extension_request_count: number
     redo_request_count: number
+    pending_grades_total?: number
+    pending_grades_assignment_count?: number
   }
   stats: {
     total_classes: number

@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep8_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownSep9_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Quiz answers keep saving if you leave early',
+    body: 'When Save and continue is on, answers now autosave shortly after you type, flush when you close or hide the tab, and stay available overnight while the quiz is still open. Closing the laptop to go to bed no longer wipes progress after 30 minutes.',
+  },
+  {
+    title: 'Redo dashboard shows assignment type',
+    body: 'Pending requests, reopenings, and redo opportunities now show Quiz, Discussion, or PDF / Paper so you can tell them apart at a glance.',
+  },
+  {
+    title: 'Granted redos reopen work through the deadline',
+    body: 'Granting a redo from the dashboard now reopens access through the end of the selected date. Quizzes get an extra attempt; discussions and PDF/paper unlock for posting or resubmit until that deadline.',
+  },
   {
     title: 'Pending grades alert for teachers and admins',
     body: 'A corner toast and review panel now list assignments with submitted work that still needs a score. Assignments & Grades hubs also show a Pending grades count. Scope follows your shell: your classes as a teacher, school-wide for admins.',
@@ -234,10 +246,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.30'
-  const releaseLabel = version?.release_label || 'September 8, 2026'
+  const display = version?.display || 'v 2.520.32'
+  const releaseLabel = version?.release_label || 'September 9, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2756
+  const updatesEstimate = version?.updates_estimate ?? 2759
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

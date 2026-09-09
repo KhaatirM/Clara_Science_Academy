@@ -190,11 +190,13 @@ def _serialize_redo_request(rr: RedoRequest) -> dict[str, Any]:
     assignment = rr.assignment
     student = rr.student
     class_info = assignment.class_info if assignment else None
+    assignment_type = (getattr(assignment, "assignment_type", None) or "").lower() if assignment else ""
     return {
         "id": rr.id,
         "assignment_id": rr.assignment_id,
         "reason": rr.reason or "",
         "requested_at": _iso(rr.requested_at),
+        "assignment_type": assignment_type or None,
         "student": {
             "id": student.id if student else None,
             "display_name": _student_name(student),
@@ -214,6 +216,7 @@ def _serialize_redo_request(rr: RedoRequest) -> dict[str, Any]:
                     _student_name(student),
                     assignment.title if assignment else "",
                     class_info.name if class_info else "",
+                    assignment_type,
                 ],
             )
         ).lower(),
@@ -254,6 +257,7 @@ def _serialize_reopening(r: AssignmentReopening) -> dict[str, Any]:
                     _student_name(student),
                     assignment.title if assignment else "",
                     class_info.name if class_info else "",
+                    assignment_type,
                 ],
             )
         ).lower(),
@@ -416,10 +420,12 @@ def _serialize_redo(
         status = "overdue"
     else:
         status = "pending"
+    assignment_type = (getattr(assignment, "assignment_type", None) or "").lower() if assignment else ""
     return {
         "id": redo.id,
         "assignment_id": redo.assignment_id,
         "reason": redo.reason or "",
+        "assignment_type": assignment_type or None,
         # Scores are stored as points earned (not percent). Expose both.
         "total_points": total_points,
         "original_grade": redo.original_grade,
@@ -456,6 +462,7 @@ def _serialize_redo(
                     _student_name(student),
                     assignment.title if assignment else "",
                     class_info.name if class_info else "",
+                    assignment_type,
                 ],
             )
         ).lower(),
@@ -545,6 +552,11 @@ def query_redo_dashboard() -> dict[str, Any]:
     redos = [r for r in redos if r.assignment and r.student]
     reopenings = [r for r in reopenings if r.assignment and r.student]
     reopenings = _close_graded_reopenings(reopenings)
+    reopenings = [
+        r
+        for r in reopenings
+        if not (r.expires_at and _as_utc_aware(r.expires_at) < now)
+    ]
     redo_requests = [r for r in redo_requests if r.assignment and r.student]
 
     recorded_scores = _recorded_grade_scores(redos)

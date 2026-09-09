@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 
-from flask import current_app, jsonify, request, url_for
+from flask import jsonify, request, url_for
 from flask_login import current_user, login_required
 
 from decorators import is_teacher_role, permissions_required, user_can_manage_assignments_and_grades
@@ -13,11 +12,8 @@ from extensions import db
 from management_routes.extensions_redo_spa_helpers import query_redo_dashboard
 from models import (
     Assignment,
-    AssignmentReopening,
     AssignmentRedo,
-    Grade,
     RedoRequest,
-    Submission,
     TeacherStaff,
     class_additional_teachers,
     class_substitute_teachers,
@@ -87,70 +83,18 @@ def redo_request_grant(request_id: int):
         return jsonify({"success": False, "message": "Please provide a redo deadline."}), 400
 
     try:
-        redo_deadline = datetime.strptime(redo_deadline_str, "%Y-%m-%d")
+        from utils.redo_grant import grant_redo_access_for_request, parse_redo_deadline_end_of_day
+
+        redo_deadline = parse_redo_deadline_end_of_day(redo_deadline_str)
         teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
 
-        submission = Submission.query.filter_by(
+        result = grant_redo_access_for_request(
+            assignment=assignment,
             student_id=req.student_id,
-            assignment_id=req.assignment_id,
-        ).first()
-        has_submitted = submission is not None and submission.submission_type != "not_submitted"
-
-        if has_submitted:
-            existing = AssignmentRedo.query.filter_by(
-                assignment_id=req.assignment_id,
-                student_id=req.student_id,
-            ).first()
-            if existing:
-                req.status = "Approved"
-                req.reviewed_at = datetime.utcnow()
-                req.reviewed_by = teacher.id if teacher else None
-                db.session.commit()
-                return jsonify({"success": True, "message": "Redo already granted for this student."})
-
-            grade = (
-                Grade.query.filter_by(student_id=req.student_id, assignment_id=req.assignment_id)
-                .order_by(Grade.graded_at.desc())
-                .first()
-            )
-            orig_grade = None
-            if grade and grade.grade_data:
-                try:
-                    gd = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                    orig_grade = gd.get("score") or gd.get("points_earned")
-                except (TypeError, json.JSONDecodeError):
-                    pass
-
-            redo_rec = AssignmentRedo(
-                assignment_id=req.assignment_id,
-                student_id=req.student_id,
-                granted_by=teacher.id if teacher else None,
-                redo_deadline=redo_deadline,
-                reason=req.reason or "Granted from redo request",
-                original_grade=orig_grade,
-            )
-            db.session.add(redo_rec)
-        else:
-            existing = AssignmentReopening.query.filter_by(
-                assignment_id=req.assignment_id,
-                student_id=req.student_id,
-                is_active=True,
-            ).first()
-            if existing:
-                req.status = "Approved"
-                req.reviewed_at = datetime.utcnow()
-                req.reviewed_by = teacher.id if teacher else None
-                db.session.commit()
-                return jsonify({"success": True, "message": "Reopening already granted for this student."})
-
-            reopening = AssignmentReopening(
-                assignment_id=req.assignment_id,
-                student_id=req.student_id,
-                reopened_by=teacher.id if teacher else None,
-                is_active=True,
-                additional_attempts=0,
-            )
-            db.session.add(reopening)
+            teacher=teacher,
+            redo_deadline=redo_deadline,
+            reason=req.reason or "Granted from redo request",
+        )
 
         req.status = "Approved"
         req.reviewed_at = datetime.utcnow()
@@ -160,18 +104,31 @@ def redo_request_grant(request_id: int):
         if req.student and req.student.user:
             from app import create_notification
 
+            kind = result.get("kind")
+            if kind == "quiz":
+                access_note = "You have one additional quiz attempt"
+            elif kind == "discussion":
+                access_note = "Discussion posting is open again"
+            else:
+                access_note = "The assignment is open again"
             create_notification(
                 user_id=req.student.user.id,
                 notification_type="assignment",
                 title=f"Redo Granted: {assignment.title}",
                 message=(
                     f'Your teacher granted a redo for "{assignment.title}". '
-                    f'New deadline: {redo_deadline.strftime("%m/%d/%Y")}.'
+                    f"{access_note} until {redo_deadline.strftime('%m/%d/%Y')}."
                 ),
                 link=url_for("student.student_assignments"),
             )
 
-        return jsonify({"success": True, "message": "Redo granted successfully. The student has been notified."})
+        already = bool(result.get("already"))
+        message = (
+            "Redo already on file; deadline and access were refreshed. The student has been notified."
+            if already
+            else "Redo granted successfully. The student has been notified."
+        )
+        return jsonify({"success": True, "message": message})
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500

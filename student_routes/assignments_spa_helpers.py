@@ -15,7 +15,6 @@ from management_routes.student_assistant_utils import (
 )
 from models import (
     Assignment,
-    AssignmentReopening,
     Class,
     Enrollment,
     ExtensionRequest,
@@ -31,6 +30,7 @@ from models import (
     User,
 )
 from teacher_routes.assignment_utils import (
+    get_active_assignment_reopening,
     get_effective_assignment_status,
     is_assignment_open_for_student,
 )
@@ -411,9 +411,7 @@ def build_student_assignments_payload(
             submissions_count = Submission.query.filter_by(
                 student_id=student.id, assignment_id=assignment.id
             ).count()
-            active_reopening = AssignmentReopening.query.filter_by(
-                assignment_id=assignment.id, student_id=student.id, is_active=True
-            ).first()
+            active_reopening = get_active_assignment_reopening(assignment.id, student.id)
             effective_max = assignment.max_attempts
             if active_reopening and active_reopening.additional_attempts > 0:
                 effective_max = (assignment.max_attempts or 0) + active_reopening.additional_attempts

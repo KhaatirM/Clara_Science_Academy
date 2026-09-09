@@ -2930,15 +2930,19 @@ def load_quiz_progress(assignment_id):
         ).first()
         
         if progress:
-            # Check if progress is still valid (not expired)
-            time_diff = datetime.utcnow() - progress.last_saved_at
-            timeout_minutes = assignment.save_timeout_minutes or 30
-            
-            if time_diff.total_seconds() > (timeout_minutes * 60):
-                # Progress expired, delete it
-                db.session.delete(progress)
-                db.session.commit()
-                return jsonify({'success': False, 'message': 'Saved progress has expired'})
+            # Keep in-progress answers while the quiz is still open for this student.
+            # The old "save timeout" wipe discarded overnight homework work (e.g. close
+            # laptop and resume next morning) even when the assignment was still open.
+            from teacher_routes.assignment_utils import is_assignment_open_for_student
+
+            still_open = is_assignment_open_for_student(assignment, student.id)
+            if not still_open:
+                time_diff = datetime.utcnow() - progress.last_saved_at
+                timeout_minutes = assignment.save_timeout_minutes or 30
+                if time_diff.total_seconds() > (timeout_minutes * 60):
+                    db.session.delete(progress)
+                    db.session.commit()
+                    return jsonify({'success': False, 'message': 'Saved progress has expired'})
             
             # Timed quiz: compute remaining from server timestamps.
             timer_remaining_seconds = None

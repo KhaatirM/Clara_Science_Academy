@@ -25,6 +25,7 @@ export interface RedoRequestItem {
   assignment_id: number
   reason: string
   requested_at: string | null
+  assignment_type?: string | null
   student: RedoStudentRef
   assignment: RedoAssignmentRef
   class: RedoClassRef
@@ -49,6 +50,7 @@ export interface ActiveRedoItem {
   id: number
   assignment_id: number
   reason: string
+  assignment_type?: string | null
   total_points: number
   original_grade: number | null
   original_percent: number | null

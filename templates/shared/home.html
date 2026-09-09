@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 8, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 9, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,39 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 8, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 9, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 8</strong> (<strong>{{ app_version_display }}</strong>) adds pending-grades alerts for teachers and admins, fixes quiz Take vs Retake labels, adds quiz Multiple select questions, and shows Homework vs In-class on Assignments &amp; Grades.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 9</strong> (<strong>{{ app_version_display }}</strong>) keeps quiz answers when students leave mid-quiz, shows assignment type on the Redo dashboard, and makes granted redos reopen quizzes, discussions, and PDF/paper through the selected deadline.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 9, 2026 - Quiz progress save -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-device-hdd me-2"></i>Student quizzes – September 9, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Answers save if you leave early:</strong> With Save and continue on, answers autosave while working, flush when the tab closes or hides, and stay available overnight while the quiz is still open (no more 30-minute wipe).
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 9, 2026 - Redo dashboard type + reopen -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Redo dashboard – September 9, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment type column:</strong> Pending requests, reopenings, and redo opportunities show Quiz, Discussion, or PDF / Paper.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grant reopens through the deadline:</strong> Granting a redo opens access through the end of the selected date. Quizzes get an extra attempt; discussions and PDF/paper unlock for posting or resubmit.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 8, 2026 - Pending grades -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Pending grades – September 8, 2026</h6>
@@ -2462,11 +2488,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep8_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep9_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep8_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownSep9_2026_v2', 'true');
         }, 500);
     }
 });

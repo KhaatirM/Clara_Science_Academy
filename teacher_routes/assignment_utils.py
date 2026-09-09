@@ -254,6 +254,24 @@ def get_student_close_date(assignment, student_id):
     return None
 
 
+def get_active_assignment_reopening(assignment_id, student_id, now=None):
+    """Return an active, non-expired AssignmentReopening for this student, or None."""
+    from models import AssignmentReopening
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+    reopening = AssignmentReopening.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student_id,
+        is_active=True,
+    ).first()
+    if not reopening:
+        return None
+    if reopening.expires_at and now > _as_utc_aware(reopening.expires_at):
+        return None
+    return reopening
+
+
 def is_assignment_open_for_student(assignment, student_id):
     """
     Check if an assignment is currently open for submission for a specific student.
@@ -287,18 +305,13 @@ def is_assignment_open_for_student(assignment, student_id):
 
     # Inactive assignments: block unless student has valid extension, reopening, or redo
     if lifecycle == 'Inactive':
-        from models import AssignmentReopening, AssignmentRedo
+        from models import AssignmentRedo
         # First check: student may have extension—is their effective close_date still valid?
         student_close_date = get_student_close_date(assignment, student_id)
         if student_close_date and now <= _as_utc_aware(student_close_date):
             return True  # Still within extension window
         # Otherwise check reopening or redo
-        reopening = AssignmentReopening.query.filter_by(
-            assignment_id=assignment.id,
-            student_id=student_id,
-            is_active=True
-        ).first()
-        if reopening:
+        if get_active_assignment_reopening(assignment.id, student_id, now=now):
             return True  # Student has been granted reopening
         redo = AssignmentRedo.query.filter_by(
             assignment_id=assignment.id,
@@ -311,13 +324,8 @@ def is_assignment_open_for_student(assignment, student_id):
 
     # Upcoming assignments: block unless student has active reopening or valid redo
     if lifecycle == 'Upcoming':
-        from models import AssignmentReopening, AssignmentRedo
-        reopening = AssignmentReopening.query.filter_by(
-            assignment_id=assignment.id,
-            student_id=student_id,
-            is_active=True
-        ).first()
-        if reopening:
+        from models import AssignmentRedo
+        if get_active_assignment_reopening(assignment.id, student_id, now=now):
             return True  # Reopening grants early access
         redo = AssignmentRedo.query.filter_by(
             assignment_id=assignment.id,

@@ -47,6 +47,14 @@ export function StudentTakeQuizPage() {
   const openedAtRef = useRef<string | null>(null)
   const timerRef = useRef<number | null>(null)
   const autoSubmittedRef = useRef(false)
+  const answersRef = useRef<Record<string, string>>({})
+  const dataRef = useRef<StudentQuizResponse | null>(null)
+  const questionsRef = useRef<QuizQuestion[]>([])
+  const savingRef = useRef(false)
+  const lastFlushAtRef = useRef(0)
+  const debounceTimerRef = useRef<number | null>(null)
+
+  const storageKey = Number.isFinite(id) && id > 0 ? `clara.quizProgress.${id}` : null
 
   const load = useCallback(async () => {
     if (!Number.isFinite(id) || id <= 0) {
@@ -82,11 +90,19 @@ export function StudentTakeQuizPage() {
           }
         }
         setAnswers(seeded)
+        if (storageKey) {
+          try {
+            window.localStorage.removeItem(storageKey)
+          } catch {
+            // ignore
+          }
+        }
       } else if (payload.assignment.allow_save_and_continue) {
+        let restored: Record<string, string> | null = null
         try {
           const saved = await loadQuizProgress(id)
           if (saved.success && saved.progress?.answers) {
-            setAnswers(saved.progress.answers)
+            restored = saved.progress.answers
             if (typeof saved.progress.timer_remaining_seconds === 'number') {
               setTimerSeconds(saved.progress.timer_remaining_seconds)
             }
@@ -94,19 +110,37 @@ export function StudentTakeQuizPage() {
         } catch {
           // No saved progress is fine
         }
+        if (!restored && storageKey) {
+          try {
+            const raw = window.localStorage.getItem(storageKey)
+            if (raw) {
+              const parsed = JSON.parse(raw) as { answers?: Record<string, string> }
+              if (parsed?.answers && typeof parsed.answers === 'object') {
+                restored = parsed.answers
+              }
+            }
+          } catch {
+            // ignore bad local cache
+          }
+        }
+        if (restored) setAnswers(restored)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load quiz')
     } finally {
       setLoading(false)
     }
-  }, [id, retake])
+  }, [id, retake, storageKey])
 
   useEffect(() => {
     void load()
   }, [load])
 
   const questions = data?.questions || []
+  dataRef.current = data
+  questionsRef.current = questions
+  answersRef.current = answers
+
   const answeredCount = useMemo(() => {
     return questions.filter((q) => {
       const v = answers[String(q.id)]
@@ -118,35 +152,79 @@ export function StudentTakeQuizPage() {
     ? Math.round((answeredCount / questions.length) * 100)
     : 0
 
-  const collectAnswers = useCallback(() => {
+  const collectAnswersFrom = useCallback((source: Record<string, string>) => {
     const out: Record<string, string> = {}
-    for (const [k, v] of Object.entries(answers)) {
+    for (const [k, v] of Object.entries(source)) {
       if (v != null && String(v).trim() !== '') out[k] = String(v)
     }
     return out
-  }, [answers])
+  }, [])
+
+  const writeLocalBackup = useCallback(
+    (source: Record<string, string>) => {
+      if (!storageKey) return
+      const payload = dataRef.current
+      if (!payload || payload.mode !== 'take' || !payload.assignment.allow_save_and_continue) return
+      try {
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            answers: collectAnswersFrom(source),
+            saved_at: new Date().toISOString(),
+          }),
+        )
+      } catch {
+        // Quota / private mode — ignore
+      }
+    },
+    [collectAnswersFrom, storageKey],
+  )
 
   const doSave = useCallback(
-    async (opts?: { pauseTimer?: boolean; silent?: boolean }) => {
-      if (!data || data.mode !== 'take' || !data.assignment.allow_save_and_continue) return
+    async (opts?: { pauseTimer?: boolean; silent?: boolean; keepalive?: boolean }) => {
+      const payload = dataRef.current
+      if (!payload || payload.mode !== 'take' || !payload.assignment.allow_save_and_continue) return
+      if (loading) return
+      if (savingRef.current && !opts?.keepalive) return
+      const source = answersRef.current
+      const qs = questionsRef.current
+      const collected = collectAnswersFrom(source)
+      const answered = qs.filter((q) => {
+        const v = collected[String(q.id)]
+        return v != null && String(v).trim() !== ''
+      }).length
+      const pct = qs.length ? Math.round((answered / qs.length) * 100) : 0
+      writeLocalBackup(source)
+      savingRef.current = true
       try {
-        const res = await saveQuizProgress(id, {
-          answers: collectAnswers(),
-          progress_percentage: progressPct,
-          questions_answered: answeredCount,
-          pause_timer: opts?.pauseTimer,
-        })
+        const res = await saveQuizProgress(
+          id,
+          {
+            answers: collected,
+            progress_percentage: pct,
+            questions_answered: answered,
+            pause_timer: opts?.pauseTimer,
+          },
+          { keepalive: opts?.keepalive },
+        )
+        lastFlushAtRef.current = Date.now()
         if (typeof res.timer_remaining_seconds === 'number') {
           setTimerSeconds(res.timer_remaining_seconds)
+        }
+        if (res.success === false) {
+          if (!opts?.silent) setSaveMsg(res.message || 'Could not save progress')
+          return
         }
         if (!opts?.silent) setSaveMsg(res.message || 'Progress saved')
       } catch (err) {
         if (!opts?.silent) {
           setSaveMsg(err instanceof Error ? err.message : 'Could not save progress')
         }
+      } finally {
+        savingRef.current = false
       }
     },
-    [answeredCount, collectAnswers, data, id, progressPct],
+    [collectAnswersFrom, id, loading, writeLocalBackup],
   )
 
   const doSubmit = useCallback(async () => {
@@ -154,7 +232,14 @@ export function StudentTakeQuizPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await submitStudentQuiz(id, collectAnswers(), openedAtRef.current)
+      await submitStudentQuiz(id, collectAnswersFrom(answersRef.current), openedAtRef.current)
+      if (storageKey) {
+        try {
+          window.localStorage.removeItem(storageKey)
+        } catch {
+          // ignore
+        }
+      }
       autoSubmittedRef.current = false
       const payload = await fetchStudentQuiz(id, false)
       setData(payload)
@@ -183,7 +268,7 @@ export function StudentTakeQuizPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [collectAnswers, data, id, navigate, retake, submitting])
+  }, [collectAnswersFrom, data, id, navigate, retake, storageKey, submitting])
 
   useEffect(() => {
     if (data?.mode !== 'take' || timerSeconds == null) return
@@ -206,6 +291,7 @@ export function StudentTakeQuizPage() {
     }
   }, [data?.mode, timerSeconds == null, doSubmit])
 
+  // Stable autosave + keepalive (do not recreate interval on every answer change).
   useEffect(() => {
     if (data?.mode !== 'take' || !data.assignment.allow_save_and_continue) return
     const saveInterval = window.setInterval(() => {
@@ -218,10 +304,65 @@ export function StudentTakeQuizPage() {
       window.clearInterval(saveInterval)
       window.clearInterval(keepAlive)
     }
-  }, [data, doSave, id])
+  }, [data?.mode, data?.assignment.allow_save_and_continue, doSave, id])
+
+  // Debounced save shortly after answers change so recent work is not only in memory.
+  useEffect(() => {
+    if (loading || data?.mode !== 'take' || !data.assignment.allow_save_and_continue) return
+    if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = window.setTimeout(() => {
+      writeLocalBackup(answersRef.current)
+      void doSave({ silent: true })
+    }, 2000)
+    return () => {
+      if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current)
+    }
+  }, [answers, data?.mode, data?.assignment.allow_save_and_continue, doSave, loading, writeLocalBackup])
+
+  // Flush on tab close / hide so closing the laptop does not discard answers.
+  useEffect(() => {
+    if (data?.mode !== 'take' || !data.assignment.allow_save_and_continue) return
+
+    const flushLeaving = () => {
+      const now = Date.now()
+      if (now - lastFlushAtRef.current < 1500) return
+      writeLocalBackup(answersRef.current)
+      void doSave({ silent: true, pauseTimer: true, keepalive: true })
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flushLeaving()
+    }
+
+    window.addEventListener('pagehide', flushLeaving)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flushLeaving)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [data?.mode, data?.assignment.allow_save_and_continue, doSave, writeLocalBackup])
+
+  // Warn before discarding unfinished answers when save-and-continue is off.
+  useEffect(() => {
+    if (data?.mode !== 'take') return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (submitting || autoSubmittedRef.current) return
+      const hasAnswers = Object.values(answersRef.current).some((v) => v != null && String(v).trim() !== '')
+      if (!hasAnswers) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [data?.mode, submitting])
 
   const setAnswer = (questionId: number, value: string) => {
-    setAnswers((prev) => ({ ...prev, [String(questionId)]: value }))
+    setAnswers((prev) => {
+      const next = { ...prev, [String(questionId)]: value }
+      answersRef.current = next
+      writeLocalBackup(next)
+      return next
+    })
   }
 
   const currentQuestion = questions[current] || null
@@ -453,9 +594,15 @@ function QuizActionsBar({
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="mb-0 mt-1 text-xs text-hub-muted">Progress: {progressPct}%</p>
+          <p className="mb-0 mt-1 text-xs text-hub-muted">
+            Progress: {progressPct}% · Answers autosave while you work; use Exit if you need to leave and come back.
+          </p>
         </div>
-      ) : null}
+      ) : (
+        <p className="mb-0 mt-3 text-xs text-amber-800">
+          Save and continue is off for this quiz. Closing the page before Submit may lose your answers.
+        </p>
+      )}
     </section>
   )
 }

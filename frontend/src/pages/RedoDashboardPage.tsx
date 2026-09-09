@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchRedoDashboard, grantRedoRequest, rejectRedoRequest, revokeRedo } from '../api/redo'
 import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ActiveRedoItem, RedoDashboardResponse, RedoRequestItem, ReopeningItem } from '../types/redo'
+import { assignmentTypeLabel, assignmentTypeTone } from '../utils/assignmentTypes'
 import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
 
 function formatDate(iso: string | null) {
@@ -29,6 +30,14 @@ function StatCard({ icon, value, label, tone }: { icon: string; value: string | 
         <div className="text-xs font-bold uppercase tracking-wide text-hub-muted">{label}</div>
       </div>
     </div>
+  )
+}
+
+function TypeBadge({ type }: { type?: string | null }) {
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${assignmentTypeTone(type)}`}>
+      {assignmentTypeLabel(type)}
+    </span>
   )
 }
 
@@ -279,10 +288,11 @@ export function RedoDashboardPage() {
           <RedoSection title="Pending redo requests" subtitle="Grant to set a new deadline, or reject the request." tone="border-amber-300 bg-amber-50">
             {filteredRequests.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Class', 'Reason', 'Requested', 'Actions']}
+                headers={['Student', 'Assignment', 'Type', 'Class', 'Reason', 'Requested', 'Actions']}
                 rows={filteredRequests.map((r) => [
                   r.student.display_name,
                   r.assignment.title,
+                  <TypeBadge key={`t-${r.id}`} type={r.assignment_type} />,
                   r.class.name,
                   r.reason || 'No reason',
                   formatDate(r.requested_at),
@@ -317,10 +327,11 @@ export function RedoDashboardPage() {
           <RedoSection title="Active reopenings" subtitle="Assignments opened again so students can submit. Graded reopenings leave this list automatically." tone="border-violet-300 bg-violet-50">
             {filteredReopenings.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Class', 'Reopened', 'Attempts', 'Actions']}
+                headers={['Student', 'Assignment', 'Type', 'Class', 'Reopened', 'Attempts', 'Actions']}
                 rows={filteredReopenings.map((r: ReopeningItem) => [
                   r.student.display_name,
                   r.assignment.title,
+                  <TypeBadge key={`rt-${r.id}`} type={r.assignment_type} />,
                   r.class.name,
                   formatDate(r.reopened_at),
                   r.attempts_label ?? (r.additional_attempts > 0 ? String(r.additional_attempts) : '—'),
@@ -341,10 +352,11 @@ export function RedoDashboardPage() {
           <RedoSection title="Active redo opportunities" subtitle="Granted redos with deadlines and grading workflow." tone="border-teal-300 bg-teal-50">
             {filteredRedos.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Class', 'Original', 'Status', 'Deadline', 'Final', 'Actions']}
+                headers={['Student', 'Assignment', 'Type', 'Class', 'Original', 'Status', 'Deadline', 'Final', 'Actions']}
                 rows={filteredRedos.map((r: ActiveRedoItem) => [
                   r.student.display_name,
                   r.assignment.title,
+                  <TypeBadge key={`dt-${r.id}`} type={r.assignment_type} />,
                   r.class.name,
                   r.original_grade != null
                     ? formatRedoScore(r.original_grade, r.original_percent, r.total_points ?? r.assignment.total_points)
@@ -392,10 +404,14 @@ export function RedoDashboardPage() {
             <h2 className="text-lg font-bold text-hub-text">Grant redo</h2>
             <p className="mt-1 text-sm text-hub-muted">
               {grantModal.student.display_name} · {grantModal.assignment.title}
+              {grantModal.assignment_type ? ` · ${assignmentTypeLabel(grantModal.assignment_type)}` : ''}
             </p>
             <label className="mt-4 block text-sm font-semibold text-hub-muted" htmlFor="redo-deadline">
               Redo deadline
             </label>
+            <p className="mb-2 text-xs text-hub-muted">
+              Access stays open through the end of this date. Quizzes also get one additional attempt.
+            </p>
             <input
               id="redo-deadline"
               type="date"

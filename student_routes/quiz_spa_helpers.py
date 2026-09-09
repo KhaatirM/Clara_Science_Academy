@@ -14,7 +14,6 @@ from sqlalchemy.orm import joinedload
 from management_routes.student_assistant_utils import assignment_visible_to_students
 from models import (
     Assignment,
-    AssignmentReopening,
     Enrollment,
     Grade,
     QuizAnswer,
@@ -25,7 +24,11 @@ from models import (
     Submission,
     db,
 )
-from teacher_routes.assignment_utils import _as_utc_aware, is_assignment_open_for_student
+from teacher_routes.assignment_utils import (
+    _as_utc_aware,
+    get_active_assignment_reopening,
+    is_assignment_open_for_student,
+)
 
 
 def _student() -> Student | None:
@@ -102,9 +105,7 @@ def build_student_quiz_payload(
             "links": {"assignments": "/app/student/assignments"},
         }, None, 200
 
-    active_reopening = AssignmentReopening.query.filter_by(
-        assignment_id=assignment_id, student_id=student.id, is_active=True
-    ).first()
+    active_reopening = get_active_assignment_reopening(assignment_id, student.id)
     if (not is_assignment_open_for_student(assignment, student.id)) and (not active_reopening):
         return None, "This assignment is no longer available.", 403
 
@@ -351,9 +352,7 @@ def submit_student_quiz(
     if err:
         return None, err, status
 
-    active_reopening = AssignmentReopening.query.filter_by(
-        assignment_id=assignment_id, student_id=student.id, is_active=True
-    ).first()
+    active_reopening = get_active_assignment_reopening(assignment_id, student.id)
     if not is_assignment_open_for_student(assignment, student.id) and not active_reopening:
         closes_at = assignment.close_date or assignment.due_date
         closes_at_utc = _as_utc_aware(closes_at) if closes_at else None

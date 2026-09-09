@@ -500,7 +500,7 @@ export function CreateQuizAssignmentPage() {
                   />
                 </div>
                 <div>
-                  <FieldLabel htmlFor="save_timeout_minutes">Save timeout (minutes)</FieldLabel>
+                  <FieldLabel htmlFor="save_timeout_minutes">Save timeout after close (minutes)</FieldLabel>
                   <input
                     id="save_timeout_minutes"
                     type="number"
@@ -509,6 +509,10 @@ export function CreateQuizAssignmentPage() {
                     value={saveTimeoutMinutes}
                     onChange={(e) => setSaveTimeoutMinutes(e.target.value)}
                   />
+                  <p className="mt-1 text-xs text-hub-muted">
+                    While the quiz is still open, saved answers are kept. This timeout only clears abandoned
+                    progress after the quiz is no longer available to the student.
+                  </p>
                 </div>
               </div>
             ) : null}

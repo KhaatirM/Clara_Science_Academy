@@ -22,6 +22,7 @@ from models import (
     Student,
     db,
 )
+from teacher_routes.assignment_utils import is_assignment_open_for_student
 
 ALLOWED_EXTENSIONS = {
     "pdf",
@@ -209,7 +210,7 @@ def build_discussion_board_payload(
     overall_pct = int((posts_pct + replies_pct) / 2)
 
     allow_edit = bool(getattr(assignment, "allow_student_edit_posts", False))
-    is_active = assignment.status == "Active"
+    is_active = is_assignment_open_for_student(assignment, student.id)
 
     threads_out = []
     for t in threads:
@@ -291,7 +292,7 @@ def build_discussion_thread_payload(
         .all()
     )
     allow_edit = bool(getattr(assignment, "allow_student_edit_posts", False))
-    is_active = assignment.status == "Active"
+    is_active = is_assignment_open_for_student(assignment, student.id)
 
     posts_out = []
     for p in posts:
@@ -362,7 +363,7 @@ def create_discussion_thread_spa(
     if err or not assignment:
         return None, err or "Discussion not found", status
 
-    if assignment.status != "Active":
+    if not is_assignment_open_for_student(assignment, student.id):
         return None, "This discussion is not currently active.", 403
 
     title = (title or "").strip()
@@ -423,7 +424,7 @@ def reply_to_thread_spa(
         return None, "You are not enrolled in this class.", 403
     if thread.is_locked:
         return None, "This thread is locked and no longer accepts replies.", 403
-    if assignment.status != "Active":
+    if not is_assignment_open_for_student(assignment, student.id):
         return None, "This discussion is not currently active.", 403
 
     content = (content or "").strip()
@@ -473,7 +474,7 @@ def edit_thread_spa(
         return None, "Editing posts is not allowed for this discussion.", 403
     if thread.student_id != student.id:
         return None, "You can only edit your own posts.", 403
-    if assignment.status != "Active":
+    if not is_assignment_open_for_student(assignment, student.id):
         return None, "This discussion is no longer active.", 403
 
     enrollment = Enrollment.query.filter_by(
@@ -521,7 +522,7 @@ def edit_post_spa(
         return None, "You can only edit your own posts.", 403
     if post.is_teacher_post:
         return None, "Teacher posts cannot be edited by students.", 403
-    if assignment.status != "Active":
+    if not is_assignment_open_for_student(assignment, student.id):
         return None, "This discussion is no longer active.", 403
 
     enrollment = Enrollment.query.filter_by(

@@ -28,6 +28,7 @@ export async function saveQuizProgress(
     questions_answered: number
     pause_timer?: boolean
   },
+  opts?: { keepalive?: boolean },
 ) {
   return apiFetch<{
     success: boolean
@@ -37,6 +38,7 @@ export async function saveQuizProgress(
   }>(`/student/save-quiz-progress/${assignmentId}`, {
     method: 'POST',
     body: JSON.stringify(payload),
+    keepalive: Boolean(opts?.keepalive),
   })
 }
 

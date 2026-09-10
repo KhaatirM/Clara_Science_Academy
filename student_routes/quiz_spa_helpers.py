@@ -284,7 +284,10 @@ def build_student_quiz_payload(
         results_mode
         and attempts_remaining is not None
         and attempts_remaining > 0
-        and is_assignment_open_for_student(assignment, student.id)
+        and (
+            is_assignment_open_for_student(assignment, student.id)
+            or bool(active_reopening)
+        )
     )
 
     return {

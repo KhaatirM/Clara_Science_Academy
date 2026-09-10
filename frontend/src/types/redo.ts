@@ -26,6 +26,8 @@ export interface RedoRequestItem {
   reason: string
   requested_at: string | null
   assignment_type?: string | null
+  due_date?: string | null
+  close_date?: string | null
   student: RedoStudentRef
   assignment: RedoAssignmentRef
   class: RedoClassRef

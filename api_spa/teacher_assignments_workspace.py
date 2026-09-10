@@ -8,13 +8,17 @@ from flask_login import login_required
 from decorators import teacher_required
 from management_routes.assignment_workspace_spa_helpers import (
     _assignment_action_links,
+    query_group_assignment_edit,
     query_group_assignment_grade,
     query_group_assignment_submissions,
     query_group_assignment_view,
+    query_individual_assignment_edit,
     query_individual_assignment_grade,
     query_individual_assignment_grade_statistics,
     query_individual_assignment_submissions,
     query_individual_assignment_view,
+    save_group_assignment_edit,
+    save_individual_assignment_edit,
     save_quiz_open_ended_grades,
 )
 from models import Assignment, GroupAssignment
@@ -195,3 +199,48 @@ def teacher_quiz_open_ended_grades(assignment_id: int):
     result = save_quiz_open_ended_grades(assignment_id, body.get("entries") or [])
     status = 200 if result.get("success") else 400
     return jsonify(result), status
+
+
+def _parse_assignment_edit_body() -> dict:
+    content_type = (request.content_type or "").lower()
+    if request.files or "multipart/form-data" in content_type:
+        body = request.form.to_dict(flat=True)
+        remove_ids = request.form.getlist("remove_attachment_ids")
+        if remove_ids:
+            body["remove_attachment_ids"] = remove_ids
+        return body
+    return request.get_json(silent=True) or {}
+
+
+@spa_api_blueprint.route(
+    "/teacher/assignments/individual/<int:assignment_id>/edit",
+    methods=["GET", "POST"],
+)
+@login_required
+@teacher_required
+def teacher_individual_assignment_edit(assignment_id: int):
+    _, err = _authorized_individual(assignment_id)
+    if err:
+        return err
+    if request.method == "POST":
+        result = save_individual_assignment_edit(assignment_id, _parse_assignment_edit_body())
+        status = 200 if result.get("success") else 400
+        return jsonify(result), status
+    return jsonify({**query_individual_assignment_edit(assignment_id), "meta": _teacher_workspace_meta()})
+
+
+@spa_api_blueprint.route(
+    "/teacher/assignments/group/<int:assignment_id>/edit",
+    methods=["GET", "POST"],
+)
+@login_required
+@teacher_required
+def teacher_group_assignment_edit(assignment_id: int):
+    _, err = _authorized_group(assignment_id)
+    if err:
+        return err
+    if request.method == "POST":
+        result = save_group_assignment_edit(assignment_id, _parse_assignment_edit_body())
+        status = 200 if result.get("success") else 400
+        return jsonify(result), status
+    return jsonify({**query_group_assignment_edit(assignment_id), "meta": _teacher_workspace_meta()})

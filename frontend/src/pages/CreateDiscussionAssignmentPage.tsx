@@ -43,6 +43,7 @@ export function CreateDiscussionAssignmentPage() {
   const [dueDate, setDueDate] = useState('')
   const [openDate, setOpenDate] = useState('')
   const [closeDate, setCloseDate] = useState('')
+  const [closeDateManual, setCloseDateManual] = useState(false)
   const [useRubric, setUseRubric] = useState(false)
   const [rubricCriteria, setRubricCriteria] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -77,7 +78,8 @@ export function CreateDiscussionAssignmentPage() {
         setAssignmentContext(e.assignment_context || 'homework')
         setDueDate(e.due_date || '')
         setOpenDate(e.open_date || '')
-        setCloseDate(e.close_date || '')
+        setCloseDate(e.close_date || e.due_date || '')
+        setCloseDateManual(Boolean(e.close_date && e.due_date && e.close_date !== e.due_date))
         setUseRubric(Boolean(e.use_rubric))
         setRubricCriteria(e.rubric_criteria || '')
       }
@@ -338,7 +340,11 @@ export function CreateDiscussionAssignmentPage() {
                   type="datetime-local"
                   className={inputClass()}
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setDueDate(next)
+                    if (!closeDateManual) setCloseDate(next)
+                  }}
                   required
                   min="2020-01-01T00:00"
                 />
@@ -366,7 +372,10 @@ export function CreateDiscussionAssignmentPage() {
                   type="datetime-local"
                   className={inputClass()}
                   value={closeDate}
-                  onChange={(e) => setCloseDate(e.target.value)}
+                  onChange={(e) => {
+                    setCloseDateManual(true)
+                    setCloseDate(e.target.value)
+                  }}
                   required
                   min="2020-01-01T00:00"
                 />

@@ -136,3 +136,36 @@ def get_school_now():
 def get_school_today():
     """Today's calendar date in the effective school timezone."""
     return get_school_now().date()
+
+
+def to_school_datetime_local(value) -> str:
+    """
+    Format a stored datetime for ``datetime-local`` inputs.
+
+    Naive values are treated as UTC (same rule as the ``schooltime`` Jinja filter),
+    then converted to the effective school timezone as ``YYYY-MM-DDTHH:MM``.
+    """
+    if value is None:
+        return ""
+    from datetime import datetime, timezone
+
+    if not isinstance(value, datetime):
+        return ""
+
+    dt = value
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    tz_name = get_school_timezone_name()
+    try:
+        from zoneinfo import ZoneInfo
+
+        local_dt = dt.astimezone(ZoneInfo(tz_name))
+    except Exception:
+        try:
+            import pytz
+
+            local_dt = dt.astimezone(pytz.timezone(tz_name))
+        except Exception:
+            local_dt = dt.astimezone(timezone.utc)
+    return local_dt.strftime("%Y-%m-%dT%H:%M")

@@ -36,6 +36,7 @@ export function CreatePdfAssignmentPage() {
   const [quarter, setQuarter] = useState('')
   const [openDate, setOpenDate] = useState('')
   const [closeDate, setCloseDate] = useState('')
+  const [closeDateManual, setCloseDateManual] = useState(false)
   const [status, setStatus] = useState('Active')
   const [assignmentContext, setAssignmentContext] = useState<'homework' | 'in-class'>(contextParam)
   const [totalPoints, setTotalPoints] = useState('100')
@@ -64,6 +65,8 @@ export function CreatePdfAssignmentPage() {
       }
       if (data.default_due_date) {
         setDueDate(data.default_due_date)
+        setCloseDate(data.default_due_date)
+        setCloseDateManual(false)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load form')
@@ -80,8 +83,9 @@ export function CreatePdfAssignmentPage() {
     if (!meta) return
     if (assignmentContext === 'in-class' && meta.in_class_due_date) {
       setDueDate(meta.in_class_due_date)
+      if (!closeDateManual) setCloseDate(meta.in_class_due_date)
     }
-  }, [assignmentContext, meta])
+  }, [assignmentContext, meta, closeDateManual])
 
   const lockedClass = Boolean(meta?.preselected_class)
   const backTo = spaRoute(meta?.type_selector_url || assignmentCreateRoutePrefix(scope))
@@ -277,7 +281,11 @@ export function CreatePdfAssignmentPage() {
                   type="datetime-local"
                   className={inputClass()}
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setDueDate(next)
+                    if (!closeDateManual) setCloseDate(next)
+                  }}
                   required
                   min="2020-01-01T00:00"
                 />
@@ -317,7 +325,10 @@ export function CreatePdfAssignmentPage() {
                   type="datetime-local"
                   className={inputClass()}
                   value={closeDate}
-                  onChange={(e) => setCloseDate(e.target.value)}
+                  onChange={(e) => {
+                    setCloseDateManual(true)
+                    setCloseDate(e.target.value)
+                  }}
                   min="2020-01-01T00:00"
                 />
               </div>

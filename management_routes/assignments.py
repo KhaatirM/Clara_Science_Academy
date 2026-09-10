@@ -4262,11 +4262,14 @@ def grant_assignment_redo(assignment_id):
             # Check if reopening already exists (for students who haven't submitted)
             existing_reopening = None
             if not has_submitted:
-                existing_reopening = AssignmentReopening.query.filter_by(
-                    assignment_id=assignment_id,
-                    student_id=student_id,
-                    is_active=True
-                ).first()
+                existing_reopening = (
+                    AssignmentReopening.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                    )
+                    .order_by(AssignmentReopening.reopened_at.desc())
+                    .first()
+                )
             
             if existing_redo:
                 # Update existing redo
@@ -4275,6 +4278,11 @@ def grant_assignment_redo(assignment_id):
                 existing_redo.granted_at = datetime.utcnow()
                 if teacher:
                     existing_redo.granted_by = teacher.id
+                if existing_redo.is_used:
+                    existing_redo.is_used = False
+                    existing_redo.redo_grade = None
+                    existing_redo.final_grade = None
+                    existing_redo.was_redo_late = False
                 already_granted_count += 1
                 
                 # Notify student of updated redo
@@ -4334,6 +4342,8 @@ def grant_assignment_redo(assignment_id):
                         )
                 else:
                     # Still no submission, just update reopening
+                    existing_reopening.is_active = True
+                    existing_reopening.expires_at = redo_deadline
                     existing_reopening.reason = reason if reason else existing_reopening.reason
                     existing_reopening.reopened_at = datetime.utcnow()
                     if teacher:
@@ -4348,7 +4358,10 @@ def grant_assignment_redo(assignment_id):
                             user_id=student.user.id,
                             notification_type='assignment',
                             title=f'Reopening Updated: {assignment.title}',
-                            message=f'Your reopening for "{assignment.title}" has been updated.',
+                            message=(
+                                f'Your reopening for "{assignment.title}" has been updated. '
+                                f'Open until {redo_deadline.strftime("%m/%d/%Y")}.'
+                            ),
                             link=url_for('student.student_assignments')
                         )
             else:

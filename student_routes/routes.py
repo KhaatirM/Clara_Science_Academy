@@ -1060,12 +1060,8 @@ def student_assignments():
                 student_id=student.id,
                 assignment_id=assignment.id
             ).count()
-            from models import AssignmentReopening
-            active_reopening = AssignmentReopening.query.filter_by(
-                assignment_id=assignment.id,
-                student_id=student.id,
-                is_active=True
-            ).first()
+            from teacher_routes.assignment_utils import get_active_assignment_reopening
+            active_reopening = get_active_assignment_reopening(assignment.id, student.id)
             effective_max_attempts = assignment.max_attempts
             if active_reopening and active_reopening.additional_attempts > 0:
                 effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts

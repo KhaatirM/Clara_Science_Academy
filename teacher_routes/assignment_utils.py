@@ -255,21 +255,96 @@ def get_student_close_date(assignment, student_id):
 
 
 def get_active_assignment_reopening(assignment_id, student_id, now=None):
-    """Return an active, non-expired AssignmentReopening for this student, or None."""
-    from models import AssignmentReopening
+    """Return an active, non-expired AssignmentReopening for this student, or None.
+
+    Also repairs reopenings that were incorrectly deactivated because a grade already
+    existed from before the grant (common for quiz redos).
+    """
+    from models import AssignmentReopening, Grade
 
     if now is None:
         now = datetime.now(timezone.utc)
+
+    def _usable(reopening):
+        if not reopening:
+            return False
+        if reopening.expires_at and now > _as_utc_aware(reopening.expires_at):
+            return False
+        return True
+
     reopening = AssignmentReopening.query.filter_by(
         assignment_id=assignment_id,
         student_id=student_id,
         is_active=True,
     ).first()
-    if not reopening:
-        return None
-    if reopening.expires_at and now > _as_utc_aware(reopening.expires_at):
-        return None
-    return reopening
+    if _usable(reopening):
+        return reopening
+
+    # Look for a premature close: inactive, not expired, no grade scored after grant.
+    candidates = (
+        AssignmentReopening.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student_id,
+            is_active=False,
+        )
+        .order_by(AssignmentReopening.reopened_at.desc())
+        .limit(5)
+        .all()
+    )
+    grades = Grade.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student_id,
+    ).all()
+
+    def _grade_has_score(row):
+        if getattr(row, "is_voided", False) or not row.grade_data:
+            return False
+        try:
+            import json
+
+            data = json.loads(row.grade_data) if isinstance(row.grade_data, str) else row.grade_data
+        except (TypeError, ValueError):
+            return False
+        if not isinstance(data, dict):
+            return False
+        value = data.get("score")
+        if value is None:
+            value = data.get("points_earned")
+        if value is None:
+            return False
+        try:
+            float(value)
+        except (TypeError, ValueError):
+            return False
+        return True
+
+    for candidate in candidates:
+        if not _usable(candidate):
+            continue
+        graded_after = False
+        for grade in grades:
+            if not _grade_has_score(grade):
+                continue
+            graded_at = getattr(grade, "graded_at", None)
+            if candidate.reopened_at is None:
+                graded_after = True
+                break
+            if graded_at and _as_utc_aware(graded_at) >= _as_utc_aware(candidate.reopened_at):
+                graded_after = True
+                break
+        if graded_after:
+            continue
+        candidate.is_active = True
+        try:
+            from extensions import db
+
+            db.session.commit()
+        except Exception:
+            from extensions import db
+
+            db.session.rollback()
+        return candidate
+    return None
 
 
 def is_assignment_open_for_student(assignment, student_id):

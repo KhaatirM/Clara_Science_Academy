@@ -50,6 +50,7 @@ export function CreateQuizAssignmentPage() {
   const [maxExtraCredit, setMaxExtraCredit] = useState('0')
   const [openDate, setOpenDate] = useState('')
   const [closeDate, setCloseDate] = useState('')
+  const [closeDateManual, setCloseDateManual] = useState(false)
   const [timeLimit, setTimeLimit] = useState('')
   const [attempts, setAttempts] = useState('1')
   const [shuffleQuestions, setShuffleQuestions] = useState(false)
@@ -88,7 +89,8 @@ export function CreateQuizAssignmentPage() {
         setAllowExtraCredit(Boolean(e.allow_extra_credit))
         setMaxExtraCredit(String(e.max_extra_credit_points ?? 0))
         setOpenDate(e.open_date || '')
-        setCloseDate(e.close_date || '')
+        setCloseDate(e.close_date || e.due_date || '')
+        setCloseDateManual(Boolean(e.close_date && e.due_date && e.close_date !== e.due_date))
         setTimeLimit(e.time_limit || '')
         setAttempts(e.attempts || '1')
         setShuffleQuestions(Boolean(e.shuffle_questions))
@@ -292,7 +294,11 @@ export function CreateQuizAssignmentPage() {
                 type="datetime-local"
                 className={inputClass()}
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value
+                  setDueDate(next)
+                  if (!closeDateManual) setCloseDate(next)
+                }}
                 min="2020-01-01T00:00"
               />
             </div>
@@ -388,7 +394,10 @@ export function CreateQuizAssignmentPage() {
                 type="datetime-local"
                 className={inputClass()}
                 value={closeDate}
-                onChange={(e) => setCloseDate(e.target.value)}
+                onChange={(e) => {
+                  setCloseDateManual(true)
+                  setCloseDate(e.target.value)
+                }}
                 min="2020-01-01T00:00"
               />
             </div>

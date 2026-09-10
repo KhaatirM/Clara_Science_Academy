@@ -314,10 +314,8 @@ def query_quiz_assignment_form(
 
 
 def _dt_local(value: Any) -> str:
-    if not value:
-        return ""
-    try:
-        return value.strftime("%Y-%m-%dT%H:%M")
-    except Exception:
-        return ""
+    """School-local datetime-local string for create/edit form hydration."""
+    from utils.school_timezone import to_school_datetime_local
+
+    return to_school_datetime_local(value)
 

@@ -9,6 +9,7 @@ import {
   unvoidAssignment,
   type ReopenStatusStudent,
 } from '../../api/assignmentViewActions'
+import { defaultRedoDeadline } from '../../utils/redoDeadline'
 
 function ModalShell({
   title,
@@ -236,12 +237,16 @@ export function RedoOpportunityModal({
   open,
   assignmentId,
   students,
+  dueDate,
+  closeDate,
   onClose,
   onSuccess,
 }: {
   open: boolean
   assignmentId: number
   students: StudentBrief[]
+  dueDate?: string | null
+  closeDate?: string | null
   onClose: () => void
   onSuccess: (message: string) => void
 }) {
@@ -253,13 +258,11 @@ export function RedoOpportunityModal({
 
   useEffect(() => {
     if (!open) return
-    const next = new Date()
-    next.setDate(next.getDate() + 7)
-    setDeadline(next.toISOString().slice(0, 10))
+    setDeadline(defaultRedoDeadline({ dueDate, closeDate }))
     setReason('')
     setSelectedIds([])
     setError(null)
-  }, [open])
+  }, [open, dueDate, closeDate])
 
   if (!open) return null
 
@@ -308,7 +311,9 @@ export function RedoOpportunityModal({
       }
     >
       <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-        If a student already submitted, this grants a tracked redo. If not, it reopens access so they can submit.
+        If a student already submitted, this grants a tracked redo that reopens closed work until the
+        deadline. If not, it reopens access so they can submit. When the original due/close date is
+        still upcoming, that date is filled in by default.
       </p>
       <div>
         <label className="mb-1 block text-sm font-bold text-hub-text">Deadline</label>

@@ -18,6 +18,9 @@ export function resolveSchoolTimezone(
 /**
  * Convert a stored ISO datetime (usually UTC) into a `datetime-local` value
  * in school timezone — matching how create forms interpret the picker.
+ *
+ * Backend edit payloads already send school-local `YYYY-MM-DDTHH:MM`; those
+ * pass through unchanged. Timezone-less ISO with seconds is treated as UTC.
  */
 export function isoToSchoolDatetimeLocal(
   iso: string | null | undefined,
@@ -25,8 +28,16 @@ export function isoToSchoolDatetimeLocal(
 ): string {
   if (!iso) return ''
   const trimmed = String(iso).trim()
+  // Already a datetime-local value from the API (school-local wall clock).
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) return trimmed
-  const d = new Date(trimmed)
+
+  let normalized = trimmed
+  // Naive ISO with seconds/fraction → treat as UTC (DB storage convention).
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(trimmed)) {
+    normalized = `${trimmed}Z`
+  }
+
+  const d = new Date(normalized)
   if (Number.isNaN(d.getTime())) return ''
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -50,7 +61,7 @@ export function isoToSchoolDatetimeLocal(
     return `${year}-${month}-${day}T${hour}:${minute}`
   } catch {
     const pad = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
   }
 }
 

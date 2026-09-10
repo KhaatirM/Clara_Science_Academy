@@ -167,11 +167,45 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 9, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 9</strong> (<strong>{{ app_version_display }}</strong>) keeps quiz answers when students leave mid-quiz, shows assignment type on the Redo dashboard, and makes granted redos reopen quizzes, discussions, and PDF/paper through the selected deadline.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 9</strong> (<strong>{{ app_version_display }}</strong>) fixes the Edit assignment popup so original dates load correctly (no accidental shifts on Save), routes Quiz/Discussion Edit to their full editors, and keeps approved redos usable for students.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 9, 2026 - Edit assignment -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Edit assignment – September 9, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Original dates load correctly:</strong> Due/open/close now show the real school-local times. Opening Edit and saving without changes no longer shifts dates.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz &amp; Discussion Edit:</strong> Edit opens the full quiz or discussion editor (questions, prompt, settings) instead of the limited PDF-style popup.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 9, 2026 - Redo student access -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Redo access – September 9, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Approved redos reopen for students:</strong> Quizzes (and other reopen grants) no longer stay stuck under Past &amp; closed after approval. Students get the retake/submit action while the redo window is open.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Smarter grant defaults:</strong> If the original due/close date is still upcoming, Grant redo prefills that date. PDF/paper re-grants reopen closed work through the deadline.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Close date follows due:</strong> When creating PDF, quiz, discussion, or group PDF assignments, Close date autofills from Due until you change Close yourself.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 9, 2026 - Quiz progress save -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-device-hdd me-2"></i>Student quizzes – September 9, 2026</h6>
@@ -2488,11 +2522,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep9_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep9_2026_v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep9_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep9_2026_v4', 'true');
         }, 500);
     }
 });

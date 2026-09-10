@@ -4,6 +4,7 @@ import { fetchRedoDashboard, grantRedoRequest, rejectRedoRequest, revokeRedo } f
 import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ActiveRedoItem, RedoDashboardResponse, RedoRequestItem, ReopeningItem } from '../types/redo'
 import { assignmentTypeLabel, assignmentTypeTone } from '../utils/assignmentTypes'
+import { defaultRedoDeadline } from '../utils/redoDeadline'
 import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
 
 function formatDate(iso: string | null) {
@@ -11,12 +12,6 @@ function formatDate(iso: string | null) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function defaultDeadline() {
-  const d = new Date()
-  d.setDate(d.getDate() + 7)
-  return d.toISOString().slice(0, 10)
 }
 
 function StatCard({ icon, value, label, tone }: { icon: string; value: string | number; label: string; tone: string }) {
@@ -98,7 +93,7 @@ export function RedoDashboardPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [grantModal, setGrantModal] = useState<RedoRequestItem | null>(null)
-  const [grantDeadline, setGrantDeadline] = useState(defaultDeadline())
+  const [grantDeadline, setGrantDeadline] = useState(() => defaultRedoDeadline())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -301,7 +296,12 @@ export function RedoDashboardPage() {
                       type="button"
                       disabled={busy}
                       onClick={() => {
-                        setGrantDeadline(defaultDeadline())
+                        setGrantDeadline(
+                          defaultRedoDeadline({
+                            dueDate: r.due_date,
+                            closeDate: r.close_date,
+                          }),
+                        )
                         setGrantModal(r)
                       }}
                       className="rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white"
@@ -411,6 +411,9 @@ export function RedoDashboardPage() {
             </label>
             <p className="mb-2 text-xs text-hub-muted">
               Access stays open through the end of this date. Quizzes also get one additional attempt.
+              {grantModal.due_date || grantModal.close_date
+                ? ' Prefills the original due/close date when that date is still upcoming.'
+                : ''}
             </p>
             <input
               id="redo-deadline"

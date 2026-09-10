@@ -65,21 +65,24 @@ def _upsert_reopening(
     if reopened_by_id is None and assignment.class_info and assignment.class_info.teacher_id:
         reopened_by_id = assignment.class_info.teacher_id
 
+    # Include inactive rows so a premature close can be revived on re-grant.
     existing = (
         AssignmentReopening.query.filter_by(
             assignment_id=assignment.id,
             student_id=student_id,
-            is_active=True,
-        ).first()
+        )
+        .order_by(AssignmentReopening.reopened_at.desc())
+        .first()
     )
     if existing:
+        existing.is_active = True
         existing.expires_at = redo_deadline
         existing.reason = reason or existing.reason
+        # Refresh grant time so "grade after reopen" checks use this grant, not the old one.
         existing.reopened_at = datetime.utcnow()
         if reopened_by_id:
             existing.reopened_by = reopened_by_id
         if additional_attempts > 0:
-            # Bring a 0-attempt (broken) reopen up to the grant; don't stack on re-approve.
             existing.additional_attempts = max(int(existing.additional_attempts or 0), additional_attempts)
         return existing
 
@@ -109,7 +112,7 @@ def grant_redo_access_for_request(
 
     - Quiz: always AssignmentReopening with +1 attempt and expires_at.
     - Discussion / never-submitted PDF: AssignmentReopening with expires_at.
-    - Submitted PDF/paper: AssignmentRedo with redo_deadline.
+    - Submitted PDF/paper: AssignmentRedo with redo_deadline (reopens closed work).
     """
     submission = Submission.query.filter_by(
         student_id=student_id,
@@ -137,9 +140,8 @@ def grant_redo_access_for_request(
         existing = AssignmentReopening.query.filter_by(
             assignment_id=assignment.id,
             student_id=student_id,
-            is_active=True,
         ).first()
-        already = existing is not None
+        already = existing is not None and bool(existing.is_active)
         _upsert_reopening(
             assignment=assignment,
             student_id=student_id,
@@ -165,10 +167,12 @@ def grant_redo_access_for_request(
         existing_redo.granted_at = datetime.utcnow()
         if teacher:
             existing_redo.granted_by = teacher.id
-        if existing_redo.is_used and not existing_redo.final_grade:
-            # Keep used flag; teacher can still grade. Access window refreshed only if unused.
-            pass
-        # Re-open unused redos that were past deadline by refreshing deadline above.
+        # Re-granting must reopen access even if the prior redo was already used.
+        if existing_redo.is_used:
+            existing_redo.is_used = False
+            existing_redo.redo_grade = None
+            existing_redo.final_grade = None
+            existing_redo.was_redo_late = False
         return {"mode": "redo", "kind": "pdf", "already": True}
 
     redo_rec = AssignmentRedo(

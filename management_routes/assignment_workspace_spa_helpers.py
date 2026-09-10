@@ -28,6 +28,7 @@ from models import (
     TeacherStaff,
 )
 from teacher_routes.assignment_utils import compute_assignment_void_scope
+from utils.school_timezone import to_school_datetime_local
 from utils.student_roster import active_class_roster_students_query
 
 
@@ -37,6 +38,14 @@ def _iso(dt: Any) -> str | None:
     if hasattr(dt, "isoformat"):
         return dt.isoformat()
     return str(dt)
+
+
+def _edit_datetime_local(dt: Any) -> str | None:
+    """School-local datetime-local string for edit forms (or None if empty)."""
+    if dt is None:
+        return None
+    formatted = to_school_datetime_local(dt)
+    return formatted or None
 
 
 def _student_brief(student: Student | None) -> dict[str, Any]:
@@ -1077,7 +1086,12 @@ def query_assignment_edit_meta(assignment_id: int, *, is_group: bool = False) ->
     assignment = Assignment.query.get_or_404(assignment_id)
     atype = (assignment.assignment_type or "pdf").lower()
     class_id = assignment.class_id
-    edit_path = f"/app/management/assignments-and-grades/{class_id}/individual/{assignment_id}/edit"
+    if atype == "quiz":
+        edit_path = f"/app/management/assignments/create/quiz?edit={assignment_id}&class_id={class_id}"
+    elif atype == "discussion":
+        edit_path = f"/app/management/assignments/create/discussion?edit={assignment_id}&class_id={class_id}"
+    else:
+        edit_path = f"/app/management/assignments-and-grades/{class_id}/individual/{assignment_id}/edit"
     return {
         "is_group": False,
         "assignment_id": assignment.id,
@@ -1247,9 +1261,9 @@ def _assignment_edit_common_fields(assignment: Assignment) -> dict[str, Any]:
         "assignment_type": (assignment.assignment_type or "pdf").lower(),
         "title": assignment.title,
         "description": assignment.description or "",
-        "due_date": _iso(assignment.due_date),
-        "open_date": _iso(assignment.open_date),
-        "close_date": _iso(assignment.close_date),
+        "due_date": _edit_datetime_local(assignment.due_date),
+        "open_date": _edit_datetime_local(assignment.open_date),
+        "close_date": _edit_datetime_local(assignment.close_date),
         "quarter": str(assignment.quarter or "1"),
         "status": assignment.status or "Active",
         "assignment_context": assignment.assignment_context or "homework",
@@ -1262,7 +1276,7 @@ def _assignment_edit_common_fields(assignment: Assignment) -> dict[str, Any]:
         "late_penalty_per_day": float(assignment.late_penalty_per_day or 0),
         "late_penalty_max_days": int(assignment.late_penalty_max_days or 0),
         "status_revert_enabled": bool(assignment.status_override and assignment.status_override_until),
-        "status_override_until": _iso(assignment.status_override_until),
+        "status_override_until": _edit_datetime_local(assignment.status_override_until),
         "attachments": attachments,
     }
 
@@ -1301,9 +1315,9 @@ def query_group_assignment_edit(assignment_id: int) -> dict[str, Any]:
         "assignment_type": (ga.assignment_type or "pdf").lower(),
         "title": ga.title,
         "description": ga.description or "",
-        "due_date": _iso(ga.due_date),
-        "open_date": _iso(ga.open_date),
-        "close_date": _iso(ga.close_date),
+        "due_date": _edit_datetime_local(ga.due_date),
+        "open_date": _edit_datetime_local(ga.open_date),
+        "close_date": _edit_datetime_local(ga.close_date),
         "quarter": str(ga.quarter or "1"),
         "status": ga.status or "Active",
         "assignment_context": ga.assignment_context or "homework",
@@ -1572,22 +1586,27 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
         assignment.late_penalty_per_day = 0.0
         assignment.late_penalty_max_days = 0
 
-    open_date = _parse_edit_datetime(body.get("open_date"))
-    close_date = _parse_edit_datetime(body.get("close_date"))
-    assignment.open_date = open_date
-    assignment.close_date = close_date
+    open_date_raw = body.get("open_date")
+    close_date_raw = body.get("close_date")
+    # Only overwrite open/close when the client sends the field (empty string clears).
+    if "open_date" in body:
+        assignment.open_date = _parse_edit_datetime(open_date_raw)
+    if "close_date" in body:
+        assignment.close_date = _parse_edit_datetime(close_date_raw)
 
-    if _truthy_form_bool(body.get("status_revert_enabled")) and body.get("status_override_until"):
-        override_until = _parse_edit_datetime(body.get("status_override_until"))
-        if override_until:
-            assignment.status_override = status
-            assignment.status_override_until = override_until
+    # Status auto-revert is not exposed in the SPA edit modal — do not clear it on save.
+    if "status_revert_enabled" in body:
+        if _truthy_form_bool(body.get("status_revert_enabled")) and body.get("status_override_until"):
+            override_until = _parse_edit_datetime(body.get("status_override_until"))
+            if override_until:
+                assignment.status_override = status
+                assignment.status_override_until = override_until
+            else:
+                assignment.status_override = None
+                assignment.status_override_until = None
         else:
             assignment.status_override = None
             assignment.status_override_until = None
-    else:
-        assignment.status_override = None
-        assignment.status_override_until = None
 
     quiz_raw = body.get("quiz")
     if isinstance(quiz_raw, str) and quiz_raw.strip():
@@ -1667,8 +1686,10 @@ def save_group_assignment_edit(assignment_id: int, body: dict[str, Any]) -> dict
         ga.max_extra_credit_points = 0.0
     ga.late_penalty_enabled = _truthy_form_bool(body.get("late_penalty_enabled"))
     ga.allow_individual = _truthy_form_bool(body.get("allow_individual"))
-    ga.open_date = _parse_edit_datetime(body.get("open_date"))
-    ga.close_date = _parse_edit_datetime(body.get("close_date"))
+    if "open_date" in body:
+        ga.open_date = _parse_edit_datetime(body.get("open_date"))
+    if "close_date" in body:
+        ga.close_date = _parse_edit_datetime(body.get("close_date"))
 
     attach_err = _apply_group_attachment_updates(ga, body)
     if attach_err:

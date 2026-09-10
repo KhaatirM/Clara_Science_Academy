@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep9_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep9_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Edit assignment keeps original dates',
+    body: 'The edit popup now loads the real school-local due/open/close times. Saving without changes no longer shifts dates. Quiz and Discussion Edit open their full editors instead of the thin PDF-style popup.',
+  },
+  {
+    title: 'Approved redos reopen for students',
+    body: 'After you grant a redo (especially quizzes), the assignment moves out of Past & closed so the student can retake. Previously a dashboard refresh could deactivate the reopen because the original grade already existed.',
+  },
+  {
+    title: 'Smarter redo deadlines and close dates',
+    body: 'Granting a redo while the original due/close date is still upcoming prefills that date. Creating assignments now copies the due date into Close date until you change Close yourself.',
+  },
   {
     title: 'Quiz answers keep saving if you leave early',
     body: 'When Save and continue is on, answers now autosave shortly after you type, flush when you close or hide the tab, and stay available overnight while the quiz is still open. Closing the laptop to go to bed no longer wipes progress after 30 minutes.',
@@ -246,10 +258,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.32'
+  const display = version?.display || 'v 2.520.34'
   const releaseLabel = version?.release_label || 'September 9, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2759
+  const updatesEstimate = version?.updates_estimate ?? 2762
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

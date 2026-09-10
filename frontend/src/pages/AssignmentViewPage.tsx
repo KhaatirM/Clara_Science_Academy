@@ -89,17 +89,36 @@ export function AssignmentViewPage() {
 
   useEffect(() => {
     const state = location.state as { openEdit?: boolean } | null
-    if (state?.openEdit) {
-      setEditOpen(true)
-      navigate(location.pathname, { replace: true, state: {} })
+    if (!state?.openEdit || !data) return
+
+    navigate(location.pathname, { replace: true, state: {} })
+
+    const atype = String((data.assignment as { assignment_type?: string } | undefined)?.assignment_type || '')
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+    const cid =
+      (data.assignment as { class_id?: number } | undefined)?.class_id ||
+      Number(classId) ||
+      null
+    const createBase = workspaceScope === 'teacher' ? '/teacher/assignments/create' : '/management/assignments/create'
+
+    if (!isGroup && atype === 'quiz' && cid && assignmentId) {
+      navigate(`${createBase}/quiz?edit=${assignmentId}&class_id=${cid}`)
+      return
     }
-  }, [location.pathname, location.state, navigate])
+    if (!isGroup && atype === 'discussion' && cid && assignmentId) {
+      navigate(`${createBase}/discussion?edit=${assignmentId}&class_id=${cid}`)
+      return
+    }
+    setEditOpen(true)
+  }, [assignmentId, classId, data, isGroup, location.pathname, location.state, navigate, workspaceScope])
 
   const assignment = data?.assignment as {
     id?: number
     title?: string
     description?: string
     due_date?: string | null
+    close_date?: string | null
     quarter?: string | null
     status?: string | null
     total_points?: number
@@ -165,7 +184,23 @@ export function AssignmentViewPage() {
     : `${base}/individual/${assignmentId}/submissions`
 
   const actionHandlers = {
-    onEdit: () => setEditOpen(true),
+    onEdit: () => {
+      const atype = String(assignment?.assignment_type || '')
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+      const cid = assignment?.class_id || Number(classId) || null
+      const createBase =
+        workspaceScope === 'teacher' ? '/teacher/assignments/create' : '/management/assignments/create'
+      if (!isGroup && atype === 'quiz' && cid) {
+        navigate(`${createBase}/quiz?edit=${assignmentId}&class_id=${cid}`)
+        return
+      }
+      if (!isGroup && atype === 'discussion' && cid) {
+        navigate(`${createBase}/discussion?edit=${assignmentId}&class_id=${cid}`)
+        return
+      }
+      setEditOpen(true)
+    },
     submissionsTo: data?.links?.submissions ? spaRoute(data.links.submissions) : submissionsPath,
     onGrade: () => {
       if (actionMeta.grade_disabled) return
@@ -368,6 +403,8 @@ export function AssignmentViewPage() {
         open={redoOpen}
         assignmentId={numericAssignmentId}
         students={students}
+        dueDate={assignment?.due_date}
+        closeDate={assignment?.close_date}
         onClose={() => setRedoOpen(false)}
         onSuccess={(msg) => {
           setMessage(msg)
@@ -416,6 +453,7 @@ export function AssignmentViewPage() {
         open={editOpen}
         assignmentId={numericAssignmentId}
         isGroup={isGroup}
+        workspaceScope={workspaceScope}
         onClose={() => setEditOpen(false)}
         onSaved={(msg) => {
           setMessage(msg)

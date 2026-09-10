@@ -5,6 +5,7 @@ import {
   type AssignmentEditForm,
 } from '../../api/assignmentWorkspace'
 import { isPdfPaperAssignmentType } from '../../utils/assignmentTypes'
+import type { AssignmentWorkspaceScope } from '../../utils/assignmentWorkspaceScope'
 import { isoToSchoolDatetimeLocal } from '../../utils/schoolTimezone'
 
 /** Same options as create PDF/paper (+ Classwork for older records). */
@@ -47,12 +48,14 @@ export function EditAssignmentModal({
   open,
   assignmentId,
   isGroup,
+  workspaceScope = 'management',
   onClose,
   onSaved,
 }: {
   open: boolean
   assignmentId: number
   isGroup: boolean
+  workspaceScope?: AssignmentWorkspaceScope
   onClose: () => void
   onSaved: (message: string) => void
 }) {
@@ -69,12 +72,13 @@ export function EditAssignmentModal({
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchAssignmentEditForm(assignmentId, isGroup, 'management')
+      const data = await fetchAssignmentEditForm(assignmentId, isGroup, workspaceScope)
       const category = data.assignment_category || ''
       setForm({
         ...data,
         title: data.title || '',
         description: data.description || '',
+        // API already returns school-local datetime-local strings; helper is a safe fallback.
         due_date: isoToSchoolDatetimeLocal(data.due_date) || '',
         open_date: isoToSchoolDatetimeLocal(data.open_date) || '',
         close_date: isoToSchoolDatetimeLocal(data.close_date) || '',
@@ -97,7 +101,7 @@ export function EditAssignmentModal({
     } finally {
       setLoading(false)
     }
-  }, [assignmentId, isGroup])
+  }, [assignmentId, isGroup, workspaceScope])
 
   useEffect(() => {
     if (open) void load()
@@ -124,8 +128,8 @@ export function EditAssignmentModal({
         title: form.title,
         description: form.description,
         due_date: form.due_date,
-        open_date: form.open_date || null,
-        close_date: form.close_date || null,
+        open_date: form.open_date || '',
+        close_date: form.close_date || '',
         quarter: form.quarter,
         status: form.status,
         assignment_context: form.assignment_context,
@@ -137,8 +141,6 @@ export function EditAssignmentModal({
         late_penalty_enabled: form.late_penalty_enabled,
         late_penalty_per_day: form.late_penalty_per_day ?? 0,
         late_penalty_max_days: form.late_penalty_max_days ?? 0,
-        status_revert_enabled: form.status_revert_enabled,
-        status_override_until: form.status_override_until || null,
       }
       if (form.allow_individual != null) body.allow_individual = form.allow_individual
       if (form.quiz) body.quiz = form.quiz
@@ -154,7 +156,7 @@ export function EditAssignmentModal({
         assignmentId,
         isGroup,
         body,
-        'management',
+        workspaceScope,
         isPdfLike ? newFiles : [],
         removeAttachmentIds,
       )

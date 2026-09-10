@@ -191,12 +191,16 @@ def _serialize_redo_request(rr: RedoRequest) -> dict[str, Any]:
     student = rr.student
     class_info = assignment.class_info if assignment else None
     assignment_type = (getattr(assignment, "assignment_type", None) or "").lower() if assignment else ""
+    due_date = getattr(assignment, "due_date", None) if assignment else None
+    close_date = getattr(assignment, "close_date", None) if assignment else None
     return {
         "id": rr.id,
         "assignment_id": rr.assignment_id,
         "reason": rr.reason or "",
         "requested_at": _iso(rr.requested_at),
         "assignment_type": assignment_type or None,
+        "due_date": _iso(due_date),
+        "close_date": _iso(close_date),
         "student": {
             "id": student.id if student else None,
             "display_name": _student_name(student),
@@ -286,29 +290,44 @@ def _grade_row_has_score(row: Grade) -> bool:
 
 
 def _close_graded_reopenings(reopenings: list[AssignmentReopening]) -> list[AssignmentReopening]:
-    """Drop reopenings that already have a grade; deactivate them so they stay off the list.
+    """Drop reopenings only after a grade is recorded *after* the reopen grant.
 
     Older grade saves never closed ``AssignmentReopening`` rows, so Active reopenings
-    could keep showing after the teacher graded.
+    could stick around after the teacher graded the retake. Closing on *any* existing
+    grade was wrong for quiz/discussion redos: the original grade already exists when
+    the teacher grants, and that was deactivating the new reopening immediately.
     """
     if not reopenings:
         return []
     pairs = {(r.assignment_id, r.student_id) for r in reopenings}
     assignment_ids = {a for a, _ in pairs}
     student_ids = {s for _, s in pairs}
-    graded_pairs: set[tuple[int, int]] = set()
+    grades_by_pair: dict[tuple[int, int], list[Grade]] = {}
     rows = Grade.query.filter(
         Grade.assignment_id.in_(assignment_ids), Grade.student_id.in_(student_ids)
     ).all()
     for row in rows:
         key = (row.assignment_id, row.student_id)
-        if key in pairs and _grade_row_has_score(row):
-            graded_pairs.add(key)
+        if key in pairs:
+            grades_by_pair.setdefault(key, []).append(row)
 
     still_open: list[AssignmentReopening] = []
     closed = 0
     for r in reopenings:
-        if (r.assignment_id, r.student_id) in graded_pairs:
+        post_reopen_grade = False
+        for row in grades_by_pair.get((r.assignment_id, r.student_id), []):
+            if not _grade_row_has_score(row):
+                continue
+            graded_at = getattr(row, "graded_at", None)
+            if r.reopened_at is None:
+                post_reopen_grade = True
+                break
+            if graded_at is None:
+                continue
+            if _as_utc_aware(graded_at) >= _as_utc_aware(r.reopened_at):
+                post_reopen_grade = True
+                break
+        if post_reopen_grade:
             if r.is_active:
                 r.is_active = False
                 closed += 1

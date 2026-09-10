@@ -52,6 +52,7 @@ export function CreateGroupPdfAssignmentPage() {
   const [openDate, setOpenDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [closeDate, setCloseDate] = useState('')
+  const [closeDateManual, setCloseDateManual] = useState(false)
   const [academicPeriodId, setAcademicPeriodId] = useState('')
   const [categoryWeight, setCategoryWeight] = useState('0')
   const [totalPoints, setTotalPoints] = useState('100')
@@ -300,7 +301,11 @@ export function CreateGroupPdfAssignmentPage() {
                   type="datetime-local"
                   className={inputClass()}
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setDueDate(next)
+                    if (!closeDateManual) setCloseDate(next)
+                  }}
                   required
                   min="2020-01-01T00:00"
                 />
@@ -312,7 +317,10 @@ export function CreateGroupPdfAssignmentPage() {
                   type="datetime-local"
                   className={inputClass()}
                   value={closeDate}
-                  onChange={(e) => setCloseDate(e.target.value)}
+                  onChange={(e) => {
+                    setCloseDateManual(true)
+                    setCloseDate(e.target.value)
+                  }}
                   min="2020-01-01T00:00"
                 />
               </div>

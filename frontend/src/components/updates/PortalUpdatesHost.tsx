@@ -1,9 +1,25 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep9_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownSep10_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Quiz redo: review previous attempts option',
+    body: 'When granting a quiz redo, choose whether the student can review prior answers while the redo is active. If off, they go straight into a new attempt.',
+  },
+  {
+    title: 'Pending grades shows assignment type',
+    body: 'The Grades pending review list now labels each item as Quiz, Discussion, PDF / Paper, or Group so you can tell them apart quickly.',
+  },
+  {
+    title: 'Quiz redo grants ask for attempts',
+    body: 'When approving a quiz redo, choose how many additional attempts to give. The quiz reopens through the deadline you pick, and those retries stay available for the student.',
+  },
+  {
+    title: 'Approved quiz redos show as open',
+    body: 'Students no longer see granted quiz redos stuck under Past & closed. The assignment moves back to active with Retake until the deadline or attempts are used.',
+  },
   {
     title: 'Edit assignment keeps original dates',
     body: 'The edit popup now loads the real school-local due/open/close times. Saving without changes no longer shifts dates. Quiz and Discussion Edit open their full editors instead of the thin PDF-style popup.',
@@ -26,7 +42,7 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   },
   {
     title: 'Granted redos reopen work through the deadline',
-    body: 'Granting a redo from the dashboard now reopens access through the end of the selected date. Quizzes get an extra attempt; discussions and PDF/paper unlock for posting or resubmit until that deadline.',
+    body: 'Granting a redo from the dashboard now reopens access through the end of the selected date. Quizzes get the attempts you choose; discussions and PDF/paper unlock for posting or resubmit until that deadline.',
   },
   {
     title: 'Pending grades alert for teachers and admins',
@@ -258,10 +274,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.34'
+  const display = version?.display || 'v 2.520.36'
   const releaseLabel = version?.release_label || 'September 9, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2762
+  const updatesEstimate = version?.updates_estimate ?? 2764
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

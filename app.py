@@ -827,6 +827,45 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: redo_request table check failed (may already exist): {e}")
 
+        # assignment_reopening.allow_review_previous_attempts (quiz redo grant option)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(assignment_reopening)"))
+                    columns = [row[1] for row in r]
+                    if columns and 'allow_review_previous_attempts' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE assignment_reopening "
+                            "ADD COLUMN allow_review_previous_attempts INTEGER NOT NULL DEFAULT 1"
+                        ))
+                        conn.commit()
+                        print("Added assignment_reopening.allow_review_previous_attempts column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'assignment_reopening' "
+                        "AND column_name = 'allow_review_previous_attempts'"
+                    ))
+                    if r.fetchone() is None:
+                        t = conn.execute(text(
+                            "SELECT 1 FROM information_schema.tables "
+                            "WHERE table_name = 'assignment_reopening'"
+                        ))
+                        if t.fetchone() is not None:
+                            conn.execute(text(
+                                "ALTER TABLE assignment_reopening "
+                                "ADD COLUMN allow_review_previous_attempts "
+                                "BOOLEAN NOT NULL DEFAULT true"
+                            ))
+                            conn.commit()
+                            print("Added assignment_reopening.allow_review_previous_attempts column.")
+        except Exception as e:
+            print(
+                "Note: assignment_reopening.allow_review_previous_attempts "
+                f"column check failed (may already exist): {e}"
+            )
+
         # Add report_card columns for auto-generation provenance if missing
         try:
             with db.engine.connect() as conn:

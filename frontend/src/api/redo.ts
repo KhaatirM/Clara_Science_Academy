@@ -16,10 +16,27 @@ export async function grantRedoRequest(
   requestId: number,
   redoDeadline: string,
   scope: AssignmentWorkspaceScope = 'management',
+  options?: {
+    additionalAttempts?: number
+    allowReviewPreviousAttempts?: boolean
+  },
 ): Promise<ApiActionResponse> {
+  const body: {
+    redo_deadline: string
+    additional_attempts?: number
+    allow_review_previous_attempts?: boolean
+  } = {
+    redo_deadline: redoDeadline,
+  }
+  if (options?.additionalAttempts != null && Number.isFinite(options.additionalAttempts)) {
+    body.additional_attempts = Math.max(1, Math.min(20, Math.floor(options.additionalAttempts)))
+  }
+  if (options?.allowReviewPreviousAttempts != null) {
+    body.allow_review_previous_attempts = Boolean(options.allowReviewPreviousAttempts)
+  }
   return apiFetch<ApiActionResponse>(`${redoApiBase(scope)}/redo-requests/${requestId}/grant`, {
     method: 'POST',
-    body: JSON.stringify({ redo_deadline: redoDeadline }),
+    body: JSON.stringify(body),
   })
 }
 

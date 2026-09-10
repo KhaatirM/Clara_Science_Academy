@@ -2625,7 +2625,9 @@ class AssignmentReopening(db.Model):
     
     # For quizzes: additional attempts granted
     additional_attempts = db.Column(db.Integer, default=0, nullable=False)  # How many extra attempts to grant
-    
+    # For quizzes: whether the student may view prior attempt results while this reopen is active
+    allow_review_previous_attempts = db.Column(db.Boolean, default=True, nullable=False)
+
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)  # Can be deactivated later
     expires_at = db.Column(db.DateTime, nullable=True)  # Optional expiration date

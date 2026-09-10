@@ -383,6 +383,11 @@ export function StudentTakeQuizPage() {
           ) : data ? (
             <div className="space-y-4 px-1 pb-8 md:px-2">
               <QuizHero data={data} timerSeconds={timerSeconds} />
+              {data.attempt?.prior_review_blocked ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  Previous attempt review is turned off for this redo. Complete a new attempt below.
+                </div>
+              ) : null}
               {error ? <div className="alert alert-danger">{error}</div> : null}
               {saveMsg ? (
                 <div className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { fetchPendingGrades, PENDING_GRADES_OPEN_EVENT } from '../../api/pendingGrades'
 import type { PendingGradeAssignment } from '../../types/pendingGrades'
+import { assignmentTypeLabel, assignmentTypeTone } from '../../utils/assignmentTypes'
 
 const SNOOZE_KEY = 'clara:pendingGradesToastSnoozeUntil'
 const SNOOZE_MS = 5 * 60 * 1000
@@ -225,7 +226,14 @@ export function PendingGradesHost({ scope }: Props) {
                       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-hub-text">{row.title}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-semibold text-hub-text">{row.title}</p>
+                          <span
+                            className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${assignmentTypeTone(row.assignment_type)}`}
+                          >
+                            {assignmentTypeLabel(row.assignment_type)}
+                          </span>
+                        </div>
                         <p className="text-xs text-hub-muted">
                           {row.class_name} · {row.is_group ? 'Group' : 'Individual'} · Due{' '}
                           {formatDue(row.due_date)}

@@ -47,6 +47,8 @@ export type StudentQuizResponse = {
     attempts_remaining: number | null
     can_retake: boolean
     has_open_ended: boolean
+    allow_review_previous_attempts?: boolean
+    prior_review_blocked?: boolean
   }
   grade?: {
     percentage: number | null

@@ -82,6 +82,29 @@ def redo_request_grant(request_id: int):
     if not redo_deadline_str:
         return jsonify({"success": False, "message": "Please provide a redo deadline."}), 400
 
+    raw_attempts = payload.get("additional_attempts", request.form.get("additional_attempts"))
+    try:
+        additional_attempts = int(raw_attempts) if raw_attempts not in (None, "") else 1
+    except (TypeError, ValueError):
+        additional_attempts = 1
+    additional_attempts = max(1, min(20, additional_attempts))
+
+    raw_review = payload.get(
+        "allow_review_previous_attempts",
+        request.form.get("allow_review_previous_attempts"),
+    )
+    if isinstance(raw_review, bool):
+        allow_review_previous_attempts = raw_review
+    elif raw_review is None or raw_review == "":
+        allow_review_previous_attempts = False
+    else:
+        allow_review_previous_attempts = str(raw_review).strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+
     try:
         from utils.redo_grant import grant_redo_access_for_request, parse_redo_deadline_end_of_day
 
@@ -94,6 +117,8 @@ def redo_request_grant(request_id: int):
             teacher=teacher,
             redo_deadline=redo_deadline,
             reason=req.reason or "Granted from redo request",
+            additional_attempts=additional_attempts,
+            allow_review_previous_attempts=allow_review_previous_attempts,
         )
 
         req.status = "Approved"
@@ -106,7 +131,10 @@ def redo_request_grant(request_id: int):
 
             kind = result.get("kind")
             if kind == "quiz":
-                access_note = "You have one additional quiz attempt"
+                n = int(result.get("attempts_granted") or additional_attempts or 1)
+                access_note = (
+                    f"You have {n} additional quiz attempt{'s' if n != 1 else ''}"
+                )
             elif kind == "discussion":
                 access_note = "Discussion posting is open again"
             else:

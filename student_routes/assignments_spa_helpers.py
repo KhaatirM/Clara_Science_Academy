@@ -149,10 +149,22 @@ def _primary_action(
 ) -> dict[str, Any] | None:
     if bucket == "upcoming":
         return {"label": "Not yet available", "url": None, "kind": "locked", "disabled": True}
-    if bucket == "inactive":
-        # View button opens SPA detail modal; no classic fallback.
-        return None
     atype = (assignment.assignment_type or "pdf").lower()
+    if bucket == "inactive":
+        # Redo/reopen may leave the card labeled inactive in edge cases — still offer retake.
+        if atype == "quiz" and attempts_remaining is not None and attempts_remaining > 0:
+            label = (
+                f"Retake quiz ({attempts_remaining} left)"
+                if has_submission
+                else "Take quiz"
+            )
+            return {
+                "label": label,
+                "url": f"/app/student/take-quiz/{assignment.id}",
+                "kind": "quiz",
+                "disabled": False,
+            }
+        return None
     if atype == "quiz":
         label = (
             f"Retake quiz ({attempts_remaining} left)"
@@ -407,16 +419,23 @@ def build_student_assignments_payload(
         student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         attempts_remaining = None
         quiz_lockout = False
-        if assignment.assignment_type == "quiz" and assignment.max_attempts:
+        active_reopening = None
+        if assignment.assignment_type == "quiz":
             submissions_count = Submission.query.filter_by(
                 student_id=student.id, assignment_id=assignment.id
             ).count()
             active_reopening = get_active_assignment_reopening(assignment.id, student.id)
-            effective_max = assignment.max_attempts
-            if active_reopening and active_reopening.additional_attempts > 0:
-                effective_max = (assignment.max_attempts or 0) + active_reopening.additional_attempts
-            attempts_remaining = max(0, (effective_max or 0) - submissions_count) if effective_max else None
-            quiz_lockout = bool(submission) and attempts_remaining == 0
+            if assignment.max_attempts:
+                effective_max = assignment.max_attempts
+                if active_reopening and active_reopening.additional_attempts > 0:
+                    effective_max = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+                attempts_remaining = max(0, (effective_max or 0) - submissions_count) if effective_max else None
+                quiz_lockout = bool(submission) and attempts_remaining == 0
+            elif active_reopening and active_reopening.additional_attempts > 0:
+                # No base max — additional_attempts is the effective total after grant math.
+                effective_max = int(active_reopening.additional_attempts)
+                attempts_remaining = max(0, effective_max - submissions_count)
+                quiz_lockout = bool(submission) and attempts_remaining == 0
 
         if assignment.status == "Voided" or student_status == "Voided":
             continue
@@ -424,6 +443,9 @@ def build_student_assignments_payload(
         if lifecycle == "Voided":
             continue
         can_submit_now = is_assignment_open_for_student(assignment, student.id)
+        # Active quiz reopenings always reopen access until deadline + attempts are used.
+        if active_reopening and not quiz_lockout:
+            can_submit_now = True
         if quiz_lockout:
             can_submit_now = False
         row = (

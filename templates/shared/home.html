@@ -165,13 +165,36 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 9, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 10, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 9</strong> (<strong>{{ app_version_display }}</strong>) fixes the Edit assignment popup so original dates load correctly (no accidental shifts on Save), routes Quiz/Discussion Edit to their full editors, and keeps approved redos usable for students.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 10</strong> (<strong>{{ app_version_display }}</strong>) adds a quiz-redo option to allow or block reviewing previous attempts, shows assignment type on pending grades, and keeps approved quiz redos open with the attempts you grant.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 10, 2026 - Quiz redo review + pending grades type -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Quiz redo &amp; pending grades – September 10, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Review previous attempts:</strong> When approving a quiz redo, choose whether the student can review prior answers while the redo is active.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Choose quiz attempts:</strong> Set how many additional attempts to give (1–20). The quiz reopens through the selected deadline with those retries.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Pending grades show type:</strong> The Grades pending popup labels Quiz, Discussion, PDF / Paper, or Group on each row.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Students see granted quizzes as open:</strong> Approved quiz redos move out of Past &amp; closed so students can Retake until the deadline or attempts are used.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 9, 2026 - Edit assignment -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Edit assignment – September 9, 2026</h6>
@@ -2522,11 +2545,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep9_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep10_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep9_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownSep10_2026_v2', 'true');
         }, 500);
     }
 });

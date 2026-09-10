@@ -2620,12 +2620,8 @@ def take_quiz(assignment_id):
     ).count()
     
     # Check for active reopening that grants additional attempts
-    from models import AssignmentReopening
-    active_reopening = AssignmentReopening.query.filter_by(
-        assignment_id=assignment_id,
-        student_id=student.id,
-        is_active=True
-    ).first()
+    from teacher_routes.assignment_utils import get_active_assignment_reopening
+    active_reopening = get_active_assignment_reopening(assignment_id, student.id)
     
     # Calculate effective max attempts (base + additional from reopening)
     effective_max_attempts = assignment.max_attempts
@@ -2649,7 +2645,23 @@ def take_quiz(assignment_id):
         if active_reopening and active_reopening.additional_attempts > 0:
             effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
         attempts_remaining = max(0, effective_max_attempts - submissions_count)
-    
+    elif active_reopening and active_reopening.additional_attempts > 0:
+        effective_max_attempts = int(active_reopening.additional_attempts)
+        attempts_remaining = max(0, effective_max_attempts - submissions_count)
+
+    allow_review_previous = True
+    if active_reopening is not None:
+        allow_review_previous = bool(
+            getattr(active_reopening, 'allow_review_previous_attempts', True)
+        )
+    if (
+        active_reopening
+        and not allow_review_previous
+        and attempts_remaining is not None
+        and attempts_remaining > 0
+    ):
+        is_retake = True
+
     # If retaking and has attempts remaining, allow new attempt (don't show submission)
     if is_retake and attempts_remaining and attempts_remaining > 0:
         submission = None  # Clear submission to allow new attempt
@@ -3036,12 +3048,8 @@ def submit_quiz(assignment_id):
     ).count()
     
     # Check for active reopening that grants additional attempts
-    from models import AssignmentReopening
-    active_reopening = AssignmentReopening.query.filter_by(
-        assignment_id=assignment_id,
-        student_id=student.id,
-        is_active=True
-    ).first()
+    from teacher_routes.assignment_utils import get_active_assignment_reopening
+    active_reopening = get_active_assignment_reopening(assignment_id, student.id)
     
     # Calculate effective max attempts (base + additional from reopening)
     effective_max_attempts = assignment.max_attempts

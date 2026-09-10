@@ -257,10 +257,11 @@ def get_student_close_date(assignment, student_id):
 def get_active_assignment_reopening(assignment_id, student_id, now=None):
     """Return an active, non-expired AssignmentReopening for this student, or None.
 
-    Also repairs reopenings that were incorrectly deactivated because a grade already
-    existed from before the grant (common for quiz redos).
+    Also repairs reopenings that were incorrectly deactivated before the student
+    finished the grant (common for quiz redos when the original grade was re-saved,
+    or when a multi-attempt quiz redo was closed after the first retake).
     """
-    from models import AssignmentReopening, Grade
+    from models import Assignment, AssignmentReopening, Submission
 
     if now is None:
         now = datetime.now(timezone.utc)
@@ -280,7 +281,15 @@ def get_active_assignment_reopening(assignment_id, student_id, now=None):
     if _usable(reopening):
         return reopening
 
-    # Look for a premature close: inactive, not expired, no grade scored after grant.
+    assignment = Assignment.query.get(assignment_id)
+    is_quiz = bool(assignment and (assignment.assignment_type or "").lower() == "quiz")
+    submissions_count = (
+        Submission.query.filter_by(assignment_id=assignment_id, student_id=student_id).count()
+        if is_quiz
+        else 0
+    )
+
+    # Look for a premature close: inactive, not expired, grant still unused / attempts left.
     candidates = (
         AssignmentReopening.query.filter_by(
             assignment_id=assignment_id,
@@ -291,49 +300,27 @@ def get_active_assignment_reopening(assignment_id, student_id, now=None):
         .limit(5)
         .all()
     )
-    grades = Grade.query.filter_by(
-        assignment_id=assignment_id,
-        student_id=student_id,
-    ).all()
-
-    def _grade_has_score(row):
-        if getattr(row, "is_voided", False) or not row.grade_data:
-            return False
-        try:
-            import json
-
-            data = json.loads(row.grade_data) if isinstance(row.grade_data, str) else row.grade_data
-        except (TypeError, ValueError):
-            return False
-        if not isinstance(data, dict):
-            return False
-        value = data.get("score")
-        if value is None:
-            value = data.get("points_earned")
-        if value is None:
-            return False
-        try:
-            float(value)
-        except (TypeError, ValueError):
-            return False
-        return True
 
     for candidate in candidates:
         if not _usable(candidate):
             continue
-        graded_after = False
-        for grade in grades:
-            if not _grade_has_score(grade):
+        if is_quiz and (candidate.additional_attempts or 0) > 0:
+            base = int((assignment.max_attempts if assignment else 0) or 0)
+            effective_max = base + int(candidate.additional_attempts or 0)
+            if effective_max > 0 and submissions_count >= effective_max:
                 continue
-            graded_at = getattr(grade, "graded_at", None)
-            if candidate.reopened_at is None:
-                graded_after = True
-                break
-            if graded_at and _as_utc_aware(graded_at) >= _as_utc_aware(candidate.reopened_at):
-                graded_after = True
-                break
-        if graded_after:
-            continue
+        elif candidate.reopened_at is not None:
+            used = (
+                Submission.query.filter(
+                    Submission.assignment_id == assignment_id,
+                    Submission.student_id == student_id,
+                    Submission.submitted_at.isnot(None),
+                    Submission.submitted_at >= candidate.reopened_at,
+                ).count()
+                > 0
+            )
+            if used:
+                continue
         candidate.is_active = True
         try:
             from extensions import db
@@ -427,8 +414,20 @@ def is_assignment_open_for_student(assignment, student_id):
     student_close_date = get_student_close_date(assignment, student_id)
     if student_close_date:
         if now > _as_utc_aware(student_close_date):
+            # Past close for Active-status overrides: still honor reopen / redo grants.
+            if get_active_assignment_reopening(assignment.id, student_id, now=now):
+                return True
+            from models import AssignmentRedo
+
+            redo = AssignmentRedo.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=student_id,
+                is_used=False,
+            ).first()
+            if redo and redo.redo_deadline and now <= _as_utc_aware(redo.redo_deadline):
+                return True
             return False  # Assignment is closed (even with extension)
-    
+
     return True  # Assignment is open
 
 

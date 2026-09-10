@@ -124,12 +124,16 @@ def finalize_redo_for_grade(
 
 
 def finalize_reopening_for_grade(*, assignment_id: int, student_id: int) -> int:
-    """Deactivate active reopenings once the teacher records a grade.
+    """Deactivate reopenings only after the student actually used the reopen.
 
-    No-submission redo grants create ``AssignmentReopening`` (not ``AssignmentRedo``).
-    Without this, graded reopenings stay on the Active reopenings list forever.
+    Closing on any grade save was wrong for quiz redos: teachers often open the
+    gradebook (or re-save the original score) after granting, which deactivated
+    the reopening before the student could retake.
+
+    Quiz reopenings stay active until granted attempts are exhausted so multi-try
+    redos keep working after the first retake is graded.
     """
-    from models import AssignmentReopening
+    from models import Assignment, AssignmentReopening, Submission
 
     rows = (
         AssignmentReopening.query.filter_by(
@@ -140,9 +144,41 @@ def finalize_reopening_for_grade(*, assignment_id: int, student_id: int) -> int:
     )
     if not rows:
         return 0
+
+    assignment = Assignment.query.get(assignment_id)
+    is_quiz = bool(assignment and (assignment.assignment_type or "").lower() == "quiz")
+    submissions_count = (
+        Submission.query.filter_by(assignment_id=assignment_id, student_id=student_id).count()
+        if is_quiz
+        else 0
+    )
+
+    closed = 0
     for row in rows:
+        if is_quiz and (row.additional_attempts or 0) > 0:
+            base = int((assignment.max_attempts if assignment else 0) or 0)
+            effective_max = base + int(row.additional_attempts or 0)
+            if effective_max <= 0 or submissions_count < effective_max:
+                continue
+            row.is_active = False
+            closed += 1
+            continue
+
+        if row.reopened_at is not None:
+            used = (
+                Submission.query.filter(
+                    Submission.assignment_id == assignment_id,
+                    Submission.student_id == student_id,
+                    Submission.submitted_at.isnot(None),
+                    Submission.submitted_at >= row.reopened_at,
+                ).count()
+                > 0
+            )
+            if not used:
+                continue
         row.is_active = False
-    return len(rows)
+        closed += 1
+    return closed
 
 
 def redo_final_grade_for(assignment_id: int, student_id: int) -> float | None:

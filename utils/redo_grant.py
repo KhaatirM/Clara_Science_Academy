@@ -32,6 +32,28 @@ def parse_redo_deadline_end_of_day(date_str: str) -> datetime:
     return deadline.replace(hour=23, minute=59, second=59)
 
 
+def quiz_additional_attempts_needed(
+    assignment: Assignment,
+    student_id: int,
+    requested_attempts: int,
+) -> int:
+    """
+    Compute AssignmentReopening.additional_attempts so the student has
+    ``requested_attempts`` tries remaining right now.
+    """
+    requested = max(1, int(requested_attempts or 1))
+    submissions_count = Submission.query.filter_by(
+        student_id=student_id,
+        assignment_id=assignment.id,
+    ).count()
+    base = int(assignment.max_attempts or 0)
+    if base <= 0:
+        # Store total allowed submissions so remaining == requested after prior attempts.
+        return submissions_count + requested
+    target_effective_max = submissions_count + requested
+    return max(requested, target_effective_max - base)
+
+
 def _original_grade_points(student_id: int, assignment_id: int) -> float | None:
     grade = (
         Grade.query.filter_by(student_id=student_id, assignment_id=assignment_id)
@@ -60,6 +82,7 @@ def _upsert_reopening(
     redo_deadline: datetime,
     reason: str | None,
     additional_attempts: int,
+    allow_review_previous_attempts: bool | None = None,
 ) -> AssignmentReopening:
     reopened_by_id = teacher.id if teacher else None
     if reopened_by_id is None and assignment.class_info and assignment.class_info.teacher_id:
@@ -78,12 +101,15 @@ def _upsert_reopening(
         existing.is_active = True
         existing.expires_at = redo_deadline
         existing.reason = reason or existing.reason
-        # Refresh grant time so "grade after reopen" checks use this grant, not the old one.
+        # Refresh grant time so "used after reopen" checks use this grant.
         existing.reopened_at = datetime.utcnow()
         if reopened_by_id:
             existing.reopened_by = reopened_by_id
         if additional_attempts > 0:
-            existing.additional_attempts = max(int(existing.additional_attempts or 0), additional_attempts)
+            # SET (not max-only) so a new grant always restores the requested remaining tries.
+            existing.additional_attempts = int(additional_attempts)
+        if allow_review_previous_attempts is not None:
+            existing.allow_review_previous_attempts = bool(allow_review_previous_attempts)
         return existing
 
     reopening = AssignmentReopening(
@@ -94,6 +120,9 @@ def _upsert_reopening(
         additional_attempts=additional_attempts,
         expires_at=redo_deadline,
         reason=reason,
+        allow_review_previous_attempts=(
+            True if allow_review_previous_attempts is None else bool(allow_review_previous_attempts)
+        ),
     )
     db.session.add(reopening)
     return reopening
@@ -106,11 +135,14 @@ def grant_redo_access_for_request(
     teacher: TeacherStaff | None,
     redo_deadline: datetime,
     reason: str | None = None,
+    additional_attempts: int | None = None,
+    allow_review_previous_attempts: bool | None = None,
 ) -> dict[str, Any]:
     """
     Grant student access until redo_deadline.
 
-    - Quiz: always AssignmentReopening with +1 attempt and expires_at.
+    - Quiz: AssignmentReopening with enough additional attempts for the requested
+      remaining tries, plus expires_at.
     - Discussion / never-submitted PDF: AssignmentReopening with expires_at.
     - Submitted PDF/paper: AssignmentRedo with redo_deadline (reopens closed work).
     """
@@ -124,17 +156,29 @@ def grant_redo_access_for_request(
     is_discussion = atype == "discussion"
     reason_text = reason or "Granted from redo request"
 
-    # Quizzes need attempt math via AssignmentReopening, not AssignmentRedo.
     if is_quiz:
+        requested = max(1, int(additional_attempts or 1))
+        needed = quiz_additional_attempts_needed(assignment, student_id, requested)
+        allow_review = (
+            True if allow_review_previous_attempts is None else bool(allow_review_previous_attempts)
+        )
         _upsert_reopening(
             assignment=assignment,
             student_id=student_id,
             teacher=teacher,
             redo_deadline=redo_deadline,
             reason=reason_text,
-            additional_attempts=1,
+            additional_attempts=needed,
+            allow_review_previous_attempts=allow_review,
         )
-        return {"mode": "reopening", "kind": "quiz", "already": False}
+        return {
+            "mode": "reopening",
+            "kind": "quiz",
+            "already": False,
+            "additional_attempts": needed,
+            "attempts_granted": requested,
+            "allow_review_previous_attempts": allow_review,
+        }
 
     if is_discussion or not has_submitted:
         existing = AssignmentReopening.query.filter_by(
@@ -167,7 +211,6 @@ def grant_redo_access_for_request(
         existing_redo.granted_at = datetime.utcnow()
         if teacher:
             existing_redo.granted_by = teacher.id
-        # Re-granting must reopen access even if the prior redo was already used.
         if existing_redo.is_used:
             existing_redo.is_used = False
             existing_redo.redo_grade = None

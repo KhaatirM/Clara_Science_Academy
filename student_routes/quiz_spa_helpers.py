@@ -124,12 +124,26 @@ def build_student_quiz_payload(
         effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
 
     attempts_remaining = None
-    if assignment.max_attempts:
-        attempts_remaining = max(0, (effective_max_attempts or 0) - submissions_count)
+    if effective_max_attempts:
+        attempts_remaining = max(0, int(effective_max_attempts) - submissions_count)
+
+    allow_review_previous = True
+    if active_reopening is not None:
+        allow_review_previous = bool(
+            getattr(active_reopening, "allow_review_previous_attempts", True)
+        )
+    # While a redo is active with tries left, optionally block viewing prior results.
+    block_prior_review = (
+        bool(active_reopening)
+        and not allow_review_previous
+        and attempts_remaining is not None
+        and attempts_remaining > 0
+    )
+    if block_prior_review:
+        is_retake = True
 
     if (
-        assignment.max_attempts
-        and effective_max_attempts
+        effective_max_attempts
         and submissions_count >= effective_max_attempts
         and not submission
         and not grade
@@ -313,6 +327,8 @@ def build_student_quiz_payload(
             "attempts_remaining": attempts_remaining,
             "can_retake": can_retake,
             "has_open_ended": any(q["question_type"] in ("short_answer", "essay") for q in questions_out),
+            "allow_review_previous_attempts": allow_review_previous,
+            "prior_review_blocked": block_prior_review,
         },
         "grade": (
             {
@@ -383,7 +399,7 @@ def submit_student_quiz(
     effective_max_attempts = assignment.max_attempts
     if active_reopening and active_reopening.additional_attempts > 0:
         effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
-    if assignment.max_attempts and effective_max_attempts and submissions_count >= effective_max_attempts:
+    if effective_max_attempts and submissions_count >= effective_max_attempts:
         return (
             None,
             f"You have reached the maximum number of attempts ({effective_max_attempts}) for this quiz.",

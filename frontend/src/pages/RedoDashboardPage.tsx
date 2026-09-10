@@ -94,6 +94,9 @@ export function RedoDashboardPage() {
   const [search, setSearch] = useState('')
   const [grantModal, setGrantModal] = useState<RedoRequestItem | null>(null)
   const [grantDeadline, setGrantDeadline] = useState(() => defaultRedoDeadline())
+  const [grantAttempts, setGrantAttempts] = useState(1)
+  const [grantAllowReview, setGrantAllowReview] = useState(false)
+  const grantIsQuiz = (grantModal?.assignment_type || '').toLowerCase() === 'quiz'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -302,6 +305,8 @@ export function RedoDashboardPage() {
                             closeDate: r.close_date,
                           }),
                         )
+                        setGrantAttempts(1)
+                        setGrantAllowReview(false)
                         setGrantModal(r)
                       }}
                       className="rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white"
@@ -410,7 +415,10 @@ export function RedoDashboardPage() {
               Redo deadline
             </label>
             <p className="mb-2 text-xs text-hub-muted">
-              Access stays open through the end of this date. Quizzes also get one additional attempt.
+              Access stays open through the end of this date
+              {grantIsQuiz
+                ? ', and the student can use the quiz attempts you grant below.'
+                : '.'}
               {grantModal.due_date || grantModal.close_date
                 ? ' Prefills the original due/close date when that date is still upcoming.'
                 : ''}
@@ -422,14 +430,60 @@ export function RedoDashboardPage() {
               onChange={(e) => setGrantDeadline(e.target.value)}
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
             />
+            {grantIsQuiz ? (
+              <>
+                <label className="mt-4 block text-sm font-semibold text-hub-muted" htmlFor="redo-attempts">
+                  Additional quiz attempts
+                </label>
+                <p className="mb-2 text-xs text-hub-muted">
+                  How many new tries the student gets for this quiz redo (1–20). The quiz reopens until the
+                  deadline above.
+                </p>
+                <input
+                  id="redo-attempts"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={grantAttempts}
+                  onChange={(e) => {
+                    const n = Number(e.target.value)
+                    setGrantAttempts(Number.isFinite(n) ? Math.max(1, Math.min(20, Math.floor(n))) : 1)
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+                <label className="mt-4 flex items-start gap-2 text-sm text-hub-text">
+                  <input
+                    id="redo-allow-review"
+                    type="checkbox"
+                    checked={grantAllowReview}
+                    onChange={(e) => setGrantAllowReview(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-semibold">Allow review of previous attempts</span>
+                    <span className="mt-0.5 block text-xs text-hub-muted">
+                      If unchecked, the student cannot see prior answers or correct results while this redo is
+                      active — they go straight into a new attempt.
+                    </span>
+                  </span>
+                </label>
+              </>
+            ) : null}
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => setGrantModal(null)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold">
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={busy || !grantDeadline}
-                onClick={() => void runAction(() => grantRedoRequest(grantModal.id, grantDeadline, workspaceScope))}
+                disabled={busy || !grantDeadline || (grantIsQuiz && grantAttempts < 1)}
+                onClick={() =>
+                  void runAction(() =>
+                    grantRedoRequest(grantModal.id, grantDeadline, workspaceScope, {
+                      additionalAttempts: grantIsQuiz ? grantAttempts : undefined,
+                      allowReviewPreviousAttempts: grantIsQuiz ? grantAllowReview : undefined,
+                    }),
+                  )
+                }
                 className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white"
               >
                 Grant redo

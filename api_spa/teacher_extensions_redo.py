@@ -190,3 +190,12 @@ def teacher_redo_revoke(redo_id: int):
     from api_spa.redo import redo_revoke
 
     return redo_revoke(redo_id)
+
+
+@spa_api_blueprint.route("/teacher/reopenings/<int:reopening_id>/revoke", methods=["POST"])
+@login_required
+@teacher_required
+def teacher_reopening_revoke(reopening_id: int):
+    from api_spa.redo import reopening_revoke
+
+    return reopening_revoke(reopening_id)

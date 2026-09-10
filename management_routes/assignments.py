@@ -4493,22 +4493,33 @@ def revoke_assignment_redo(redo_id):
         return jsonify({'success': False, 'message': 'Cannot revoke a redo that has already been used.'})
     
     try:
-        # Notify student
-        if redo.student and redo.student.user:
+        from utils.redo_revoke import revoke_assignment_redo_record
+
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
+        info = revoke_assignment_redo_record(redo=redo, teacher=teacher)
+        student = info.get('student')
+        title = info.get('title') or 'assignment'
+
+        if student and student.user:
             from app import create_notification
             create_notification(
-                user_id=redo.student.user.id,
+                user_id=student.user.id,
                 notification_type='assignment',
-                title=f'Redo Revoked: {redo.assignment.title}',
-                message=f'Your redo permission for "{redo.assignment.title}" has been revoked.',
+                title=f'Redo Revoked: {title}',
+                message=(
+                    f'Your redo permission for "{title}" has been revoked. '
+                    'You may request another redo from your Assignments list.'
+                ),
                 link=url_for('student.student_assignments')
             )
         
-        db.session.delete(redo)
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Redo permission revoked successfully.'})
         
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error revoking redo: {str(e)}'})

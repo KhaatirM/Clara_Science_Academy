@@ -86,7 +86,17 @@ function canRequestExtension(card: StudentAssignmentCard, bucket: StudentAssignm
 
 function canRequestRedo(card: StudentAssignmentCard, bucket: StudentAssignmentBucket) {
   if (card.can_request_redo === true) return true
-  return bucket === 'inactive' && !card.is_group && !card.redo
+  const status = (card.redo?.status || '').toLowerCase()
+  const blocked = status === 'pending' || status === 'approved'
+  return bucket === 'inactive' && !card.is_group && !blocked
+}
+
+function redoBadgeTone(status: string | null | undefined) {
+  const s = (status || '').toLowerCase()
+  if (s === 'revoked') return 'bg-red-100 text-red-900'
+  if (s === 'rejected') return 'bg-slate-200 text-slate-800'
+  if (s === 'approved') return 'bg-emerald-100 text-emerald-900'
+  return 'bg-violet-100 text-violet-900'
 }
 
 export function StudentAssignmentsPage() {
@@ -697,7 +707,7 @@ function AssignmentCard({
           </span>
         ) : null}
         {card.redo ? (
-          <span className="w-fit rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-900">
+          <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${redoBadgeTone(card.redo.status)}`}>
             Redo {card.redo.status.toLowerCase()}
           </span>
         ) : null}

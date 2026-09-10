@@ -1028,11 +1028,16 @@ def student_assignments():
     ).all()
     extension_requests_by_assignment = {r.assignment_id: r for r in extension_requests}
     
-    # Redo requests (pending or approved) for inactive assignments
-    redo_requests = RedoRequest.query.filter_by(student_id=student.id).filter(
-        RedoRequest.status.in_(['Pending', 'Approved'])
-    ).all()
-    redo_requests_by_assignment = {r.assignment_id: r for r in redo_requests}
+    # Redo requests (pending/approved/rejected/revoked) for inactive assignments
+    redo_requests_by_assignment = {}
+    for r in (
+        RedoRequest.query.filter_by(student_id=student.id)
+        .filter(RedoRequest.status.in_(['Pending', 'Approved', 'Rejected', 'Revoked']))
+        .order_by(RedoRequest.requested_at.desc())
+        .all()
+    ):
+        if r.assignment_id not in redo_requests_by_assignment:
+            redo_requests_by_assignment[r.assignment_id] = r
     
     # Separate assignments into 3 buckets using the same date-aware lifecycle as teacher/admin UIs
     inactive_assignments = []  # Effective Inactive and not open for this student (no extension/redo/reopen)
@@ -1263,10 +1268,16 @@ def class_assignments(class_id):
         assignments_with_status.append((assignment, submission, student_status))
     
     # Redo requests for inactive assignments (Request Redo button)
-    redo_requests = RedoRequest.query.filter_by(student_id=student.id).filter(
-        RedoRequest.status.in_(['Pending', 'Approved'])
-    ).all()
-    redo_requests_by_assignment = {r.assignment_id: r for r in redo_requests}
+    # Keep latest status per assignment, including Revoked/Rejected so students can re-request.
+    redo_requests_by_assignment = {}
+    for r in (
+        RedoRequest.query.filter_by(student_id=student.id)
+        .filter(RedoRequest.status.in_(['Pending', 'Approved', 'Rejected', 'Revoked']))
+        .order_by(RedoRequest.requested_at.desc())
+        .all()
+    ):
+        if r.assignment_id not in redo_requests_by_assignment:
+            redo_requests_by_assignment[r.assignment_id] = r
     
     class_student_group = get_student_class_group(student.id, class_id)
 

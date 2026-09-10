@@ -59,3 +59,13 @@ export async function revokeRedo(
     body: JSON.stringify({}),
   })
 }
+
+export async function revokeReopening(
+  reopeningId: number,
+  scope: AssignmentWorkspaceScope = 'management',
+): Promise<ApiActionResponse> {
+  return apiFetch<ApiActionResponse>(`${redoApiBase(scope)}/reopenings/${reopeningId}/revoke`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}

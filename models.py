@@ -2675,7 +2675,7 @@ class RedoRequest(db.Model):
     assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     reason = db.Column(db.Text, nullable=True)  # Student's reason for requesting redo
-    status = db.Column(db.String(20), default='Pending', nullable=False)  # Pending, Approved, Rejected
+    status = db.Column(db.String(20), default='Pending', nullable=False)  # Pending, Approved, Rejected, Revoked
     requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     reviewed_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)

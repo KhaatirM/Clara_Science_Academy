@@ -167,7 +167,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 10, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 10</strong> (<strong>{{ app_version_display }}</strong>) adds a quiz-redo option to allow or block reviewing previous attempts, shows assignment type on pending grades, and keeps approved quiz redos open with the attempts you grant.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 10</strong> (<strong>{{ app_version_display }}</strong>) lets revoked redos show as Redo revoked so students can request again, adds quiz-redo attempt/review options, and shows assignment type on pending grades.</p>
                     </div>
                 </div>
 
@@ -176,6 +176,10 @@
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Quiz redo &amp; pending grades – September 10, 2026</h6>
                         <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Revoked redos reopen request:</strong> After a teacher revokes an approved redo, students see <em>Redo revoked</em> and can request another redo.
+                            </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Review previous attempts:</strong> When approving a quiz redo, choose whether the student can review prior answers while the redo is active.
@@ -2545,11 +2549,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep10_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep10_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep10_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep10_2026_v3', 'true');
         }, 500);
     }
 });

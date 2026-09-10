@@ -217,20 +217,83 @@ def redo_revoke(redo_id: int):
         return jsonify({"success": False, "message": "Cannot revoke a redo that has already been used."}), 400
 
     try:
-        if redo.student and redo.student.user:
+        from utils.redo_revoke import revoke_assignment_redo_record
+
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
+        info = revoke_assignment_redo_record(redo=redo, teacher=teacher)
+        student = info.get("student")
+        title = info.get("title") or "assignment"
+
+        if student and student.user:
             from app import create_notification
 
             create_notification(
-                user_id=redo.student.user.id,
+                user_id=student.user.id,
                 notification_type="assignment",
-                title=f"Redo Revoked: {redo.assignment.title}",
-                message=f'Your redo permission for "{redo.assignment.title}" has been revoked.',
+                title=f"Redo Revoked: {title}",
+                message=(
+                    f'Your redo permission for "{title}" has been revoked. '
+                    "You may request another redo from your Assignments list."
+                ),
                 link=url_for("student.student_assignments"),
             )
 
-        db.session.delete(redo)
         db.session.commit()
         return jsonify({"success": True, "message": "Redo permission revoked successfully."})
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f"Error revoking redo: {e}"}), 500
+
+
+@spa_api_blueprint.route("/reopenings/<int:reopening_id>/revoke", methods=["POST"])
+@login_required
+def reopening_revoke(reopening_id: int):
+    from models import AssignmentReopening
+
+    reopening = AssignmentReopening.query.get_or_404(reopening_id)
+
+    if user_can_manage_assignments_and_grades(current_user):
+        pass
+    elif is_teacher_role(current_user.role):
+        from teacher_routes.utils import is_authorized_for_class
+
+        if not reopening.assignment or not reopening.assignment.class_info:
+            return jsonify({"success": False, "message": "Assignment class not found."}), 403
+        if not is_authorized_for_class(reopening.assignment.class_info):
+            return jsonify({"success": False, "message": "You can only revoke reopenings for your own classes."}), 403
+    else:
+        return jsonify({"success": False, "message": "You are not authorized to revoke reopenings."}), 403
+
+    try:
+        from utils.redo_revoke import revoke_assignment_reopening_record
+
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id) if current_user.teacher_staff_id else None
+        info = revoke_assignment_reopening_record(reopening=reopening, teacher=teacher)
+        student = info.get("student")
+        title = info.get("title") or "assignment"
+
+        if student and student.user:
+            from app import create_notification
+
+            create_notification(
+                user_id=student.user.id,
+                notification_type="assignment",
+                title=f"Redo Revoked: {title}",
+                message=(
+                    f'Your redo permission for "{title}" has been revoked. '
+                    "You may request another redo from your Assignments list."
+                ),
+                link=url_for("student.student_assignments"),
+            )
+
+        db.session.commit()
+        return jsonify({"success": True, "message": "Reopening revoked successfully."})
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error revoking reopening: {e}"}), 500

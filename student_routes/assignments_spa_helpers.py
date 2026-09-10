@@ -226,7 +226,11 @@ def _serialize_card(
         and not grade["has_grade"]
         and extension_req is None
     )
-    can_request_redo = bucket == "inactive" and not is_group and redo_req is None
+    can_request_redo = (
+        bucket == "inactive"
+        and not is_group
+        and (redo_req is None or redo_req.status in ("Rejected", "Revoked"))
+    )
 
     return {
         "id": assignment.id,
@@ -402,12 +406,15 @@ def build_student_assignments_payload(
         .filter(ExtensionRequest.status.in_(["Pending", "Approved"]))
         .all()
     }
-    redo_requests_by_assignment = {
-        r.assignment_id: r
-        for r in RedoRequest.query.filter_by(student_id=student.id)
-        .filter(RedoRequest.status.in_(["Pending", "Approved"]))
+    redo_requests_by_assignment: dict[int, RedoRequest] = {}
+    for r in (
+        RedoRequest.query.filter_by(student_id=student.id)
+        .filter(RedoRequest.status.in_(["Pending", "Approved", "Rejected", "Revoked"]))
+        .order_by(RedoRequest.requested_at.desc())
         .all()
-    }
+    ):
+        if r.assignment_id not in redo_requests_by_assignment:
+            redo_requests_by_assignment[r.assignment_id] = r
 
     inactive_raw: list = []
     active_raw: list = []

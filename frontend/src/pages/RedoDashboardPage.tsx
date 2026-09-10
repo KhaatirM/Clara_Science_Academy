@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchRedoDashboard, grantRedoRequest, rejectRedoRequest, revokeRedo } from '../api/redo'
+import { fetchRedoDashboard, grantRedoRequest, rejectRedoRequest, revokeRedo, revokeReopening } from '../api/redo'
 import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ActiveRedoItem, RedoDashboardResponse, RedoRequestItem, ReopeningItem } from '../types/redo'
 import { assignmentTypeLabel, assignmentTypeTone } from '../utils/assignmentTypes'
@@ -340,13 +340,25 @@ export function RedoDashboardPage() {
                   r.class.name,
                   formatDate(r.reopened_at),
                   r.attempts_label ?? (r.additional_attempts > 0 ? String(r.additional_attempts) : '—'),
-                  r.grade_url ? (
-                    <a key={`g-${r.id}`} href={r.grade_url} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">
-                      Grade
-                    </a>
-                  ) : (
-                    '—'
-                  ),
+                  <div key={`ro-${r.id}`} className="flex gap-1">
+                    {r.grade_url ? (
+                      <a href={r.grade_url} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">
+                        Grade
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        if (window.confirm('Revoke this reopening / redo access?')) {
+                          void runAction(() => revokeReopening(r.id, workspaceScope))
+                        }
+                      }}
+                      className="rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
+                    >
+                      Revoke
+                    </button>
+                  </div>,
                 ])}
               />
             ) : (

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep10_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep10_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Revoked redos can be requested again',
+    body: 'If a teacher revokes an approved redo, students see Redo revoked on the assignment and can submit a new redo request.',
+  },
   {
     title: 'Quiz redo: review previous attempts option',
     body: 'When granting a quiz redo, choose whether the student can review prior answers while the redo is active. If off, they go straight into a new attempt.',
@@ -274,10 +278,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.36'
+  const display = version?.display || 'v 2.520.37'
   const releaseLabel = version?.release_label || 'September 9, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2764
+  const updatesEstimate = version?.updates_estimate ?? 2765
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

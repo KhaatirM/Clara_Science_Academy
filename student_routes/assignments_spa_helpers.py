@@ -406,6 +406,11 @@ def build_student_assignments_payload(
         .filter(ExtensionRequest.status.in_(["Pending", "Approved"]))
         .all()
     }
+    # Legacy grants/revokes could leave Approved with no live access — flip those to Revoked.
+    from utils.redo_revoke import repair_orphaned_approved_redo_requests_for_student
+
+    repair_orphaned_approved_redo_requests_for_student(student.id)
+
     redo_requests_by_assignment: dict[int, RedoRequest] = {}
     for r in (
         RedoRequest.query.filter_by(student_id=student.id)

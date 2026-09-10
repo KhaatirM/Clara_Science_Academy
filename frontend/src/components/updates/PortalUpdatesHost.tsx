@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep10_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownSep10_2026_v4'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Stuck “Redo approved” without access is fixed',
+    body: 'Older quiz redos that were approved (or revoked before the revoke fix) could stay labeled Approved while the quiz remained closed. Those orphaned approvals now flip to Redo revoked so the student can request again, and teachers can re-grant with the current quiz redo flow.',
+  },
   {
     title: 'Revoked redos can be requested again',
     body: 'If a teacher revokes an approved redo, students see Redo revoked on the assignment and can submit a new redo request.',
@@ -278,10 +282,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.37'
+  const display = version?.display || 'v 2.520.38'
   const releaseLabel = version?.release_label || 'September 9, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2765
+  const updatesEstimate = version?.updates_estimate ?? 2766
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

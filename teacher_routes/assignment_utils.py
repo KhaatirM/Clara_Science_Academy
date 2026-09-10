@@ -290,6 +290,7 @@ def get_active_assignment_reopening(assignment_id, student_id, now=None):
     )
 
     # Look for a premature close: inactive, not expired, grant still unused / attempts left.
+    # Intentional revokes set expires_at to now so they will not pass _usable().
     candidates = (
         AssignmentReopening.query.filter_by(
             assignment_id=assignment_id,

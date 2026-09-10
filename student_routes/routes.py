@@ -1029,6 +1029,9 @@ def student_assignments():
     extension_requests_by_assignment = {r.assignment_id: r for r in extension_requests}
     
     # Redo requests (pending/approved/rejected/revoked) for inactive assignments
+    from utils.redo_revoke import repair_orphaned_approved_redo_requests_for_student
+
+    repair_orphaned_approved_redo_requests_for_student(student.id)
     redo_requests_by_assignment = {}
     for r in (
         RedoRequest.query.filter_by(student_id=student.id)
@@ -1269,6 +1272,9 @@ def class_assignments(class_id):
     
     # Redo requests for inactive assignments (Request Redo button)
     # Keep latest status per assignment, including Revoked/Rejected so students can re-request.
+    from utils.redo_revoke import repair_orphaned_approved_redo_requests_for_student
+
+    repair_orphaned_approved_redo_requests_for_student(student.id)
     redo_requests_by_assignment = {}
     for r in (
         RedoRequest.query.filter_by(student_id=student.id)
@@ -3469,6 +3475,20 @@ def request_redo():
         ).first()
         if not enrollment:
             return jsonify({'success': False, 'message': 'You are not enrolled in this class.'}), 403
+
+        # Repair legacy Approved requests that no longer have live redo/reopen access.
+        from utils.redo_revoke import repair_orphaned_approved_redo_request
+
+        for orphan in RedoRequest.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            status='Approved',
+        ).all():
+            repair_orphaned_approved_redo_request(orphan)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # Check for existing pending or approved redo request
         existing = RedoRequest.query.filter_by(

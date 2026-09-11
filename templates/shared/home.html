@@ -165,13 +165,28 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 10, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 11, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 10</strong> (<strong>{{ app_version_display }}</strong>) repairs stuck “Redo approved” labels with no access so students can request again, supports revoke/re-request, and improves quiz redo grants.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 11</strong> (<strong>{{ app_version_display }}</strong>) makes multi-attempt quiz grading clearer: pick an attempt, match the score bar to that attempt, and keep Official grade on file (best) separate from the answers you are reviewing.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 11, 2026 - Quiz attempt grading -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-ui-checks-grid me-2"></i>Quiz submissions – September 11, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Select attempt to review:</strong> When a student has multiple quiz attempts, choose which attempt’s auto score to focus on. The score bar matches that attempt.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Official grade stays clear:</strong> “Official grade on file (best)” is shown separately from the attempt you are viewing. Answers remain from the latest attempt (prior answer text is not stored).
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 10, 2026 - Quiz redo review + pending grades type -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-arrow-repeat me-2"></i>Quiz redo &amp; pending grades – September 10, 2026</h6>
@@ -2553,11 +2568,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep10_2026_v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep11_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep10_2026_v4', 'true');
+            sessionStorage.setItem('updateModalShownSep11_2026_v1', 'true');
         }, 500);
     }
 });

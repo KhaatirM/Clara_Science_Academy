@@ -419,6 +419,7 @@ def _quiz_attempt_details(subs: list) -> list[dict[str, Any]]:
         details.append(
             {
                 "attempt_num": idx,
+                "submission_id": sub.id,
                 "submitted_at": _iso(sub.submitted_at) if sub.submitted_at else None,
                 "parsed_score": parse_quiz_submission_auto_score(sub.comments),
             }
@@ -1133,10 +1134,20 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
         if not student_id or int(student_id) not in student_by_id:
             continue
         student = student_by_id[int(student_id)]
-        existing_grade = Grade.query.filter_by(assignment_id=assignment_id, student_id=student.id).first()
+        # Prefer the newest grade row so open-ended scoring updates the latest attempt,
+        # not the first attempt (which made Score on file stick at attempt 1).
+        existing_grade = (
+            Grade.query.filter_by(assignment_id=assignment_id, student_id=student.id)
+            .order_by(Grade.graded_at.desc(), Grade.id.desc())
+            .first()
+        )
         if existing_grade and existing_grade.is_voided:
             continue
-        sub = Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+        sub = (
+            Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id)
+            .order_by(Submission.submitted_at.desc(), Submission.id.desc())
+            .first()
+        )
 
         earned_points = 0.0
         question_scores = entry.get("questions") or {}
@@ -1733,10 +1744,9 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
         submissions_by_student[sub.student_id].append(sub)
 
     grades_ordered = Grade.query.filter_by(assignment_id=assignment_id).order_by(Grade.graded_at.desc()).all()
-    grades_dict: dict[int, Grade] = {}
+    grades_by_student: dict[int, list[Grade]] = defaultdict(list)
     for g in grades_ordered:
-        if g.student_id not in grades_dict:
-            grades_dict[g.student_id] = g
+        grades_by_student[g.student_id].append(g)
 
     extensions = {
         e.student_id: e
@@ -1773,7 +1783,15 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
     for student in students:
         subs_for_student = submissions_by_student.get(student.id, [])
         submission = subs_for_student[-1] if subs_for_student else None
-        grade = grades_dict.get(student.id)
+        student_grades = grades_by_student.get(student.id, [])
+        if ui_mode == "quiz":
+            from utils.academic_concern_assignments import pick_best_quiz_grade_row
+
+            grade = pick_best_quiz_grade_row(student_grades, total_points) or (
+                student_grades[0] if student_grades else None
+            )
+        else:
+            grade = student_grades[0] if student_grades else None
         status = _submission_status_for_student(student.id, submission, assignment, extensions)
 
         if submission:
@@ -1818,12 +1836,19 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
             )
         elif ui_mode == "quiz":
             questions, auto_points = _quiz_questions_payload(assignment_id, student.id)
+            attempt_details = _quiz_attempt_details(subs_for_student)
+            latest_attempt_num = len(attempt_details) if attempt_details else None
+            latest_attempt_score = (
+                attempt_details[-1].get("parsed_score") if attempt_details else None
+            )
             rows.append(
                 {
                     **base_row,
                     "submitted_at": _iso(submission.submitted_at) if submission else None,
                     "quiz_attempts": len(subs_for_student),
-                    "quiz_attempt_details": _quiz_attempt_details(subs_for_student),
+                    "quiz_attempt_details": attempt_details,
+                    "answers_attempt_num": latest_attempt_num,
+                    "latest_attempt_score": latest_attempt_score,
                     "auto_points": round(auto_points, 2),
                     "questions": questions,
                     "has_submission": submission is not None,

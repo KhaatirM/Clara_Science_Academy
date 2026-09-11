@@ -229,6 +229,7 @@ export interface QuizQuestionRow {
 
 export interface QuizAttemptDetail {
   attempt_num: number
+  submission_id?: number
   submitted_at: string | null
   parsed_score: { earned: number; total: number; percentage: number } | null
 }
@@ -239,9 +240,13 @@ export interface QuizSubmissionRow {
   submitted_at: string | null
   quiz_attempts: number
   quiz_attempt_details?: QuizAttemptDetail[]
+  /** Attempt number whose answers are currently stored (always the latest). */
+  answers_attempt_num?: number | null
+  latest_attempt_score?: { earned: number; total: number; percentage: number } | null
   auto_points: number
   has_submission: boolean
   questions: QuizQuestionRow[]
+  /** Official score on file (best attempt for quizzes). */
   grade: SubmissionsGradeInfo | null
   is_voided: boolean
 }

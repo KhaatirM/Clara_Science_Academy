@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   saveQuizOpenEndedGrades,
+  type QuizAttemptDetail,
   type QuizSubmissionRow,
 } from '../../../api/assignmentWorkspace'
 import type { AssignmentWorkspaceScope } from '../../../utils/assignmentWorkspaceScope'
@@ -20,7 +21,7 @@ function questionTypeLabel(type: string) {
   return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function gradePercent(row: QuizSubmissionRow, totalPoints: number): number | null {
+function officialGradePercent(row: QuizSubmissionRow, totalPoints: number): number | null {
   if (row.is_voided) return null
   const pct = row.grade?.percentage
   if (pct != null) return Math.round(Number(pct) * 10) / 10
@@ -30,7 +31,7 @@ function gradePercent(row: QuizSubmissionRow, totalPoints: number): number | nul
 }
 
 export function isQuizGraded(row: QuizSubmissionRow, totalPoints: number) {
-  return gradePercent(row, totalPoints) != null
+  return officialGradePercent(row, totalPoints) != null
 }
 
 function statusAccent(status: string) {
@@ -97,6 +98,13 @@ type Props = {
   onSaved: () => void
 }
 
+function attemptPercent(att: QuizAttemptDetail | null | undefined, totalPoints: number): number | null {
+  if (!att?.parsed_score) return null
+  if (att.parsed_score.percentage != null) return Math.round(Number(att.parsed_score.percentage) * 10) / 10
+  if (totalPoints <= 0) return null
+  return Math.round((Number(att.parsed_score.earned) / totalPoints) * 1000) / 10
+}
+
 export function QuizSubmissionCard({
   row,
   totalPoints,
@@ -117,11 +125,27 @@ export function QuizSubmissionCard({
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
-  const accent = statusAccent(row.status)
-  const pct = gradePercent(row, totalPoints)
-  const graded = isQuizGraded(row, totalPoints)
-  const displayScore = row.grade?.score ?? row.grade?.points_earned
   const attempts = row.quiz_attempt_details?.length ? row.quiz_attempt_details : []
+  const answersAttemptNum =
+    row.answers_attempt_num ?? (attempts.length ? attempts[attempts.length - 1].attempt_num : null)
+  const [selectedAttemptNum, setSelectedAttemptNum] = useState<number>(
+    () => answersAttemptNum ?? attempts[attempts.length - 1]?.attempt_num ?? 1,
+  )
+
+  const selectedAttempt = useMemo(
+    () => attempts.find((a) => a.attempt_num === selectedAttemptNum) ?? attempts[attempts.length - 1] ?? null,
+    [attempts, selectedAttemptNum],
+  )
+  const viewingAnswersAttempt = selectedAttemptNum === answersAttemptNum
+  const selectedPct = attemptPercent(selectedAttempt, totalPoints)
+  const officialPct = officialGradePercent(row, totalPoints)
+  const officialScore = row.grade?.score ?? row.grade?.points_earned
+  const barPct = selectedPct ?? (viewingAnswersAttempt && row.auto_points > 0 && totalPoints > 0
+    ? Math.round((row.auto_points / totalPoints) * 1000) / 10
+    : officialPct)
+
+  const accent = statusAccent(row.status)
+  const graded = isQuizGraded(row, totalPoints)
 
   async function saveManualGrades() {
     if (!manualQs.length) return
@@ -183,12 +207,12 @@ export function QuizSubmissionCard({
                   {row.quiz_attempts} {row.quiz_attempts === 1 ? 'attempt' : 'attempts'}
                 </span>
               ) : null}
-              {graded && pct != null ? (
+              {graded && officialPct != null ? (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${GRADE_TONES[gradeToneFromPercent(pct)].solid}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${GRADE_TONES[gradeToneFromPercent(officialPct)].solid}`}
                 >
                   <i className="bi bi-star-fill" />
-                  Graded: {pct}%
+                  On file: {officialPct}%
                 </span>
               ) : row.has_submission && hasOpenEnded ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-950">
@@ -212,56 +236,96 @@ export function QuizSubmissionCard({
                 </span>
                 <strong className="text-hub-text">{formatSubmissionWhen(row.submitted_at)}</strong>
               </div>
-              {row.auto_points > 0 ? (
+              {officialScore != null && !row.is_voided ? (
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-hub-muted">
+                    <i className="bi bi-star me-1" />
+                    Official grade on file (best):
+                  </span>
+                  <strong className="text-hub-text">
+                    {officialScore} / {totalPoints}
+                    {officialPct != null ? ` (${officialPct}%)` : ''}
+                  </strong>
+                </div>
+              ) : null}
+
+              {attempts.length > 1 ? (
+                <div className="mt-2 space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wide text-hub-muted" htmlFor={`attempt-${row.student.id}`}>
+                    View attempt
+                  </label>
+                  <select
+                    id={`attempt-${row.student.id}`}
+                    value={selectedAttemptNum}
+                    onChange={(e) => setSelectedAttemptNum(Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-hub-text"
+                  >
+                    {attempts.map((att) => {
+                      const labelScore = att.parsed_score
+                        ? `${att.parsed_score.earned}/${att.parsed_score.total} (${att.parsed_score.percentage}%)`
+                        : 'no auto score'
+                      const answersTag = att.attempt_num === answersAttemptNum ? ' · answers shown below' : ''
+                      return (
+                        <option key={att.attempt_num} value={att.attempt_num}>
+                          Attempt {att.attempt_num} — {formatSubmissionWhen(att.submitted_at)} — {labelScore}
+                          {answersTag}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-slate-50 text-left text-hub-muted">
+                        <tr>
+                          <th className="px-3 py-2">#</th>
+                          <th className="px-3 py-2">Submitted</th>
+                          <th className="px-3 py-2">Auto score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attempts.map((att) => {
+                          const selected = att.attempt_num === selectedAttemptNum
+                          return (
+                            <tr
+                              key={att.attempt_num}
+                              className={`cursor-pointer border-t border-slate-100 ${
+                                selected ? 'bg-indigo-50' : 'hover:bg-slate-50'
+                              }`}
+                              onClick={() => setSelectedAttemptNum(att.attempt_num)}
+                            >
+                              <td className="px-3 py-2 font-semibold">
+                                {att.attempt_num}
+                                {att.attempt_num === answersAttemptNum ? (
+                                  <span className="ms-1 text-[0.65rem] font-bold uppercase text-indigo-700">
+                                    answers
+                                  </span>
+                                ) : null}
+                              </td>
+                              <td className="px-3 py-2">{formatSubmissionWhen(att.submitted_at)}</td>
+                              <td className="px-3 py-2">
+                                {att.parsed_score ? (
+                                  <>
+                                    {att.parsed_score.earned} / {att.parsed_score.total}
+                                    <span className="text-hub-muted"> ({att.parsed_score.percentage}%)</span>
+                                  </>
+                                ) : (
+                                  <span className="text-hub-muted">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : row.auto_points > 0 ? (
                 <div className="flex flex-wrap items-baseline gap-2">
                   <span className="text-hub-muted">
                     <i className="bi bi-lightning-charge me-1" />
                     Auto-graded:
                   </span>
                   <strong className="text-hub-text">{row.auto_points} pts</strong>
-                </div>
-              ) : null}
-              {displayScore != null && !row.is_voided ? (
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-hub-muted">
-                    <i className="bi bi-star me-1" />
-                    Score on file:
-                  </span>
-                  <strong className="text-hub-text">
-                    {displayScore} / {totalPoints}
-                    {pct != null ? ` (${pct}%)` : ''}
-                  </strong>
-                </div>
-              ) : null}
-              {attempts.length > 1 ? (
-                <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                  <table className="min-w-full text-xs">
-                    <thead className="bg-slate-50 text-left text-hub-muted">
-                      <tr>
-                        <th className="px-3 py-2">#</th>
-                        <th className="px-3 py-2">Submitted</th>
-                        <th className="px-3 py-2">Auto score</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attempts.map((att) => (
-                        <tr key={att.attempt_num} className="border-t border-slate-100">
-                          <td className="px-3 py-2 font-semibold">{att.attempt_num}</td>
-                          <td className="px-3 py-2">{formatSubmissionWhen(att.submitted_at)}</td>
-                          <td className="px-3 py-2">
-                            {att.parsed_score ? (
-                              <>
-                                {att.parsed_score.earned} / {att.parsed_score.total}
-                                <span className="text-hub-muted"> ({att.parsed_score.percentage}%)</span>
-                              </>
-                            ) : (
-                              <span className="text-hub-muted">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               ) : null}
             </>
@@ -273,23 +337,40 @@ export function QuizSubmissionCard({
           )}
         </div>
 
-        <div className="flex flex-col justify-center">
-          {graded && pct != null && !row.is_voided ? (
+        <div className="flex flex-col justify-center gap-2">
+          {barPct != null && !row.is_voided ? (
             <div
-              className={`overflow-hidden rounded-xl border ${GRADE_TONES[gradeToneFromPercent(pct)].badge}`}
+              className={`overflow-hidden rounded-xl border ${GRADE_TONES[gradeToneFromPercent(barPct)].badge}`}
             >
               <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-bold text-white transition-all ${GRADE_TONES[gradeToneFromPercent(pct)].bar}`}
-                style={{ width: `${Math.min(pct, 100)}%`, minWidth: '8rem' }}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-bold text-white transition-all ${GRADE_TONES[gradeToneFromPercent(barPct)].bar}`}
+                style={{ width: `${Math.min(barPct, 100)}%`, minWidth: '8rem' }}
               >
-                <i className="bi bi-star-fill" />
-                Grade: {pct}%
+                <i className="bi bi-bar-chart-fill" />
+                Attempt {selectedAttempt?.attempt_num ?? '—'}: {barPct}%
               </div>
             </div>
           ) : row.has_submission && !row.is_voided ? (
             <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-hub-muted">
               {hasOpenEnded ? 'Open-ended items need manual scoring' : 'Awaiting final grade'}
             </div>
+          ) : null}
+          {selectedAttempt?.parsed_score ? (
+            <p className="text-center text-xs text-hub-muted">
+              Selected attempt auto score:{' '}
+              <strong className="text-hub-text">
+                {selectedAttempt.parsed_score.earned} / {selectedAttempt.parsed_score.total}
+              </strong>
+            </p>
+          ) : viewingAnswersAttempt && row.auto_points > 0 ? (
+            <p className="text-center text-xs text-hub-muted">
+              Current answers auto-total: <strong className="text-hub-text">{row.auto_points} pts</strong>
+            </p>
+          ) : null}
+          {officialPct != null && selectedPct != null && officialPct !== selectedPct ? (
+            <p className="text-center text-xs text-hub-muted">
+              Official on-file grade remains <strong>{officialPct}%</strong> (best attempt).
+            </p>
           ) : null}
         </div>
       </div>
@@ -304,12 +385,25 @@ export function QuizSubmissionCard({
             <span>
               <i className="bi bi-ui-checks-grid me-2" />
               {expanded ? 'Hide' : 'Review'} questions & answers ({row.questions.length})
+              {answersAttemptNum != null ? ` · attempt ${answersAttemptNum}` : ''}
             </span>
             <i className={`bi ${expanded ? 'bi-chevron-up' : 'bi-chevron-down'}`} />
           </button>
 
           {expanded ? (
             <div className="mt-3 space-y-3">
+              {!viewingAnswersAttempt ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <i className="bi bi-info-circle me-1" />
+                  Answers below are from <strong>attempt {answersAttemptNum}</strong> (latest). Prior attempt
+                  answer text is not stored — switch to attempt {answersAttemptNum} to grade open-ended items.
+                </div>
+              ) : (
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-sm text-indigo-950">
+                  Showing answers for <strong>attempt {answersAttemptNum}</strong> (most recent).
+                </div>
+              )}
+
               {row.questions.map((q) => (
                 <div
                   key={q.question_id}
@@ -353,7 +447,7 @@ export function QuizSubmissionCard({
                     <p className="mt-2 text-xs font-semibold text-hub-muted">
                       {q.points_earned ?? 0} / {q.max_points} points
                     </p>
-                  ) : hasOpenEnded && !row.is_voided ? (
+                  ) : hasOpenEnded && !row.is_voided && viewingAnswersAttempt ? (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <label className="text-xs font-bold uppercase tracking-wide text-hub-muted">
                         Points (max {q.max_points})
@@ -373,11 +467,15 @@ export function QuizSubmissionCard({
                         className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                       />
                     </div>
+                  ) : q.needs_manual_grade ? (
+                    <p className="mt-2 text-xs text-hub-muted">
+                      Switch to attempt {answersAttemptNum} to enter points for this answer.
+                    </p>
                   ) : null}
                 </div>
               ))}
 
-              {manualQs.length > 0 && hasOpenEnded && !row.is_voided ? (
+              {manualQs.length > 0 && hasOpenEnded && !row.is_voided && viewingAnswersAttempt ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4">
                   <label className="text-xs font-bold uppercase tracking-wide text-hub-muted">
                     Overall comment

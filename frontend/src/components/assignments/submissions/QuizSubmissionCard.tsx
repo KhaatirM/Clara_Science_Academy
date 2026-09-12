@@ -31,7 +31,22 @@ function officialGradePercent(row: QuizSubmissionRow, totalPoints: number): numb
 }
 
 export function isQuizGraded(row: QuizSubmissionRow, totalPoints: number) {
+  if (row.is_voided) return false
+  const status = (row.grade?.grading_status || '').toLowerCase()
+  if (status === 'pending') return false
+  if (status === 'final') return true
   return officialGradePercent(row, totalPoints) != null
+}
+
+/** Open-ended quiz submitted but waiting on teacher review. */
+export function isQuizPendingReview(row: QuizSubmissionRow, hasOpenEnded: boolean) {
+  if (!hasOpenEnded || row.is_voided || !row.has_submission) return false
+  const status = (row.grade?.grading_status || '').toLowerCase()
+  if (status === 'pending') return true
+  if (status === 'final') return false
+  // Legacy rows without grading_status: pending when any open-ended item still lacks points.
+  const manual = row.questions.filter((q) => q.needs_manual_grade)
+  return manual.length > 0 && manual.some((q) => q.points_earned == null)
 }
 
 function statusAccent(status: string) {
@@ -62,28 +77,31 @@ function statusAccent(status: string) {
   }
 }
 
-export type QuizSubmissionFilter = 'all' | 'submitted' | 'late' | 'not_submitted' | 'graded'
+export type QuizSubmissionFilter = 'all' | 'submitted' | 'late' | 'not_submitted' | 'graded' | 'pending'
 
 export function quizRowMatchesFilter(
   row: QuizSubmissionRow,
   filter: QuizSubmissionFilter,
   totalPoints: number,
+  hasOpenEnded = false,
 ) {
   if (filter === 'all') return true
   if (filter === 'submitted') return row.has_submission
   if (filter === 'late') return row.status === 'late'
   if (filter === 'not_submitted') return !row.has_submission
   if (filter === 'graded') return isQuizGraded(row, totalPoints) && !row.is_voided
+  if (filter === 'pending') return isQuizPendingReview(row, hasOpenEnded)
   return true
 }
 
-export function quizFilterCounts(rows: QuizSubmissionRow[], totalPoints: number) {
+export function quizFilterCounts(rows: QuizSubmissionRow[], totalPoints: number, hasOpenEnded = false) {
   return {
     all: rows.length,
     submitted: rows.filter((r) => r.has_submission).length,
     late: rows.filter((r) => r.status === 'late').length,
     not_submitted: rows.filter((r) => !r.has_submission).length,
     graded: rows.filter((r) => isQuizGraded(r, totalPoints) && !r.is_voided).length,
+    pending: rows.filter((r) => isQuizPendingReview(r, hasOpenEnded)).length,
   }
 }
 
@@ -163,6 +181,7 @@ export function QuizSubmissionCard({
 
   const accent = statusAccent(row.status)
   const graded = isQuizGraded(row, totalPoints)
+  const pendingReview = isQuizPendingReview(row, hasOpenEnded)
 
   async function saveManualGrades() {
     if (!manualQs.length) return
@@ -224,17 +243,24 @@ export function QuizSubmissionCard({
                   {row.quiz_attempts} {row.quiz_attempts === 1 ? 'attempt' : 'attempts'}
                 </span>
               ) : null}
+              {hasOpenEnded && pendingReview ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-950">
+                  <i className="bi bi-hourglass-split" />
+                  Pending
+                </span>
+              ) : null}
+              {hasOpenEnded && graded ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-900">
+                  <i className="bi bi-check2-circle" />
+                  Graded
+                </span>
+              ) : null}
               {graded && officialPct != null ? (
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${GRADE_TONES[gradeToneFromPercent(officialPct)].solid}`}
                 >
                   <i className="bi bi-star-fill" />
                   On file: {officialPct}%
-                </span>
-              ) : row.has_submission && hasOpenEnded ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-950">
-                  <i className="bi bi-pencil" />
-                  Needs review
                 </span>
               ) : null}
             </>

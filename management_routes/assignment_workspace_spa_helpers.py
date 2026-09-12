@@ -396,11 +396,13 @@ def _grade_info_dict(grade: Grade | None) -> dict[str, Any] | None:
     try:
         gd = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
         if isinstance(gd, dict):
+            status = (gd.get("grading_status") or "").strip().lower() or None
             return {
                 "score": gd.get("score"),
                 "points_earned": gd.get("points_earned") or gd.get("score"),
                 "percentage": gd.get("percentage"),
                 "comment": gd.get("comment") or gd.get("feedback") or "",
+                "grading_status": status,
             }
     except Exception:
         pass
@@ -1837,7 +1839,9 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
         grade_info = _grade_info_dict(grade)
         is_voided = bool(grade and grade.is_voided)
         if grade_info and not is_voided:
-            graded_count += 1
+            # Open-ended quiz auto-submit leaves grading_status=pending until teacher finalizes.
+            if (grade_info.get("grading_status") or "").lower() != "pending":
+                graded_count += 1
 
         base_row: dict[str, Any] = {
             "student": _student_brief(student),

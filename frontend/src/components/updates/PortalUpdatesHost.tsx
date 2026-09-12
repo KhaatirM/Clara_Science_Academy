@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep12_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep12_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Open-ended quiz cards show Pending vs Graded',
+    body: 'On quiz Submissions, each student card clearly shows Pending or Graded for open-ended review, with a Pending filter so you can jump to work still waiting on you.',
+  },
+  {
+    title: 'Long assignment filenames stay in the popup',
+    body: 'On View Assignment, long material file names truncate instead of stretching the modal and forcing horizontal scrolling.',
+  },
   {
     title: 'Feedback files on PDF/paper grades',
     body: 'When grading PDF/paper work, attach one or more documents with your written feedback. Students see and download them next to teacher feedback on Assignments.',
@@ -294,10 +302,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.41'
+  const display = version?.display || 'v 2.520.42'
   const releaseLabel = version?.release_label || 'September 12, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2776
+  const updatesEstimate = version?.updates_estimate ?? 2778
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

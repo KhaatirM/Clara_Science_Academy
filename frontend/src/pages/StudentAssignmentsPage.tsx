@@ -689,7 +689,11 @@ function AssignmentCard({
           <p className="mb-0 text-sm text-hub-muted">{card.description_preview}</p>
         ) : null}
         {card.download_url && card.attachment_name ? (
-          <a href={card.download_url} className="text-sm font-semibold text-teal-700 hover:underline">
+          <a
+            href={card.download_url}
+            title={card.attachment_name}
+            className="block max-w-full truncate text-sm font-semibold text-teal-700 hover:underline"
+          >
             <i className="bi bi-paperclip me-1" aria-hidden />
             {card.attachment_name}
           </a>
@@ -881,7 +885,7 @@ function AssignmentDetailModal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-5 py-5">
           <div
             className={`rounded-2xl border px-4 py-3 ${banner.tone}`}
           >
@@ -909,8 +913,8 @@ function AssignmentDetailModal({
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
-            <div className="space-y-4">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[1.45fr_1fr]">
+            <div className="min-w-0 space-y-4">
               <section className="rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/80 to-white p-4 shadow-sm">
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-teal-950">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-700 text-white">
@@ -961,8 +965,8 @@ function AssignmentDetailModal({
               </section>
             </div>
 
-            <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="min-w-0 space-y-4">
+              <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-hub-text">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
                     <i className="bi bi-folder2-open text-xs" aria-hidden />
@@ -972,10 +976,11 @@ function AssignmentDetailModal({
                 {card.download_url && card.attachment_name ? (
                   <a
                     href={card.download_url}
-                    className="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100"
+                    title={card.attachment_name}
+                    className="flex max-w-full min-w-0 items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100"
                   >
-                    <i className="bi bi-paperclip" aria-hidden />
-                    {card.attachment_name}
+                    <i className="bi bi-paperclip shrink-0" aria-hidden />
+                    <span className="min-w-0 truncate">{card.attachment_name}</span>
                   </a>
                 ) : (
                   <p className="mb-0 text-sm text-hub-muted">No attachment for this assignment.</p>
@@ -1047,12 +1052,13 @@ function AssignmentDetailModal({
                         <li key={att.id}>
                           <a
                             href={att.url}
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-teal-800 hover:underline"
+                            title={att.name}
+                            className="flex max-w-full min-w-0 items-center gap-1 text-sm font-semibold text-teal-800 hover:underline"
                             target="_blank"
                             rel="noreferrer"
                           >
-                            <i className="bi bi-paperclip" aria-hidden />
-                            {att.name}
+                            <i className="bi bi-paperclip shrink-0" aria-hidden />
+                            <span className="min-w-0 truncate">{att.name}</span>
                           </a>
                         </li>
                       ))}

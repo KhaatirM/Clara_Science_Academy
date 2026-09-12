@@ -59,6 +59,13 @@ const FILTERS: {
     active: 'bg-emerald-600 text-white border-emerald-600',
     idle: 'border-emerald-300 bg-white text-emerald-900 hover:bg-emerald-50',
   },
+  {
+    id: 'pending',
+    label: 'Pending',
+    icon: 'bi-hourglass-split',
+    active: 'bg-amber-600 text-white border-amber-600',
+    idle: 'border-amber-300 bg-white text-amber-950 hover:bg-amber-50',
+  },
 ]
 
 export function QuizSubmissionsPanel({
@@ -70,11 +77,19 @@ export function QuizSubmissionsPanel({
   onSaved,
 }: Props) {
   const [filter, setFilter] = useState<QuizSubmissionFilter>('all')
-  const counts = useMemo(() => quizFilterCounts(rows, totalPoints), [rows, totalPoints])
+  const counts = useMemo(
+    () => quizFilterCounts(rows, totalPoints, hasOpenEnded),
+    [rows, totalPoints, hasOpenEnded],
+  )
 
   const visible = useMemo(
-    () => rows.filter((row) => quizRowMatchesFilter(row, filter, totalPoints)),
-    [filter, rows, totalPoints],
+    () => rows.filter((row) => quizRowMatchesFilter(row, filter, totalPoints, hasOpenEnded)),
+    [filter, rows, totalPoints, hasOpenEnded],
+  )
+
+  const filterButtons = useMemo(
+    () => (hasOpenEnded ? FILTERS : FILTERS.filter((f) => f.id !== 'pending')),
+    [hasOpenEnded],
   )
 
   return (
@@ -92,7 +107,7 @@ export function QuizSubmissionsPanel({
       )}
 
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => {
+        {filterButtons.map((f) => {
           const active = filter === f.id
           const count = counts[f.id]
           return (

@@ -209,6 +209,8 @@ export interface SubmissionsGradeInfo {
   points_earned?: number | null
   percentage?: number | null
   comment?: string
+  /** `pending` until open-ended items are finalized; `final` when graded. */
+  grading_status?: string | null
 }
 
 export interface PdfSubmissionRow {

@@ -95,6 +95,7 @@ def _type_label(assignment_type: str | None) -> str:
 
 def _grade_info(grade_obj, total_points) -> dict[str, Any]:
     from .routes import _parse_numeric_grade_score, get_letter_grade
+    from utils.grade_feedback_attachments import feedback_attachments_payload
 
     empty = {
         "has_grade": False,
@@ -102,6 +103,7 @@ def _grade_info(grade_obj, total_points) -> dict[str, Any]:
         "letter": None,
         "feedback": None,
         "feedback_preview": None,
+        "feedback_attachments": [],
         "display": None,
     }
     if not grade_obj or not grade_obj.grade_data:
@@ -129,12 +131,17 @@ def _grade_info(grade_obj, total_points) -> dict[str, Any]:
     feedback = (data.get("feedback") or data.get("comment") or data.get("comments") or "").strip() or None
     letter = get_letter_grade(percentage) if percentage is not None else None
     display = f"{percentage}%" if percentage is not None else "Graded"
+    attachments = feedback_attachments_payload(
+        grade_obj,
+        download_url_for_id=lambda aid: f"/api/spa/student/grade-attachments/{aid}/download",
+    )
     return {
         "has_grade": True,
         "percentage": percentage,
         "letter": letter,
         "feedback": feedback,
         "feedback_preview": (feedback[:120] + "…") if feedback and len(feedback) > 120 else feedback,
+        "feedback_attachments": attachments,
         "display": display,
     }
 
@@ -158,20 +165,27 @@ def _primary_action(
                 if has_submission
                 else "Take quiz"
             )
+            quiz_url = f"/app/student/take-quiz/{assignment.id}"
+            if has_submission:
+                quiz_url = f"{quiz_url}?retake=true"
             return {
                 "label": label,
-                "url": f"/app/student/take-quiz/{assignment.id}",
+                "url": quiz_url,
                 "kind": "quiz",
                 "disabled": False,
             }
         return None
     if atype == "quiz":
-        label = (
-            f"Retake quiz ({attempts_remaining} left)"
-            if has_submission and attempts_remaining is not None and attempts_remaining > 0
-            else "Take quiz"
+        is_retake = bool(
+            has_submission and attempts_remaining is not None and attempts_remaining > 0
         )
-        return {"label": label, "url": f"/app/student/take-quiz/{assignment.id}", "kind": "quiz", "disabled": False}
+        label = (
+            f"Retake quiz ({attempts_remaining} left)" if is_retake else "Take quiz"
+        )
+        quiz_url = f"/app/student/take-quiz/{assignment.id}"
+        if is_retake:
+            quiz_url = f"{quiz_url}?retake=true"
+        return {"label": label, "url": quiz_url, "kind": "quiz", "disabled": False}
     if atype == "discussion":
         return {
             "label": "Open discussion",

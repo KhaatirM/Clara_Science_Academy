@@ -2164,8 +2164,9 @@ def _save_single_student_grade(assignment_id, student_id):
         existing_grade.graded_at = datetime.utcnow()
         existing_grade.extra_credit_points = adjusted['extra_credit_points']
         existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
+        grade_row = existing_grade
     else:
-        grade = Grade(
+        grade_row = Grade(
             student_id=student_id,
             assignment_id=assignment_id,
             grade_data=grade_data,
@@ -2173,7 +2174,7 @@ def _save_single_student_grade(assignment_id, student_id):
             extra_credit_points=adjusted['extra_credit_points'],
             late_penalty_applied=adjusted['late_penalty_applied']
         )
-        db.session.add(grade)
+        db.session.add(grade_row)
         sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
         if not sub and adjusted['points_earned'] > 0:
             sub = Submission(
@@ -2183,6 +2184,22 @@ def _save_single_student_grade(assignment_id, student_id):
                 marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
             )
             db.session.add(sub)
+
+    db.session.flush()
+    try:
+        from utils.grade_feedback_attachments import apply_grade_feedback_attachments
+
+        remove_raw = request.form.getlist('remove_feedback_attachment_ids')
+        if not remove_raw and isinstance(payload.get('remove_feedback_attachment_ids'), list):
+            remove_raw = [str(x) for x in payload.get('remove_feedback_attachment_ids')]
+        files = list(request.files.getlist('feedback_files') or [])
+        apply_grade_feedback_attachments(
+            grade_row,
+            files=files,
+            remove_ids=[int(x) for x in remove_raw if str(x).strip().isdigit()],
+        )
+    except Exception as att_exc:
+        current_app.logger.exception('Feedback attachment save failed: %s', att_exc)
 
     db.session.commit()
     return True, 'Saved'

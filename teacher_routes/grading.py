@@ -2,7 +2,7 @@
 Grading routes for teachers.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
@@ -616,15 +616,16 @@ def save_student_grade(assignment_id, student_id):
             existing_grade.graded_at = datetime.utcnow()
             existing_grade.extra_credit_points = adjusted['extra_credit_points']
             existing_grade.late_penalty_applied = adjusted['late_penalty_applied']
+            grade_row = existing_grade
         else:
-            new_grade = Grade(
+            grade_row = Grade(
                 assignment_id=assignment_id, student_id=student_id,
                 grade_data=json.dumps(grade_data),
                 graded_at=datetime.utcnow(),
                 extra_credit_points=adjusted['extra_credit_points'],
                 late_penalty_applied=adjusted['late_penalty_applied']
             )
-            db.session.add(new_grade)
+            db.session.add(grade_row)
             sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
             if not sub and adjusted['points_earned'] > 0:
                 sub = Submission(
@@ -634,6 +635,22 @@ def save_student_grade(assignment_id, student_id):
                     marked_at=datetime.utcnow(), submitted_at=datetime.utcnow(), file_path=None
                 )
                 db.session.add(sub)
+
+        db.session.flush()
+        try:
+            from utils.grade_feedback_attachments import apply_grade_feedback_attachments
+
+            remove_raw = request.form.getlist('remove_feedback_attachment_ids')
+            if not remove_raw and isinstance(payload.get('remove_feedback_attachment_ids'), list):
+                remove_raw = [str(x) for x in payload.get('remove_feedback_attachment_ids')]
+            files = list(request.files.getlist('feedback_files') or [])
+            apply_grade_feedback_attachments(
+                grade_row,
+                files=files,
+                remove_ids=[int(x) for x in remove_raw if str(x).strip().isdigit()],
+            )
+        except Exception as att_exc:
+            current_app.logger.exception('Feedback attachment save failed: %s', att_exc)
 
         db.session.commit()
         from utils.grade_mutation_hooks import notify_grades_changed

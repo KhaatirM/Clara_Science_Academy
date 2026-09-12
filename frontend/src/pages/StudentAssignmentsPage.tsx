@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   fetchStudentAssignments,
@@ -7,6 +7,7 @@ import {
   submitStudentAssignment,
 } from '../api/studentAssignments'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import type { GradeTone } from '../utils/gradeDisplay'
 import { GRADE_TONES, gradeToneFromLetter, gradeToneFromPercent } from '../utils/gradeDisplay'
 import type {
@@ -46,13 +47,11 @@ function resolvePrimaryAction(
   const atype = (card.assignment_type || 'pdf').toLowerCase()
   if (atype === 'quiz' || atype.includes('quiz')) {
     const attempts = card.attempts_remaining
-    const label =
-      card.has_submission && attempts != null && attempts > 0
-        ? `Retake quiz (${attempts} left)`
-        : 'Take quiz'
+    const isRetake = Boolean(card.has_submission && attempts != null && attempts > 0)
+    const label = isRetake ? `Retake quiz (${attempts} left)` : 'Take quiz'
     return {
       label: card.primary_action?.kind === 'quiz' ? card.primary_action.label : label,
-      url: `/student/take-quiz/${card.id}`,
+      url: isRetake ? `/student/take-quiz/${card.id}?retake=true` : `/student/take-quiz/${card.id}`,
       kind: 'quiz',
       disabled: false,
     }
@@ -695,10 +694,24 @@ function AssignmentCard({
             {card.attachment_name}
           </a>
         ) : null}
-        {card.grade.feedback_preview ? (
+        {card.grade.feedback_preview || (card.grade.feedback_attachments || []).length > 0 ? (
           <div className="rounded-lg border-l-4 border-teal-500 bg-slate-50 px-3 py-2 text-xs text-hub-muted">
             <div className="font-semibold text-teal-800">Teacher feedback</div>
-            <p className="mb-0 mt-1">{card.grade.feedback_preview}</p>
+            {card.grade.feedback_preview ? (
+              <p className="mb-0 mt-1">{card.grade.feedback_preview}</p>
+            ) : null}
+            {(card.grade.feedback_attachments || []).length > 0 ? (
+              <ul className="mb-0 mt-1 space-y-0.5">
+                {(card.grade.feedback_attachments || []).map((att) => (
+                  <li key={att.id}>
+                    <a href={att.url} className="font-semibold text-teal-800 hover:underline" target="_blank" rel="noreferrer">
+                      <i className="bi bi-paperclip me-1" aria-hidden />
+                      {att.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
         {card.extension ? (
@@ -1028,6 +1041,23 @@ function AssignmentDetailModal({
                   <p className="mb-0 whitespace-pre-wrap text-sm text-slate-700">
                     {card.grade.feedback || 'No written feedback.'}
                   </p>
+                  {(card.grade.feedback_attachments || []).length > 0 ? (
+                    <ul className="mt-3 space-y-1">
+                      {(card.grade.feedback_attachments || []).map((att) => (
+                        <li key={att.id}>
+                          <a
+                            href={att.url}
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-teal-800 hover:underline"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <i className="bi bi-paperclip" aria-hidden />
+                            {att.name}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </section>
               ) : null}
             </div>
@@ -1371,12 +1401,6 @@ function RedoRequestModal({
   )
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1048576).toFixed(1)} MB`
-}
-
 function SubmitAssignmentModal({
   card,
   onClose,
@@ -1390,8 +1414,6 @@ function SubmitAssignmentModal({
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const isResubmit = card.has_submission && !isEffectivelyGraded(card)
 
   const pickFile = (next: File | null) => {
@@ -1488,95 +1510,18 @@ function SubmitAssignmentModal({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
             <div>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <label className="text-sm font-bold text-hub-text" htmlFor="student-submit-file">
+                <span className="text-sm font-bold text-hub-text">
                   <i className="bi bi-file-earmark-arrow-up me-1 text-teal-700" aria-hidden />
                   Upload your file
-                </label>
+                </span>
                 <span className="text-xs text-hub-muted">Required</span>
               </div>
-
-              <div
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    fileInputRef.current?.click()
-                  }
-                }}
-                onClick={() => fileInputRef.current?.click()}
-                onDragEnter={(e) => {
-                  e.preventDefault()
-                  setDragOver(true)
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setDragOver(true)
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault()
-                  setDragOver(false)
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  setDragOver(false)
-                  const dropped = e.dataTransfer.files?.[0] || null
-                  pickFile(dropped)
-                }}
-                className={`cursor-pointer rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ${
-                  dragOver
-                    ? 'border-teal-500 bg-teal-50 shadow-inner'
-                    : file
-                      ? 'border-teal-300 bg-teal-50/60'
-                      : 'border-slate-300 bg-slate-50 hover:border-teal-400 hover:bg-teal-50/40'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  id="student-submit-file"
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => pickFile(e.target.files?.[0] || null)}
-                />
-                {!file ? (
-                  <>
-                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-teal-700 shadow-sm ring-1 ring-slate-200">
-                      <i className="bi bi-cloud-arrow-up text-2xl" aria-hidden />
-                    </div>
-                    <p className="mb-1 text-sm font-bold text-hub-text">
-                      {dragOver ? 'Drop file to attach' : 'Drag & drop, or click to browse'}
-                    </p>
-                    <p className="mb-3 text-xs text-hub-muted">
-                      PDF, DOC, DOCX, TXT, PNG, JPG, JPEG, GIF, or MD
-                    </p>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-800">
-                      <i className="bi bi-folder2-open" aria-hidden />
-                      Choose file
-                    </span>
-                  </>
-                ) : (
-                  <div className="mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-teal-200 bg-white px-4 py-3 text-left shadow-sm">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800">
-                      <i className="bi bi-file-earmark-check text-xl" aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="mb-0 truncate text-sm font-bold text-hub-text">{file.name}</p>
-                      <p className="mb-0 text-xs text-hub-muted">{formatFileSize(file.size)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        pickFile(null)
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }}
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-              </div>
+              <DocumentFileField
+                files={file ? [file] : []}
+                onChange={(next) => pickFile(next[0] ?? null)}
+                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.md"
+                helpText="PDF, DOC, DOCX, TXT, PNG, JPG, JPEG, GIF, or MD — from your computer or Google Drive."
+              />
             </div>
 
             <label className="block text-sm">

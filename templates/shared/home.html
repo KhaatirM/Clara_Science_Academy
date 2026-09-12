@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 9, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 12, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,51 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 11, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 12, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 11</strong> (<strong>{{ app_version_display }}</strong>) makes multi-attempt quiz grading clearer: pick an attempt, match the score bar to that attempt, and keep Official grade on file (best) separate from the answers you are reviewing.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 12</strong> (<strong>{{ app_version_display }}</strong>) adds Google Drive picks on document uploads, lets teachers attach feedback files on PDF/paper grades, and earlier today tightened pending grades, quiz retakes, and Admin+ redo scope.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 12, 2026 - Drive + feedback files -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-google me-2"></i>Drive uploads &amp; feedback files – September 12, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>From Google Drive:</strong> Document uploads across the portal (assignments, student submissions, Class Notes, syllabus, and more) can pull from Drive. Connect Google in Settings first; files are copied into the portal.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Feedback attachments:</strong> When grading PDF/paper work, attach documents with your written feedback. Students download them next to teacher feedback on Assignments.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 12, 2026 - Pending grades / retake / Admin+ -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Pending grades, retakes &amp; Admin+ – September 12, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Pending grades by type:</strong> Fully auto quizzes are never pending. Open-ended quizzes and discussions only appear when teacher action is needed. Missing quiz/discussion work past the student’s effective due is auto-zeroed (extensions and live redos honored).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Retake starts blank:</strong> Retake from Assignments opens a fresh attempt immediately. Results include View previous attempts when review is allowed, with clearer Back / Retake buttons.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Answers per attempt:</strong> New quiz submissions store answers with that attempt so students and teachers can review earlier tries (legacy attempts may remain score-only).
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School Admin+ school-wide redos:</strong> Directors and School Administrators (including dual-role teacher accounts) see all redo and extension requests across the school.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 11, 2026 - Quiz attempt grading -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-ui-checks-grid me-2"></i>Quiz submissions – September 11, 2026</h6>
@@ -182,7 +220,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Official grade stays clear:</strong> “Official grade on file (best)” is shown separately from the attempt you are viewing. Answers remain from the latest attempt (prior answer text is not stored).
+                                <strong>Official grade stays clear:</strong> “Official grade on file (best)” is shown separately from the attempt you are viewing. Answers load for attempts that have stored responses.
                             </li>
                         </ul>
                     </div>
@@ -2568,11 +2606,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep11_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep12_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep11_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep12_2026_v2', 'true');
         }, 500);
     }
 });

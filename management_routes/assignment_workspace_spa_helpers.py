@@ -60,6 +60,14 @@ def _student_brief(student: Student | None) -> dict[str, Any]:
 
 
 def _parse_grade_row(grade: Grade | None, total_points: float) -> dict[str, Any]:
+    from utils.grade_feedback_attachments import feedback_attachments_payload
+
+    def _atts(g: Grade | None) -> list:
+        return feedback_attachments_payload(
+            g,
+            download_url_for_id=lambda aid: f"/api/spa/grade-attachments/{aid}/download",
+        )
+
     if not grade:
         return {
             "score": None,
@@ -68,6 +76,7 @@ def _parse_grade_row(grade: Grade | None, total_points: float) -> dict[str, Any]
             "comment": "",
             "grade_id": None,
             "is_voided": False,
+            "feedback_attachments": [],
         }
     if grade.is_voided:
         return {
@@ -77,6 +86,7 @@ def _parse_grade_row(grade: Grade | None, total_points: float) -> dict[str, Any]
             "comment": "",
             "grade_id": grade.id,
             "is_voided": True,
+            "feedback_attachments": [],
         }
     try:
         if grade.grade_data:
@@ -97,6 +107,7 @@ def _parse_grade_row(grade: Grade | None, total_points: float) -> dict[str, Any]
                     "comment": data.get("comment") or data.get("feedback") or "",
                     "grade_id": grade.id,
                     "is_voided": False,
+                    "feedback_attachments": _atts(grade),
                 }
     except (json.JSONDecodeError, TypeError):
         pass
@@ -107,6 +118,7 @@ def _parse_grade_row(grade: Grade | None, total_points: float) -> dict[str, Any]
         "comment": "",
         "grade_id": grade.id,
         "is_voided": grade.is_voided,
+        "feedback_attachments": _atts(grade),
     }
 
 
@@ -427,7 +439,9 @@ def _quiz_attempt_details(subs: list) -> list[dict[str, Any]]:
     return details
 
 
-def _quiz_questions_payload(assignment_id: int, student_id: int) -> tuple[list[dict[str, Any]], float]:
+def _quiz_questions_payload(
+    assignment_id: int, student_id: int, submission_id: int | None = None
+) -> tuple[list[dict[str, Any]], float]:
     from models import QuizAnswer, QuizOption
 
     questions = (
@@ -439,11 +453,30 @@ def _quiz_questions_payload(assignment_id: int, student_id: int) -> tuple[list[d
         return [], 0.0
 
     question_ids = [q.id for q in questions]
-    answers = (
-        QuizAnswer.query.options(joinedload(QuizAnswer.selected_option))
-        .filter(QuizAnswer.student_id == student_id, QuizAnswer.question_id.in_(question_ids))
-        .all()
+    answers_q = QuizAnswer.query.options(joinedload(QuizAnswer.selected_option)).filter(
+        QuizAnswer.student_id == student_id, QuizAnswer.question_id.in_(question_ids)
     )
+    if submission_id is not None:
+        linked = answers_q.filter(QuizAnswer.submission_id == submission_id).all()
+        if linked:
+            answers = linked
+        else:
+            # Legacy unscoped answers only for the student's latest submission.
+            from models import Submission
+
+            latest = (
+                Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id)
+                .order_by(Submission.submitted_at.desc())
+                .first()
+            )
+            if latest and latest.id == submission_id:
+                answers = answers_q.filter(QuizAnswer.submission_id.is_(None)).all()
+                if not answers:
+                    answers = answers_q.all()
+            else:
+                answers = []
+    else:
+        answers = answers_q.all()
     answers_by_q = {a.question_id: a for a in answers}
 
     auto_points = 0.0
@@ -1835,8 +1868,22 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
                 }
             )
         elif ui_mode == "quiz":
-            questions, auto_points = _quiz_questions_payload(assignment_id, student.id)
             attempt_details = _quiz_attempt_details(subs_for_student)
+            latest_sub = subs_for_student[-1] if subs_for_student else None
+            latest_submission_id = latest_sub.id if latest_sub else None
+            questions, auto_points = _quiz_questions_payload(
+                assignment_id, student.id, submission_id=latest_submission_id
+            )
+            questions_by_submission: dict[str, list] = {}
+            for sub in subs_for_student:
+                qs, _pts = _quiz_questions_payload(
+                    assignment_id, student.id, submission_id=sub.id
+                )
+                # Only expose attempts that have any answer text / selections stored.
+                if any((q.get("answer_display") or "").strip() for q in qs) or any(
+                    q.get("points_earned") is not None for q in qs
+                ):
+                    questions_by_submission[str(sub.id)] = qs
             latest_attempt_num = len(attempt_details) if attempt_details else None
             latest_attempt_score = (
                 attempt_details[-1].get("parsed_score") if attempt_details else None
@@ -1848,9 +1895,11 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
                     "quiz_attempts": len(subs_for_student),
                     "quiz_attempt_details": attempt_details,
                     "answers_attempt_num": latest_attempt_num,
+                    "answers_submission_id": latest_submission_id,
                     "latest_attempt_score": latest_attempt_score,
                     "auto_points": round(auto_points, 2),
                     "questions": questions,
+                    "questions_by_submission_id": questions_by_submission,
                     "has_submission": submission is not None,
                 }
             )

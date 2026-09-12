@@ -103,8 +103,10 @@ def is_authorized_for_class(class_obj):
     return False
 
 def is_admin():
-    """Helper function to check if user is an administrator."""
-    return current_user.role in ['Director', 'School Administrator']
+    """True for School Admin / Director via primary or secondary roles (dual-role safe)."""
+    from utils.user_roles import user_has_management_entry_access
+
+    return user_has_management_entry_access(current_user)
 
 
 def user_can_create_class_group_content(class_obj) -> bool:

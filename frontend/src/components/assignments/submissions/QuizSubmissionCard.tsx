@@ -136,7 +136,24 @@ export function QuizSubmissionCard({
     () => attempts.find((a) => a.attempt_num === selectedAttemptNum) ?? attempts[attempts.length - 1] ?? null,
     [attempts, selectedAttemptNum],
   )
-  const viewingAnswersAttempt = selectedAttemptNum === answersAttemptNum
+  const displayQuestions = useMemo(() => {
+    const sid = selectedAttempt?.submission_id
+    if (sid != null && row.questions_by_submission_id?.[String(sid)]) {
+      return row.questions_by_submission_id[String(sid)]
+    }
+    if (selectedAttemptNum === answersAttemptNum) return row.questions
+    return row.questions_by_submission_id && sid != null
+      ? row.questions_by_submission_id[String(sid)] || []
+      : []
+  }, [answersAttemptNum, row.questions, row.questions_by_submission_id, selectedAttempt, selectedAttemptNum])
+  const hasStoredAnswersForSelected = displayQuestions.length > 0 && (
+    selectedAttemptNum === answersAttemptNum
+    || Boolean(
+      selectedAttempt?.submission_id != null
+      && row.questions_by_submission_id?.[String(selectedAttempt.submission_id)],
+    )
+  )
+  const viewingAnswersAttempt = hasStoredAnswersForSelected
   const selectedPct = attemptPercent(selectedAttempt, totalPoints)
   const officialPct = officialGradePercent(row, totalPoints)
   const officialScore = row.grade?.score ?? row.grade?.points_earned
@@ -264,7 +281,12 @@ export function QuizSubmissionCard({
                       const labelScore = att.parsed_score
                         ? `${att.parsed_score.earned}/${att.parsed_score.total} (${att.parsed_score.percentage}%)`
                         : 'no auto score'
-                      const answersTag = att.attempt_num === answersAttemptNum ? ' · answers shown below' : ''
+                      const answersTag =
+                        att.attempt_num === answersAttemptNum ||
+                        (att.submission_id != null &&
+                          Boolean(row.questions_by_submission_id?.[String(att.submission_id)]))
+                          ? ' · answers available'
+                          : ' · score only'
                       return (
                         <option key={att.attempt_num} value={att.attempt_num}>
                           Attempt {att.attempt_num} — {formatSubmissionWhen(att.submitted_at)} — {labelScore}
@@ -295,7 +317,9 @@ export function QuizSubmissionCard({
                             >
                               <td className="px-3 py-2 font-semibold">
                                 {att.attempt_num}
-                                {att.attempt_num === answersAttemptNum ? (
+                                {att.attempt_num === answersAttemptNum ||
+                                (att.submission_id != null &&
+                                  Boolean(row.questions_by_submission_id?.[String(att.submission_id)])) ? (
                                   <span className="ms-1 text-[0.65rem] font-bold uppercase text-indigo-700">
                                     answers
                                   </span>
@@ -384,27 +408,32 @@ export function QuizSubmissionCard({
           >
             <span>
               <i className="bi bi-ui-checks-grid me-2" />
-              {expanded ? 'Hide' : 'Review'} questions & answers ({row.questions.length})
-              {answersAttemptNum != null ? ` · attempt ${answersAttemptNum}` : ''}
+              {expanded ? 'Hide' : 'Review'} questions & answers ({displayQuestions.length || row.questions.length})
+              {selectedAttemptNum != null ? ` · attempt ${selectedAttemptNum}` : ''}
             </span>
             <i className={`bi ${expanded ? 'bi-chevron-up' : 'bi-chevron-down'}`} />
           </button>
 
           {expanded ? (
             <div className="mt-3 space-y-3">
-              {!viewingAnswersAttempt ? (
+              {!hasStoredAnswersForSelected ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
                   <i className="bi bi-info-circle me-1" />
-                  Answers below are from <strong>attempt {answersAttemptNum}</strong> (latest). Prior attempt
-                  answer text is not stored — switch to attempt {answersAttemptNum} to grade open-ended items.
+                  Answer text for this attempt was not stored (legacy attempt). Scores still appear above —
+                  switch to an attempt marked with answers to review responses.
+                </div>
+              ) : selectedAttemptNum === answersAttemptNum ? (
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-sm text-indigo-950">
+                  Showing answers for <strong>attempt {selectedAttemptNum}</strong> (most recent).
                 </div>
               ) : (
                 <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-sm text-indigo-950">
-                  Showing answers for <strong>attempt {answersAttemptNum}</strong> (most recent).
+                  Showing answers for <strong>attempt {selectedAttemptNum}</strong>. Open-ended scoring
+                  applies to the latest attempt ({answersAttemptNum}).
                 </div>
               )}
 
-              {row.questions.map((q) => (
+              {(hasStoredAnswersForSelected ? displayQuestions : row.questions).map((q) => (
                 <div
                   key={q.question_id}
                   className={`rounded-xl border p-4 ${
@@ -447,7 +476,7 @@ export function QuizSubmissionCard({
                     <p className="mt-2 text-xs font-semibold text-hub-muted">
                       {q.points_earned ?? 0} / {q.max_points} points
                     </p>
-                  ) : hasOpenEnded && !row.is_voided && viewingAnswersAttempt ? (
+                  ) : hasOpenEnded && !row.is_voided && selectedAttemptNum === answersAttemptNum ? (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <label className="text-xs font-bold uppercase tracking-wide text-hub-muted">
                         Points (max {q.max_points})
@@ -475,7 +504,10 @@ export function QuizSubmissionCard({
                 </div>
               ))}
 
-              {manualQs.length > 0 && hasOpenEnded && !row.is_voided && viewingAnswersAttempt ? (
+              {manualQs.length > 0 &&
+              hasOpenEnded &&
+              !row.is_voided &&
+              selectedAttemptNum === answersAttemptNum ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4">
                   <label className="text-xs font-bold uppercase tracking-wide text-hub-muted">
                     Overall comment

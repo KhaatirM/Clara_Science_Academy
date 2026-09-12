@@ -866,6 +866,90 @@ def create_app(config_class=None):
                 f"column check failed (may already exist): {e}"
             )
 
+        # quiz_answer.submission_id — per-attempt answer history
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(quiz_answer)"))
+                    columns = [row[1] for row in r]
+                    if columns and 'submission_id' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE quiz_answer ADD COLUMN submission_id INTEGER "
+                            "REFERENCES submission(id)"
+                        ))
+                        conn.commit()
+                        print("Added quiz_answer.submission_id column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'quiz_answer' AND column_name = 'submission_id'"
+                    ))
+                    if r.fetchone() is None:
+                        t = conn.execute(text(
+                            "SELECT 1 FROM information_schema.tables WHERE table_name = 'quiz_answer'"
+                        ))
+                        if t.fetchone() is not None:
+                            conn.execute(text(
+                                "ALTER TABLE quiz_answer ADD COLUMN submission_id INTEGER "
+                                "REFERENCES submission(id)"
+                            ))
+                            conn.commit()
+                            print("Added quiz_answer.submission_id column.")
+        except Exception as e:
+            print(f"Note: quiz_answer.submission_id column check failed (may already exist): {e}")
+
+        # grade_attachment table for feedback files on PDF/paper grades
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='grade_attachment'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            """
+                            CREATE TABLE grade_attachment (
+                                id INTEGER PRIMARY KEY,
+                                grade_id INTEGER NOT NULL REFERENCES grade(id),
+                                attachment_filename VARCHAR(255) NOT NULL,
+                                attachment_original_filename VARCHAR(255),
+                                attachment_file_path VARCHAR(500),
+                                attachment_file_size INTEGER,
+                                attachment_mime_type VARCHAR(100),
+                                sort_order INTEGER NOT NULL DEFAULT 0,
+                                uploaded_at DATETIME
+                            )
+                            """
+                        ))
+                        conn.commit()
+                        print("Created grade_attachment table.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.tables WHERE table_name = 'grade_attachment'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            """
+                            CREATE TABLE grade_attachment (
+                                id SERIAL PRIMARY KEY,
+                                grade_id INTEGER NOT NULL REFERENCES grade(id),
+                                attachment_filename VARCHAR(255) NOT NULL,
+                                attachment_original_filename VARCHAR(255),
+                                attachment_file_path VARCHAR(500),
+                                attachment_file_size INTEGER,
+                                attachment_mime_type VARCHAR(100),
+                                sort_order INTEGER NOT NULL DEFAULT 0,
+                                uploaded_at TIMESTAMP
+                            )
+                            """
+                        ))
+                        conn.commit()
+                        print("Created grade_attachment table.")
+        except Exception as e:
+            print(f"Note: grade_attachment table check failed (may already exist): {e}")
+
         # Add report_card columns for auto-generation provenance if missing
         try:
             with db.engine.connect() as conn:

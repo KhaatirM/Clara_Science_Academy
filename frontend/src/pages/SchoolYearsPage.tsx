@@ -13,6 +13,7 @@ import {
 } from '../api/schoolYears'
 import { LegacyBootstrapModal } from '../components/legacy/LegacyBootstrapModal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import type { AcademicPeriod, CalendarEventRow, SchoolYearRow, SchoolYearsPageResponse } from '../types/schoolYears'
 import { formatDateLong, formatDateShort } from '../utils/formatDate'
@@ -811,17 +812,14 @@ function UploadPdfModal({
             and conferences automatically.
           </div>
           <div className="mb-3">
-            <label htmlFor="calendar_pdf" className="form-label">
+            <label className="form-label">
               Calendar PDF <span className="text-danger">*</span>
             </label>
-            <input
-              type="file"
-              className="form-control"
-              id="calendar_pdf"
-              name="calendar_pdf"
-              accept=".pdf"
-              required
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            <DocumentFileField
+              files={file ? [file] : []}
+              onChange={(next) => setFile(next[0] ?? null)}
+              accept=".pdf,application/pdf"
+              helpText="Upload from your computer or Google Drive."
             />
           </div>
           <div className="mb-3">

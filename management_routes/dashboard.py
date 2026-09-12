@@ -467,8 +467,10 @@ def redo_dashboard():
     
     # Role/visibility rules:
     # - Teachers: only students/classes they are attached to (primary, additional, or substitute teacher)
-    # - School admins: see all classes in the active school year
-    is_school_admin = current_user.role in ('Director', 'School Administrator')
+    # - School Admin / Director (incl. dual-role): see all classes in the active school year
+    from utils.user_roles import user_has_management_entry_access
+
+    is_school_admin = user_has_management_entry_access(current_user)
     is_teacher_user = (not is_school_admin) and bool(getattr(current_user, 'teacher_staff_id', None))
 
     teacher = None

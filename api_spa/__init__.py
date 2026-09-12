@@ -191,3 +191,5 @@ from api_spa import class_syllabus as _spa_class_syllabus  # noqa: F401, E402
 from api_spa import class_notes as _spa_class_notes  # noqa: F401, E402
 from api_spa import parent_dashboard as _spa_parent_dashboard  # noqa: F401, E402
 from api_spa import bell_schedule as _spa_bell_schedule  # noqa: F401, E402
+from api_spa import drive as _spa_drive  # noqa: F401, E402
+from api_spa import grade_attachments as _spa_grade_attachments  # noqa: F401, E402

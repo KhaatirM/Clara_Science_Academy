@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useOutletContext, useParams } from 'react-router-dom'
 import {
   classNotesItemDownloadUrl,
@@ -17,6 +17,7 @@ import {
 import { ClassSubpageShell } from '../components/classes/ClassSubpageShell'
 import { ClassWorkflowNav } from '../components/classes/ClassWorkflowNav'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import type {
   ClassNotesDriveLink,
   ClassNotesFolder,
@@ -349,7 +350,6 @@ export function ClassNotesPage() {
   const outlet = useOutletContext<ManagementOutletContext | null>()
   const user = outlet?.user
   const isDirector = user?.role_canonical === 'Director'
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const [data, setData] = useState<ClassNotesResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -544,7 +544,6 @@ export function ClassNotesPage() {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setBusy(false)
-      if (fileRef.current) fileRef.current.value = ''
       setDragOver(false)
     }
   }
@@ -857,25 +856,16 @@ export function ClassNotesPage() {
                   </p>
                 </div>
                 {canManage ? (
-                  <div>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      multiple
-                      className="hidden"
-                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mov"
-                      onChange={(e) => void onUploadMany(e.target.files)}
-                    />
-                    <button
-                      type="button"
-                      disabled={busy}
-                      className="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      <i className="bi bi-cloud-upload me-1" aria-hidden />
-                      {busy ? 'Working…' : 'Upload files'}
-                    </button>
-                  </div>
+                  <DocumentFileField
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mov"
+                    multiple
+                    disabled={busy}
+                    driveScope={scope === 'teacher' ? 'teacher' : 'management'}
+                    helpText="Upload from your computer or Google Drive into this folder."
+                    onChange={(picked) => {
+                      if (picked.length) void onUploadMany(picked)
+                    }}
+                  />
                 ) : null}
               </div>
 

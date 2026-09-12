@@ -33,7 +33,11 @@ function draftsEqual(a: GradeRowDraft, b: GradeRowDraft): boolean {
     a.comment === b.comment &&
     a.submission_type === b.submission_type &&
     a.submission_notes_type === b.submission_notes_type &&
-    a.submission_notes === b.submission_notes
+    a.submission_notes === b.submission_notes &&
+    a.feedback_files.length === b.feedback_files.length &&
+    a.feedback_files.every((f, i) => f === b.feedback_files[i]) &&
+    a.remove_feedback_attachment_ids.length === b.remove_feedback_attachment_ids.length &&
+    a.remove_feedback_attachment_ids.every((id, i) => id === b.remove_feedback_attachment_ids[i])
   )
 }
 
@@ -164,9 +168,13 @@ export function PdfPaperGradingPanel({
             submission_type: snapshot.submission_type,
             submission_notes_type: snapshot.submission_notes_type,
             submission_notes: snapshot.submission_notes,
+            feedback_files: snapshot.feedback_files,
+            remove_feedback_attachment_ids: snapshot.remove_feedback_attachment_ids,
           },
           workspaceScope,
         )
+        const attachmentChanged =
+          snapshot.feedback_files.length > 0 || snapshot.remove_feedback_attachment_ids.length > 0
         const current = draftsRef.current[rowKey(studentId)]
         if (current && draftsEqual(current, snapshot)) {
           dirtyIdsRef.current.delete(studentId)
@@ -177,8 +185,9 @@ export function PdfPaperGradingPanel({
         if (!silent) {
           setMessage(`Saved grade for ${row.student.display_name}`)
         }
-        // Full reload only when requested; dirty drafts are preserved across reloads.
-        if (shouldReload) onSavedRef.current?.()
+        // Full reload when attachments changed so the attachment list refreshes.
+        if (shouldReload || attachmentChanged) onSavedRef.current?.()
+        return
       } catch (e) {
         setMessage(e instanceof Error ? e.message : 'Save failed')
       } finally {

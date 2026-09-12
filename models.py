@@ -1139,6 +1139,8 @@ class QuizAnswer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     question_id = db.Column(db.Integer, db.ForeignKey('quiz_question.id'), nullable=False)
+    # Links answers to a specific quiz attempt (Submission). Null for legacy rows.
+    submission_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=True)
     answer_text = db.Column(db.Text, nullable=True)  # For short answer and essay
     selected_option_id = db.Column(db.Integer, db.ForeignKey('quiz_option.id'), nullable=True)  # For multiple choice and true/false
     is_correct = db.Column(db.Boolean, nullable=True)  # Calculated when submitted
@@ -1148,6 +1150,7 @@ class QuizAnswer(db.Model):
     student = db.relationship('Student', backref='quiz_answers', lazy=True)
     question = db.relationship('QuizQuestion', backref='answers', lazy=True)
     selected_option = db.relationship('QuizOption', backref='selected_answers', lazy=True)
+    submission = db.relationship('Submission', backref='quiz_answers', lazy=True, foreign_keys=[submission_id])
     
     def __repr__(self):
         return f"QuizAnswer(Student: {self.student_id}, Question: {self.question_id}, Correct: {self.is_correct})"
@@ -1323,6 +1326,29 @@ class Grade(db.Model):
 
     def __repr__(self):
         return f"Grade(Student: {self.student_id}, Assignment: {self.assignment_id})"
+
+
+class GradeAttachment(db.Model):
+    """Teacher feedback file attachments linked to a Grade row (PDF/paper grading)."""
+
+    __tablename__ = 'grade_attachment'
+    id = db.Column(db.Integer, primary_key=True)
+    grade_id = db.Column(db.Integer, db.ForeignKey('grade.id'), nullable=False)
+    attachment_filename = db.Column(db.String(255), nullable=False)
+    attachment_original_filename = db.Column(db.String(255), nullable=True)
+    attachment_file_path = db.Column(db.String(500), nullable=True)
+    attachment_file_size = db.Column(db.Integer, nullable=True)
+    attachment_mime_type = db.Column(db.String(100), nullable=True)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    grade = db.relationship(
+        'Grade',
+        backref=db.backref('feedback_attachments', lazy=True, cascade='all, delete-orphan'),
+    )
+
+    def __repr__(self):
+        return f"GradeAttachment(grade_id={self.grade_id}, filename={self.attachment_original_filename})"
 
 
 class GradeHistory(db.Model):

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   classSyllabusDownloadUrl,
   deleteClassSyllabus,
   fetchClassSyllabus,
   uploadClassSyllabus,
 } from '../../api/classSyllabus'
+import { DocumentFileField } from '../uploads/DocumentFileField'
 import type { ClassSyllabusResponse, SyllabusOutline, SyllabusSection } from '../../types/classSyllabus'
 
 type Props = {
@@ -14,12 +15,12 @@ type Props = {
 }
 
 export function ClassSyllabusModal({ open, classId, onClose }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null)
   const [data, setData] = useState<ClassSyllabusResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
 
   const load = useCallback(async () => {
     if (!Number.isFinite(classId) || classId <= 0) return
@@ -55,12 +56,12 @@ export function ClassSyllabusModal({ open, classId, onClose }: Props) {
     try {
       const res = await uploadClassSyllabus(classId, file)
       setData(res)
+      setPendingFiles([])
       setMessage(res.message || 'Syllabus uploaded.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setBusy(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -131,24 +132,20 @@ export function ClassSyllabusModal({ open, classId, onClose }: Props) {
                     Upload a PDF, DOCX, TXT, or Markdown file. The outline appears here (not a PDF viewer).
                     Students can download the original.
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      ref={fileRef}
-                      type="file"
+                  <div className="space-y-2">
+                    <DocumentFileField
+                      files={pendingFiles}
+                      onChange={(next) => {
+                        const f = next[0] ?? null
+                        setPendingFiles(f ? [f] : [])
+                        if (f) void onUpload(f)
+                      }}
                       accept=".pdf,.docx,.txt,.md,application/pdf"
-                      className="hidden"
-                      onChange={(e) => void onUpload(e.target.files?.[0] || null)}
-                    />
-                    <button
-                      type="button"
                       disabled={busy}
-                      className="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      {busy ? 'Working…' : syllabus ? 'Replace syllabus' : 'Upload syllabus'}
-                    </button>
+                      helpText="PDF, DOCX, TXT, or Markdown — from your computer or Google Drive."
+                    />
                     {syllabus ? (
-                      <>
+                      <div className="flex flex-wrap items-center gap-2">
                         <a
                           href={classSyllabusDownloadUrl(classId)}
                           className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-800"
@@ -164,7 +161,7 @@ export function ClassSyllabusModal({ open, classId, onClose }: Props) {
                         >
                           Remove
                         </button>
-                      </>
+                      </div>
                     ) : null}
                   </div>
                   {syllabus ? (

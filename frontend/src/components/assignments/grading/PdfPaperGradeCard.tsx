@@ -1,4 +1,5 @@
 import type { GradeStudentRow } from '../../../api/assignmentWorkspace'
+import { DocumentFileField } from '../../uploads/DocumentFileField'
 import { GRADE_TONES, gradeToneFromLetter } from '../../../utils/gradeDisplay'
 import {
   bucketFromDraft,
@@ -15,6 +16,8 @@ export type GradeRowDraft = {
   submission_type: string
   submission_notes_type: string
   submission_notes: string
+  feedback_files: File[]
+  remove_feedback_attachment_ids: number[]
 }
 
 type Props = {
@@ -268,6 +271,51 @@ export function PdfPaperGradeCard({
             className="mt-0.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
           <div className="text-right text-xs text-hub-muted">{commentLen}/500</div>
+          {(row.grade.feedback_attachments || []).length > 0 ? (
+            <ul className="mt-2 space-y-1">
+              {(row.grade.feedback_attachments || []).map((att) => {
+                const marked = draft.remove_feedback_attachment_ids.includes(att.id)
+                return (
+                  <li
+                    key={att.id}
+                    className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-1 text-xs ${
+                      marked ? 'border-red-200 bg-red-50 text-red-800' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <a href={att.url} className="min-w-0 truncate font-semibold text-teal-800 hover:underline" target="_blank" rel="noreferrer">
+                      {att.name}
+                    </a>
+                    {!disabled ? (
+                      <button
+                        type="button"
+                        className="shrink-0 font-semibold underline"
+                        onClick={() => {
+                          const ids = draft.remove_feedback_attachment_ids
+                          onChange({
+                            remove_feedback_attachment_ids: marked
+                              ? ids.filter((x) => x !== att.id)
+                              : [...ids, att.id],
+                          })
+                        }}
+                      >
+                        {marked ? 'Keep' : 'Remove'}
+                      </button>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+          {!disabled ? (
+            <DocumentFileField
+              className="mt-2"
+              files={draft.feedback_files}
+              onChange={(files) => onChange({ feedback_files: files })}
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+              helpText="Attach feedback files from your computer or Google Drive."
+            />
+          ) : null}
         </div>
 
         {/* Current grade */}

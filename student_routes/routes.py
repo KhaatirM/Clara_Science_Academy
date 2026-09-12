@@ -3105,17 +3105,11 @@ def submit_quiz(assignment_id):
     try:
         # Get all questions for this assignment
         questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
-        # Replace prior answers for this assignment so grading/UI doesn't accidentally
-        # pull the student's first attempt answers (QuizAnswer isn't attempt-scoped).
-        q_ids = [q.id for q in questions]
-        if q_ids:
-            QuizAnswer.query.filter(
-                QuizAnswer.student_id == student.id,
-                QuizAnswer.question_id.in_(q_ids),
-            ).delete(synchronize_session=False)
+        # Keep prior attempt answers; new rows are linked to this submission.
         total_points = 0
         earned_points = 0
         has_open_ended = False
+        answer_rows = []
         
         # Process each question
         for question in questions:
@@ -3136,7 +3130,7 @@ def submit_quiz(assignment_id):
                             is_correct=is_correct,
                             points_earned=points_earned
                         )
-                        db.session.add(answer)
+                        answer_rows.append(answer)
                         
                         if is_correct:
                             earned_points += points_earned
@@ -3160,7 +3154,7 @@ def submit_quiz(assignment_id):
                     selected_ids=selected_ids,
                     question_points=question.points,
                 )
-                db.session.add(QuizAnswer(
+                answer_rows.append(QuizAnswer(
                     student_id=student.id,
                     question_id=question.id,
                     selected_option_id=selected_ids[0] if selected_ids else None,
@@ -3185,17 +3179,21 @@ def submit_quiz(assignment_id):
                     is_correct=None,  # Will be graded manually
                     points_earned=points_earned
                 )
-                db.session.add(answer)
+                answer_rows.append(answer)
             
             total_points += question.points
         
-        # Create submission record
+        # Create submission record, then link answers to this attempt
         submission = Submission(
             student_id=student.id,
             assignment_id=assignment_id,
             comments=f"Quiz submitted with {earned_points}/{total_points} points"
         )
         db.session.add(submission)
+        db.session.flush()
+        for answer in answer_rows:
+            answer.submission_id = submission.id
+            db.session.add(answer)
         
         # Create/update grade record using grade_data JSON format
         import json

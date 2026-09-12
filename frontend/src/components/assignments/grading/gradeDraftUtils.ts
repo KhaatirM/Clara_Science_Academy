@@ -30,6 +30,8 @@ export function draftFromGradeRow(row: GradeStudentRow): GradeRowDraft {
     submission_type: sub?.submission_type || row.submission_type || 'not_submitted',
     submission_notes_type: submissionNotesType,
     submission_notes: submissionNotes,
+    feedback_files: [],
+    remove_feedback_attachment_ids: [],
   }
 }
 

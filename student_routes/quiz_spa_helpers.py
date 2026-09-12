@@ -65,8 +65,10 @@ def _access_error(assignment: Assignment, student: Student) -> tuple[str | None,
 
 
 def build_student_quiz_payload(
-    assignment_id: int, *, retake: bool = False
+    assignment_id: int, *, retake: bool = False, attempt_submission_id: int | None = None
 ) -> tuple[dict[str, Any] | None, str | None, int]:
+    from teacher_routes.assignment_utils import parse_quiz_submission_auto_score
+
     from .routes import _pick_best_quiz_grade_row
 
     student = _student()
@@ -110,14 +112,13 @@ def build_student_quiz_payload(
         return None, "This assignment is no longer available.", 403
 
     is_retake = bool(retake)
-    submission = (
+    all_submissions = (
         Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id)
-        .order_by(Submission.submitted_at.desc())
-        .first()
+        .order_by(Submission.submitted_at.asc())
+        .all()
     )
-    submissions_count = Submission.query.filter_by(
-        student_id=student.id, assignment_id=assignment_id
-    ).count()
+    submissions_count = len(all_submissions)
+    submission = all_submissions[-1] if all_submissions else None
 
     effective_max_attempts = assignment.max_attempts
     if active_reopening and active_reopening.additional_attempts > 0:
@@ -168,12 +169,15 @@ def build_student_quiz_payload(
         except Exception:
             grade_data = None
 
-    if is_retake and attempts_remaining and attempts_remaining > 0:
+    # Retake starts blank whenever attempts remain (including unlimited max_attempts).
+    retake_allowed = is_retake and (attempts_remaining is None or attempts_remaining > 0)
+    if retake_allowed:
         submission = None
         grade = None
         grade_data = None
         grading_status = None
         grade_percentage = None
+        attempt_submission_id = None
         QuizProgress.query.filter_by(
             student_id=student.id, assignment_id=assignment_id
         ).delete(synchronize_session=False)
@@ -198,16 +202,29 @@ def build_student_quiz_payload(
     show_correct = bool(assignment.show_correct_answers and submission and not is_retake)
     results_mode = bool(submission and not is_retake)
 
+    review_submission = submission
+    if results_mode and attempt_submission_id and allow_review_previous and not block_prior_review:
+        for sub in all_submissions:
+            if sub.id == int(attempt_submission_id):
+                review_submission = sub
+                break
+
     existing_answers: dict[int, Any] = {}
-    if results_mode:
-        answers = (
-            QuizAnswer.query.join(QuizQuestion)
-            .filter(
-                QuizAnswer.student_id == student.id,
-                QuizQuestion.assignment_id == assignment_id,
-            )
-            .all()
+    if results_mode and review_submission:
+        answers_q = QuizAnswer.query.join(QuizQuestion).filter(
+            QuizAnswer.student_id == student.id,
+            QuizQuestion.assignment_id == assignment_id,
         )
+        linked = answers_q.filter(QuizAnswer.submission_id == review_submission.id).all()
+        if linked:
+            answers = linked
+        elif all_submissions and review_submission.id == all_submissions[-1].id:
+            # Legacy: unscoped answers belong to the latest attempt only.
+            answers = answers_q.filter(QuizAnswer.submission_id.is_(None)).all()
+            if not answers:
+                answers = answers_q.all()
+        else:
+            answers = []
         for answer in answers:
             existing_answers[answer.question_id] = {
                 "selected_option_id": answer.selected_option_id,
@@ -215,6 +232,33 @@ def build_student_quiz_payload(
                 "is_correct": answer.is_correct,
                 "points_earned": answer.points_earned,
             }
+
+    attempts_out: list[dict[str, Any]] = []
+    if results_mode and allow_review_previous and not block_prior_review:
+        for idx, sub in enumerate(all_submissions, start=1):
+            parsed = parse_quiz_submission_auto_score(sub.comments)
+            has_answers = QuizAnswer.query.filter_by(submission_id=sub.id).first() is not None
+            if not has_answers and idx == len(all_submissions):
+                has_answers = (
+                    QuizAnswer.query.join(QuizQuestion)
+                    .filter(
+                        QuizAnswer.student_id == student.id,
+                        QuizQuestion.assignment_id == assignment_id,
+                        QuizAnswer.submission_id.is_(None),
+                    )
+                    .first()
+                    is not None
+                )
+            attempts_out.append(
+                {
+                    "attempt_num": idx,
+                    "submission_id": sub.id,
+                    "submitted_at": sub.submitted_at.isoformat() if sub.submitted_at else None,
+                    "parsed_score": parsed,
+                    "has_stored_answers": bool(has_answers),
+                    "is_selected": bool(review_submission and review_submission.id == sub.id),
+                }
+            )
 
     questions_out = []
     for q in questions:
@@ -296,11 +340,13 @@ def build_student_quiz_payload(
 
     can_retake = bool(
         results_mode
-        and attempts_remaining is not None
-        and attempts_remaining > 0
         and (
             is_assignment_open_for_student(assignment, student.id)
             or bool(active_reopening)
+        )
+        and (
+            (attempts_remaining is not None and attempts_remaining > 0)
+            or (attempts_remaining is None and not effective_max_attempts)
         )
     )
 
@@ -327,9 +373,13 @@ def build_student_quiz_payload(
             "attempts_remaining": attempts_remaining,
             "can_retake": can_retake,
             "has_open_ended": any(q["question_type"] in ("short_answer", "essay") for q in questions_out),
-            "allow_review_previous_attempts": allow_review_previous,
+            "allow_review_previous_attempts": allow_review_previous and not block_prior_review,
             "prior_review_blocked": block_prior_review,
+            "selected_submission_id": (
+                review_submission.id if results_mode and review_submission else None
+            ),
         },
+        "attempts": attempts_out,
         "grade": (
             {
                 "percentage": grade_percentage,
@@ -429,16 +479,11 @@ def submit_student_quiz(
 
     try:
         questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
-        q_ids = [q.id for q in questions]
-        if q_ids:
-            QuizAnswer.query.filter(
-                QuizAnswer.student_id == student.id,
-                QuizAnswer.question_id.in_(q_ids),
-            ).delete(synchronize_session=False)
 
         total_points = 0
         earned_points = 0
         has_open_ended = False
+        answer_rows: list[QuizAnswer] = []
 
         for question in questions:
             raw = answers.get(str(question.id), answers.get(question.id))
@@ -448,7 +493,7 @@ def submit_student_quiz(
                         selected_option = QuizOption.query.get(int(raw))
                         is_correct = bool(selected_option and selected_option.is_correct)
                         points_earned = question.points if is_correct else 0
-                        db.session.add(
+                        answer_rows.append(
                             QuizAnswer(
                                 student_id=student.id,
                                 question_id=question.id,
@@ -474,7 +519,7 @@ def submit_student_quiz(
                     selected_ids=selected_ids,
                     question_points=question.points,
                 )
-                db.session.add(
+                answer_rows.append(
                     QuizAnswer(
                         student_id=student.id,
                         question_id=question.id,
@@ -488,7 +533,7 @@ def submit_student_quiz(
                     earned_points += points_earned
             elif question.question_type in ("short_answer", "essay"):
                 has_open_ended = True
-                db.session.add(
+                answer_rows.append(
                     QuizAnswer(
                         student_id=student.id,
                         question_id=question.id,
@@ -499,13 +544,16 @@ def submit_student_quiz(
                 )
             total_points += question.points or 0
 
-        db.session.add(
-            Submission(
-                student_id=student.id,
-                assignment_id=assignment_id,
-                comments=f"Quiz submitted with {earned_points}/{total_points} points",
-            )
+        submission = Submission(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            comments=f"Quiz submitted with {earned_points}/{total_points} points",
         )
+        db.session.add(submission)
+        db.session.flush()
+        for row in answer_rows:
+            row.submission_id = submission.id
+            db.session.add(row)
 
         grade_percentage = (earned_points / total_points * 100) if total_points > 0 else 0
         grade_data = {

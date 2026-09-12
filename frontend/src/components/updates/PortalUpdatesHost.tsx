@@ -1,32 +1,40 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep11_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep12_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
+    title: 'Feedback files on PDF/paper grades',
+    body: 'When grading PDF/paper work, attach one or more documents with your written feedback. Students see and download them next to teacher feedback on Assignments.',
+  },
+  {
+    title: 'Upload from Google Drive anywhere',
+    body: 'Document uploads across the portal (assignments, submissions, Class Notes, syllabus, and more) now offer From Google Drive. Files are copied into the portal like a normal upload. Connect Google in Settings first.',
+  },
+  {
+    title: 'Pending grades are smarter by type',
+    body: 'Fully auto quizzes stay out of the pending list. Open-ended quizzes and discussions only show when teacher action is needed. Missing quiz/discussion work past the student’s effective due date is auto-zeroed (extensions and live redos are honored).',
+  },
+  {
+    title: 'Retake quiz starts blank immediately',
+    body: 'Retake from Assignments opens a fresh attempt right away (not the previous results view). Use View previous attempts on the results page when review is allowed.',
+  },
+  {
+    title: 'Quiz answers are kept per attempt',
+    body: 'New submissions store answers with that attempt, so students and teachers can review earlier tries. Older attempts from before this change may still show score only.',
+  },
+  {
+    title: 'School Admin+ sees school-wide redos',
+    body: 'Directors and School Administrators (including dual-role teacher accounts) see all redo and extension requests across the school, not only classes they teach.',
+  },
+  {
     title: 'Quiz multi-attempt grading is clearer',
-    body: 'On Submissions, pick which attempt to review. The score bar matches that attempt, Official grade on file shows the best score separately, and answers are labeled as the latest attempt (prior answer text is not stored).',
+    body: 'On Submissions, pick which attempt to review. The score bar matches that attempt, Official grade on file shows the best score separately, and answers load for attempts that have stored responses.',
   },
   {
     title: 'Stuck “Redo approved” without access is fixed',
     body: 'Older quiz redos that were approved (or revoked before the revoke fix) could stay labeled Approved while the quiz remained closed. Those orphaned approvals now flip to Redo revoked so the student can request again, and teachers can re-grant with the current quiz redo flow.',
-  },
-  {
-    title: 'Revoked redos can be requested again',
-    body: 'If a teacher revokes an approved redo, students see Redo revoked on the assignment and can submit a new redo request.',
-  },
-  {
-    title: 'Quiz redo: review previous attempts option',
-    body: 'When granting a quiz redo, choose whether the student can review prior answers while the redo is active. If off, they go straight into a new attempt.',
-  },
-  {
-    title: 'Pending grades shows assignment type',
-    body: 'The Grades pending review list now labels each item as Quiz, Discussion, PDF / Paper, or Group so you can tell them apart quickly.',
-  },
-  {
-    title: 'Quiz redo grants ask for attempts',
-    body: 'When approving a quiz redo, choose how many additional attempts to give. The quiz reopens through the deadline you pick, and those retries stay available for the student.',
   },
   {
     title: 'Approved quiz redos show as open',
@@ -286,10 +294,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.39'
-  const releaseLabel = version?.release_label || 'September 9, 2026'
+  const display = version?.display || 'v 2.520.41'
+  const releaseLabel = version?.release_label || 'September 12, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2767
+  const updatesEstimate = version?.updates_estimate ?? 2776
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

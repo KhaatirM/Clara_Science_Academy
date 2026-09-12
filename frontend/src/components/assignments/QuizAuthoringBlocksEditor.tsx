@@ -1,4 +1,5 @@
 import { useCallback, useId, useState } from 'react'
+import { DocumentFileField } from '../uploads/DocumentFileField'
 import { FieldLabel, inputClass } from './AssignmentCreateLayout'
 import {
   createEmptyQuestion,
@@ -947,16 +948,18 @@ export function QuizAuthoringBlocksEditor({
                     Upload a CSV file. First row must be headers. Import{' '}
                     <strong>replaces</strong> all current questions and sections.
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="file"
-                      accept=".csv,text/csv"
-                      className={`${inputClass()} min-w-0 flex-1`}
-                      onChange={(e) => {
-                        setCsvFile(e.target.files?.[0] || null)
-                        setCsvError(null)
-                      }}
-                    />
+                  <div className="flex flex-wrap items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <DocumentFileField
+                        files={csvFile ? [csvFile] : []}
+                        onChange={(next) => {
+                          setCsvFile(next[0] || null)
+                          setCsvError(null)
+                        }}
+                        accept=".csv,text/csv"
+                        helpText="CSV from your computer or Google Drive."
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={downloadQuizCsvTemplate}

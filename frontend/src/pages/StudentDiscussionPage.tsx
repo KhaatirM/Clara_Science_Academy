@@ -8,6 +8,7 @@ import {
   fetchDiscussionThread,
   replyToDiscussionThread,
 } from '../api/studentDiscussion'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type {
   DiscussionAttachment,
@@ -494,11 +495,11 @@ export function StudentDiscussionThreadPage() {
                     placeholder="Share your thoughts…"
                     required
                   />
-                  <input
-                    type="file"
-                    className="form-control mb-3"
+                  <DocumentFileField
+                    files={files}
+                    onChange={setFiles}
                     multiple
-                    onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                    helpText="Optional attachments from your computer or Google Drive."
                   />
                   <button
                     type="submit"
@@ -668,11 +669,11 @@ function CreateThreadModal({
             onChange={(e) => setContent(e.target.value)}
             required
           />
-          <input
-            type="file"
-            className="form-control"
+          <DocumentFileField
+            files={files}
+            onChange={setFiles}
             multiple
-            onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            helpText="Optional attachments from your computer or Google Drive."
           />
           <div className="flex justify-end gap-2">
             <button type="button" className={discBtnMuted} onClick={onClose}>

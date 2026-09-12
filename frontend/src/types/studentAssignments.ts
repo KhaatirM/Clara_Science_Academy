@@ -6,6 +6,13 @@ export interface StudentAssignmentGradeInfo {
   letter: string | null
   feedback: string | null
   feedback_preview: string | null
+  feedback_attachments?: Array<{
+    id: number
+    name: string
+    size?: number | null
+    mime_type?: string | null
+    url: string
+  }>
   display: string | null
 }
 

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   fetchAssignmentEditForm,
   saveAssignmentEdit,
   type AssignmentEditForm,
 } from '../../api/assignmentWorkspace'
+import { DocumentFileField } from '../uploads/DocumentFileField'
 import { isPdfPaperAssignmentType } from '../../utils/assignmentTypes'
 import type { AssignmentWorkspaceScope } from '../../utils/assignmentWorkspaceScope'
 import { isoToSchoolDatetimeLocal } from '../../utils/schoolTimezone'
@@ -59,7 +60,6 @@ export function EditAssignmentModal({
   onClose: () => void
   onSaved: (message: string) => void
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<AssignmentEditForm | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -177,21 +177,6 @@ export function EditAssignmentModal({
   function toggleRemove(id: number | null) {
     if (id == null) return
     setRemoveIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  }
-
-  function onPickFiles(list: FileList | null) {
-    if (!list?.length) return
-    const picked = Array.from(list)
-    setNewFiles((prev) => {
-      const next = [...prev]
-      for (const file of picked) {
-        const exists = next.some(
-          (f) => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified,
-        )
-        if (!exists) next.push(file)
-      }
-      return next
-    })
   }
 
   return (
@@ -361,31 +346,6 @@ export function EditAssignmentModal({
               {isPdfLike ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wide text-hub-muted">Documents</p>
-                  {newFiles.length > 0 ? (
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-2">
-                      <p className="mb-2 text-xs font-semibold text-emerald-900">
-                        Ready to attach ({newFiles.length})
-                      </p>
-                      <ul className="space-y-1 text-sm">
-                        {newFiles.map((f, index) => (
-                          <li
-                            key={`${f.name}-${f.size}-${f.lastModified}`}
-                            className="flex items-center gap-2 text-emerald-900"
-                          >
-                            <i className="bi bi-file-earmark-plus shrink-0" aria-hidden />
-                            <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                            <button
-                              type="button"
-                              className="shrink-0 text-xs text-slate-600 underline"
-                              onClick={() => setNewFiles((prev) => prev.filter((_, i) => i !== index))}
-                            >
-                              Remove
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
                   {(form.attachments || []).length > 0 ? (
                     <ul className="space-y-2 text-sm text-hub-text">
                       {form.attachments!.map((a, idx) => (
@@ -417,26 +377,18 @@ export function EditAssignmentModal({
                   ) : (
                     <p className="text-xs text-hub-muted">No documents yet.</p>
                   )}
-                  <div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple={!isGroup}
-                      className="hidden"
-                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
-                      onChange={(e) => onPickFiles(e.target.files)}
-                    />
-                    <button
-                      type="button"
-                      className="inline-flex rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {isGroup ? 'Add or replace document' : 'Add documents'}
-                    </button>
-                    <p className="mt-1 text-xs text-hub-muted">
-                      Selected files appear above. They are uploaded when you click Save changes.
-                    </p>
-                  </div>
+                  <DocumentFileField
+                    files={newFiles}
+                    onChange={(next) => setNewFiles(isGroup ? next.slice(-1) : next)}
+                    multiple={!isGroup}
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
+                    helpText={
+                      isGroup
+                        ? 'Add or replace one document from your computer or Google Drive.'
+                        : 'Add documents from your computer or Google Drive. Uploaded when you Save changes.'
+                    }
+                    driveScope={workspaceScope === 'teacher' ? 'teacher' : 'management'}
+                  />
                 </div>
               ) : null}
 

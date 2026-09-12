@@ -8,6 +8,7 @@ import {
   FormSection,
   inputClass,
 } from '../components/assignments/AssignmentCreateLayout'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import { appendDatetime, appendIfChecked, postAssignmentForm } from '../api/assignmentCreateActions'
 import {
   fetchClassGroups,
@@ -470,16 +471,13 @@ export function CreateGroupPdfAssignmentPage() {
           </FormSection>
 
           <FormSection title="Attachment" icon="bi-paperclip" tone="success">
-            <input
-              type="file"
-              className="text-sm"
+            <DocumentFileField
+              files={attachment ? [attachment] : []}
+              onChange={(next) => setAttachment(next[0] ?? null)}
               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
-              onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+              helpText="Attach one file from your computer or Google Drive when you create the assignment."
+              driveScope={scope === 'teacher' ? 'teacher' : 'management'}
             />
-            <p className="mt-1 text-xs text-slate-500">
-              File attaches when you create the assignment.
-            </p>
-            {attachment ? <p className="mt-2 text-sm text-slate-600">{attachment.name}</p> : null}
           </FormSection>
 
           {formError ? <p className="text-sm font-semibold text-red-700">{formError}</p> : null}

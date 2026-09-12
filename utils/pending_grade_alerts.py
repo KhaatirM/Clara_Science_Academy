@@ -9,12 +9,13 @@ from __future__ import annotations
 import json
 import threading
 import time
+from datetime import datetime
 from typing import Any
 
 from flask_login import current_user
 
 _CACHE_TTL_SECONDS = 300
-_CACHE_VERSION = 1
+_CACHE_VERSION = 2
 _cache_lock = threading.Lock()
 _cache: dict[tuple, tuple[float, dict[str, Any]]] = {}
 
@@ -108,34 +109,148 @@ def _resolve_class_ids(scope: str) -> list[int]:
 
 
 def _count_individual_pending(assignment, enrolled_ids: set[int]) -> int:
-    from models import Grade, Submission
+    from models import DiscussionPost, DiscussionThread, Grade, QuizQuestion, Submission
+    from utils.academic_concern_assignments import pick_best_quiz_grade_row
 
     if not enrolled_ids:
         return 0
+
+    atype = (assignment.assignment_type or "pdf").lower()
     grades = Grade.query.filter(
         Grade.assignment_id == assignment.id,
         Grade.student_id.in_(enrolled_ids),
     ).all()
-    grade_by_student = {g.student_id: g for g in grades}
-    voided_ids = {g.student_id for g in grades if getattr(g, "is_voided", False)}
+    grades_by_student: dict[int, list] = {}
+    for g in grades:
+        grades_by_student.setdefault(g.student_id, []).append(g)
+    voided_ids = {
+        g.student_id for g in grades if getattr(g, "is_voided", False)
+    }
 
-    submissions = (
-        Submission.query.filter(
+    def _pick_grade(sid: int):
+        rows = grades_by_student.get(sid) or []
+        if atype == "quiz":
+            return pick_best_quiz_grade_row(rows, assignment.total_points) or (
+                rows[0] if rows else None
+            )
+        # Newest first for non-quiz
+        rows_sorted = sorted(
+            rows,
+            key=lambda g: (g.graded_at or datetime.min, g.id or 0),
+            reverse=True,
+        )
+        return rows_sorted[0] if rows_sorted else None
+
+    # Fully auto quizzes never need teacher pending action.
+    if atype == "quiz":
+        has_open_ended = (
+            QuizQuestion.query.filter_by(assignment_id=assignment.id)
+            .filter(QuizQuestion.question_type.in_(("short_answer", "essay")))
+            .count()
+            > 0
+        )
+        if not has_open_ended:
+            return 0
+        # Open-ended: one pending per student with a submission and pending grade.
+        submitted_ids = {
+            s.student_id
+            for s in Submission.query.filter(
+                Submission.assignment_id == assignment.id,
+                Submission.student_id.in_(enrolled_ids),
+                Submission.submission_type.in_(("online", "in_person")),
+            ).all()
+        }
+        pending = 0
+        for sid in submitted_ids:
+            if sid in voided_ids:
+                continue
+            grade = _pick_grade(sid)
+            if grade and getattr(grade, "is_voided", False):
+                continue
+            gdata = _parse_grade_data(grade.grade_data) if grade else None
+            if _has_usable_score(gdata):
+                continue
+            # Pending when grading_status is pending OR no usable score yet.
+            pending += 1
+        return pending
+
+    if atype == "discussion":
+        thread_rows = DiscussionThread.query.filter_by(assignment_id=assignment.id).all()
+        thread_ids = [t.id for t in thread_rows]
+        participated: set[int] = {t.student_id for t in thread_rows if t.student_id in enrolled_ids}
+        if thread_ids:
+            for post in DiscussionPost.query.filter(DiscussionPost.thread_id.in_(thread_ids)).all():
+                if post.student_id in enrolled_ids:
+                    participated.add(post.student_id)
+        pending = 0
+        for sid in participated:
+            if sid in voided_ids:
+                continue
+            grade = _pick_grade(sid)
+            if grade and getattr(grade, "is_voided", False):
+                continue
+            gdata = _parse_grade_data(grade.grade_data) if grade else None
+            if _has_usable_score(gdata):
+                continue
+            pending += 1
+        return pending
+
+    # PDF / paper / other: submitted without usable score (once per student).
+    submitted_ids = {
+        s.student_id
+        for s in Submission.query.filter(
             Submission.assignment_id == assignment.id,
             Submission.student_id.in_(enrolled_ids),
             Submission.submission_type.in_(("online", "in_person")),
         ).all()
-    )
+    }
+    # Active unused redo with prior score still counts as needing attention if
+    # there is a newer submission after grant without a usable redo final.
+    from models import AssignmentRedo
+
+    for redo in AssignmentRedo.query.filter(
+        AssignmentRedo.assignment_id == assignment.id,
+        AssignmentRedo.student_id.in_(enrolled_ids),
+        AssignmentRedo.is_used.is_(False),
+    ).all():
+        if redo.student_id in enrolled_ids:
+            submitted_ids.add(redo.student_id)
+
     pending = 0
-    for sub in submissions:
-        sid = sub.student_id
+    for sid in submitted_ids:
         if sid in voided_ids:
             continue
-        grade = grade_by_student.get(sid)
+        grade = _pick_grade(sid)
         if grade and getattr(grade, "is_voided", False):
             continue
         gdata = _parse_grade_data(grade.grade_data) if grade else None
         if _has_usable_score(gdata):
+            # Unused redo still on file → teacher may need to grade the redo.
+            unused_redo = AssignmentRedo.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=sid,
+                is_used=False,
+            ).first()
+            if unused_redo and unused_redo.is_used is False:
+                # Only count if student already submitted a redo file after grant.
+                from models import Submission as SubModel
+
+                post_grant = False
+                if unused_redo.granted_at:
+                    post_grant = (
+                        SubModel.query.filter(
+                            SubModel.assignment_id == assignment.id,
+                            SubModel.student_id == sid,
+                            SubModel.submitted_at.isnot(None),
+                            SubModel.submitted_at >= unused_redo.granted_at,
+                        ).count()
+                        > 0
+                    )
+                if not post_grant:
+                    continue
+                # Has post-grant submission but grade still shows original usable score.
+                pending += 1
+                continue
             continue
         pending += 1
     return pending
@@ -264,6 +379,14 @@ def get_pending_grade_alerts_for_user(*, force_scope: str | None = None) -> dict
             with _cache_lock:
                 _cache[cache_key] = (time.time() + _CACHE_TTL_SECONDS, payload)
         return payload
+
+    # Apply quiz/discussion auto-zeros for this scope before counting.
+    try:
+        from utils.auto_zero_missing_work import apply_quiz_discussion_auto_zeros
+
+        apply_quiz_discussion_auto_zeros(class_ids=class_ids)
+    except Exception:
+        pass
 
     classes = {c.id: c for c in Class.query.filter(Class.id.in_(class_ids)).all()}
     enrolled_by_class: dict[int, set[int]] = {}

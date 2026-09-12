@@ -49,7 +49,16 @@ export type StudentQuizResponse = {
     has_open_ended: boolean
     allow_review_previous_attempts?: boolean
     prior_review_blocked?: boolean
+    selected_submission_id?: number | null
   }
+  attempts?: Array<{
+    attempt_num: number
+    submission_id: number
+    submitted_at: string | null
+    parsed_score: { earned: number; total: number; percentage: number } | null
+    has_stored_answers: boolean
+    is_selected: boolean
+  }>
   grade?: {
     percentage: number | null
     grading_status: string | null

@@ -84,6 +84,14 @@ def update_assignment_statuses(run_auto_zeros=False):
 
         db.session.commit()
 
+        # Quiz/discussion missing-work zeros after effective due (extensions/redos honored).
+        try:
+            from utils.auto_zero_missing_work import apply_quiz_discussion_auto_zeros
+
+            apply_quiz_discussion_auto_zeros()
+        except Exception as e:
+            print(f"Error applying quiz/discussion auto-zeros: {e}")
+
         # Apply automatic 0 for students with no grade 7 days after due/close only when explicitly requested.
         should_run_auto_zeros = bool(run_auto_zeros)
         try:

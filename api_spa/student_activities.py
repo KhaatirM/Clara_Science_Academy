@@ -24,7 +24,16 @@ from . import spa_api_blueprint
 @student_required
 def student_quiz_get(assignment_id: int):
     retake = request.args.get("retake", "").lower() in ("1", "true", "yes")
-    payload, error, status = build_student_quiz_payload(assignment_id, retake=retake)
+    attempt_raw = request.args.get("attempt")
+    attempt_submission_id = None
+    if attempt_raw not in (None, ""):
+        try:
+            attempt_submission_id = int(attempt_raw)
+        except (TypeError, ValueError):
+            attempt_submission_id = None
+    payload, error, status = build_student_quiz_payload(
+        assignment_id, retake=retake, attempt_submission_id=attempt_submission_id
+    )
     if error or not payload:
         return jsonify({"error": error or "Could not load quiz"}), status
     return jsonify(payload)

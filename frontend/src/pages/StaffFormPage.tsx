@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchStaffDetail, submitStaffForm } from '../api/staff'
 import { StaffCredentialModal } from '../components/staff/StaffCredentialModal'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import {
   EMERGENCY_RELATIONSHIPS,
   STAFF_DEPARTMENTS,
@@ -541,14 +542,14 @@ export function StaffFormPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <label>
+              <div>
                 <span className={labelClass}>Resume (PDF, DOC, DOCX)</span>
-                <input className={inputClass} type="file" name="resume" accept=".pdf,.doc,.docx" />
-              </label>
-              <label>
+                <DocumentFileField name="resume" accept=".pdf,.doc,.docx" />
+              </div>
+              <div>
                 <span className={labelClass}>Other documents</span>
-                <input className={inputClass} type="file" name="other_document" accept=".pdf,.doc,.docx,image/*" />
-              </label>
+                <DocumentFileField name="other_document" accept=".pdf,.doc,.docx,image/*" />
+              </div>
             </div>
           </div>
         </section>

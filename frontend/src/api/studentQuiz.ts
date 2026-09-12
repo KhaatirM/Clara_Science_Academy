@@ -1,9 +1,17 @@
 import { apiFetch } from './client'
 import type { QuizSubmitResponse, StudentQuizResponse } from '../types/studentQuiz'
 
-export async function fetchStudentQuiz(assignmentId: number, retake = false) {
-  const qs = retake ? '?retake=true' : ''
-  return apiFetch<StudentQuizResponse>(`/api/spa/student/quiz/${assignmentId}${qs}`)
+export async function fetchStudentQuiz(
+  assignmentId: number,
+  opts: { retake?: boolean; attemptSubmissionId?: number | null } = {},
+) {
+  const params = new URLSearchParams()
+  if (opts.retake) params.set('retake', 'true')
+  if (opts.attemptSubmissionId != null) params.set('attempt', String(opts.attemptSubmissionId))
+  const qs = params.toString()
+  return apiFetch<StudentQuizResponse>(
+    `/api/spa/student/quiz/${assignmentId}${qs ? `?${qs}` : ''}`,
+  )
 }
 
 export async function submitStudentQuiz(

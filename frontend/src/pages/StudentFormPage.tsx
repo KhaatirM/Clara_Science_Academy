@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { submitStudentAddForm } from '../api/students'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import { MgmtBootstrapRoot } from '../components/legacy/MgmtBootstrapRoot'
 import { StaffCredentialModal } from '../components/staff/StaffCredentialModal'
 import {
@@ -178,7 +179,7 @@ export function StudentFormPage() {
               <input type="file" name="student_image" accept="image/jpeg,image/png,image/gif" className={inputClass} />
             </Field>
             <Field label="Transcript">
-              <input type="file" name="transcript" className={inputClass} />
+              <DocumentFileField name="transcript" accept=".pdf,.doc,.docx,.txt" />
             </Field>
           </div>
         </section>

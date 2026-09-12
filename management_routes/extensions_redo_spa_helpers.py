@@ -168,12 +168,19 @@ def query_extensions_hub() -> dict[str, Any]:
 
 
 def _redo_visibility() -> tuple[bool, TeacherStaff | None, list[int], list]:
-    """Return (is_teacher_scoped, teacher, class_ids, classes)."""
-    is_school_admin = current_user.role in ("Director", "School Administrator")
-    is_teacher_user = (not is_school_admin) and bool(getattr(current_user, "teacher_staff_id", None))
+    """Return (is_teacher_scoped, teacher, class_ids, classes).
+
+    School Admin / Director (including dual-role with teacher_staff_id) see school-wide.
+    """
+    from utils.user_roles import user_has_management_entry_access
+
+    if user_has_management_entry_access(current_user):
+        classes = classes_for_active_school_year()
+        class_ids = [c.id for c in classes]
+        return False, None, class_ids, classes
 
     teacher = None
-    if is_teacher_user:
+    if getattr(current_user, "teacher_staff_id", None):
         teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
         if not teacher:
             return True, None, [], []

@@ -33,7 +33,7 @@ GOOGLE_NATIVE_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 _FILE_FIELDS = (
-    'id, name, mimeType, size, modifiedTime, webViewLink, iconLink, trashed, '
+    'id, name, mimeType, size, modifiedTime, webViewLink, iconLink, trashed, parents, '
     'shortcutDetails(targetId, targetMimeType)'
 )
 _LIST_FIELDS = f'nextPageToken, files({_FILE_FIELDS})'

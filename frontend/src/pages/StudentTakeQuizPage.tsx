@@ -33,6 +33,8 @@ export function StudentTakeQuizPage() {
   const { assignmentId = '' } = useParams()
   const [searchParams] = useSearchParams()
   const retake = searchParams.get('retake') === 'true'
+  const attemptParam = searchParams.get('attempt')
+  const attemptSubmissionId = attemptParam ? Number(attemptParam) : null
   const navigate = useNavigate()
   const id = Number(assignmentId)
 
@@ -65,7 +67,13 @@ export function StudentTakeQuizPage() {
     setLoading(true)
     setError(null)
     try {
-      const payload = await fetchStudentQuiz(id, retake)
+      const payload = await fetchStudentQuiz(id, {
+        retake,
+        attemptSubmissionId:
+          !retake && attemptSubmissionId && Number.isFinite(attemptSubmissionId)
+            ? attemptSubmissionId
+            : null,
+      })
       if (payload.mode === 'google_form' && payload.assignment.google_form_url) {
         window.location.assign(payload.assignment.google_form_url)
         return
@@ -130,7 +138,7 @@ export function StudentTakeQuizPage() {
     } finally {
       setLoading(false)
     }
-  }, [id, retake, storageKey])
+  }, [id, retake, attemptSubmissionId, storageKey])
 
   useEffect(() => {
     void load()
@@ -241,7 +249,7 @@ export function StudentTakeQuizPage() {
         }
       }
       autoSubmittedRef.current = false
-      const payload = await fetchStudentQuiz(id, false)
+      const payload = await fetchStudentQuiz(id, {})
       setData(payload)
       setAnswers({})
       setCurrent(0)
@@ -407,6 +415,9 @@ export function StudentTakeQuizPage() {
                   data={data}
                   questions={questions}
                   onRetake={() => navigate(`/student/take-quiz/${id}?retake=true`)}
+                  onSelectAttempt={(submissionId) =>
+                    navigate(`/student/take-quiz/${id}?attempt=${submissionId}`)
+                  }
                 />
               ) : (
                 <>
@@ -616,14 +627,20 @@ function QuizResults({
   data,
   questions,
   onRetake,
+  onSelectAttempt,
 }: {
   data: StudentQuizResponse
   questions: QuizQuestion[]
   onRetake: () => void
+  onSelectAttempt: (submissionId: number) => void
 }) {
   const pending = (data.grade?.grading_status || '').toLowerCase() === 'pending'
   const showCorrect = Boolean(data.assignment.show_correct_answers)
   const correctCount = questions.filter((q) => q.student_answer?.is_correct === true).length
+  const attempts = data.attempts || []
+  const canReviewAttempts =
+    Boolean(data.attempt?.allow_review_previous_attempts) && attempts.length > 1
+  const selectedId = data.attempt?.selected_submission_id ?? attempts.find((a) => a.is_selected)?.submission_id
 
   return (
     <div className="space-y-4">
@@ -661,13 +678,53 @@ function QuizResults({
               </span>
             )}
           </div>
+
+          {canReviewAttempts ? (
+            <div className="mb-4">
+              <label
+                htmlFor="student-quiz-attempt"
+                className="mb-1 block text-xs font-bold uppercase tracking-wide text-hub-muted"
+              >
+                View previous attempts
+              </label>
+              <select
+                id="student-quiz-attempt"
+                className="w-full max-w-md rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-hub-text"
+                value={selectedId ?? ''}
+                onChange={(e) => {
+                  const next = Number(e.target.value)
+                  if (Number.isFinite(next) && next > 0) onSelectAttempt(next)
+                }}
+              >
+                {attempts.map((att) => {
+                  const scoreLabel = att.parsed_score
+                    ? `${att.parsed_score.earned}/${att.parsed_score.total} (${att.parsed_score.percentage}%)`
+                    : 'score pending'
+                  const when = att.submitted_at
+                    ? new Date(att.submitted_at).toLocaleString()
+                    : '—'
+                  const answersNote = att.has_stored_answers ? '' : ' · score only'
+                  return (
+                    <option key={att.submission_id} value={att.submission_id}>
+                      Attempt {att.attempt_num} — {when} — {scoreLabel}
+                      {answersNote}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
-            <Link to="/student/assignments" className="btn btn-sm text-white" style={{ background: '#0f766e' }}>
+            <Link to="/student/assignments" className={quizBtnTealOutline}>
               Back to assignments
             </Link>
             {data.attempt?.can_retake ? (
-              <button type="button" className="btn btn-success btn-sm" onClick={onRetake}>
-                Retake quiz ({data.attempt.attempts_remaining} left)
+              <button type="button" className={quizBtnPrimary} onClick={onRetake}>
+                Retake quiz
+                {data.attempt.attempts_remaining != null
+                  ? ` (${data.attempt.attempts_remaining} left)`
+                  : ''}
               </button>
             ) : null}
           </div>

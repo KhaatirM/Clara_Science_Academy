@@ -55,6 +55,14 @@ export interface AssignmentViewResponse {
   }
 }
 
+export interface GradeFeedbackAttachment {
+  id: number
+  name: string
+  size?: number | null
+  mime_type?: string | null
+  url: string
+}
+
 export interface GradeStudentRow {
   student: { id: number; display_name: string; grade_level?: number | null; email?: string | null }
   grade: {
@@ -64,6 +72,7 @@ export interface GradeStudentRow {
     comment: string
     is_voided: boolean
     grade_id?: number | null
+    feedback_attachments?: GradeFeedbackAttachment[]
   }
   submission?: {
     submission_type: string
@@ -242,10 +251,13 @@ export interface QuizSubmissionRow {
   quiz_attempt_details?: QuizAttemptDetail[]
   /** Attempt number whose answers are currently stored (always the latest). */
   answers_attempt_num?: number | null
+  answers_submission_id?: number | null
   latest_attempt_score?: { earned: number; total: number; percentage: number } | null
   auto_points: number
   has_submission: boolean
   questions: QuizQuestionRow[]
+  /** Per-attempt answer payloads keyed by submission id (when stored). */
+  questions_by_submission_id?: Record<string, QuizQuestionRow[]>
   /** Official score on file (best attempt for quizzes). */
   grade: SubmissionsGradeInfo | null
   is_voided: boolean
@@ -390,17 +402,54 @@ export async function saveIndividualStudentGrade(
     submission_type?: string
     submission_notes_type?: string
     submission_notes?: string
+    feedback_files?: File[]
+    remove_feedback_attachment_ids?: number[]
   },
   scope: AssignmentWorkspaceScope = 'management',
 ) {
   const base = scope === 'teacher' ? '/teacher' : '/management'
-  const data = await apiFetch<{ success: boolean; message: string; error?: string }>(
-    `${base}/grade/assignment/${assignmentId}/student/${studentId}`,
-    {
+  const path = `${base}/grade/assignment/${assignmentId}/student/${studentId}`
+  const hasFiles = Boolean(payload.feedback_files?.length)
+  const hasRemoves = Boolean(payload.remove_feedback_attachment_ids?.length)
+
+  if (hasFiles || hasRemoves) {
+    const form = new FormData()
+    form.append('score', payload.score)
+    if (payload.comment != null) form.append('comment', payload.comment)
+    if (payload.submission_type) form.append('submission_type', payload.submission_type)
+    if (payload.submission_notes_type) form.append('submission_notes_type', payload.submission_notes_type)
+    if (payload.submission_notes) form.append('submission_notes', payload.submission_notes)
+    for (const id of payload.remove_feedback_attachment_ids || []) {
+      form.append('remove_feedback_attachment_ids', String(id))
+    }
+    for (const file of payload.feedback_files || []) {
+      form.append('feedback_files', file)
+    }
+    const token = getCsrfToken()
+    if (token) form.append('csrf_token', token)
+    const response = await fetch(path, {
       method: 'POST',
-      body: JSON.stringify(payload),
-    },
-  )
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: form,
+    })
+    const data = (await response.json()) as { success?: boolean; message?: string; error?: string }
+    if (!response.ok || data.success === false) {
+      throw new Error(data.error || data.message || `Save failed (${response.status})`)
+    }
+    return data
+  }
+
+  const data = await apiFetch<{ success: boolean; message: string; error?: string }>(path, {
+    method: 'POST',
+    body: JSON.stringify({
+      score: payload.score,
+      comment: payload.comment,
+      submission_type: payload.submission_type,
+      submission_notes_type: payload.submission_notes_type,
+      submission_notes: payload.submission_notes,
+    }),
+  })
   if (data.success === false) {
     throw new Error(data.error || data.message || 'Save failed')
   }

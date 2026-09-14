@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep14_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep14_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'School Admins can generate login letters',
+    body: 'Family Portal now shows Generate letter for School Administrator accounts even when the stored role uses an alias such as School Admin. Each parent row has an Actions column with that button.',
+  },
   {
     title: 'Family Portal login letters',
     body: 'On Family Portal, Generate letter prints a PDF with the parent’s username, a temporary password when you reset one, the students they can open, and the grades, attendance, classes, and released report cards they can see.',
@@ -314,10 +318,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.44'
+  const display = version?.display || 'v 2.520.45'
   const releaseLabel = version?.release_label || 'September 14, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2782
+  const updatesEstimate = version?.updates_estimate ?? 2783
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

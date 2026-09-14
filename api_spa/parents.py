@@ -9,6 +9,7 @@ from decorators import get_user_permissions, permissions_required
 from management_routes.parents import query_parents_hub
 from models import User
 from utils.parent_login_letter import parent_login_letter_response
+from utils.user_roles import user_has_management_entry_access
 
 from . import spa_api_blueprint
 
@@ -24,10 +25,7 @@ def parents_list():
             "items": payload["items"],
             "stats": payload["stats"],
             "meta": {
-                "can_provision": "students:edit" in perms or getattr(current_user, "role", None) in (
-                    "Director",
-                    "School Administrator",
-                ),
+                "can_provision": "students:edit" in perms or user_has_management_entry_access(current_user),
             },
         }
     )

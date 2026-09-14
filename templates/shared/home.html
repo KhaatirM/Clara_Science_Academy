@@ -167,11 +167,22 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 14, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 14</strong> (<strong>{{ app_version_display }}</strong>) adds a Family Portal login letter you can print for each parent, with temporary credentials and the students and records that login can see.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 14</strong> (<strong>{{ app_version_display }}</strong>) shows Generate letter on Family Portal for School Administrator accounts, including when the stored role is an alias such as School Admin.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 14, 2026 - Login letter visible to School Admin -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-person-badge me-2"></i>Login letter for School Admins – September 14, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Actions column on Family Portal:</strong> School Administrators see Generate letter on each parent row, even when the account role is stored as School Admin or another alias.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 14, 2026 - Parent login letter -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-envelope-paper me-2"></i>Family Portal login letter – September 14, 2026</h6>
@@ -2655,11 +2666,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep14_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep14_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep14_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep14_2026_v3', 'true');
         }, 500);
     }
 });

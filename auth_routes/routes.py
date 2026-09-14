@@ -1256,13 +1256,7 @@ def google_callback():
         return redirect(url_for('auth.login'))
 
 
-# Allowed theme values (for validation)
-THEME_CHOICES = {
-    'default', 'light', 'dark', 'snowy', 'autumn', 'spring', 'summer',
-    'ocean', 'forest', 'holiday',
-    'sunset', 'midnight', 'desert', 'lavender', 'rose', 'cherry',
-    'aurora', 'storm', 'wine', 'mint'
-}
+from utils.user_theme import THEME_CHOICES
 
 
 @auth_blueprint.route('/update-theme', methods=['POST'])

@@ -6,12 +6,11 @@ from typing import Any
 
 from models import User
 from utils.user_roles import canonical_role_label
-from utils.user_theme import get_effective_theme, get_site_theme_override
+from utils.user_theme import get_effective_theme, get_site_theme_override, normalize_theme_name
 
 THEME_OPTIONS = [
     {"value": "default", "label": "Default", "group": "Standard"},
     {"value": "light", "label": "Light", "group": "Standard"},
-    {"value": "dark", "label": "Dark", "group": "Standard"},
     {"value": "snowy", "label": "Snowy (Winter)", "group": "Seasonal"},
     {"value": "autumn", "label": "Autumn", "group": "Seasonal"},
     {"value": "spring", "label": "Spring", "group": "Seasonal"},
@@ -29,6 +28,10 @@ THEME_OPTIONS = [
     {"value": "storm", "label": "Storm", "group": "Color"},
     {"value": "wine", "label": "Wine", "group": "Color"},
     {"value": "mint", "label": "Mint", "group": "Color"},
+    {"value": "coral", "label": "Coral", "group": "Color"},
+    {"value": "sapphire", "label": "Sapphire", "group": "Color"},
+    {"value": "honey", "label": "Honey", "group": "Color"},
+    {"value": "slate", "label": "Slate", "group": "Color"},
 ]
 
 
@@ -40,7 +43,7 @@ def query_settings_hub(*, user) -> dict[str, Any]:
     # Treat a stored-but-unreadable token as disconnected so the UI offers reconnect.
     google_connected = token_usable
     site_override = get_site_theme_override()
-    saved_theme = (db_user.theme_preference if db_user else None) or "default"
+    saved_theme = normalize_theme_name(db_user.theme_preference if db_user else None) or "default"
 
     return {
         "role_canonical": role,

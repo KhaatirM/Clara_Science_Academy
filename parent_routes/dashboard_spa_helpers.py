@@ -17,7 +17,7 @@ from utils.parent_portal import (
     parent_has_access,
 )
 from utils.report_card_portal import get_parent_visible_report_cards
-from utils.user_theme import get_effective_theme, get_site_theme_override
+from utils.user_theme import get_effective_theme, get_site_theme_override, normalize_theme_name
 
 
 def resolve_active_child_id() -> int | None:
@@ -199,7 +199,7 @@ def build_parent_tab_payload(tab: str) -> tuple[dict[str, Any] | None, str | Non
 
 def build_parent_settings_payload() -> dict[str, Any]:
     site_override = get_site_theme_override()
-    saved_theme = getattr(current_user, "theme_preference", None) or "default"
+    saved_theme = normalize_theme_name(getattr(current_user, "theme_preference", None)) or "default"
     return {
         "account": {
             "username": current_user.username,

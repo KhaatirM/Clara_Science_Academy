@@ -17,7 +17,7 @@ from utils.bell_schedule import build_bell_grid_for_classes
 from utils.bell_schedule_pdf import render_bell_schedule_pdf
 from utils.schedule_helpers import build_weekly_schedule, finalize_schedule_view
 from utils.school_year_filters import get_active_school_year, student_classes_for_school_year
-from utils.user_theme import get_effective_theme, get_site_theme_override
+from utils.user_theme import get_effective_theme, get_site_theme_override, normalize_theme_name
 from utils.school_timezone import get_school_now, get_school_today
 
 
@@ -243,7 +243,7 @@ def build_student_settings_payload(*, user) -> dict[str, Any]:
         threshold = 70
 
     site_override = get_site_theme_override()
-    saved_theme = (db_user.theme_preference if db_user else None) or "default"
+    saved_theme = normalize_theme_name(db_user.theme_preference if db_user else None) or "default"
 
     return {
         "account": {

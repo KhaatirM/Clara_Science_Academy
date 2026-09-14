@@ -2,30 +2,50 @@
 
 from __future__ import annotations
 
-THEME_CHOICES = frozenset(
-    {
-        "default",
-        "light",
-        "dark",
-        "snowy",
-        "autumn",
-        "spring",
-        "summer",
-        "holiday",
-        "ocean",
-        "forest",
-        "sunset",
-        "midnight",
-        "desert",
-        "lavender",
-        "rose",
-        "cherry",
-        "aurora",
-        "storm",
-        "wine",
-        "mint",
-    }
+THEME_ORDER = (
+    "default",
+    "light",
+    "snowy",
+    "autumn",
+    "spring",
+    "summer",
+    "holiday",
+    "ocean",
+    "forest",
+    "sunset",
+    "midnight",
+    "desert",
+    "lavender",
+    "rose",
+    "cherry",
+    "aurora",
+    "storm",
+    "wine",
+    "mint",
+    "coral",
+    "sapphire",
+    "honey",
+    "slate",
 )
+
+THEME_CHOICES = frozenset(THEME_ORDER)
+
+# Retired themes fall back to Default so stored preferences cannot keep them on.
+REMOVED_THEMES = frozenset({"dark"})
+
+
+def normalize_theme_name(value) -> str | None:
+    """Map a stored theme to a current choice. Retired themes become Default."""
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if not normalized:
+        return None
+    if normalized in REMOVED_THEMES:
+        return "default"
+    if normalized in THEME_CHOICES:
+        return normalized
+    return None
 
 
 def get_effective_theme(user) -> str:
@@ -33,20 +53,14 @@ def get_effective_theme(user) -> str:
     try:
         from models import SystemConfig
 
-        site_override = SystemConfig.get_value("site_theme_override")
+        site_override = normalize_theme_name(SystemConfig.get_value("site_theme_override"))
         if site_override:
-            normalized = str(site_override).strip().lower()
-            if normalized in THEME_CHOICES:
-                return normalized
+            return site_override
     except Exception:
         pass
 
     pref = getattr(user, "theme_preference", None) if user is not None else None
-    if pref:
-        normalized = str(pref).strip().lower()
-        if normalized in THEME_CHOICES:
-            return normalized
-    return "default"
+    return normalize_theme_name(pref) or "default"
 
 
 def get_site_theme_override() -> str | None:
@@ -56,7 +70,6 @@ def get_site_theme_override() -> str | None:
         raw = SystemConfig.get_value("site_theme_override")
         if not raw:
             return None
-        normalized = str(raw).strip().lower()
-        return normalized if normalized in THEME_CHOICES else None
+        return normalize_theme_name(raw)
     except Exception:
         return None

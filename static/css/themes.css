@@ -608,6 +608,122 @@ body.theme-mint .discussion-header {
 }
 
 /* ---------------------------------------------------------------------------
+   CORAL - warm peach
+   --------------------------------------------------------------------------- */
+body.theme-coral {
+    background: linear-gradient(180deg, #fff7f4 0%, #ffe8e0 50%, #ffddd2 100%);
+}
+body.theme-coral .sidebar {
+    background: linear-gradient(180deg, #e07a5f 0%, #c45c41 50%, #9a4632 100%);
+    border-right-color: #f0a090;
+}
+body.theme-coral .sidebar-heading {
+    background: linear-gradient(135deg, #c45c41 0%, #9a4632 100%);
+    border-bottom-color: #f0a090;
+}
+body.theme-coral .sidebar .nav-link.active {
+    background-color: #c45c41;
+    border-left-color: #ffd0c4;
+}
+body.theme-coral .sidebar .nav-link:hover {
+    background-color: rgba(255,255,255,0.14);
+    border-left-color: #ffd0c4;
+}
+body.theme-coral .dashboard-header,
+body.theme-coral .thread-header-section,
+body.theme-coral .discussion-header {
+    background: linear-gradient(135deg, #e07a5f 0%, #c45c41 45%, #f09980 100%) !important;
+    box-shadow: 0 4px 20px rgba(196, 92, 65, 0.28);
+}
+
+/* ---------------------------------------------------------------------------
+   SAPPHIRE - clear blue
+   --------------------------------------------------------------------------- */
+body.theme-sapphire {
+    background: linear-gradient(180deg, #f3f7ff 0%, #e4edff 50%, #d6e4ff 100%);
+}
+body.theme-sapphire .sidebar {
+    background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 50%, #1e3a8a 100%);
+    border-right-color: #93c5fd;
+}
+body.theme-sapphire .sidebar-heading {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+    border-bottom-color: #93c5fd;
+}
+body.theme-sapphire .sidebar .nav-link.active {
+    background-color: #1d4ed8;
+    border-left-color: #bfdbfe;
+}
+body.theme-sapphire .sidebar .nav-link:hover {
+    background-color: rgba(255,255,255,0.14);
+    border-left-color: #bfdbfe;
+}
+body.theme-sapphire .dashboard-header,
+body.theme-sapphire .thread-header-section,
+body.theme-sapphire .discussion-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #3b82f6 100%) !important;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.28);
+}
+
+/* ---------------------------------------------------------------------------
+   HONEY - warm gold
+   --------------------------------------------------------------------------- */
+body.theme-honey {
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+}
+body.theme-honey .sidebar {
+    background: linear-gradient(180deg, #d97706 0%, #b45309 50%, #92400e 100%);
+    border-right-color: #fcd34d;
+}
+body.theme-honey .sidebar-heading {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+    border-bottom-color: #fcd34d;
+}
+body.theme-honey .sidebar .nav-link.active {
+    background-color: #b45309;
+    border-left-color: #fde68a;
+}
+body.theme-honey .sidebar .nav-link:hover {
+    background-color: rgba(255,255,255,0.14);
+    border-left-color: #fde68a;
+}
+body.theme-honey .dashboard-header,
+body.theme-honey .thread-header-section,
+body.theme-honey .discussion-header {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 45%, #f59e0b 100%) !important;
+    box-shadow: 0 4px 20px rgba(180, 83, 9, 0.28);
+}
+
+/* ---------------------------------------------------------------------------
+   SLATE - cool stone (light pages, not a dark mode)
+   --------------------------------------------------------------------------- */
+body.theme-slate {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2f6 50%, #e2e8f0 100%);
+}
+body.theme-slate .sidebar {
+    background: linear-gradient(180deg, #64748b 0%, #475569 50%, #334155 100%);
+    border-right-color: #94a3b8;
+}
+body.theme-slate .sidebar-heading {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    border-bottom-color: #94a3b8;
+}
+body.theme-slate .sidebar .nav-link.active {
+    background-color: #475569;
+    border-left-color: #cbd5e1;
+}
+body.theme-slate .sidebar .nav-link:hover {
+    background-color: rgba(255,255,255,0.12);
+    border-left-color: #cbd5e1;
+}
+body.theme-slate .dashboard-header,
+body.theme-slate .thread-header-section,
+body.theme-slate .discussion-header {
+    background: linear-gradient(135deg, #64748b 0%, #475569 45%, #334155 100%) !important;
+    box-shadow: 0 4px 20px rgba(51, 65, 85, 0.22);
+}
+
+/* ---------------------------------------------------------------------------
    Sidebar chrome — theme tokens (clock, collapse bar, logout footer)
    --------------------------------------------------------------------------- */
 body.theme-light .sidebar {
@@ -856,4 +972,56 @@ body.theme-mint .sidebar {
     --sidebar-logout-bg: #2d7a6a;
     --sidebar-logout-border: #3d9a86;
     --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.75);
+}
+body.theme-coral .sidebar {
+    --sidebar-tz-bg: rgba(255, 255, 255, 0.14);
+    --sidebar-tz-border: rgba(255, 255, 255, 0.22);
+    --sidebar-tz-accent: #ffd0c4;
+    --sidebar-toggle-bg: linear-gradient(135deg, #9a4632 0%, #c45c41 100%);
+    --sidebar-toggle-bg-hover: linear-gradient(135deg, #c45c41 0%, #e07a5f 100%);
+    --sidebar-toggle-border: #ffd0c4;
+    --sidebar-toggle-border-hover: #ffe4dc;
+    --sidebar-toggle-accent: #ffd0c4;
+    --sidebar-logout-bg: #9a4632;
+    --sidebar-logout-border: #c45c41;
+    --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.75);
+}
+body.theme-sapphire .sidebar {
+    --sidebar-tz-bg: rgba(255, 255, 255, 0.14);
+    --sidebar-tz-border: rgba(255, 255, 255, 0.22);
+    --sidebar-tz-accent: #bfdbfe;
+    --sidebar-toggle-bg: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    --sidebar-toggle-bg-hover: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    --sidebar-toggle-border: #bfdbfe;
+    --sidebar-toggle-border-hover: #dbeafe;
+    --sidebar-toggle-accent: #bfdbfe;
+    --sidebar-logout-bg: #1e3a8a;
+    --sidebar-logout-border: #1d4ed8;
+    --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.75);
+}
+body.theme-honey .sidebar {
+    --sidebar-tz-bg: rgba(255, 255, 255, 0.16);
+    --sidebar-tz-border: rgba(255, 255, 255, 0.24);
+    --sidebar-tz-accent: #fde68a;
+    --sidebar-toggle-bg: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+    --sidebar-toggle-bg-hover: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+    --sidebar-toggle-border: #fde68a;
+    --sidebar-toggle-border-hover: #fef3c7;
+    --sidebar-toggle-accent: #fde68a;
+    --sidebar-logout-bg: #92400e;
+    --sidebar-logout-border: #b45309;
+    --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.78);
+}
+body.theme-slate .sidebar {
+    --sidebar-tz-bg: rgba(255, 255, 255, 0.12);
+    --sidebar-tz-border: rgba(255, 255, 255, 0.2);
+    --sidebar-tz-accent: #e2e8f0;
+    --sidebar-toggle-bg: linear-gradient(135deg, #334155 0%, #475569 100%);
+    --sidebar-toggle-bg-hover: linear-gradient(135deg, #475569 0%, #64748b 100%);
+    --sidebar-toggle-border: #cbd5e1;
+    --sidebar-toggle-border-hover: #e2e8f0;
+    --sidebar-toggle-accent: #e2e8f0;
+    --sidebar-logout-bg: #334155;
+    --sidebar-logout-border: #475569;
+    --sidebar-nav-eyebrow: rgba(255, 255, 255, 0.72);
 }

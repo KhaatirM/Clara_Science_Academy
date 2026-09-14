@@ -329,6 +329,23 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: theme_preference column check failed (may already exist): {e}")
 
+        # Drop the retired Dark theme from every account and any site-wide override.
+        try:
+            from models import SystemConfig, User
+
+            User.query.filter(db.func.lower(User.theme_preference) == "dark").update(
+                {User.theme_preference: "default"},
+                synchronize_session=False,
+            )
+            SystemConfig.query.filter(
+                SystemConfig.key == "site_theme_override",
+                db.func.lower(SystemConfig.value) == "dark",
+            ).update({SystemConfig.value: ""}, synchronize_session=False)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Note: clearing retired dark theme failed: {e}")
+
         # Add user.low_grade_threshold column if missing (for student "Grades to Improve" feature)
         try:
             with db.engine.connect() as conn:
@@ -1527,17 +1544,11 @@ def create_app(config_class=None):
     # Inject effective theme into all templates (site override from tech, or user preference)
     @app.context_processor
     def inject_theme():
-        from models import SystemConfig
         effective = 'default'
         if current_user.is_authenticated:
             try:
-                site_override = SystemConfig.get_value('site_theme_override')
-                if site_override:
-                    effective = site_override
-                else:
-                    pref = getattr(current_user, 'theme_preference', None)
-                    if pref:
-                        effective = pref
+                from utils.user_theme import get_effective_theme
+                effective = get_effective_theme(current_user)
             except Exception as e:
                 # If the request transaction is in a failed state (e.g., prior DB error),
                 # ensure we can still render error pages without cascading failures.

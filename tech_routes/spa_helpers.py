@@ -25,6 +25,7 @@ from models import (
     User,
     db,
 )
+from utils.user_theme import THEME_ORDER
 from utils.tech_user_management import (
     build_tech_user_management_lists,
     user_portal_status_label,
@@ -845,7 +846,7 @@ def build_system_payload() -> dict[str, Any]:
             "database": "SQLite",
             "server": "Development" if config["debug_mode"] == "Development Server" else "Production",
         },
-        "site_theme_override": site_theme_override,
+        "site_theme_override": "" if str(site_theme_override or "").strip().lower() == "dark" else site_theme_override,
         "school_timezone": {
             "effective": effective_school_tz,
             "env": env_school_tz,
@@ -854,28 +855,7 @@ def build_system_payload() -> dict[str, Any]:
             "now_sample": school_tz_now,
         },
         "maintenance": _maintenance_payload(maintenance),
-        "theme_choices": [
-            "default",
-            "light",
-            "dark",
-            "snowy",
-            "autumn",
-            "spring",
-            "summer",
-            "ocean",
-            "forest",
-            "holiday",
-            "sunset",
-            "midnight",
-            "desert",
-            "lavender",
-            "rose",
-            "cherry",
-            "aurora",
-            "storm",
-            "wine",
-            "mint",
-        ],
+        "theme_choices": list(THEME_ORDER),
     }
 
 
@@ -1057,29 +1037,9 @@ def set_school_timezone_spa(body: dict[str, Any]) -> tuple[dict[str, Any] | None
 
 def set_site_theme_spa(body: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None, int]:
     theme = (body.get("theme") or "").strip().lower()
-    choices = {
-        "default",
-        "light",
-        "dark",
-        "snowy",
-        "autumn",
-        "spring",
-        "summer",
-        "ocean",
-        "forest",
-        "holiday",
-        "sunset",
-        "midnight",
-        "desert",
-        "lavender",
-        "rose",
-        "cherry",
-        "aurora",
-        "storm",
-        "wine",
-        "mint",
-        "",
-    }
+    from utils.user_theme import THEME_CHOICES
+
+    choices = set(THEME_CHOICES) | {""}
     if theme not in choices:
         return None, "Invalid theme choice.", 400
     try:

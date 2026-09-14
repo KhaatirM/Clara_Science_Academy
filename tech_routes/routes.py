@@ -475,12 +475,7 @@ def system():
     )
 
 
-THEME_CHOICES = [
-    'default', 'light', 'dark', 'snowy', 'autumn', 'spring', 'summer',
-    'ocean', 'forest', 'holiday',
-    'sunset', 'midnight', 'desert', 'lavender', 'rose', 'cherry',
-    'aurora', 'storm', 'wine', 'mint'
-]
+from utils.user_theme import THEME_CHOICES
 
 
 @tech_blueprint.route('/school-timezone', methods=['POST'])

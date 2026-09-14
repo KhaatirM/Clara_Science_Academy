@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep14_2026_v4'
+const SESSION_KEY = 'spaUpdateModalShownSep14_2026_v5'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'New themes, and Dark is retired',
+    body: 'Settings now includes Coral, Sapphire, Honey, and Slate for every role. Dark has been removed, and anyone who had it selected is moved back to Default.',
+  },
   {
     title: 'Login letters keep each student on one page',
     body: 'Family Portal login letters now include the school logo. Each student is a card with class chips, and a student moves to the next page instead of splitting mid-row.',
@@ -322,10 +326,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.46'
+  const display = version?.display || 'v 2.520.47'
   const releaseLabel = version?.release_label || 'September 14, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2784
+  const updatesEstimate = version?.updates_estimate ?? 2786
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

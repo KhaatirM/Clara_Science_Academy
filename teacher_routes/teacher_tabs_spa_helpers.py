@@ -31,7 +31,7 @@ from utils.school_year_filters import (
 )
 from utils.student_roster import active_roster_student_filters, student_is_archived
 from utils.user_roles import canonical_role_label
-from utils.user_theme import get_effective_theme, get_site_theme_override
+from utils.user_theme import get_effective_theme, get_site_theme_override, normalize_theme_name
 
 
 def _teacher_can_select_school_year() -> bool:
@@ -511,7 +511,7 @@ def build_teacher_settings_payload(*, user) -> dict[str, Any]:
     hub = query_settings_hub(user=user)
     db_user = User.query.get(user.id) if getattr(user, "id", None) else None
     role = canonical_role_label(getattr(user, "role", None))
-    saved_theme = (db_user.theme_preference if db_user else None) or "default"
+    saved_theme = normalize_theme_name(db_user.theme_preference if db_user else None) or "default"
     site_override = get_site_theme_override()
     google_connected = bool(db_user and db_user.google_refresh_token)
     token_stored = bool(db_user and db_user.has_google_token_stored)

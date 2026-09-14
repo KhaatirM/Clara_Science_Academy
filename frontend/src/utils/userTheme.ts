@@ -3,7 +3,6 @@ const THEME_CLASS_PREFIX = 'theme-'
 export const VALID_THEMES = new Set([
   'default',
   'light',
-  'dark',
   'snowy',
   'autumn',
   'spring',
@@ -21,6 +20,10 @@ export const VALID_THEMES = new Set([
   'storm',
   'wine',
   'mint',
+  'coral',
+  'sapphire',
+  'honey',
+  'slate',
 ])
 
 export function normalizeTheme(theme: string | null | undefined): string {

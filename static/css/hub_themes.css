@@ -328,6 +328,58 @@ body.theme-mint {
   --hub-schedule-accent-deep: #2d7a6a;
 }
 
+body.theme-coral {
+  --hub-mgmt-accent: #e07a5f;
+  --hub-mgmt-accent-deep: #c45c41;
+  --hub-mgmt-accent-soft: rgba(224, 122, 95, 0.16);
+  --hub-mgmt-bg: linear-gradient(165deg, #fff7f4 0%, #ffe8e0 45%, #ffddd2 100%);
+  --hub-teacher-accent: #e07a5f;
+  --hub-teacher-accent-deep: #c45c41;
+  --hub-student-accent: #f09980;
+  --hub-student-accent-deep: #c45c41;
+  --hub-schedule-accent: #e07a5f;
+  --hub-schedule-accent-deep: #c45c41;
+}
+
+body.theme-sapphire {
+  --hub-mgmt-accent: #2563eb;
+  --hub-mgmt-accent-deep: #1d4ed8;
+  --hub-mgmt-accent-soft: rgba(37, 99, 235, 0.14);
+  --hub-mgmt-bg: linear-gradient(165deg, #f3f7ff 0%, #e4edff 45%, #d6e4ff 100%);
+  --hub-teacher-accent: #3b82f6;
+  --hub-teacher-accent-deep: #1e3a8a;
+  --hub-student-accent: #2563eb;
+  --hub-student-accent-deep: #1d4ed8;
+  --hub-schedule-accent: #2563eb;
+  --hub-schedule-accent-deep: #1d4ed8;
+}
+
+body.theme-honey {
+  --hub-mgmt-accent: #d97706;
+  --hub-mgmt-accent-deep: #b45309;
+  --hub-mgmt-accent-soft: rgba(217, 119, 6, 0.16);
+  --hub-mgmt-bg: linear-gradient(165deg, #fffbeb 0%, #fef3c7 45%, #fde68a 100%);
+  --hub-teacher-accent: #f59e0b;
+  --hub-teacher-accent-deep: #b45309;
+  --hub-student-accent: #d97706;
+  --hub-student-accent-deep: #92400e;
+  --hub-schedule-accent: #d97706;
+  --hub-schedule-accent-deep: #b45309;
+}
+
+body.theme-slate {
+  --hub-mgmt-accent: #64748b;
+  --hub-mgmt-accent-deep: #334155;
+  --hub-mgmt-accent-soft: rgba(100, 116, 139, 0.16);
+  --hub-mgmt-bg: linear-gradient(165deg, #f8fafc 0%, #eef2f6 45%, #e2e8f0 100%);
+  --hub-teacher-accent: #64748b;
+  --hub-teacher-accent-deep: #334155;
+  --hub-student-accent: #475569;
+  --hub-student-accent-deep: #334155;
+  --hub-schedule-accent: #64748b;
+  --hub-schedule-accent-deep: #334155;
+}
+
 /*
  * Director shells (--director modifiers, spa-mgmt--director) read --hub-mgmt-director-*.
  * Mirror the active theme's management palette so site themes apply for directors too.

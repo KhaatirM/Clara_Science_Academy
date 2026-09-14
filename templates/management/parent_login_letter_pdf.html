@@ -4,34 +4,94 @@
     <meta charset="utf-8">
     <title>Family Portal login — {{ parent_name }}</title>
     <style>
-        @page { size: letter; margin: 0.7in 0.75in; }
+        @page { size: letter; margin: 0.65in 0.7in; }
         body { font-family: "Segoe UI", Calibri, Arial, sans-serif; color: #1e293b; font-size: 11pt; line-height: 1.45; }
-        h1 { margin: 0; font-size: 16pt; letter-spacing: 0.04em; color: #0f766e; }
-        h2 { margin: 1.1em 0 0.35em; font-size: 12pt; color: #0f766e; }
-        p { margin: 0.4em 0; }
-        .school { text-align: center; border-bottom: 3px solid #0f766e; padding-bottom: 10px; margin-bottom: 16px; }
-        .school .addr { margin: 2px 0 0; font-size: 10pt; color: #475569; }
-        .meta { text-align: right; font-size: 10pt; color: #64748b; margin: 0 0 12px; }
-        .login-box { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 8px; padding: 12px 14px; margin: 10px 0 4px; }
+        h2 { margin: 1em 0 0.3em; font-size: 12pt; color: #0f766e; page-break-after: avoid; }
+        p { margin: 0.35em 0; }
+        .letterhead { width: 100%; border-collapse: collapse; border-bottom: 3px solid #0f766e; margin-bottom: 14px; }
+        .letterhead td { vertical-align: middle; padding-bottom: 10px; }
+        .logo-cell { width: 78px; }
+        .logo-cell img { width: 68px; height: 68px; }
+        .school-name { font-size: 16pt; font-weight: 800; letter-spacing: 0.04em; color: #0f766e; margin: 0; }
+        .addr { margin: 1px 0 0; font-size: 10pt; color: #475569; }
+        .doc-title { margin: 3px 0 0; font-size: 11pt; font-weight: 700; color: #134e4a; }
+        .meta { text-align: right; font-size: 10pt; color: #64748b; margin: 0 0 10px; }
+        .login-box { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 8px; padding: 10px 12px; margin: 8px 0 4px; page-break-inside: avoid; }
         .login-box table { width: 100%; border-collapse: collapse; }
-        .login-box td { padding: 4px 6px; vertical-align: top; }
+        .login-box td { padding: 3px 6px; vertical-align: top; }
         .login-box .label { width: 34%; font-weight: 700; color: #115e59; font-size: 10pt; }
         .mono { font-family: Consolas, "Courier New", monospace; font-weight: 700; }
         .note { font-size: 10pt; color: #334155; }
-        table.students { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 10pt; }
-        table.students th { text-align: left; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 8px; }
-        table.students td { border: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top; }
+        .student-card {
+            border: 1px solid #ccfbf1;
+            border-left: 4px solid #0f766e;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 8px 10px 9px;
+            margin: 0 0 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .student-head { width: 100%; border-collapse: collapse; margin: 0; }
+        .student-head td { padding: 0; vertical-align: middle; }
+        .student-name { font-size: 12pt; font-weight: 800; color: #134e4a; }
+        .student-grade {
+            text-align: right;
+            width: 88px;
+            font-size: 9pt;
+            font-weight: 800;
+            color: #0f766e;
+        }
+        .grade-pill {
+            display: inline-block;
+            background: #ccfbf1;
+            border-radius: 999px;
+            padding: 2px 8px;
+        }
+        .student-meta { margin: 2px 0 6px; font-size: 9pt; color: #475569; }
+        .classes-label {
+            margin: 0 0 3px;
+            font-size: 8pt;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #0f766e;
+        }
+        .chip {
+            display: inline-block;
+            background: #f0fdfa;
+            border: 1px solid #5eead4;
+            color: #115e59;
+            border-radius: 999px;
+            padding: 2px 8px 3px;
+            margin: 0 4px 4px 0;
+            font-size: 8.5pt;
+            line-height: 1.25;
+            page-break-inside: avoid;
+        }
+        .chip-subject { color: #0f766e; font-weight: 700; }
+        .no-classes { margin: 0; font-size: 9pt; color: #94a3b8; font-style: italic; }
+        .access-block { page-break-inside: avoid; break-inside: avoid; }
         ul.access { margin: 4px 0 0 1.1em; padding: 0; }
         ul.access li { margin: 0.15em 0; }
-        .footer { margin-top: 18px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 9pt; color: #64748b; }
+        .footer { margin-top: 16px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 9pt; color: #64748b; page-break-inside: avoid; }
     </style>
 </head>
 <body>
-    <div class="school">
-        <h1>CLARA SCIENCE ACADEMY</h1>
-        <p class="addr">3015 East Bessemer Ave, Greensboro, NC 27405</p>
-        <p class="addr"><strong>Family Portal login letter</strong></p>
-    </div>
+    <table class="letterhead">
+        <tr>
+            <td class="logo-cell">
+                {% if logo_src %}
+                <img src="{{ logo_src }}" alt="Clara Science Academy">
+                {% endif %}
+            </td>
+            <td>
+                <p class="school-name">CLARA SCIENCE ACADEMY</p>
+                <p class="addr">3015 East Bessemer Ave, Greensboro, NC 27405</p>
+                <p class="doc-title">Family Portal login letter</p>
+            </td>
+        </tr>
+    </table>
     <p class="meta">{{ generated_on }}{% if school_year_name %} · {{ school_year_name }}{% endif %}</p>
 
     <p>Dear {{ parent_name }},</p>
@@ -77,47 +137,40 @@
     <h2>Students you can view</h2>
     {% if students %}
     <p class="note">This login can open records only for the students listed below.</p>
-    <table class="students">
-        <thead>
+    {% for row in students %}
+    <div class="student-card">
+        <table class="student-head">
             <tr>
-                <th>Student</th>
-                <th>Student ID</th>
-                <th>Grade</th>
-                <th>Your relationship</th>
-                <th>Current classes</th>
+                <td class="student-name">{{ row.name }}</td>
+                <td class="student-grade"><span class="grade-pill">Grade {{ row.grade_level }}</span></td>
             </tr>
-        </thead>
-        <tbody>
-            {% for row in students %}
-            <tr>
-                <td>{{ row.name }}</td>
-                <td>{{ row.student_id }}</td>
-                <td>{{ row.grade_level }}</td>
-                <td>{{ row.relationship }}</td>
-                <td>
-                    {% if row.classes %}
-                        {{ row.classes | join(', ') }}
-                    {% else %}
-                        No active classes this year
-                    {% endif %}
-                </td>
-            </tr>
+        </table>
+        <p class="student-meta">Student ID <strong>{{ row.student_id }}</strong> · {{ row.relationship }}</p>
+        <p class="classes-label">Current classes</p>
+        {% if row.classes %}
+            {% for cls in row.classes %}
+            <span class="chip">{{ cls.name }}{% if cls.subject %} <span class="chip-subject">· {{ cls.subject }}</span>{% endif %}</span>
             {% endfor %}
-        </tbody>
-    </table>
+        {% else %}
+            <p class="no-classes">No active classes this year</p>
+        {% endif %}
+    </div>
+    {% endfor %}
     {% else %}
     <p>No students are linked to this login yet. The school office can link your children before you sign in.</p>
     {% endif %}
 
-    <h2>What you can see for those students</h2>
-    <p class="note">After you sign in, the Family Portal shows:</p>
-    <ul class="access">
-        <li>Grades and assignment scores</li>
-        <li>Attendance</li>
-        <li>Classes, including teachers and schedules</li>
-        <li>Report cards that the director has released to families</li>
-    </ul>
-    <p class="note">You will not see other students’ records.</p>
+    <div class="access-block">
+        <h2>What you can see for those students</h2>
+        <p class="note">After you sign in, the Family Portal shows:</p>
+        <ul class="access">
+            <li>Grades and assignment scores</li>
+            <li>Attendance</li>
+            <li>Classes, including teachers and schedules</li>
+            <li>Report cards that the director has released to families</li>
+        </ul>
+        <p class="note">You will not see other students’ records.</p>
+    </div>
 
     <div class="footer">
         If you received this letter in error, please return it to Clara Science Academy and do not use the login.

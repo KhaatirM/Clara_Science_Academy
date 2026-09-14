@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import os
 import re
 from datetime import datetime
 from io import BytesIO
@@ -20,6 +22,17 @@ from utils.parent_portal import (
     parent_display_name,
     parent_slot_fields,
 )
+
+
+def _logo_data_uri() -> str:
+    path = os.path.join(current_app.root_path, "static", "img", "clara_logo.png")
+    try:
+        with open(path, "rb") as handle:
+            encoded = base64.b64encode(handle.read()).decode("ascii")
+        return f"data:image/png;base64,{encoded}"
+    except OSError:
+        current_app.logger.warning("Parent login letter: logo missing at %s", path)
+        return ""
 
 
 def _login_url() -> str:
@@ -70,9 +83,9 @@ def _student_rows(links: list[ParentStudentLink], school_year) -> list[dict[str,
             for class_obj in enrolled_classes_for_student(student.id, school_year.id):
                 label = class_obj.name or "Class"
                 subject = (getattr(class_obj, "subject", None) or "").strip()
-                if subject and subject.lower() not in label.lower():
-                    label = f"{label} ({subject})"
-                classes.append(label)
+                if subject and subject.lower() in label.lower():
+                    subject = ""
+                classes.append({"name": label, "subject": subject})
         rows.append(
             {
                 "name": f"{student.first_name or ''} {student.last_name or ''}".strip() or "Student",
@@ -134,6 +147,7 @@ def build_parent_login_letter_pdf(user: User, *, reset_password: bool) -> tuple[
             students=students,
             school_year_name=school_year.name if school_year else None,
             generated_on=datetime.now().strftime("%B %d, %Y"),
+            logo_src=_logo_data_uri(),
         )
         from weasyprint import HTML
 

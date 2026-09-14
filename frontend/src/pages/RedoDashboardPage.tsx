@@ -2,10 +2,20 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { Link } from 'react-router-dom'
 import { fetchRedoDashboard, grantRedoRequest, rejectRedoRequest, revokeRedo, revokeReopening } from '../api/redo'
 import { ManagementPageHero, ManagementPageShell } from '../components/layout/ManagementPageShell'
-import type { ActiveRedoItem, RedoDashboardResponse, RedoRequestItem, ReopeningItem } from '../types/redo'
+import type { ActiveRedoItem, RedoAttachmentDoc, RedoDashboardResponse, RedoRequestItem, ReopeningItem } from '../types/redo'
 import { assignmentTypeLabel, assignmentTypeTone } from '../utils/assignmentTypes'
+import {
+  assignmentIndividualViewPath,
+  assignmentWorkspaceHubPath,
+  useAssignmentWorkspaceScope,
+  type AssignmentWorkspaceScope,
+} from '../utils/assignmentWorkspaceScope'
 import { defaultRedoDeadline } from '../utils/redoDeadline'
-import { useAssignmentWorkspaceScope, assignmentWorkspaceHubPath } from '../utils/assignmentWorkspaceScope'
+import {
+  beginPrintSession,
+  finishPrintSession,
+  splitPrintableDocuments,
+} from '../utils/printAssignmentDocuments'
 
 function formatDate(iso: string | null) {
   if (!iso) return '—'
@@ -96,6 +106,8 @@ export function RedoDashboardPage() {
   const [grantDeadline, setGrantDeadline] = useState(() => defaultRedoDeadline())
   const [grantAttempts, setGrantAttempts] = useState(1)
   const [grantAllowReview, setGrantAllowReview] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
+  const [printing, setPrinting] = useState(false)
   const grantIsQuiz = (grantModal?.assignment_type || '').toLowerCase() === 'quiz'
 
   const load = useCallback(async () => {
@@ -137,6 +149,85 @@ export function RedoDashboardPage() {
     if (!data) return []
     return data.redos.filter((r) => matchesFilters(r, classFilter, statusFilter, search))
   }, [data, classFilter, statusFilter, search])
+
+  const printableByKey = useMemo(() => {
+    const map = new Map<string, RedoAttachmentDoc[]>()
+    for (const row of data?.redo_requests || []) {
+      if (row.documents?.length) map.set(`request:${row.id}`, row.documents)
+    }
+    for (const row of data?.reopenings || []) {
+      if (row.documents?.length) map.set(`reopening:${row.id}`, row.documents)
+    }
+    for (const row of data?.redos || []) {
+      if (row.documents?.length) map.set(`redo:${row.id}`, row.documents)
+    }
+    return map
+  }, [data])
+
+  const selectedCount = selectedKeys.size
+  const selectedDocCount = useMemo(() => {
+    const docs: RedoAttachmentDoc[] = []
+    for (const key of selectedKeys) {
+      const rowDocs = printableByKey.get(key)
+      if (rowDocs) docs.push(...rowDocs)
+    }
+    return splitPrintableDocuments(docs).printable.length
+  }, [printableByKey, selectedKeys])
+
+  function toggleKey(key: string) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function setKeys(keys: string[], selected: boolean) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      for (const key of keys) {
+        if (selected) next.add(key)
+        else next.delete(key)
+      }
+      return next
+    })
+  }
+
+  function printSelected() {
+    const docs: RedoAttachmentDoc[] = []
+    for (const key of selectedKeys) {
+      const rowDocs = printableByKey.get(key)
+      if (rowDocs) docs.push(...rowDocs)
+    }
+    const { printable, skipped } = splitPrintableDocuments(docs)
+    if (!printable.length) {
+      setToast(
+        skipped.length
+          ? 'Those assignments have files that cannot be printed here (not a PDF or image). Use View and download them.'
+          : 'Select assignments that have an attached document.',
+      )
+      return
+    }
+    const win = beginPrintSession()
+    if (!win) {
+      setToast('Allow pop-ups to print the selected documents.')
+      return
+    }
+    setPrinting(true)
+    void finishPrintSession(win, printable)
+      .then(() => {
+        if (skipped.length) {
+          setToast(
+            `Opened ${printable.length} document${printable.length === 1 ? '' : 's'} to print. Skipped ${skipped.length} file${skipped.length === 1 ? '' : 's'} that aren’t PDF or image.`,
+          )
+        }
+      })
+      .catch((err: unknown) => {
+        setToast(err instanceof Error ? err.message : 'Could not print the selected documents.')
+      })
+      .finally(() => setPrinting(false))
+  }
 
   const runAction = async (fn: () => Promise<{ message: string }>) => {
     setBusy(true)
@@ -283,18 +374,82 @@ export function RedoDashboardPage() {
         <div className="rounded-2xl bg-white p-12 text-center text-hub-muted shadow-lg">No active school year.</div>
       ) : (
         <div className="space-y-4">
+          {printableByKey.size > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-white px-4 py-3 shadow-sm">
+              <div className="text-sm text-hub-text">
+                <span className="font-bold">{selectedCount}</span> selected
+                {selectedDocCount ? (
+                  <span className="text-hub-muted"> · {selectedDocCount} document{selectedDocCount === 1 ? '' : 's'} to print</span>
+                ) : null}
+                <p className="mb-0 mt-0.5 text-xs text-hub-muted">
+                  Select worksheet files from one student or several, then print them together. The same assignment prints once.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={printing || selectedDocCount === 0}
+                  onClick={printSelected}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
+                >
+                  <i className="bi bi-printer" aria-hidden />
+                  {printing ? 'Preparing…' : 'Print selected'}
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedCount}
+                  onClick={() => setSelectedKeys(new Set())}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <RedoSection title="Pending redo requests" subtitle="Grant to set a new deadline, or reject the request." tone="border-amber-300 bg-amber-50">
             {filteredRequests.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Type', 'Class', 'Reason', 'Requested', 'Actions']}
+                headers={[
+                  sectionSelectHeader(
+                    filteredRequests.filter((r) => r.documents?.length).map((r) => `request:${r.id}`),
+                    selectedKeys,
+                    setKeys,
+                  ),
+                  'Student',
+                  'Assignment',
+                  'Type',
+                  'Class',
+                  'Reason',
+                  'Requested',
+                  'Actions',
+                ]}
                 rows={filteredRequests.map((r) => [
-                  r.student.display_name,
+                  <SelectCell
+                    key={`sel-${r.id}`}
+                    rowKey={`request:${r.id}`}
+                    enabled={Boolean(r.documents?.length)}
+                    checked={selectedKeys.has(`request:${r.id}`)}
+                    onToggle={toggleKey}
+                  />,
+                  <StudentSelectCell
+                    key={`stu-${r.id}`}
+                    name={r.student.display_name}
+                    keys={keysForStudent(filteredRequests, r.student.id, (row) => `request:${row.id}`)}
+                    selectedKeys={selectedKeys}
+                    onSetKeys={setKeys}
+                  />,
                   r.assignment.title,
                   <TypeBadge key={`t-${r.id}`} type={r.assignment_type} />,
                   r.class.name,
                   r.reason || 'No reason',
                   formatDate(r.requested_at),
-                  <div key={r.id} className="flex gap-1">
+                  <div key={r.id} className="flex flex-wrap gap-1">
+                    <ViewAssignmentLink
+                      scope={workspaceScope}
+                      classId={r.class.id}
+                      assignmentId={r.assignment.id ?? r.assignment_id}
+                    />
                     <button
                       type="button"
                       disabled={busy}
@@ -332,15 +487,42 @@ export function RedoDashboardPage() {
           <RedoSection title="Active reopenings" subtitle="Assignments opened again so students can submit. Graded reopenings leave this list automatically." tone="border-violet-300 bg-violet-50">
             {filteredReopenings.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Type', 'Class', 'Reopened', 'Attempts', 'Actions']}
+                headers={[
+                  sectionSelectHeader(
+                    filteredReopenings.filter((r) => r.documents?.length).map((r) => `reopening:${r.id}`),
+                    selectedKeys,
+                    setKeys,
+                  ),
+                  'Student',
+                  'Assignment',
+                  'Type',
+                  'Class',
+                  'Reopened',
+                  'Attempts',
+                  'Actions',
+                ]}
                 rows={filteredReopenings.map((r: ReopeningItem) => [
-                  r.student.display_name,
+                  <SelectCell
+                    key={`sel-ro-${r.id}`}
+                    rowKey={`reopening:${r.id}`}
+                    enabled={Boolean(r.documents?.length)}
+                    checked={selectedKeys.has(`reopening:${r.id}`)}
+                    onToggle={toggleKey}
+                  />,
+                  <StudentSelectCell
+                    key={`stu-ro-${r.id}`}
+                    name={r.student.display_name}
+                    keys={keysForStudent(filteredReopenings, r.student.id, (row) => `reopening:${row.id}`)}
+                    selectedKeys={selectedKeys}
+                    onSetKeys={setKeys}
+                  />,
                   r.assignment.title,
                   <TypeBadge key={`rt-${r.id}`} type={r.assignment_type} />,
                   r.class.name,
                   formatDate(r.reopened_at),
                   r.attempts_label ?? (r.additional_attempts > 0 ? String(r.additional_attempts) : '—'),
-                  <div key={`ro-${r.id}`} className="flex gap-1">
+                  <div key={`ro-${r.id}`} className="flex flex-wrap gap-1">
+                    <ViewAssignmentLink scope={workspaceScope} classId={r.class.id} assignmentId={r.assignment.id} />
                     {r.grade_url ? (
                       <a href={r.grade_url} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">
                         Grade
@@ -369,9 +551,37 @@ export function RedoDashboardPage() {
           <RedoSection title="Active redo opportunities" subtitle="Granted redos with deadlines and grading workflow." tone="border-teal-300 bg-teal-50">
             {filteredRedos.length ? (
               <DataTable
-                headers={['Student', 'Assignment', 'Type', 'Class', 'Original', 'Status', 'Deadline', 'Final', 'Actions']}
+                headers={[
+                  sectionSelectHeader(
+                    filteredRedos.filter((r) => r.documents?.length).map((r) => `redo:${r.id}`),
+                    selectedKeys,
+                    setKeys,
+                  ),
+                  'Student',
+                  'Assignment',
+                  'Type',
+                  'Class',
+                  'Original',
+                  'Status',
+                  'Deadline',
+                  'Final',
+                  'Actions',
+                ]}
                 rows={filteredRedos.map((r: ActiveRedoItem) => [
-                  r.student.display_name,
+                  <SelectCell
+                    key={`sel-rd-${r.id}`}
+                    rowKey={`redo:${r.id}`}
+                    enabled={Boolean(r.documents?.length)}
+                    checked={selectedKeys.has(`redo:${r.id}`)}
+                    onToggle={toggleKey}
+                  />,
+                  <StudentSelectCell
+                    key={`stu-rd-${r.id}`}
+                    name={r.student.display_name}
+                    keys={keysForStudent(filteredRedos, r.student.id, (row) => `redo:${row.id}`)}
+                    selectedKeys={selectedKeys}
+                    onSetKeys={setKeys}
+                  />,
                   r.assignment.title,
                   <TypeBadge key={`dt-${r.id}`} type={r.assignment_type} />,
                   r.class.name,
@@ -385,7 +595,8 @@ export function RedoDashboardPage() {
                   r.final_grade != null
                     ? formatRedoScore(r.final_grade, r.final_percent, r.total_points ?? r.assignment.total_points)
                     : '—',
-                  <div key={`act-${r.id}`} className="flex gap-1">
+                  <div key={`act-${r.id}`} className="flex flex-wrap gap-1">
+                    <ViewAssignmentLink scope={workspaceScope} classId={r.class.id} assignmentId={r.assignment.id ?? r.assignment_id} />
                     {r.grade_url ? (
                       <a href={r.grade_url} className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold">
                         Grade
@@ -530,14 +741,14 @@ function RedoSection({
   )
 }
 
-function DataTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
+function DataTable({ headers, rows }: { headers: ReactNode[]; rows: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-hub-muted">
-            {headers.map((h) => (
-              <th key={h} className="px-3 py-2.5">
+            {headers.map((h, i) => (
+              <th key={i} className="px-3 py-2.5">
                 {h}
               </th>
             ))}
@@ -561,4 +772,104 @@ function DataTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }
 
 function EmptyRow({ message }: { message: string }) {
   return <div className="px-6 py-10 text-center text-sm text-hub-muted">{message}</div>
+}
+
+function ViewAssignmentLink({
+  scope,
+  classId,
+  assignmentId,
+}: {
+  scope: AssignmentWorkspaceScope
+  classId: number | null
+  assignmentId: number | null
+}) {
+  const to = assignmentIndividualViewPath(scope, classId, assignmentId)
+  if (!to) return null
+  return (
+    <Link
+      to={to}
+      className="rounded-lg border border-indigo-300 bg-white px-2 py-1 text-xs font-semibold text-indigo-800 hover:bg-indigo-50"
+    >
+      View
+    </Link>
+  )
+}
+
+function SelectCell({
+  rowKey,
+  enabled,
+  checked,
+  onToggle,
+}: {
+  rowKey: string
+  enabled: boolean
+  checked: boolean
+  onToggle: (key: string) => void
+}) {
+  return (
+    <input
+      type="checkbox"
+      aria-label="Select assignment to print"
+      disabled={!enabled}
+      checked={enabled && checked}
+      title={enabled ? 'Select to print the attached document' : 'No printable document on this assignment'}
+      onChange={() => onToggle(rowKey)}
+      className="mt-0.5"
+    />
+  )
+}
+
+function keysForStudent<T extends { student: { id: number | null }; documents?: RedoAttachmentDoc[] }>(
+  rows: T[],
+  studentId: number | null,
+  keyFor: (row: T) => string,
+) {
+  if (studentId == null) return []
+  return rows.filter((row) => row.student.id === studentId && row.documents?.length).map(keyFor)
+}
+
+function StudentSelectCell({
+  name,
+  keys,
+  selectedKeys,
+  onSetKeys,
+}: {
+  name: string
+  keys: string[]
+  selectedKeys: Set<string>
+  onSetKeys: (keys: string[], selected: boolean) => void
+}) {
+  const allSelected = keys.length > 1 && keys.every((key) => selectedKeys.has(key))
+  return (
+    <div>
+      <div>{name}</div>
+      {keys.length > 1 ? (
+        <button
+          type="button"
+          onClick={() => onSetKeys(keys, !allSelected)}
+          className="mt-1 text-[11px] font-semibold text-teal-800 hover:underline"
+        >
+          {allSelected ? 'Clear this student' : `Select ${keys.length} worksheets`}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+function sectionSelectHeader(
+  keys: string[],
+  selectedKeys: Set<string>,
+  onSetKeys: (keys: string[], selected: boolean) => void,
+) {
+  if (!keys.length) return ''
+  const allSelected = keys.every((key) => selectedKeys.has(key))
+  return (
+    <input
+      type="checkbox"
+      aria-label="Select all printable assignments in this list"
+      checked={allSelected}
+      title="Select all printable documents in this list"
+      onChange={() => onSetKeys(keys, !allSelected)}
+    />
+  )
 }

@@ -165,13 +165,47 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 12, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 14, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 12</strong> (<strong>{{ app_version_display }}</strong>) clarifies Pending vs Graded on open-ended quiz submission cards, stops long material filenames from stretching the student View Assignment popup, and earlier today added Drive picks and grade feedback files.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 14</strong> (<strong>{{ app_version_display }}</strong>) adds a Family Portal login letter you can print for each parent, with temporary credentials and the students and records that login can see.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 14, 2026 - Parent login letter -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-envelope-paper me-2"></i>Family Portal login letter – September 14, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Generate letter:</strong> Each parent account on Family Portal has a Generate letter action. The PDF lists the portal address, username, linked students, and the grades, attendance, classes, and released report cards they can see.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Temporary password on the letter:</strong> If the parent still has a temporary password, a new one is printed. If they already chose their own, you confirm before resetting it. Cancel prints the letter without a password.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 14, 2026 - Redo view + print -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-printer me-2"></i>Redo dashboard &amp; assignment print – September 14, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>View from the redo dashboard:</strong> Each request, reopening, and redo opportunity has a View action that opens the assignment.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Print assignment documents:</strong> On assignment view, Print sits next to Download for uploaded PDFs and images.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Print a student’s worksheets together:</strong> Select several redo rows (or all of one student’s worksheets) and print the attached documents in one packet.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 12, 2026 - Quiz pending badges + filename truncation -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-ui-checks me-2"></i>Quiz grading status &amp; assignment popup – September 12, 2026</h6>
@@ -2621,11 +2655,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep12_2026_v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep14_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep12_2026_v3', 'true');
+            sessionStorage.setItem('updateModalShownSep14_2026_v2', 'true');
         }, 500);
     }
 });

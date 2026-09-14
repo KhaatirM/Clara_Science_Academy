@@ -20,6 +20,15 @@ export interface RedoClassRef {
   name: string
 }
 
+/** Worksheet files attached to the assignment (not the student's submission). */
+export interface RedoAttachmentDoc {
+  name: string
+  is_pdf: boolean
+  is_image: boolean
+  view_url: string
+  download_url: string
+}
+
 export interface RedoRequestItem {
   id: number
   assignment_id: number
@@ -31,6 +40,7 @@ export interface RedoRequestItem {
   student: RedoStudentRef
   assignment: RedoAssignmentRef
   class: RedoClassRef
+  documents?: RedoAttachmentDoc[]
   search_text: string
 }
 
@@ -44,6 +54,7 @@ export interface ReopeningItem {
   assignment: RedoAssignmentRef
   class: RedoClassRef
   status: string
+  documents?: RedoAttachmentDoc[]
   grade_url?: string | null
   search_text: string
 }
@@ -69,6 +80,7 @@ export interface ActiveRedoItem {
   student: RedoStudentRef
   assignment: RedoAssignmentRef
   class: RedoClassRef
+  documents?: RedoAttachmentDoc[]
   grade_url: string | null
   search_text: string
 }

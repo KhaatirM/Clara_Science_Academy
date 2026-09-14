@@ -9,6 +9,7 @@ from decorators import permissions_required
 from extensions import db
 from models import ParentStudentLink, Student, User
 from utils.parent_portal import (
+    parent_display_name,
     parent_portal_status_for_student,
     parent_slot_fields,
     sync_student_parent_portal,
@@ -51,6 +52,8 @@ def query_parents_hub() -> dict:
                 "id": u.id,
                 "username": u.username or "",
                 "email": u.email or "",
+                "display_name": parent_display_name(u),
+                "is_temporary_password": bool(getattr(u, "is_temporary_password", False)),
                 "initial": (u.username or "P")[0].upper(),
                 "children": children,
                 "link_count": len(links),

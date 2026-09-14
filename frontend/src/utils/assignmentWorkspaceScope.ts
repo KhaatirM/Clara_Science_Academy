@@ -11,6 +11,15 @@ export function assignmentWorkspaceApiBase(scope: AssignmentWorkspaceScope): str
   return scope === 'teacher' ? '/api/spa/teacher/assignments' : '/api/spa/assignments'
 }
 
+export function assignmentIndividualViewPath(
+  scope: AssignmentWorkspaceScope,
+  classId: number | null | undefined,
+  assignmentId: number | null | undefined,
+): string | null {
+  if (!classId || !assignmentId) return null
+  return `${assignmentWorkspaceHubPath(scope, classId)}/individual/${assignmentId}/view`
+}
+
 export function assignmentWorkspaceHubPath(scope: AssignmentWorkspaceScope, classId?: number): string {
   if (scope === 'teacher') {
     return classId ? `/teacher/assignments-and-grades/${classId}` : '/teacher/assignments-and-grades'

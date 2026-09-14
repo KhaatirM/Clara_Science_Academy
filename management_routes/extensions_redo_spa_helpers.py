@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from flask_login import current_user
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from models import (
     Assignment,
@@ -28,6 +28,71 @@ from utils.school_year_filters import (
     redo_requests_query,
     teacher_class_ids_active_school_year,
 )
+
+
+def _is_pdf_name(mime: str | None, name: str | None) -> bool:
+    mime_l = (mime or "").lower()
+    name_l = (name or "").lower()
+    return "pdf" in mime_l or name_l.endswith(".pdf")
+
+
+def _is_image_name(mime: str | None, name: str | None) -> bool:
+    mime_l = (mime or "").lower()
+    name_l = (name or "").lower()
+    return mime_l.startswith("image/") or name_l.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))
+
+
+def _document_payload(assignment_id: int, index: int, name: str, mime: str | None, *, indexed: bool) -> dict[str, Any]:
+    if indexed:
+        view_url = f"/assignment/file/{assignment_id}?view=true&index={index}"
+        download_url = f"/assignment/file/{assignment_id}?index={index}"
+    else:
+        view_url = f"/assignment/file/{assignment_id}?view=true"
+        download_url = f"/assignment/file/{assignment_id}"
+    return {
+        "name": name,
+        "is_pdf": _is_pdf_name(mime, name),
+        "is_image": _is_image_name(mime, name),
+        "view_url": view_url,
+        "download_url": download_url,
+    }
+
+
+def _assignment_documents(assignment: Assignment | None) -> list[dict[str, Any]]:
+    """Worksheet files attached to the assignment (not student submissions)."""
+    if not assignment:
+        return []
+    docs: list[dict[str, Any]] = []
+    attachment_list = list(getattr(assignment, "attachment_list", None) or [])
+    if attachment_list:
+        for i, att in enumerate(attachment_list):
+            name = (
+                getattr(att, "attachment_original_filename", None)
+                or getattr(att, "attachment_filename", None)
+                or f"Document {i + 1}"
+            )
+            docs.append(
+                _document_payload(
+                    assignment.id,
+                    i,
+                    name,
+                    getattr(att, "attachment_mime_type", None),
+                    indexed=True,
+                )
+            )
+        return docs
+    if getattr(assignment, "attachment_filename", None):
+        name = getattr(assignment, "attachment_original_filename", None) or assignment.attachment_filename
+        docs.append(
+            _document_payload(
+                assignment.id,
+                0,
+                name,
+                getattr(assignment, "attachment_mime_type", None),
+                indexed=False,
+            )
+        )
+    return docs
 
 
 def _iso(dt: Any) -> str | None:
@@ -220,6 +285,7 @@ def _serialize_redo_request(rr: RedoRequest) -> dict[str, Any]:
             "id": class_info.id if class_info else None,
             "name": class_info.name if class_info else "Unknown",
         },
+        "documents": _assignment_documents(assignment),
         "search_text": " ".join(
             filter(
                 None,
@@ -260,6 +326,7 @@ def _serialize_reopening(r: AssignmentReopening) -> dict[str, Any]:
             "name": class_info.name if class_info else "Unknown",
         },
         "status": "reopened",
+        "documents": _assignment_documents(assignment),
         "grade_url": f"/management/grade/assignment/{r.assignment_id}" if assignment else None,
         "search_text": " ".join(
             filter(
@@ -518,6 +585,7 @@ def _serialize_redo(
             "id": class_info.id if class_info else None,
             "name": class_info.name if class_info else "Unknown",
         },
+        "documents": _assignment_documents(assignment),
         "grade_url": f"/management/grade/assignment/{redo.assignment_id}" if assignment else None,
         "search_text": " ".join(
             filter(
@@ -591,6 +659,7 @@ def query_redo_dashboard() -> dict[str, Any]:
     redos = (
         redos_q.options(
             joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
+            joinedload(AssignmentRedo.assignment).selectinload(Assignment.attachment_list),
             joinedload(AssignmentRedo.student),
         )
         .order_by(AssignmentRedo.redo_deadline.asc())
@@ -599,6 +668,7 @@ def query_redo_dashboard() -> dict[str, Any]:
     reopenings = (
         reopenings_q.options(
             joinedload(AssignmentReopening.assignment).joinedload(Assignment.class_info),
+            joinedload(AssignmentReopening.assignment).selectinload(Assignment.attachment_list),
             joinedload(AssignmentReopening.student),
         )
         .order_by(AssignmentReopening.reopened_at.desc())
@@ -607,6 +677,7 @@ def query_redo_dashboard() -> dict[str, Any]:
     redo_requests = (
         requests_q.options(
             joinedload(RedoRequest.assignment).joinedload(Assignment.class_info),
+            joinedload(RedoRequest.assignment).selectinload(Assignment.attachment_list),
             joinedload(RedoRequest.student),
         )
         .order_by(RedoRequest.requested_at.desc())

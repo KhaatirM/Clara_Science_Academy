@@ -7,6 +7,8 @@ export interface ParentAccountItem {
   id: number
   username: string
   email: string
+  display_name?: string
+  is_temporary_password?: boolean
   initial: string
   children: ParentLinkedChild[]
   link_count: number

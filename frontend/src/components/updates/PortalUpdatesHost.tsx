@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep12_2026_v3'
+const SESSION_KEY = 'spaUpdateModalShownSep14_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Family Portal login letters',
+    body: 'On Family Portal, Generate letter prints a PDF with the parent’s username, a temporary password when you reset one, the students they can open, and the grades, attendance, classes, and released report cards they can see.',
+  },
+  {
+    title: 'Redo dashboard can view and print worksheets',
+    body: 'Each redo row has a View action that opens the assignment. Select one student’s worksheets — or several — and print the attached documents together.',
+  },
+  {
+    title: 'Print next to download on assignment documents',
+    body: 'On assignment view, uploaded PDFs and images have a Print button beside Download.',
+  },
   {
     title: 'Open-ended quiz cards show Pending vs Graded',
     body: 'On quiz Submissions, each student card clearly shows Pending or Graded for open-ended review, with a Pending filter so you can jump to work still waiting on you.',
@@ -302,10 +314,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.42'
-  const releaseLabel = version?.release_label || 'September 12, 2026'
+  const display = version?.display || 'v 2.520.44'
+  const releaseLabel = version?.release_label || 'September 14, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2778
+  const updatesEstimate = version?.updates_estimate ?? 2782
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

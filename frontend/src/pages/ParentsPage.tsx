@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
-import { fetchParentsHub, provisionAllParentLogins } from '../api/parents'
+import { fetchParentsHub, downloadParentLoginLetter, provisionAllParentLogins } from '../api/parents'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ManagementOutletContext } from '../types/layout'
 import type { ParentAccountItem, ParentProvisionCredential, ParentsHubStats } from '../types/parents'
@@ -56,7 +56,17 @@ function WorkflowStep({ num, title, body }: { num: number; title: string; body: 
   )
 }
 
-function ParentAccountsTable({ items }: { items: ParentAccountItem[] }) {
+function ParentAccountsTable({
+  items,
+  canGenerate,
+  generatingId,
+  onGenerateLetter,
+}: {
+  items: ParentAccountItem[]
+  canGenerate: boolean
+  generatingId: number | null
+  onGenerateLetter: (row: ParentAccountItem) => void
+}) {
   if (!items.length) {
     return (
       <div className="px-6 py-12 text-center text-hub-muted">
@@ -79,6 +89,7 @@ function ParentAccountsTable({ items }: { items: ParentAccountItem[] }) {
             <th className="px-5 py-3">Email</th>
             <th className="px-5 py-3">Linked children</th>
             <th className="px-5 py-3 text-right">Links</th>
+            {canGenerate ? <th className="px-5 py-3 text-right">Actions</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -121,6 +132,19 @@ function ParentAccountsTable({ items }: { items: ParentAccountItem[] }) {
                   {row.link_count}
                 </span>
               </td>
+              {canGenerate ? (
+                <td className="px-5 py-3 text-right">
+                  <button
+                    type="button"
+                    disabled={generatingId === row.id}
+                    onClick={() => onGenerateLetter(row)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-teal-300 bg-white px-2.5 py-1 text-xs font-semibold text-teal-900 hover:bg-teal-50 disabled:opacity-60"
+                  >
+                    <i className="bi bi-file-earmark-pdf" aria-hidden />
+                    {generatingId === row.id ? 'Preparing…' : 'Generate letter'}
+                  </button>
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -145,6 +169,7 @@ export function ParentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [provisioning, setProvisioning] = useState(false)
+  const [generatingLetterId, setGeneratingLetterId] = useState<number | null>(null)
   const [newCredentials, setNewCredentials] = useState<ParentProvisionCredential[]>([])
 
   const load = useCallback(async () => {
@@ -165,6 +190,37 @@ export function ParentsPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const handleGenerateLetter = async (row: ParentAccountItem) => {
+    const name = row.display_name || row.username
+    let resetPassword = true
+    if (!row.is_temporary_password) {
+      resetPassword = window.confirm(
+        `${name} already set their own password.\n\n` +
+          'Reset it to a new temporary password so it can be printed on the letter?\n\n' +
+          'Choose Cancel to print the letter without a password. They will keep the password they already set.',
+      )
+    }
+    setGeneratingLetterId(row.id)
+    setActionMessage(null)
+    try {
+      await downloadParentLoginLetter(row.id, resetPassword)
+      if (resetPassword) {
+        setActionMessage(
+          `Login letter downloaded for ${name}. A new temporary password was set and is printed on the letter. They must change it the next time they sign in.`,
+        )
+        void load()
+      } else {
+        setActionMessage(
+          `Login letter downloaded for ${name}. Their existing password was left unchanged, so the letter does not include a password.`,
+        )
+      }
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Could not generate the login letter')
+    } finally {
+      setGeneratingLetterId(null)
+    }
+  }
 
   const handleProvisionAll = async () => {
     if (
@@ -336,7 +392,12 @@ export function ParentsPage() {
         {loading ? (
           <div className="px-6 py-12 text-center text-hub-muted">Loading parent accounts…</div>
         ) : (
-          <ParentAccountsTable items={items} />
+          <ParentAccountsTable
+            items={items}
+            canGenerate={canProvision}
+            generatingId={generatingLetterId}
+            onGenerateLetter={(row) => void handleGenerateLetter(row)}
+          />
         )}
       </section>
 

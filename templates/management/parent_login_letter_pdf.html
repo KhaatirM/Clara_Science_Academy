@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Family Portal login — {{ parent_name }}</title>
+    <style>
+        @page { size: letter; margin: 0.7in 0.75in; }
+        body { font-family: "Segoe UI", Calibri, Arial, sans-serif; color: #1e293b; font-size: 11pt; line-height: 1.45; }
+        h1 { margin: 0; font-size: 16pt; letter-spacing: 0.04em; color: #0f766e; }
+        h2 { margin: 1.1em 0 0.35em; font-size: 12pt; color: #0f766e; }
+        p { margin: 0.4em 0; }
+        .school { text-align: center; border-bottom: 3px solid #0f766e; padding-bottom: 10px; margin-bottom: 16px; }
+        .school .addr { margin: 2px 0 0; font-size: 10pt; color: #475569; }
+        .meta { text-align: right; font-size: 10pt; color: #64748b; margin: 0 0 12px; }
+        .login-box { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 8px; padding: 12px 14px; margin: 10px 0 4px; }
+        .login-box table { width: 100%; border-collapse: collapse; }
+        .login-box td { padding: 4px 6px; vertical-align: top; }
+        .login-box .label { width: 34%; font-weight: 700; color: #115e59; font-size: 10pt; }
+        .mono { font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+        .note { font-size: 10pt; color: #334155; }
+        table.students { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 10pt; }
+        table.students th { text-align: left; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 8px; }
+        table.students td { border: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top; }
+        ul.access { margin: 4px 0 0 1.1em; padding: 0; }
+        ul.access li { margin: 0.15em 0; }
+        .footer { margin-top: 18px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 9pt; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="school">
+        <h1>CLARA SCIENCE ACADEMY</h1>
+        <p class="addr">3015 East Bessemer Ave, Greensboro, NC 27405</p>
+        <p class="addr"><strong>Family Portal login letter</strong></p>
+    </div>
+    <p class="meta">{{ generated_on }}{% if school_year_name %} · {{ school_year_name }}{% endif %}</p>
+
+    <p>Dear {{ parent_name }},</p>
+    <p>
+        Your Family Portal account is ready. This letter is for you only. It lists the login for that
+        account and the students whose records you can open. Please keep it private.
+    </p>
+
+    <h2>How to sign in</h2>
+    <div class="login-box">
+        <table>
+            <tr>
+                <td class="label">Portal address</td>
+                <td class="mono">{{ login_url }}</td>
+            </tr>
+            <tr>
+                <td class="label">Username</td>
+                <td class="mono">{{ username }}</td>
+            </tr>
+            {% if temporary_password %}
+            <tr>
+                <td class="label">Temporary password</td>
+                <td class="mono">{{ temporary_password }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    {% if temporary_password %}
+    <p class="note">
+        This is a temporary password. The first time you sign in, the portal will ask you to choose a new password.
+        Do not share this letter.
+    </p>
+    {% else %}
+    <p class="note">
+        Use the password you already set for this account. This letter does not include a password.
+        Contact the school office if you need it reset.
+    </p>
+    {% endif %}
+    {% if parent_email %}
+    <p class="note">Account email on file: {{ parent_email }}</p>
+    {% endif %}
+
+    <h2>Students you can view</h2>
+    {% if students %}
+    <p class="note">This login can open records only for the students listed below.</p>
+    <table class="students">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Student ID</th>
+                <th>Grade</th>
+                <th>Your relationship</th>
+                <th>Current classes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in students %}
+            <tr>
+                <td>{{ row.name }}</td>
+                <td>{{ row.student_id }}</td>
+                <td>{{ row.grade_level }}</td>
+                <td>{{ row.relationship }}</td>
+                <td>
+                    {% if row.classes %}
+                        {{ row.classes | join(', ') }}
+                    {% else %}
+                        No active classes this year
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No students are linked to this login yet. The school office can link your children before you sign in.</p>
+    {% endif %}
+
+    <h2>What you can see for those students</h2>
+    <p class="note">After you sign in, the Family Portal shows:</p>
+    <ul class="access">
+        <li>Grades and assignment scores</li>
+        <li>Attendance</li>
+        <li>Classes, including teachers and schedules</li>
+        <li>Report cards that the director has released to families</li>
+    </ul>
+    <p class="note">You will not see other students’ records.</p>
+
+    <div class="footer">
+        If you received this letter in error, please return it to Clara Science Academy and do not use the login.
+        Access is limited to the students listed above.
+    </div>
+</body>
+</html>

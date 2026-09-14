@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AssignmentViewResponse } from '../../api/assignmentWorkspace'
 import { spaRoute } from '../../utils/spaRoute'
+import {
+  beginPrintSession,
+  finishPrintSession,
+  isPrintableDocument,
+  type PrintableDocument,
+} from '../../utils/printAssignmentDocuments'
 
 type Attachment = NonNullable<AssignmentViewResponse['attachments']>[number]
 
@@ -156,26 +162,60 @@ export function DocumentViewer({
 
 function DocumentViewerInner({ docs }: { docs: Attachment[] }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [printError, setPrintError] = useState<string | null>(null)
   const active = docs[activeIndex] ?? docs[0]
+
+  function printCurrent() {
+    setPrintError(null)
+    const doc: PrintableDocument = {
+      name: active.name,
+      is_pdf: active.is_pdf,
+      view_url: active.view_url,
+      download_url: active.download_url,
+    }
+    if (!isPrintableDocument(doc)) {
+      setPrintError('This file type cannot be printed here. Download it and print from your computer.')
+      return
+    }
+    const win = beginPrintSession()
+    if (!win) {
+      setPrintError('Allow pop-ups to print this document.')
+      return
+    }
+    void finishPrintSession(win, [doc]).catch((err: unknown) => {
+      setPrintError(err instanceof Error ? err.message : 'Could not print this document.')
+    })
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-sm font-bold text-hub-text">
             <i className="bi bi-file-earmark-pdf text-red-600" aria-hidden />
             {docs.length > 1 ? 'Assignment Documents' : 'Assignment Document'}
           </h2>
-          <p className="text-xs text-hub-muted">{active.name}</p>
+          <p className="truncate text-xs text-hub-muted" title={active.name}>{active.name}</p>
+          {printError ? <p className="mb-0 mt-1 text-xs text-red-700">{printError}</p> : null}
         </div>
-        <a
-          href={active.download_url}
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
-          download
-        >
-          <i className="bi bi-download" aria-hidden />
-          Download
-        </a>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={printCurrent}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+          >
+            <i className="bi bi-printer" aria-hidden />
+            Print
+          </button>
+          <a
+            href={active.download_url}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+            download
+          >
+            <i className="bi bi-download" aria-hidden />
+            Download
+          </a>
+        </div>
       </div>
 
       {docs.length > 1 ? (
@@ -208,14 +248,24 @@ function DocumentViewerInner({ docs }: { docs: Attachment[] }) {
           <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
             <i className="bi bi-file-earmark-text text-5xl text-slate-400" aria-hidden />
             <p className="text-sm font-semibold text-hub-text">{active.name}</p>
-            <a
-              href={active.download_url}
-              className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-              download
-            >
-              <i className="bi bi-download" aria-hidden />
-              Download document
-            </a>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <a
+                href={active.download_url}
+                className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                download
+              >
+                <i className="bi bi-download" aria-hidden />
+                Download document
+              </a>
+              <button
+                type="button"
+                onClick={printCurrent}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <i className="bi bi-printer" aria-hidden />
+                Print
+              </button>
+            </div>
           </div>
         )}
       </div>

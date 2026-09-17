@@ -52,18 +52,9 @@ def query_unified_attendance_hub(
         .all()
     )
 
-    try:
-        from services.attendance_on_login import (
-            _now_in_school_tz,
-            apply_end_of_day_automark,
-            is_past_end_of_day_cutoff,
-        )
-
-        school_today, _ = _now_in_school_tz(current_app)
-        if selected_date == school_today and is_past_end_of_day_cutoff(current_app):
-            apply_end_of_day_automark(current_app, selected_date)
-    except Exception as exc:
-        current_app.logger.warning("End-of-day attendance automark failed: %s", exc)
+    # Do not auto-create school-day rows on hub load. Period attendance only writes
+    # class Attendance; filling empty school-day Unexcused Absences here made it look
+    # like taking a period marked school day.
 
     existing_records: dict[int, SchoolDayAttendance] = {}
     if selected_date:

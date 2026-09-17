@@ -24,6 +24,7 @@ from models import (
     Student,
     User,
 )
+from utils.grade_selection import collapse_grades_to_official
 
 
 def normalize_parent_email(email: Optional[str]) -> Optional[str]:
@@ -400,11 +401,17 @@ def build_child_academic_summary(student_id: int) -> dict[str, Any]:
 
     for c in classes:
         pcts: list[float] = []
-        for g in Grade.query.join(Assignment).filter(
-            Grade.student_id == student_id,
-            Assignment.class_id == c.id,
-            Assignment.school_year_id == school_year.id,
-        ).all():
+
+        class_grades_rows = collapse_grades_to_official(
+            Grade.query.join(Assignment)
+            .filter(
+                Grade.student_id == student_id,
+                Assignment.class_id == c.id,
+                Assignment.school_year_id == school_year.id,
+            )
+            .all()
+        )
+        for g in class_grades_rows:
             pct = _percentage_from_grade(g, assignment=g.assignment)
             if pct is not None:
                 pcts.append(pct)
@@ -423,14 +430,13 @@ def build_child_academic_summary(student_id: int) -> dict[str, Any]:
             class_grades[c.name] = avg
             all_pcts.extend(pcts)
 
-    for g in (
+    for g in collapse_grades_to_official(
         Grade.query.filter_by(student_id=student_id)
         .join(Assignment)
         .filter(Assignment.status != "Voided", Assignment.school_year_id == school_year.id)
         .order_by(Grade.graded_at.desc())
-        .limit(8)
         .all()
-    ):
+    )[:8]:
         if g.is_voided:
             continue
         pct = _percentage_from_grade(g, assignment=g.assignment)

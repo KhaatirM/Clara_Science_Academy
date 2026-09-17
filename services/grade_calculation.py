@@ -46,7 +46,11 @@ def _subjects_for_grade_level(grade_level):
 def _calculate_grades_for_subjects(grades, subjects):
     """
     Helper: average grades for a list of subjects.
+    Quiz retakes are collapsed to one official score per assignment first.
     """
+    from utils.grade_selection import collapse_grades_to_official
+
+    grades = collapse_grades_to_official(grades)
     calculated = {}
     for subject in subjects:
         subject_grades = [g for g in grades if g.assignment.class_info.name == subject]

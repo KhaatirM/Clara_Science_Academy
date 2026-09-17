@@ -165,13 +165,32 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 14, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 16, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 14</strong> (<strong>{{ app_version_display }}</strong>) adds Coral, Sapphire, Honey, and Slate in Settings for every role, and retires the Dark theme.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 16</strong> (<strong>{{ app_version_display }}</strong>) fixes open-ended quiz grading on the correct attempt, stops quiz retakes from counting multiple times in averages, and stops period attendance from auto-filling empty school-day rows.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 16, 2026 - Quiz averages + attendance -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-ui-checks-grid me-2"></i>Quiz averages &amp; attendance – September 16, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Open-ended quiz grading:</strong> Manual points save to the selected attempt’s answers and grade row — not a mix of older auto scores that made the on-file “best” look like an average.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz retakes:</strong> Class averages, quarter grades, GPA, and grade lists use the best attempt only — earlier tries no longer stack into the average.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Period vs school day:</strong> Taking class-period attendance no longer auto-creates school-day Unexcused Absences for unmarked students.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 14, 2026 - Themes -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Themes – September 14, 2026</h6>
@@ -2696,11 +2715,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep14_2026_v5')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep16_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep14_2026_v5', 'true');
+            sessionStorage.setItem('updateModalShownSep16_2026_v2', 'true');
         }, 500);
     }
 });

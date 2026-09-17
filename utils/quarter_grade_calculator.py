@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from flask import current_app
 from models import db, QuarterGrade, Grade, Assignment, Student, Class, SchoolYear, Enrollment, AcademicPeriod, GroupGrade, GroupAssignment
 import json
+from utils.grade_selection import collapse_grades_to_official
 
 
 def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_id, quarter):
@@ -112,7 +113,11 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
             return None
     
     # Calculate weighted average from grades based on points earned vs total points
-    # This ensures assignments with different point values are properly weighted
+    # This ensures assignments with different point values are properly weighted.
+    # Quiz retakes store one Grade row per attempt — only the official (best) attempt counts.
+    # Drop unused import leftover if present.
+    grades = collapse_grades_to_official(grades)
+
     total_points_sum = 0.0
     points_earned_sum = 0.0
     valid_grades_count = 0

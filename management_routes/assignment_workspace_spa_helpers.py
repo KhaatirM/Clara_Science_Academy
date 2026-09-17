@@ -1137,9 +1137,111 @@ def query_assignment_edit_meta(assignment_id: int, *, is_group: bool = False) ->
     }
 
 
+def _parse_grade_data_dict(grade: Grade | None) -> dict[str, Any] | None:
+    if not grade or not grade.grade_data:
+        return None
+    try:
+        gd = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return gd if isinstance(gd, dict) else None
+
+
+def _quiz_submission_for_student(
+    student_id: int,
+    assignment_id: int,
+    submission_id: int | None,
+) -> Submission | None:
+    if submission_id:
+        sub = Submission.query.filter_by(
+            id=int(submission_id),
+            student_id=student_id,
+            assignment_id=assignment_id,
+        ).first()
+        if sub:
+            return sub
+    return (
+        Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id)
+        .order_by(Submission.submitted_at.desc(), Submission.id.desc())
+        .first()
+    )
+
+
+def _grade_row_for_quiz_attempt(
+    student_id: int,
+    assignment_id: int,
+    submission: Submission | None,
+) -> Grade | None:
+    """Match the Grade row for one quiz attempt (not an arbitrary first/newest row)."""
+    grades = (
+        Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id)
+        .order_by(Grade.graded_at.asc(), Grade.id.asc())
+        .all()
+    )
+    active = [g for g in grades if not g.is_voided]
+    if not active:
+        return None
+    if submission is None:
+        return active[-1]
+
+    for grade in active:
+        gd = _parse_grade_data_dict(grade)
+        if gd and gd.get("submission_id") == submission.id:
+            return grade
+
+    subs = (
+        Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id)
+        .order_by(Submission.submitted_at.asc(), Submission.id.asc())
+        .all()
+    )
+    try:
+        idx = next(i for i, s in enumerate(subs) if s.id == submission.id)
+    except StopIteration:
+        return active[-1]
+    if idx < len(active):
+        return active[idx]
+    return active[-1]
+
+
+def _quiz_answer_for_attempt(
+    *,
+    student_id: int,
+    question_id: int,
+    submission: Submission | None,
+    is_latest_submission: bool,
+):
+    from models import QuizAnswer
+
+    if submission is not None:
+        linked = QuizAnswer.query.filter_by(
+            student_id=student_id,
+            question_id=question_id,
+            submission_id=submission.id,
+        ).first()
+        if linked:
+            return linked
+        if is_latest_submission:
+            legacy = (
+                QuizAnswer.query.filter_by(
+                    student_id=student_id,
+                    question_id=question_id,
+                )
+                .filter(QuizAnswer.submission_id.is_(None))
+                .order_by(QuizAnswer.id.desc())
+                .first()
+            )
+            if legacy:
+                return legacy
+        return None
+    return (
+        QuizAnswer.query.filter_by(student_id=student_id, question_id=question_id)
+        .order_by(QuizAnswer.id.desc())
+        .first()
+    )
+
+
 def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]]) -> dict[str, Any]:
     """Save per-question quiz grades (open-ended questions) from SPA JSON."""
-    import json
     from datetime import datetime
 
     from management_routes.assignments import _apply_assignment_adjustments
@@ -1159,8 +1261,6 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
     if not open_questions:
         return {"success": False, "message": "This quiz has no manually graded questions."}
 
-    from models import QuizAnswer
-
     saved = 0
     for entry in entries:
         if not isinstance(entry, dict):
@@ -1169,20 +1269,23 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
         if not student_id or int(student_id) not in student_by_id:
             continue
         student = student_by_id[int(student_id)]
-        # Prefer the newest grade row so open-ended scoring updates the latest attempt,
-        # not the first attempt (which made Score on file stick at attempt 1).
-        existing_grade = (
-            Grade.query.filter_by(assignment_id=assignment_id, student_id=student.id)
-            .order_by(Grade.graded_at.desc(), Grade.id.desc())
-            .first()
-        )
-        if existing_grade and existing_grade.is_voided:
-            continue
-        sub = (
+        raw_submission_id = entry.get("submission_id")
+        try:
+            wanted_submission_id = int(raw_submission_id) if raw_submission_id not in (None, "") else None
+        except (TypeError, ValueError):
+            wanted_submission_id = None
+
+        sub = _quiz_submission_for_student(student.id, assignment_id, wanted_submission_id)
+        latest_sub = (
             Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id)
             .order_by(Submission.submitted_at.desc(), Submission.id.desc())
             .first()
         )
+        is_latest = bool(sub and latest_sub and sub.id == latest_sub.id)
+
+        existing_grade = _grade_row_for_quiz_attempt(student.id, assignment_id, sub)
+        if existing_grade and existing_grade.is_voided:
+            continue
 
         earned_points = 0.0
         question_scores = entry.get("questions") or {}
@@ -1194,6 +1297,12 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
             }
 
         for question in questions:
+            answer = _quiz_answer_for_attempt(
+                student_id=student.id,
+                question_id=question.id,
+                submission=sub,
+                is_latest_submission=is_latest,
+            )
             if question.question_type in ("short_answer", "essay"):
                 raw_val = question_scores.get(str(question.id), question_scores.get(question.id, ""))
                 try:
@@ -1201,14 +1310,11 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
                 except (TypeError, ValueError):
                     q_points = 0.0
                 earned_points += q_points
-                answer = QuizAnswer.query.filter_by(student_id=student.id, question_id=question.id).first()
                 if answer:
                     answer.points_earned = q_points
                     answer.is_correct = q_points == float(question.points or 0)
-            else:
-                answer = QuizAnswer.query.filter_by(student_id=student.id, question_id=question.id).first()
-                if answer:
-                    earned_points += float(answer.points_earned or 0.0)
+            elif answer:
+                earned_points += float(answer.points_earned or 0.0)
 
         comments = (entry.get("comment") or "").strip()
         adjusted = _apply_assignment_adjustments(
@@ -1232,6 +1338,8 @@ def save_quiz_open_ended_grades(assignment_id: int, entries: list[dict[str, Any]
             "graded_at": datetime.utcnow().isoformat(),
             "grading_status": "final",
         }
+        if sub is not None:
+            grade_data_dict["submission_id"] = sub.id
         from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
 
         finalize_redo_for_grade(

@@ -253,6 +253,11 @@ def build_student_grades_payload() -> tuple[dict[str, Any] | None, str | None]:
         if not grades and not group_grades:
             continue
 
+        # Quiz retakes store multiple Grade rows; averages and lists use one official score.
+        from utils.grade_selection import collapse_grades_to_official
+
+        grades = collapse_grades_to_official(grades)
+
         assignment_details: list[dict[str, Any]] = []
         total_score = 0.0
         valid_grades = 0

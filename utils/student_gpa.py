@@ -72,7 +72,12 @@ def grades_for_gpa(
     school_year_id: int | None = None,
     school_year_ids: Iterable[int] | None = None,
 ) -> list:
-    """Non-voided grades used for GPA (optionally limited to classes / school year(s))."""
+    """Non-voided grades used for GPA (optionally limited to classes / school year(s)).
+
+    Quiz retakes keep multiple Grade rows; GPA uses one official score per assignment.
+    """
+    from utils.grade_selection import collapse_grades_to_official
+
     q = (
         Grade.query.join(Assignment)
         .filter(
@@ -90,7 +95,7 @@ def grades_for_gpa(
         q = q.filter(Assignment.school_year_id.in_(ids))
     elif school_year_id is not None:
         q = q.filter(Assignment.school_year_id == school_year_id)
-    return q.all()
+    return collapse_grades_to_official(q.all())
 
 
 def compute_scoped_gpa(

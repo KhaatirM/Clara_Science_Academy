@@ -185,6 +185,10 @@ export function QuizSubmissionCard({
 
   async function saveManualGrades() {
     if (!manualQs.length) return
+    const targetSubmissionId =
+      selectedAttempt?.submission_id
+      ?? row.answers_submission_id
+      ?? null
     setSaving(true)
     setSaveMsg(null)
     try {
@@ -193,6 +197,7 @@ export function QuizSubmissionCard({
         [
           {
             student_id: row.student.id,
+            submission_id: targetSubmissionId,
             comment: draft.comment,
             questions: manualQs.map((q) => ({
               question_id: q.question_id,
@@ -454,8 +459,8 @@ export function QuizSubmissionCard({
                 </div>
               ) : (
                 <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-sm text-indigo-950">
-                  Showing answers for <strong>attempt {selectedAttemptNum}</strong>. Open-ended scoring
-                  applies to the latest attempt ({answersAttemptNum}).
+                  Showing answers for <strong>attempt {selectedAttemptNum}</strong>. Switch to attempt{' '}
+                  {answersAttemptNum} to enter open-ended points for that attempt.
                 </div>
               )}
 

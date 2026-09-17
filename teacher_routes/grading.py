@@ -97,12 +97,20 @@ def grade_assignment(assignment_id):
                 total_points = assignment.total_points if assignment.total_points else 100.0
                 
                 for student_id in student_ids:
-                    sub = Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id).first()
-                    # Check if grade is voided
-                    existing_grade = Grade.query.filter_by(
-                        assignment_id=assignment_id,
-                        student_id=student_id
-                    ).first()
+                    # Prefer the latest attempt so open-ended scoring does not mix
+                    # auto points from an older QuizAnswer row into a newer attempt.
+                    sub = (
+                        Submission.query.filter_by(student_id=student_id, assignment_id=assignment_id)
+                        .order_by(Submission.submitted_at.desc(), Submission.id.desc())
+                        .first()
+                    )
+                    # Check if grade is voided — update the grade paired with this attempt.
+                    from management_routes.assignment_workspace_spa_helpers import (
+                        _grade_row_for_quiz_attempt,
+                        _quiz_answer_for_attempt,
+                    )
+
+                    existing_grade = _grade_row_for_quiz_attempt(student_id, assignment_id, sub)
                     
                     if existing_grade and existing_grade.is_voided:
                         continue
@@ -114,6 +122,12 @@ def grade_assignment(assignment_id):
                     # Calculate points from per-question grades
                     earned_points = 0.0
                     for question in quiz_questions:
+                        answer = _quiz_answer_for_attempt(
+                            student_id=student_id,
+                            question_id=question.id,
+                            submission=sub,
+                            is_latest_submission=True,
+                        )
                         # Get points for this question (for text answers, it's from the form; for auto-graded, it's already in QuizAnswer)
                         if question.question_type in ['short_answer', 'essay']:
                             # Get manually graded points
@@ -122,10 +136,6 @@ def grade_assignment(assignment_id):
                             try:
                                 earned_points += float(question_points)
                                 # Update QuizAnswer points_earned
-                                answer = QuizAnswer.query.filter_by(
-                                    student_id=student_id,
-                                    question_id=question.id
-                                ).first()
                                 if answer:
                                     answer.points_earned = float(question_points)
                                     answer.is_correct = (float(question_points) == question.points)
@@ -133,10 +143,6 @@ def grade_assignment(assignment_id):
                                 pass
                         else:
                             # For auto-graded questions, get points from existing answer
-                            answer = QuizAnswer.query.filter_by(
-                                student_id=student_id,
-                                question_id=question.id
-                            ).first()
                             if answer:
                                 earned_points += answer.points_earned
                     
@@ -165,6 +171,8 @@ def grade_assignment(assignment_id):
                         # Teacher manual grading finalizes mixed-question quizzes.
                         'grading_status': 'final',
                     }
+                    if sub is not None:
+                        grade_data['submission_id'] = sub.id
 
                     from utils.redo_grading import finalize_redo_for_grade, finalize_reopening_for_grade
 

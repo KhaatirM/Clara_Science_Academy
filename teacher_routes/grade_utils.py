@@ -214,9 +214,23 @@ def calculate_assignment_statistics(assignment_id):
             "std_dev": 0,
             "grade_distribution": {}
         }
+
+    # Quiz retakes create multiple rows per student — use one official score each.
+    from collections import defaultdict
+    from utils.academic_concern_assignments import pick_representative_grade
+
+    by_student = defaultdict(list)
+    for grade in grades:
+        by_student[grade.student_id].append(grade)
+    official_grades = []
+    for rows in by_student.values():
+        asg = rows[0].assignment
+        rep = pick_representative_grade(rows, asg)
+        if rep is not None:
+            official_grades.append(rep)
     
     percentages = []
-    for grade in grades:
+    for grade in official_grades:
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
             # Get points earned from grade_data
@@ -231,7 +245,7 @@ def calculate_assignment_statistics(assignment_id):
     
     if not percentages:
         return {
-            "total_students": len(grades),
+            "total_students": len(official_grades),
             "graded_students": 0,
             "average": 0,
             "median": 0,
@@ -277,7 +291,7 @@ def calculate_assignment_statistics(assignment_id):
             distribution["E"] += 1
     
     return {
-        "total_students": len(grades),
+        "total_students": len(official_grades),
         "graded_students": n,
         "average": round(average, 2),
         "median": round(median, 2),

@@ -24,7 +24,7 @@ def get_points_earned(grade_data):
 
 
 def pick_best_quiz_grade_row(grade_rows, assignment_total_points):
-    """Highest-percentage quiz attempt; tie-break newest graded_at / id."""
+    """Highest-percentage quiz attempt; tie-break final over pending, then newest."""
     total_points = assignment_total_points if (assignment_total_points and assignment_total_points > 0) else 100.0
     best = None
     best_pct = None
@@ -37,6 +37,8 @@ def pick_best_quiz_grade_row(grade_rows, assignment_total_points):
             gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
         except (json.JSONDecodeError, TypeError):
             continue
+        if not isinstance(gdata, dict):
+            continue
         pts = get_points_earned(gdata)
         if pts is None:
             continue
@@ -44,7 +46,11 @@ def pick_best_quiz_grade_row(grade_rows, assignment_total_points):
             pct = (float(pts) / float(total_points) * 100.0) if float(total_points) > 0 else 0.0
         except (ValueError, TypeError):
             continue
-        key = (g.graded_at or datetime.min, g.id or 0)
+        status = (gdata.get('grading_status') or '').strip().lower()
+        # Prefer finalized attempts when percentages tie (pending auto-only scores
+        # should not beat an equal finalized score just by being newer).
+        is_final = 1 if status == 'final' else 0
+        key = (is_final, g.graded_at or datetime.min, g.id or 0)
         if best is None or best_pct is None or pct > best_pct or (pct == best_pct and key > best_key):
             best = g
             best_pct = pct

@@ -482,14 +482,9 @@ def unified_attendance():
         .all()
     )
     
-    # End-of-day automark: if viewing today and it's >= 3:30 PM (school time), mark unrecorded students as Unexcused Absence
-    try:
-        from services.attendance_on_login import _now_in_school_tz, is_past_end_of_day_cutoff, apply_end_of_day_automark
-        school_today, _ = _now_in_school_tz(current_app)
-        if selected_date == school_today and is_past_end_of_day_cutoff(current_app):
-            apply_end_of_day_automark(current_app, selected_date)
-    except Exception as e:
-        current_app.logger.warning('End-of-day attendance automark failed: %s', e)
+    # Do not auto-create school-day rows when opening this page. That used to fill
+    # missing students as Unexcused Absence after 3:30 PM and looked like period
+    # attendance was writing school-day attendance.
     
     # Get existing attendance records for the selected date
     existing_records = {}

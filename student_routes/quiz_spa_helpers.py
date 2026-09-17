@@ -566,6 +566,7 @@ def submit_student_quiz(
             "auto_score_summary": f"{earned_points}/{total_points}",
             "graded_at": datetime.now().isoformat(),
             "grading_status": "pending" if has_open_ended else "final",
+            "submission_id": submission.id,
         }
         if timed_meta:
             grade_data["timed_quiz"] = timed_meta

@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep14_2026_v5'
+const SESSION_KEY = 'spaUpdateModalShownSep16_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Open-ended quiz grading stays on the right attempt',
+    body: 'Saving manual points for a multi-attempt quiz now updates that attempt’s answers and grade — not a mix of older auto scores that made “best / on file” look like an average (for example 55 instead of the 80 attempt).',
+  },
+  {
+    title: 'Quiz retakes no longer inflate averages',
+    body: 'When a student takes a quiz more than once, class averages, quarter grades, GPA, and grade lists use the best attempt only — not every try added together.',
+  },
+  {
+    title: 'Period attendance no longer fills school day',
+    body: 'Taking class-period attendance no longer auto-creates school-day Unexcused Absences for students who were not marked yet. School day stays empty until staff take it (or a student login auto-record applies in its own window).',
+  },
   {
     title: 'New themes, and Dark is retired',
     body: 'Settings now includes Coral, Sapphire, Honey, and Slate for every role. Dark has been removed, and anyone who had it selected is moved back to Default.',
@@ -326,10 +338,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.47'
-  const releaseLabel = version?.release_label || 'September 14, 2026'
+  const display = version?.display || 'v 2.520.49'
+  const releaseLabel = version?.release_label || 'September 16, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2786
+  const updatesEstimate = version?.updates_estimate ?? 2790
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

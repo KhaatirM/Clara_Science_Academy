@@ -490,6 +490,7 @@ export async function saveQuizOpenEndedGrades(
   assignmentId: number,
   entries: {
     student_id: number
+    submission_id?: number | null
     comment?: string
     questions: { question_id: number; points: string | number }[]
   }[],

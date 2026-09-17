@@ -99,7 +99,7 @@ def _grade_has_entered_score(grade) -> bool:
 def _pick_best_quiz_grade_row(grade_rows, assignment_total_points):
     """
     Choose the best (highest percentage) Grade row from multiple attempts.
-    Tie-breaker: newest graded_at, then highest id.
+    Tie-breaker: finalized over pending, then newest graded_at / id.
     """
     from datetime import datetime
 
@@ -115,6 +115,8 @@ def _pick_best_quiz_grade_row(grade_rows, assignment_total_points):
             gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
         except Exception:
             continue
+        if not isinstance(gdata, dict):
+            continue
         pts = _parse_numeric_grade_score(gdata)
         if pts is None:
             continue
@@ -123,7 +125,9 @@ def _pick_best_quiz_grade_row(grade_rows, assignment_total_points):
         except (ValueError, TypeError):
             continue
 
-        key = (g.graded_at or datetime.min, g.id or 0)
+        status = (gdata.get("grading_status") or "").strip().lower()
+        is_final = 1 if status == "final" else 0
+        key = (is_final, g.graded_at or datetime.min, g.id or 0)
         if best is None or best_pct is None or pct > best_pct or (pct == best_pct and key > best_key):
             best = g
             best_pct = pct
@@ -1707,6 +1711,9 @@ def student_grades():
         
         if not grades and not group_grades:
             continue
+
+        from utils.grade_selection import collapse_grades_to_official
+        grades = collapse_grades_to_official(grades)
         
         # Calculate individual assignment grades (including both regular and group assignments)
         assignment_grades = {}
@@ -3210,6 +3217,7 @@ def submit_quiz(assignment_id):
             'auto_score_summary': f"{earned_points}/{total_points}",
             'graded_at': datetime.now().isoformat(),
             'grading_status': 'pending' if has_open_ended else 'final',
+            'submission_id': submission.id,
         }
         if timed_meta:
             grade_data['timed_quiz'] = timed_meta

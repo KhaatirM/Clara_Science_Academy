@@ -159,11 +159,14 @@ def _primary_action(
     atype = (assignment.assignment_type or "pdf").lower()
     if bucket == "inactive":
         # Redo/reopen may leave the card labeled inactive in edge cases — still offer retake.
-        if atype == "quiz" and attempts_remaining is not None and attempts_remaining > 0:
+        if atype == "quiz" and (
+            (attempts_remaining is not None and attempts_remaining > 0)
+            or (attempts_remaining is None and has_submission)
+        ):
             label = (
                 f"Retake quiz ({attempts_remaining} left)"
-                if has_submission
-                else "Take quiz"
+                if has_submission and attempts_remaining is not None
+                else ("Retake quiz" if has_submission else "Take quiz")
             )
             quiz_url = f"/app/student/take-quiz/{assignment.id}"
             if has_submission:
@@ -174,13 +177,33 @@ def _primary_action(
                 "kind": "quiz",
                 "disabled": False,
             }
+        if atype == "quiz" and has_submission:
+            return {
+                "label": "View results",
+                "url": f"/app/student/take-quiz/{assignment.id}",
+                "kind": "quiz",
+                "disabled": False,
+            }
         return None
     if atype == "quiz":
         is_retake = bool(
-            has_submission and attempts_remaining is not None and attempts_remaining > 0
+            has_submission
+            and (
+                (attempts_remaining is not None and attempts_remaining > 0)
+                or attempts_remaining is None
+            )
         )
+        if has_submission and attempts_remaining == 0:
+            return {
+                "label": "View results",
+                "url": f"/app/student/take-quiz/{assignment.id}",
+                "kind": "quiz",
+                "disabled": False,
+            }
         label = (
-            f"Retake quiz ({attempts_remaining} left)" if is_retake else "Take quiz"
+            f"Retake quiz ({attempts_remaining} left)"
+            if is_retake and attempts_remaining is not None
+            else ("Retake quiz" if is_retake else "Take quiz")
         )
         quiz_url = f"/app/student/take-quiz/{assignment.id}"
         if is_retake:
@@ -410,7 +433,20 @@ def build_student_assignments_payload(
 
     assignments = query.order_by(Assignment.due_date.asc()).all() if class_ids else []
     submissions_dict = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
-    grades_dict: dict[int, Any] = {g.assignment_id: g for g in Grade.query.filter_by(student_id=student.id).all()}
+    from collections import defaultdict
+
+    from utils.academic_concern_assignments import pick_representative_grade
+
+    grades_by_assignment: dict[int, list] = defaultdict(list)
+    for g in Grade.query.filter_by(student_id=student.id).all():
+        grades_by_assignment[g.assignment_id].append(g)
+    grades_dict: dict[int, Any] = {}
+    for assignment_id, rows in grades_by_assignment.items():
+        assignment_obj = rows[0].assignment if rows else None
+        if assignment_obj is not None:
+            grades_dict[assignment_id] = pick_representative_grade(rows, assignment_obj) or rows[0]
+        else:
+            grades_dict[assignment_id] = rows[-1]
     for g in GroupGrade.query.filter_by(student_id=student.id).all():
         grades_dict[g.group_assignment_id] = g
 

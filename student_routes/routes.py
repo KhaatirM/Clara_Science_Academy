@@ -1009,9 +1009,22 @@ def student_assignments():
     submissions = Submission.query.filter_by(student_id=student.id).all()
     submissions_dict = {sub.assignment_id: sub for sub in submissions}
     
-    # Get all grades for this student (regular + group)
-    grades = Grade.query.filter_by(student_id=student.id).all()
-    grades_dict = {g.assignment_id: g for g in grades}
+    # Get all grades for this student (regular + group). Quizzes keep one row per
+    # attempt — surface the official/best row on assignment cards.
+    from collections import defaultdict
+
+    from utils.academic_concern_assignments import pick_representative_grade
+
+    grades_by_assignment = defaultdict(list)
+    for g in Grade.query.filter_by(student_id=student.id).all():
+        grades_by_assignment[g.assignment_id].append(g)
+    grades_dict = {}
+    for assignment_id, rows in grades_by_assignment.items():
+        assignment_obj = rows[0].assignment if rows else None
+        if assignment_obj is not None:
+            grades_dict[assignment_id] = pick_representative_grade(rows, assignment_obj) or rows[0]
+        else:
+            grades_dict[assignment_id] = rows[-1]
     group_grades = GroupGrade.query.filter_by(student_id=student.id).all()
     for g in group_grades:
         grades_dict[g.group_assignment_id] = g  # key by group_assignment_id for template lookup

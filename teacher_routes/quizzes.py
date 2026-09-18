@@ -181,6 +181,9 @@ def autosave_quiz_draft():
         assignment.due_date = due_date
         assignment.open_date = open_date
         assignment.close_date = close_date
+        from teacher_routes.assignment_utils import ensure_assignment_close_covers_due
+
+        ensure_assignment_close_covers_due(assignment)
         assignment.quarter = quarter
         assignment.class_id = int(class_id)
         assignment.school_year_id = current_school_year.id
@@ -410,6 +413,9 @@ def create_quiz_assignment():
                 existing.due_date = due_date
                 existing.open_date = open_date
                 existing.close_date = close_date
+                from teacher_routes.assignment_utils import ensure_assignment_close_covers_due
+
+                ensure_assignment_close_covers_due(existing)
                 existing.quarter = str(quarter)
                 existing.class_id = class_id
                 existing.status = calculated_status

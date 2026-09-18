@@ -165,13 +165,28 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 16, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 18, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 16</strong> (<strong>{{ app_version_display }}</strong>) fixes open-ended quiz grading on the correct attempt, stops quiz retakes from counting multiple times in averages, and stops period attendance from auto-filling empty school-day rows.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 18</strong> (<strong>{{ app_version_display }}</strong>) keeps quizzes open for students when you extend the due date, and shows them the same official best score staff see.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 18, 2026 - Quiz window + official score -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-calendar2-check me-2"></i>Quiz window &amp; scores – September 18, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Extend due date:</strong> Moving a quiz due date later also updates the close date when needed, so students are not locked out after a class-wide extension.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Same official score:</strong> Student assignment cards show the best quiz attempt (matching staff), and closed quizzes still offer View results.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 16, 2026 - Quiz averages + attendance -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-ui-checks-grid me-2"></i>Quiz averages &amp; attendance – September 16, 2026</h6>
@@ -2715,11 +2730,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep16_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep18_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep16_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep18_2026_v1', 'true');
         }, 500);
     }
 });

@@ -229,7 +229,14 @@ export function EditAssignmentModal({
                     id="edit-due"
                     type="datetime-local"
                     value={form.due_date}
-                    onChange={(e) => patch({ due_date: e.target.value })}
+                    onChange={(e) => {
+                      const nextDue = e.target.value
+                      const next: Partial<AssignmentEditForm> = { due_date: nextDue }
+                      if (nextDue && (!form.close_date || form.close_date < nextDue)) {
+                        next.close_date = nextDue
+                      }
+                      patch(next)
+                    }}
                     className={inputClass()}
                     min="2020-01-01T00:00"
                   />

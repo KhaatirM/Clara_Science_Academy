@@ -1748,6 +1748,10 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
     if "close_date" in body:
         assignment.close_date = _parse_edit_datetime(close_date_raw)
 
+    from teacher_routes.assignment_utils import ensure_assignment_close_covers_due
+
+    ensure_assignment_close_covers_due(assignment)
+
     # Status auto-revert is not exposed in the SPA edit modal — do not clear it on save.
     if "status_revert_enabled" in body:
         if _truthy_form_bool(body.get("status_revert_enabled")) and body.get("status_override_until"):
@@ -1844,6 +1848,10 @@ def save_group_assignment_edit(assignment_id: int, body: dict[str, Any]) -> dict
         ga.open_date = _parse_edit_datetime(body.get("open_date"))
     if "close_date" in body:
         ga.close_date = _parse_edit_datetime(body.get("close_date"))
+
+    from teacher_routes.assignment_utils import ensure_assignment_close_covers_due
+
+    ensure_assignment_close_covers_due(ga)
 
     attach_err = _apply_group_attachment_updates(ga, body)
     if attach_err:

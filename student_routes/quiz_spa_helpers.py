@@ -108,9 +108,6 @@ def build_student_quiz_payload(
         }, None, 200
 
     active_reopening = get_active_assignment_reopening(assignment_id, student.id)
-    if (not is_assignment_open_for_student(assignment, student.id)) and (not active_reopening):
-        return None, "This assignment is no longer available.", 403
-
     is_retake = bool(retake)
     all_submissions = (
         Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id)
@@ -119,6 +116,20 @@ def build_student_quiz_payload(
     )
     submissions_count = len(all_submissions)
     submission = all_submissions[-1] if all_submissions else None
+
+    window_open = bool(
+        is_assignment_open_for_student(assignment, student.id) or active_reopening
+    )
+    if not window_open:
+        # Still allow viewing prior results after the window closes; block new attempts.
+        if not all_submissions and not grade:
+            return None, "This assignment is no longer available.", 403
+        if is_retake:
+            return (
+                None,
+                "This quiz is closed. Ask your teacher to extend the close date or grant another attempt.",
+                403,
+            )
 
     effective_max_attempts = assignment.max_attempts
     if active_reopening and active_reopening.additional_attempts > 0:
@@ -170,7 +181,11 @@ def build_student_quiz_payload(
             grade_data = None
 
     # Retake starts blank whenever attempts remain (including unlimited max_attempts).
-    retake_allowed = is_retake and (attempts_remaining is None or attempts_remaining > 0)
+    retake_allowed = (
+        is_retake
+        and window_open
+        and (attempts_remaining is None or attempts_remaining > 0)
+    )
     if retake_allowed:
         submission = None
         grade = None
@@ -340,10 +355,7 @@ def build_student_quiz_payload(
 
     can_retake = bool(
         results_mode
-        and (
-            is_assignment_open_for_student(assignment, student.id)
-            or bool(active_reopening)
-        )
+        and window_open
         and (
             (attempts_remaining is not None and attempts_remaining > 0)
             or (attempts_remaining is None and not effective_max_attempts)

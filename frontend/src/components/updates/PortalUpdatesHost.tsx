@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep16_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep18_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Extending a quiz due date reopens the student window',
+    body: 'Moving the due date later now also moves the close date when needed, so students are not left locked out with an old auto-score while staff see the better attempt. Assignment cards show the official best quiz grade, and closed quizzes still allow View results.',
+  },
   {
     title: 'Open-ended quiz grading stays on the right attempt',
     body: 'Saving manual points for a multi-attempt quiz now updates that attempt’s answers and grade — not a mix of older auto scores that made “best / on file” look like an average (for example 55 instead of the 80 attempt).',
@@ -338,10 +342,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.49'
-  const releaseLabel = version?.release_label || 'September 16, 2026'
+  const display = version?.display || 'v 2.520.50'
+  const releaseLabel = version?.release_label || 'September 18, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2790
+  const updatesEstimate = version?.updates_estimate ?? 2792
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

@@ -376,6 +376,10 @@ def edit_assignment(assignment_id):
             assignment.late_penalty_enabled = late_penalty_enabled
             assignment.late_penalty_per_day = late_penalty_per_day if late_penalty_enabled else 0.0
             assignment.late_penalty_max_days = late_penalty_max_days if late_penalty_enabled else 0
+
+            from teacher_routes.assignment_utils import ensure_assignment_close_covers_due
+
+            ensure_assignment_close_covers_due(assignment)
             
             # Calculate status based on dates if status not explicitly set to Voided
             from teacher_routes.assignment_utils import calculate_assignment_status

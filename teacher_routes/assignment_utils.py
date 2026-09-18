@@ -254,6 +254,59 @@ def get_student_close_date(assignment, student_id):
     return None
 
 
+def ensure_assignment_close_covers_due(assignment, *, reopen_if_active=True):
+    """
+    Keep close_date from blocking access after due_date is extended.
+
+    Student access uses close_date when set (not due_date). Editing only the due
+    date left a past close_date, so quizzes stayed closed for students even when
+    the teacher thought they had reopened the window.
+    """
+    due = getattr(assignment, "due_date", None)
+    close = getattr(assignment, "close_date", None)
+
+    if due is not None:
+        due_a = _as_utc_aware(due)
+        if close is None:
+            assignment.close_date = due
+        else:
+            close_a = _as_utc_aware(close)
+            if close_a is not None and due_a is not None and close_a < due_a:
+                assignment.close_date = due
+
+    if not reopen_if_active:
+        return assignment
+
+    if (getattr(assignment, "status", None) or "") != "Active":
+        return assignment
+
+    now = datetime.now(timezone.utc)
+    effective_close = getattr(assignment, "close_date", None) or getattr(assignment, "due_date", None)
+    if effective_close is None:
+        return assignment
+    close_a = _as_utc_aware(effective_close)
+    if close_a is None or close_a >= now:
+        return assignment
+
+    due_a = _as_utc_aware(getattr(assignment, "due_date", None))
+    if due_a is not None and due_a >= now:
+        assignment.close_date = assignment.due_date
+        return assignment
+
+    try:
+        import pytz
+        from utils.school_timezone import get_school_timezone_name
+
+        school_tz = pytz.timezone(get_school_timezone_name())
+        end_of_today = datetime.now(school_tz).replace(
+            hour=23, minute=59, second=59, microsecond=999999
+        )
+        assignment.close_date = end_of_today.astimezone(pytz.UTC).replace(tzinfo=None)
+    except Exception:
+        assignment.close_date = now.replace(tzinfo=None)
+    return assignment
+
+
 def get_active_assignment_reopening(assignment_id, student_id, now=None):
     """Return an active, non-expired AssignmentReopening for this student, or None.
 

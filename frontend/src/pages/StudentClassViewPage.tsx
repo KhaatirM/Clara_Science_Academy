@@ -247,7 +247,7 @@ function StudentClassViewBody({
                         {teacher.phone}
                       </a>
                     ) : (
-                      <span className="text-hub-muted">Phone not available</span>
+                      <span className="text-hub-muted">Work phone not available</span>
                     )}
                   </p>
                 </div>

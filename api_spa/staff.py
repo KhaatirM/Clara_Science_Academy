@@ -120,6 +120,7 @@ def _serialize_staff(teacher: TeacherStaff) -> dict:
         "staff_id": teacher.staff_id,
         "email": teacher.email,
         "phone": teacher.phone,
+        "work_phone": getattr(teacher, "work_phone", None),
         "department": teacher.department,
         "employment_type": teacher.employment_type,
         "employment_status": status,

@@ -62,7 +62,13 @@ export interface ClassDetailResponse {
     room_display?: string
     schedule_display?: string
   }
-  teacher: { id: number | null; display_name: string; email?: string | null; phone?: string | null }
+  teacher: {
+    id: number | null
+    display_name: string
+    email?: string | null
+    phone?: string | null
+    work_phone?: string | null
+  }
   enrolled_students: StudentBrief[]
   stats: {
     students: number

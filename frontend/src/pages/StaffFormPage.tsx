@@ -25,6 +25,7 @@ function detailToDefaults(data: StaffDetail) {
     last_name: data.last_name || '',
     dob: (data.dob as string) || '',
     phone: (data.phone as string) || '',
+    work_phone: (data.work_phone as string) || '',
     staff_ssn: (data.staff_ssn as string) || '',
     email: (data.email as string) || '',
     street_address: (data.street as string) || '',
@@ -65,6 +66,7 @@ const emptyDefaults: FormDefaults = {
   last_name: '',
   dob: '',
   phone: '',
+  work_phone: '',
   staff_ssn: '',
   email: '',
   street_address: '',
@@ -229,8 +231,19 @@ export function StaffFormPage() {
                 <input className={inputClass} type="date" name="dob" required defaultValue={defaults.dob} />
               </label>
               <label className="sm:col-span-4">
-                <span className={labelClass}>Phone *</span>
+                <span className={labelClass}>Personal phone *</span>
                 <input className={inputClass} type="tel" name="phone" required defaultValue={defaults.phone} />
+              </label>
+              <label className="sm:col-span-4">
+                <span className={labelClass}>Work number</span>
+                <input
+                  className={inputClass}
+                  type="tel"
+                  name="work_phone"
+                  maxLength={20}
+                  defaultValue={defaults.work_phone}
+                  placeholder="Shown to students"
+                />
               </label>
               <label className="sm:col-span-4">
                 <span className={labelClass}>SSN</span>

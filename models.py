@@ -368,7 +368,8 @@ class TeacherStaff(db.Model):
     city = db.Column(db.String(100), nullable=True)
     state = db.Column(db.String(50), nullable=True)
     zip_code = db.Column(db.String(20), nullable=True)
-    phone = db.Column(db.String(20), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)  # Personal / private
+    work_phone = db.Column(db.String(20), nullable=True)  # Student-facing work number
     
     # Relationship to the User model
     user = db.relationship('User', backref='teacher_staff_profile', uselist=False)

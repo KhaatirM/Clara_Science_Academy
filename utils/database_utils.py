@@ -85,7 +85,7 @@ def run_production_database_fix():
         cursor.execute("""
             SELECT column_name FROM information_schema.columns
             WHERE table_name = 'teacher_staff'
-            AND column_name IN ('is_temporary', 'access_expires_at', 'is_deleted', 'deleted_at')
+            AND column_name IN ('is_temporary', 'access_expires_at', 'is_deleted', 'deleted_at', 'work_phone')
         """)
         teacher_existing = [row[0] for row in cursor.fetchall()]
         if 'is_temporary' not in teacher_existing:
@@ -96,6 +96,8 @@ def run_production_database_fix():
             cursor.execute("ALTER TABLE teacher_staff ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE NOT NULL")
         if 'deleted_at' not in teacher_existing:
             cursor.execute("ALTER TABLE teacher_staff ADD COLUMN deleted_at TIMESTAMP")
+        if 'work_phone' not in teacher_existing:
+            cursor.execute("ALTER TABLE teacher_staff ADD COLUMN work_phone VARCHAR(20)")
 
         # group_assignment_extension table
         cursor.execute("""

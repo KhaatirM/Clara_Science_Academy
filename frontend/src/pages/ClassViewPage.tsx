@@ -223,7 +223,12 @@ export function ClassViewPage() {
                 <DetailRow icon="bi-calendar3" label="School Year" value={cls.school_year_name || 'N/A'} />
                 <DetailRow icon="bi-person" label="Teacher" value={data.teacher.display_name} />
                 <DetailRow icon="bi-envelope" label="Teacher Email" value={data.teacher.email || 'N/A'} />
-                <DetailRow icon="bi-telephone" label="Teacher Phone" value={data.teacher.phone || 'N/A'} />
+                <DetailRow icon="bi-telephone" label="Personal Phone" value={data.teacher.phone || 'N/A'} />
+                <DetailRow
+                  icon="bi-telephone-outbound"
+                  label="Work Number"
+                  value={data.teacher.work_phone || 'N/A'}
+                />
               </div>
             </section>
 

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep18_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep20_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Staff work numbers stay private from personal phones',
+    body: 'Add Staff and Edit Staff now include an optional Work number. Students see only that work number on class teacher info — never the personal phone on file.',
+  },
   {
     title: 'Extending a quiz due date reopens the student window',
     body: 'Moving the due date later now also moves the close date when needed, so students are not left locked out with an old auto-score while staff see the better attempt. Assignment cards show the official best quiz grade, and closed quizzes still allow View results.',
@@ -342,10 +346,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.50'
-  const releaseLabel = version?.release_label || 'September 18, 2026'
+  const display = version?.display || 'v 2.520.51'
+  const releaseLabel = version?.release_label || 'September 20, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2792
+  const updatesEstimate = version?.updates_estimate ?? 2794
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

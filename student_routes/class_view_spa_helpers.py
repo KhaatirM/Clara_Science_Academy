@@ -250,7 +250,7 @@ def build_student_class_detail_payload(class_id: int) -> tuple[dict[str, Any] | 
             "name": f"{teacher.first_name or ''} {teacher.last_name or ''}".strip() or "Teacher",
             "position": teacher.position or "Teacher",
             "email": _teacher_school_email(teacher),
-            "phone": teacher.phone,
+            "phone": getattr(teacher, "work_phone", None) or None,
         }
 
     roster = [

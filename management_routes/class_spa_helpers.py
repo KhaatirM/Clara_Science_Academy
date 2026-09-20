@@ -45,12 +45,13 @@ from .classes import (
 
 def _teacher_display(staff: TeacherStaff | None) -> dict[str, Any]:
     if not staff:
-        return {"id": None, "display_name": "N/A", "email": None, "phone": None}
+        return {"id": None, "display_name": "N/A", "email": None, "phone": None, "work_phone": None}
     return {
         "id": staff.id,
         "display_name": f"{staff.first_name or ''} {staff.last_name or ''}".strip() or "N/A",
         "email": staff.email,
         "phone": staff.phone,
+        "work_phone": getattr(staff, "work_phone", None),
     }
 
 

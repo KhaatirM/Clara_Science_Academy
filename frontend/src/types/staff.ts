@@ -84,6 +84,7 @@ export interface StaffDetail extends Record<string, unknown> {
   staff_ssn?: string | null
   email?: string
   phone?: string | null
+  work_phone?: string | null
   role?: string
   primary_role?: string
   secondary_roles?: string[]

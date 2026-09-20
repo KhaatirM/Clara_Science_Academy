@@ -39,7 +39,8 @@ export function StaffDetailModal({ detail, loading, onClose }: StaffDetailModalP
                 ['Department', String(detail.department || '—')],
                 ['Employment', String(detail.employment_type || '—')],
                 ['Status', String(detail.employment_status || 'Active')],
-                ['Phone', String(detail.phone || '—')],
+                ['Phone (personal)', String(detail.phone || '—')],
+                ['Work number', String(detail.work_phone || '—')],
                 ['Hire date', String(detail.hire_date || '—')],
                 ['Portal login', detail.portal_login ? 'Yes' : 'No'],
               ]}

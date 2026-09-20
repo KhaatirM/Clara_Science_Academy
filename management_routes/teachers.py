@@ -217,6 +217,7 @@ def _dict_for_staff_form(teacher_staff):
         "dob": teacher_staff.dob,
         "ssn": teacher_staff.staff_ssn,
         "phone": teacher_staff.phone,
+        "work_phone": getattr(teacher_staff, "work_phone", None),
         "email": teacher_staff.email,
         "street_address": teacher_staff.street,
         "apt_unit_suite": teacher_staff.apt_unit,
@@ -345,6 +346,7 @@ def add_teacher_staff():
         dob = request.form.get('dob', '').strip()
         staff_ssn = request.form.get('staff_ssn', '').strip()
         phone = request.form.get('phone', '').strip()
+        work_phone = request.form.get('work_phone', '').strip()
         
         # Professional information
         hire_date = request.form.get('hire_date', '').strip()
@@ -391,9 +393,11 @@ def add_teacher_staff():
             if '@' in emergency_phone or len(emergency_phone) > 20:
                 return _fail('Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).')
         
-        # Validate staff phone number
+        # Validate staff phone numbers
         if phone and len(phone) > 20:
-            return _fail('Phone number is too long. Please enter a valid phone number (max 20 characters).')
+            return _fail('Personal phone number is too long. Please enter a valid phone number (max 20 characters).')
+        if work_phone and len(work_phone) > 20:
+            return _fail('Work number is too long. Please enter a valid phone number (max 20 characters).')
         
         # Validate required fields
         if not all([first_name, last_name, email]):
@@ -417,6 +421,7 @@ def add_teacher_staff():
             teacher_staff.dob = dob
             teacher_staff.staff_ssn = staff_ssn
             teacher_staff.phone = phone
+            teacher_staff.work_phone = work_phone or None
             
             # Professional information
             teacher_staff.assigned_role = assigned_role_display
@@ -617,6 +622,7 @@ def edit_teacher_staff(staff_id):
         dob = request.form.get('dob', '').strip()
         staff_ssn = request.form.get('staff_ssn', '').strip()
         phone = request.form.get('phone', '').strip()
+        work_phone = request.form.get('work_phone', '').strip()
         
         hire_date = request.form.get('hire_date', '').strip()
         employment_status = (request.form.get('employment_status', '') or '').strip() or 'Active'
@@ -655,6 +661,19 @@ def edit_teacher_staff(staff_id):
                 return jsonify({'success': False, 'message': 'Please enter a valid email address.'})
             flash('Please enter a valid email address.', 'danger')
             return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
+
+        if phone and len(phone) > 20:
+            msg = 'Personal phone number is too long. Please enter a valid phone number (max 20 characters).'
+            if is_ajax:
+                return jsonify({'success': False, 'message': msg})
+            flash(msg, 'danger')
+            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
+        if work_phone and len(work_phone) > 20:
+            msg = 'Work number is too long. Please enter a valid phone number (max 20 characters).'
+            if is_ajax:
+                return jsonify({'success': False, 'message': msg})
+            flash(msg, 'danger')
+            return render_template('management/add_teacher_staff.html', **_edit_staff_form_context(teacher_staff))
         
         # Check if email already exists (excluding current staff)
         existing_staff = TeacherStaff.query.filter_by(email=email).first()
@@ -675,6 +694,7 @@ def edit_teacher_staff(staff_id):
             teacher_staff.dob = dob
             teacher_staff.staff_ssn = staff_ssn
             teacher_staff.phone = phone
+            teacher_staff.work_phone = work_phone or None
             
             # Professional information
             teacher_staff.assigned_role = assigned_role_display
@@ -1876,6 +1896,7 @@ def view_teacher(teacher_id):
             'position': teacher.position,
             'hire_date': _fmt_date(teacher.hire_date),
             'phone': teacher.phone,
+            'work_phone': getattr(teacher, 'work_phone', None),
             'street': teacher.street,
             'apt_unit': teacher.apt_unit,
             'city': teacher.city,
@@ -2053,6 +2074,11 @@ def edit_teacher(teacher_id):
         teacher.dob = request.form.get('dob', teacher.dob)
         teacher.staff_ssn = request.form.get('staff_ssn', teacher.staff_ssn)
         teacher.phone = request.form.get('phone', teacher.phone)
+        work_phone = (request.form.get('work_phone') or '').strip()
+        if 'work_phone' in request.form:
+            if work_phone and len(work_phone) > 20:
+                return jsonify({'success': False, 'message': 'Work number is too long (max 20 characters).'}), 400
+            teacher.work_phone = work_phone or None
         
         # Professional information
         teacher.assigned_role = request.form.get('assigned_role', teacher.assigned_role)

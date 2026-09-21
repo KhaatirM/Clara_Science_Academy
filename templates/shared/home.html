@@ -165,9 +165,9 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 20, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 21, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 20</strong> (<strong>{{ app_version_display }}</strong>) adds staff work numbers and keeps personal phones off student class pages.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 21</strong> (<strong>{{ app_version_display }}</strong>) restores login and Google sync by adding the staff work_phone column on deploy, and keeps personal phones off student class pages.</p>
                     </div>
                 </div>
 
@@ -2745,11 +2745,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep20_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep21_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep20_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep21_2026_v1', 'true');
         }, 500);
     }
 });

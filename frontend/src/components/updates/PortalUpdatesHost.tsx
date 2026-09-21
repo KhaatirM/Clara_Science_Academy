@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep20_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep21_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Login and Google sync restored after work-number column',
+    body: 'Production now adds the staff work_phone column on startup so login and the Google sync cron no longer fail after the work-number release.',
+  },
   {
     title: 'Staff work numbers stay private from personal phones',
     body: 'Add Staff and Edit Staff now include an optional Work number. Students see only that work number on class teacher info — never the personal phone on file.',
@@ -346,10 +350,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.51'
-  const releaseLabel = version?.release_label || 'September 20, 2026'
+  const display = version?.display || 'v 2.520.52'
+  const releaseLabel = version?.release_label || 'September 21, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2794
+  const updatesEstimate = version?.updates_estimate ?? 2795
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

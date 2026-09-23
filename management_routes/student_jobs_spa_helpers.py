@@ -73,6 +73,48 @@ def _current_week_start_est():
     return now_est.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=current_weekday)
 
 
+def week_baseline_score_for_team(team_id: int, as_of_date=None) -> int:
+    """
+    Running score for this team in the calendar week of ``as_of_date``.
+
+    Returns 100 when there is no prior non-archived inspection that week.
+    New inspections must start from this value (not a fresh 100 each day).
+    """
+    from datetime import date as date_cls
+
+    from pytz import timezone as tz
+
+    if as_of_date is None:
+        as_of_date = datetime.now(tz("US/Eastern")).date()
+    elif isinstance(as_of_date, datetime):
+        as_of_date = as_of_date.date()
+    elif not isinstance(as_of_date, date_cls):
+        as_of_date = date_cls.fromisoformat(str(as_of_date))
+
+    week_start = as_of_date - timedelta(days=as_of_date.weekday())
+    try:
+        latest = (
+            active_inspections_query()
+            .filter(
+                CleaningInspection.team_id == int(team_id),
+                CleaningInspection.inspection_date >= week_start,
+                CleaningInspection.inspection_date <= as_of_date,
+            )
+            .order_by(
+                CleaningInspection.inspection_date.desc(),
+                CleaningInspection.created_at.desc(),
+                CleaningInspection.id.desc(),
+            )
+            .first()
+        )
+    except Exception:
+        db.session.rollback()
+        latest = None
+    if not latest:
+        return 100
+    return int(latest.final_score or 100)
+
+
 def _team_current_score(team_id: int, recent_inspections: list[CleaningInspection]) -> int:
     if not recent_inspections:
         return 100

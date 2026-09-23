@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 12, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 22, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 21, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 22, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 21</strong> (<strong>{{ app_version_display }}</strong>) restores login and Google sync by adding the staff work_phone column on deploy, and keeps personal phones off student class pages.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 22</strong> (<strong>{{ app_version_display }}</strong>) adds soft CSS-only icons and slow drift to every theme (Default and Light stay a gentle wash), and keeps Student Jobs weekly scores carrying through the week.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 22, 2026 - Theme motifs -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Theme atmosphere – September 22, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Motifs &amp; motion:</strong> Seasonal and color themes show light corner icons that drift slowly; Default and Light use a soft wash only.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Safe by design:</strong> CSS-only (no particles), never blocks clicks, and respects reduced-motion preferences.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- September 22, 2026 - Student Jobs weekly score -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Student Jobs weekly scores – September 22, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Weekly carry-forward:</strong> Teams still reset to 100 on Monday; each new inspection this week starts from the current weekly score, not a fresh 100.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Inspection preview:</strong> The conduct-inspection form shows the running baseline so the live score matches what will be saved.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 20, 2026 - Staff work numbers -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-telephone me-2"></i>Staff work numbers – September 20, 2026</h6>
@@ -2745,11 +2775,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep21_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep22_2026_v2')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep21_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep22_2026_v2', 'true');
         }, 500);
     }
 });

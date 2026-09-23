@@ -390,7 +390,20 @@ export function StudentJobsPage() {
   )
   const deductionOptions = activeType?.deductions || data?.deduction_options || []
   const bonusOptions = activeType?.bonuses || data?.bonus_options || []
-  const startingScore = activeType?.starting_score ?? data?.point_system.starting_points ?? 100
+  const inspectionTeam = useMemo(
+    () =>
+      inspectionTeamId != null
+        ? data?.teams.find((team) => team.id === inspectionTeamId) || null
+        : null,
+    [data?.teams, inspectionTeamId],
+  )
+  // Carry the team's weekly running score; only fall back to the catalog 100
+  // when no team is selected yet (or the team has no score this week).
+  const startingScore =
+    inspectionTeam?.current_score ??
+    activeType?.starting_score ??
+    data?.point_system.starting_points ??
+    100
   const passThreshold = activeType?.pass_threshold ?? data?.point_system.redo_threshold ?? 60
 
   const scorePreview = useMemo(() => {
@@ -1213,13 +1226,15 @@ export function StudentJobsPage() {
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <SectionCard
             title="How scoring works"
-            subtitle={`Every team starts at ${data.point_system.starting_points} points`}
+            subtitle={`Teams start each week at ${data.point_system.starting_points} points`}
           >
             <div className="space-y-3 p-5 text-sm text-hub-text">
               <p className="mb-0">
-                Points come off for each problem found during an inspection and go back on for
-                exceptional work. A team scoring below{' '}
-                <strong>{data.point_system.redo_threshold}</strong> has to redo the job.
+                Each Monday the score resets to {data.point_system.starting_points}. Through the
+                rest of the week, points come off for problems found and go back on for exceptional
+                work — later inspections continue from the running total, not a fresh start. A team
+                scoring below <strong>{data.point_system.redo_threshold}</strong> has to redo the
+                job.
               </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-xl bg-slate-50 p-3">
@@ -1302,9 +1317,13 @@ export function StudentJobsPage() {
         size="xl"
         footer={
           <>
-            <div className="mr-auto flex items-center gap-2">
+            <div className="mr-auto flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wide text-hub-muted">
-                Final score
+                From {startingScore}
+              </span>
+              <span className="text-hub-muted">→</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-hub-muted">
+                Final
               </span>
               <span
                 className={`rounded-full px-3 py-1 text-lg font-extrabold ${

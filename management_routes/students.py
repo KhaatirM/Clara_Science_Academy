@@ -3844,7 +3844,10 @@ def submit_cleaning_inspection():
         if not team_id or not inspection_date_raw or not inspector_name:
             return jsonify({'success': False, 'error': 'team_id, inspection_date, and inspector_name are required'}), 400
 
-        from management_routes.student_jobs_spa_helpers import ensure_duty_columns
+        from management_routes.student_jobs_spa_helpers import (
+            ensure_duty_columns,
+            week_baseline_score_for_team,
+        )
         from utils.student_jobs_catalog import (
             apply_flags,
             get_inspection_type,
@@ -3853,12 +3856,14 @@ def submit_cleaning_inspection():
 
         ensure_duty_columns()
         definition = get_inspection_type(data.get('inspection_type'))
-        # The score is recomputed here so the checklist and the number always agree.
-        scores = score_inspection(definition, data)
+        inspection_date = datetime.strptime(str(inspection_date_raw), '%Y-%m-%d').date()
+        # Carry the team's running weekly total — do not restart at 100 each day.
+        week_baseline = week_baseline_score_for_team(int(team_id), inspection_date)
+        scores = score_inspection(definition, data, starting_score=week_baseline)
 
         inspection = CleaningInspection(
             team_id=team_id,
-            inspection_date=datetime.strptime(str(inspection_date_raw), '%Y-%m-%d').date(),
+            inspection_date=inspection_date,
             inspector_name=inspector_name,
             inspector_notes=data.get('inspector_notes', ''),
             inspection_type=definition['value'],

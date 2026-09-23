@@ -169,8 +169,18 @@ def apply_flags(inspection, data: dict[str, Any], definition: dict[str, Any]) ->
     inspection.checklist_json = json.dumps(extras) if extras else None
 
 
-def score_inspection(definition: dict[str, Any], data: dict[str, Any]) -> dict[str, int]:
-    """Authoritative score for a submitted checklist; the client only previews it."""
+def score_inspection(
+    definition: dict[str, Any],
+    data: dict[str, Any],
+    *,
+    starting_score: int | None = None,
+) -> dict[str, int]:
+    """Authoritative score for a submitted checklist; the client only previews it.
+
+    ``starting_score`` is the team's running total for the current week (defaults to
+    the type's baseline of 100 when omitted). Each inspection adjusts that total —
+    it must not restart at 100 every day.
+    """
     major = moderate = minor = 0
     for item in definition["deductions"]:
         if not data.get(item["key"]):
@@ -183,7 +193,11 @@ def score_inspection(definition: dict[str, Any], data: dict[str, Any]) -> dict[s
             minor += item["points"]
 
     bonus = sum(item["points"] for item in definition["bonuses"] if data.get(item["key"]))
-    starting = int(definition["starting_score"])
+    starting = (
+        int(starting_score)
+        if starting_score is not None
+        else int(definition["starting_score"])
+    )
     return {
         "starting_score": starting,
         "major_deductions": major,

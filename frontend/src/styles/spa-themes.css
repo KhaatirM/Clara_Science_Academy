@@ -1,6 +1,7 @@
 /* SPA shell theming — reuses legacy hub + site theme tokens */
 @import '../../../static/css/hub_themes.css';
 @import '../../../static/css/themes.css';
+@import '../../../static/css/theme_effects.css';
 
 /* Default management sidebar (React SPA) when theme-default is active */
 body.theme-default .sidebar {

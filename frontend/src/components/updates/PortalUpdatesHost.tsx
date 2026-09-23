@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep21_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep22_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Themes get soft icons and motion',
+    body: 'Every theme now has a light CSS-only atmosphere — seasonal and color themes show gentle corner motifs that drift slowly; Default and Light stay a soft wash. Respects reduced-motion preferences and never blocks clicks.',
+  },
+  {
+    title: 'Student Jobs scores carry through the week',
+    body: 'Team inspections still reset to 100 on Monday, but later inspections this week continue from the running score instead of restarting at 100 every day.',
+  },
   {
     title: 'Login and Google sync restored after work-number column',
     body: 'Production now adds the staff work_phone column on startup so login and the Google sync cron no longer fail after the work-number release.',
@@ -350,10 +358,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.52'
-  const releaseLabel = version?.release_label || 'September 21, 2026'
+  const display = version?.display || 'v 2.520.54'
+  const releaseLabel = version?.release_label || 'September 22, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2795
+  const updatesEstimate = version?.updates_estimate ?? 2797
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

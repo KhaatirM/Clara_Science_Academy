@@ -86,21 +86,7 @@ body.theme-snowy {
     background: linear-gradient(180deg, #e8f4fc 0%, #d4e8f7 50%, #f0f8ff 100%);
     position: relative;
 }
-body.theme-snowy::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.8) 1px, transparent 1px),
-                     radial-gradient(circle at 80% 70%, rgba(255,255,255,0.6) 1px, transparent 1px);
-    background-size: 60px 60px;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.4;
-}
-body.theme-snowy .dashboard-flex-wrapper {
-    position: relative;
-    z-index: 1;
-}
+/* Snow flake pattern + motifs live in theme_effects.css */
 body.theme-snowy .sidebar {
     background: linear-gradient(180deg, #5b8fb9 0%, #3d6b8f 50%, #2c5068 100%);
     border-right-color: #7ba3c4;

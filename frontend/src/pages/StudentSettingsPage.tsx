@@ -10,6 +10,7 @@ import {
 import { BugReportsPanel } from '../components/settings/BugReportsPanel'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { StudentSettingsResponse } from '../types/studentTabs'
+import { playThemeReveal } from '../utils/themeReveal'
 import { applyUserTheme } from '../utils/userTheme'
 
 type SettingsTab = 'account' | 'preferences' | 'academic' | 'bug-reports'
@@ -80,6 +81,8 @@ export function StudentSettingsPage() {
     }
     setSavingTheme(true)
     setMessage(null)
+    applyUserTheme(theme)
+    playThemeReveal(theme, 'full')
     try {
       const result = await updateStudentTheme(theme)
       if (result.success) {
@@ -257,7 +260,10 @@ export function StudentSettingsPage() {
                             checked={theme === option.value}
                             onChange={() => {
                               setTheme(option.value)
-                              if (!data.preferences.theme_locked) applyUserTheme(option.value)
+                              if (!data.preferences.theme_locked) {
+                                applyUserTheme(option.value)
+                                playThemeReveal(option.value, 'flash')
+                              }
                             }}
                           />
                           {option.label}

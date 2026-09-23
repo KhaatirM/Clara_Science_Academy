@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 22, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 23, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,28 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 22, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 23, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 22</strong> (<strong>{{ app_version_display }}</strong>) adds soft CSS-only icons and slow drift to every theme (Default and Light stay a gentle wash), and keeps Student Jobs weekly scores carrying through the week.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 23</strong> (<strong>{{ app_version_display }}</strong>) adds a full-screen theme reveal when you save a look in Settings, plus a short preview flash when you pick one.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 23, 2026 - Theme reveal scene -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-stars me-2"></i>Theme reveal scene – September 23, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Save intro:</strong> Saving a theme plays a ~3.5s full-screen scene with its name, meaning, and motif — use Skip anytime.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Preview flash:</strong> Selecting a theme shows a quick flash so you see what it represents before saving.
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- September 22, 2026 - Theme motifs -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Theme atmosphere – September 22, 2026</h6>
@@ -2775,11 +2790,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep22_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep23_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep22_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep23_2026_v1', 'true');
         }, 500);
     }
 });

@@ -16,6 +16,7 @@ import {
   ManagementPageHero,
   ManagementPageShell,
 } from '../components/layout/ManagementPageShell'
+import { playThemeReveal } from '../utils/themeReveal'
 import { applyUserTheme } from '../utils/userTheme'
 
 const fieldClass =
@@ -1836,7 +1837,10 @@ export function TechSettingsPage() {
                           }
                           onClick={() => {
                             setTheme(opt.value)
-                            if (!data.preferences?.theme_locked) applyUserTheme(opt.value)
+                            if (!data.preferences?.theme_locked) {
+                              applyUserTheme(opt.value)
+                              playThemeReveal(opt.value, 'flash')
+                            }
                           }}
                         >
                           {opt.label}
@@ -1855,6 +1859,8 @@ export function TechSettingsPage() {
               onClick={async () => {
                 setSaving(true)
                 setMessage(null)
+                applyUserTheme(theme)
+                playThemeReveal(theme, 'full')
                 try {
                   const res = await updateTechTheme(theme)
                   setMessage(res.message || 'Theme saved')

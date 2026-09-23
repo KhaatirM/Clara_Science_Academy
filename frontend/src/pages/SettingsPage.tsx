@@ -7,6 +7,7 @@ import { BugReportsPanel } from '../components/settings/BugReportsPanel'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { SettingsHubResponse } from '../types/settings'
 import { spaRoute } from '../utils/spaRoute'
+import { playThemeReveal } from '../utils/themeReveal'
 import { applyUserTheme } from '../utils/userTheme'
 
 type SettingsTab = 'account' | 'preferences' | 'google' | 'bug-reports'
@@ -74,6 +75,8 @@ export default function SettingsPage() {
     }
     setSavingTheme(true)
     setMessage(null)
+    applyUserTheme(theme)
+    playThemeReveal(theme, 'full')
     try {
       const result = await updateTheme(theme)
       if (result.success) {
@@ -107,6 +110,7 @@ export default function SettingsPage() {
     setTheme(nextTheme)
     if (!data?.preferences.theme_locked) {
       applyUserTheme(nextTheme)
+      playThemeReveal(nextTheme, 'flash')
     }
   }
 

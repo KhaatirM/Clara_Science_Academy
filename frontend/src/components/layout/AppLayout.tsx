@@ -8,6 +8,7 @@ import {
 import { useLegacyMgmtShell } from '../../hooks/useLegacyStyles'
 import { AcademicConcernsHost } from '../academic/AcademicConcernsHost'
 import { PendingGradesHost } from '../grading/PendingGradesHost'
+import { ThemeRevealHost } from '../theme/ThemeRevealHost'
 import { AppToastHost } from '../toasts/AppToastHost'
 import { PortalUpdatesHost } from '../updates/PortalUpdatesHost'
 import { IdleSessionGuard } from '../session/IdleSessionGuard'
@@ -49,6 +50,7 @@ export function AppLayout({
         <Outlet context={outletContext} />
       </main>
       <AppToastHost />
+      <ThemeRevealHost />
       <PortalUpdatesHost version={appVersion} />
       {showAcademicConcerns ? <AcademicConcernsHost scope={academicScope} /> : null}
       {showAcademicConcerns ? <PendingGradesHost scope={academicScope} /> : null}

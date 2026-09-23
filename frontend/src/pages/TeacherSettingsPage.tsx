@@ -11,6 +11,7 @@ import { getCsrfToken } from '../api/client'
 import { BugReportsPanel } from '../components/settings/BugReportsPanel'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { TeacherSettingsResponse } from '../types/teacherTabs'
+import { playThemeReveal } from '../utils/themeReveal'
 import { applyUserTheme } from '../utils/userTheme'
 
 type SettingsTab = 'account' | 'preferences' | 'google' | 'bug-reports'
@@ -78,6 +79,8 @@ export function TeacherSettingsPage() {
     }
     setSavingTheme(true)
     setMessage(null)
+    applyUserTheme(theme)
+    playThemeReveal(theme, 'full')
     try {
       const result = await updateTeacherTheme(theme)
       if (result.success) {
@@ -107,6 +110,7 @@ export function TeacherSettingsPage() {
     setTheme(nextTheme)
     if (!data?.preferences.theme_locked) {
       applyUserTheme(nextTheme)
+      playThemeReveal(nextTheme, 'flash')
     }
   }
 

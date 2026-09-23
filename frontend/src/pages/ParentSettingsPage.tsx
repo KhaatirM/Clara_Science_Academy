@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchParentSettings, updateParentTheme } from '../api/parentPortal'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type { ParentSettingsResponse } from '../types/parentPortal'
+import { playThemeReveal } from '../utils/themeReveal'
 import { applyUserTheme } from '../utils/userTheme'
 
 export function ParentSettingsPage() {
@@ -49,6 +50,8 @@ export function ParentSettingsPage() {
     setSaving(true)
     setMessage(null)
     setError(null)
+    applyUserTheme(theme)
+    playThemeReveal(theme, 'full')
     try {
       const res = await updateParentTheme(theme)
       setMessage(res.message || 'Theme saved.')
@@ -59,6 +62,14 @@ export function ParentSettingsPage() {
       setError(err instanceof Error ? err.message : 'Could not save theme')
     } finally {
       setSaving(false)
+    }
+  }
+
+  function handleThemePreview(nextTheme: string) {
+    setTheme(nextTheme)
+    if (!data?.preferences.theme_locked) {
+      applyUserTheme(nextTheme)
+      playThemeReveal(nextTheme, 'flash')
     }
   }
 
@@ -153,7 +164,7 @@ export function ParentSettingsPage() {
                               value={opt.value}
                               checked={theme === opt.value}
                               disabled={data.preferences.theme_locked || saving}
-                              onChange={() => setTheme(opt.value)}
+                              onChange={() => handleThemePreview(opt.value)}
                             />
                             {opt.label}
                           </label>

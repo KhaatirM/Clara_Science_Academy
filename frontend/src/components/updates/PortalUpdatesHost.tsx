@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep22_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep23_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Theme switch gets a reveal scene',
+    body: 'Saving a theme plays a short full-screen intro with that theme’s look and meaning (Skip available). Picking a theme for preview shows a quicker flash. Reduced-motion stays short and calm.',
+  },
   {
     title: 'Themes get soft icons and motion',
     body: 'Every theme now has a light CSS-only atmosphere — seasonal and color themes show gentle corner motifs that drift slowly; Default and Light stay a soft wash. Respects reduced-motion preferences and never blocks clicks.',
@@ -358,10 +362,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.54'
-  const releaseLabel = version?.release_label || 'September 22, 2026'
+  const display = version?.display || 'v 2.520.55'
+  const releaseLabel = version?.release_label || 'September 23, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2797
+  const updatesEstimate = version?.updates_estimate ?? 2798
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

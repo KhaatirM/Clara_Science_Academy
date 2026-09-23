@@ -1221,6 +1221,7 @@ def assistant_add_discussion_assignment(class_id):
             min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
             min_replies = request.form.get('min_replies', type=int) or 2
             allow_student_edit_posts = request.form.get('allow_student_edit_posts') == 'on'
+            allow_student_threads = request.form.get('allow_student_threads') == 'on'
             use_rubric = request.form.get('use_rubric') == 'on'
             rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
             open_date_str = request.form.get('open_date', '').strip()
@@ -1256,7 +1257,8 @@ def assistant_add_discussion_assignment(class_id):
                 full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
             full_description += (
                 f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n"
-                f"- Minimum {min_replies} reply/replies to classmates"
+                f"- Minimum {min_replies} reply/replies to classmates\n"
+                f"- Students may create threads: {'yes' if allow_student_threads else 'no'}"
             )
 
             new_assignment = Assignment(

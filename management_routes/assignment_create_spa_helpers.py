@@ -164,7 +164,10 @@ def query_discussion_assignment_form(
     edit_id: int | None = None,
 ) -> dict[str, Any]:
     from models import Assignment
-    from teacher_routes.assignment_utils import parse_discussion_description
+    from teacher_routes.assignment_utils import (
+        parse_allow_student_threads,
+        parse_discussion_description,
+    )
 
     assignment = None
     if edit_id:
@@ -195,6 +198,7 @@ def query_discussion_assignment_form(
         prompt, instructions, rubric, min_initial_posts, min_replies = parse_discussion_description(
             assignment.description or ""
         )
+
         defaults = {
             "min_initial_posts": min_initial_posts or 1,
             "min_replies": min_replies or 2,
@@ -209,7 +213,7 @@ def query_discussion_assignment_form(
             "min_initial_posts": min_initial_posts or 1,
             "min_replies": min_replies or 2,
             "require_peer_response": bool(getattr(assignment, "require_peer_response", True)),
-            "allow_student_threads": bool(getattr(assignment, "allow_student_threads", True)),
+            "allow_student_threads": parse_allow_student_threads(assignment.description or ""),
             "allow_student_edit_posts": bool(getattr(assignment, "allow_student_edit_posts", False)),
             "total_points": float(assignment.total_points or 100),
             "quarter": str(assignment.quarter or get_current_quarter()),

@@ -3,6 +3,7 @@ import {
   saveIndividualStudentGrade,
   type DiscussionSubmissionRow,
 } from '../../../api/assignmentWorkspace'
+import { DiscussionContentView } from '../../discussion/DiscussionContentView'
 import { formatWhen, StudentAvatar } from './submissionsShared'
 import type { AssignmentWorkspaceScope } from '../../../utils/assignmentWorkspaceScope'
 
@@ -193,10 +194,9 @@ export function DiscussionSubmissionsPanel({
                         </div>
                         <span className="text-xs text-hub-muted">{formatWhen(thread.created_at)}</span>
                       </div>
-                      <div
-                        className="prose prose-sm mt-2 max-w-none text-hub-text"
-                        dangerouslySetInnerHTML={{ __html: thread.content }}
-                      />
+                      <div className="mt-2">
+                        <DiscussionContentView content={thread.content} />
+                      </div>
                     </div>
                   ))}
                   {row.replies.map((reply) => (
@@ -218,10 +218,9 @@ export function DiscussionSubmissionsPanel({
                         </div>
                         <span className="text-xs text-hub-muted">{formatWhen(reply.created_at)}</span>
                       </div>
-                      <div
-                        className="prose prose-sm mt-2 max-w-none text-hub-text"
-                        dangerouslySetInnerHTML={{ __html: reply.content }}
-                      />
+                      <div className="mt-2">
+                        <DiscussionContentView content={reply.content} />
+                      </div>
                     </div>
                   ))}
                 </div>

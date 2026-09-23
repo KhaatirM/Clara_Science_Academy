@@ -76,6 +76,20 @@ def _initials(student: Student | None) -> str:
     return f"{a}{b}".upper()
 
 
+def _discussion_preview(content: str | None, maxlen: int = 180) -> str:
+    s = (content or "").strip()
+    if s.startswith("[DISCUSSION_CODE:"):
+        try:
+            end = s.index("]")
+            lang = s[len("[DISCUSSION_CODE:") : end].strip() or "text"
+            body = s[end + 1 :].lstrip("\n\r")
+            full = f"[{lang} code] {body}"
+            return full[:maxlen] + ("…" if len(full) > maxlen else "")
+        except ValueError:
+            pass
+    return s[:maxlen] + ("…" if len(s) > maxlen else "")
+
+
 def _parse_discussion_meta(description: str | None) -> dict[str, Any]:
     raw = description or ""
     prompt = raw
@@ -98,10 +112,18 @@ def _parse_discussion_meta(description: str | None) -> dict[str, Any]:
         if replies_match:
             min_replies = int(replies_match.group(1))
 
+    allow_student_threads = True
+    threads_match = re.search(
+        r"Students may create threads:\s*(yes|no)", raw, flags=re.IGNORECASE
+    )
+    if threads_match:
+        allow_student_threads = threads_match.group(1).lower() == "yes"
+
     return {
         "prompt": prompt,
         "min_initial_posts": min_initial_posts,
         "min_replies": min_replies,
+        "allow_student_threads": allow_student_threads,
     }
 
 
@@ -219,7 +241,7 @@ def build_discussion_board_payload(
             {
                 "id": t.id,
                 "title": t.title,
-                "content_preview": (t.content or "")[:180],
+                "content_preview": _discussion_preview(t.content),
                 "is_pinned": bool(t.is_pinned),
                 "is_locked": bool(t.is_locked),
                 "created_display": _fmt(t.created_at),
@@ -253,7 +275,7 @@ def build_discussion_board_payload(
             "complete": participation_complete,
             "overall_pct": overall_pct,
         },
-        "allow_student_threads": True,
+        "allow_student_threads": bool(meta.get("allow_student_threads", True)),
         "allow_student_edit_posts": allow_edit,
         "threads": threads_out,
         "links": {
@@ -366,10 +388,24 @@ def create_discussion_thread_spa(
     if not is_assignment_open_for_student(assignment, student.id):
         return None, "This discussion is not currently active.", 403
 
+    meta = _parse_discussion_meta(assignment.description)
+    if not meta.get("allow_student_threads", True):
+        return None, "Students are not allowed to create new threads for this discussion.", 403
+
     title = (title or "").strip()
     content = (content or "").strip()
     if not title or not content:
         return None, "Please provide both a title and content for your thread.", 400
+
+    # Reject empty code posts that are only the language header.
+    if content.startswith("[DISCUSSION_CODE:"):
+        try:
+            end = content.index("]")
+            body = content[end + 1 :].strip()
+            if not body:
+                return None, "Please provide both a title and content for your thread.", 400
+        except ValueError:
+            pass
 
     try:
         thread = DiscussionThread(

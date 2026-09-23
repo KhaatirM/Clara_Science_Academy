@@ -68,7 +68,16 @@ def parse_discussion_description(desc):
     if m:
         min_replies = int(m.group(1))
     return prompt, instructions, rubric, min_initial_posts, min_replies
-from models import AssignmentExtension
+
+
+def parse_allow_student_threads(desc, default: bool = True) -> bool:
+    """Whether students may create new threads (stored in participation text)."""
+    if not desc:
+        return default
+    m = re.search(r'Students may create threads:\s*(yes|no)', desc, flags=re.IGNORECASE)
+    if not m:
+        return default
+    return m.group(1).lower() == 'yes'from models import AssignmentExtension
 
 
 def parse_form_datetime_as_school_tz(dt_str, tz_name=None, fmt='%Y-%m-%dT%H:%M'):

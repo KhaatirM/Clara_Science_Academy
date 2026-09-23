@@ -640,6 +640,7 @@ def create_discussion_assignment():
         min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
         min_replies = request.form.get('min_replies', type=int) or 2
         allow_student_edit_posts = request.form.get('allow_student_edit_posts') == 'on'
+        allow_student_threads = request.form.get('allow_student_threads') == 'on'
         use_rubric = request.form.get('use_rubric') == 'on'
         rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
         open_date_str = request.form.get('open_date', '').strip()
@@ -667,7 +668,12 @@ def create_discussion_assignment():
                 full_description += f"**Instructions:**\n{description}\n\n"
             if rubric_criteria:
                 full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
-            full_description += f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n- Minimum {min_replies} reply/replies to classmates"
+            full_description += (
+                f"**Participation Requirements:**\n"
+                f"- Minimum {min_initial_posts} initial post(s)\n"
+                f"- Minimum {min_replies} reply/replies to classmates\n"
+                f"- Students may create threads: {'yes' if allow_student_threads else 'no'}"
+            )
 
             temp_assignment = type('obj', (object,), {
                 'status': 'Active',

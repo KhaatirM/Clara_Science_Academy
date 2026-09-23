@@ -8,6 +8,8 @@ import {
   fetchDiscussionThread,
   replyToDiscussionThread,
 } from '../api/studentDiscussion'
+import { DiscussionContentEditor } from '../components/discussion/DiscussionContentEditor'
+import { DiscussionContentView } from '../components/discussion/DiscussionContentView'
 import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
 import type {
@@ -15,6 +17,7 @@ import type {
   StudentDiscussionBoardResponse,
   StudentDiscussionThreadResponse,
 } from '../types/studentDiscussion'
+import { discussionContentPreview } from '../utils/discussionContent'
 
 function spaPath(href: string) {
   return href.replace(/^\/app/, '') || '/'
@@ -192,7 +195,7 @@ export function StudentDiscussionPage() {
                           </span>
                         </div>
                         <p className="mb-2 line-clamp-2 text-sm text-slate-600">
-                          {t.content_preview}
+                          {discussionContentPreview(t.content_preview)}
                         </p>
                         <div className="flex flex-wrap gap-3 text-xs text-hub-muted">
                           <span>
@@ -235,6 +238,7 @@ export function StudentDiscussionThreadPage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [reply, setReply] = useState('')
+  const [replyEditorKey, setReplyEditorKey] = useState(0)
   const [files, setFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [editingThread, setEditingThread] = useState(false)
@@ -276,6 +280,7 @@ export function StudentDiscussionThreadPage() {
       const res = await replyToDiscussionThread(tid, { content: reply, files })
       setMessage(res.message)
       setReply('')
+      setReplyEditorKey((k) => k + 1)
       setFiles([])
       await load()
     } catch (err) {
@@ -369,13 +374,15 @@ export function StudentDiscussionThreadPage() {
                       value={threadTitle}
                       onChange={(e) => setThreadTitle(e.target.value)}
                       required
+                      placeholder="Thread title"
                     />
-                    <textarea
-                      className="form-control"
-                      rows={5}
+                    <DiscussionContentEditor
+                      key={`edit-thread-${tid}-${data.thread.content.slice(0, 24)}`}
                       value={threadContent}
-                      onChange={(e) => setThreadContent(e.target.value)}
+                      onChange={setThreadContent}
+                      label="Thread post"
                       required
+                      rows={6}
                     />
                     <button type="submit" className={discBtnPrimary}>
                       Save thread
@@ -383,7 +390,7 @@ export function StudentDiscussionThreadPage() {
                   </form>
                 ) : (
                   <>
-                    <p className="mb-0 whitespace-pre-wrap text-slate-800">{data.thread.content}</p>
+                    <DiscussionContentView content={data.thread.content} />
                     <AttachmentList items={data.thread.attachments} />
                   </>
                 )}
@@ -449,12 +456,13 @@ export function StudentDiscussionThreadPage() {
                               }
                             }}
                           >
-                            <textarea
-                              className="form-control"
-                              rows={4}
+                            <DiscussionContentEditor
+                              key={`edit-post-${p.id}`}
                               value={editPostContent}
-                              onChange={(e) => setEditPostContent(e.target.value)}
+                              onChange={setEditPostContent}
+                              label="Reply"
                               required
+                              rows={5}
                             />
                             <div className="flex gap-2">
                               <button type="submit" className={discBtnPrimary}>
@@ -471,7 +479,7 @@ export function StudentDiscussionThreadPage() {
                           </form>
                         ) : (
                           <>
-                            <p className="mb-0 whitespace-pre-wrap text-slate-800">{p.content}</p>
+                            <DiscussionContentView content={p.content} />
                             <AttachmentList items={p.attachments} />
                           </>
                         )}
@@ -487,23 +495,26 @@ export function StudentDiscussionThreadPage() {
                   className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
                   <h2 className="mb-3 text-base font-bold">Post a reply</h2>
-                  <textarea
-                    className="form-control mb-3"
-                    rows={4}
+                  <DiscussionContentEditor
+                    key={`reply-${tid}-${replyEditorKey}`}
                     value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    placeholder="Share your thoughts…"
+                    onChange={setReply}
+                    label="Your reply"
                     required
+                    rows={5}
+                    textPlaceholder="Share your thoughts…"
                   />
-                  <DocumentFileField
-                    files={files}
-                    onChange={setFiles}
-                    multiple
-                    helpText="Optional attachments from your computer or Google Drive."
-                  />
+                  <div className="mt-3">
+                    <DocumentFileField
+                      files={files}
+                      onChange={setFiles}
+                      multiple
+                      helpText="Optional attachments from your computer or Google Drive."
+                    />
+                  </div>
                   <button
                     type="submit"
-                    className={discBtnPrimary}
+                    className={`${discBtnPrimary} mt-3`}
                     disabled={submitting}
                   >
                     {submitting ? 'Posting…' : 'Post reply'}
@@ -637,46 +648,65 @@ function CreateThreadModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
-        <h2 className="mb-3 text-lg font-bold text-slate-900">Create thread</h2>
+      <div className="max-h-[min(92vh,52rem)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl md:p-6">
+        <h2 className="mb-1 text-lg font-bold text-slate-900">Create thread</h2>
+        <p className="mb-4 text-sm text-hub-muted">
+          Add a clear title, then write your post in Text or paste code with line numbers.
+        </p>
         {err ? <div className="alert alert-danger py-2">{err}</div> : null}
         <form
-          className="space-y-3"
+          className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
+            const trimmedTitle = title.trim()
+            const trimmedBody = content.replace(/^\[DISCUSSION_CODE:[^\]]+\]\s*/, '').trim()
+            if (!trimmedTitle || !trimmedBody) {
+              setErr('Please provide both a title and content for your thread.')
+              return
+            }
             setBusy(true)
             setErr(null)
             try {
-              await onSubmit({ title, content, files })
+              await onSubmit({ title: trimmedTitle, content, files })
             } catch (error) {
               setErr(error instanceof Error ? error.message : 'Could not create thread')
               setBusy(false)
             }
           }}
         >
-          <input
-            className="form-control"
-            placeholder="Thread title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-          <textarea
-            className="form-control"
-            rows={5}
-            placeholder="Your post"
+          <div>
+            <label htmlFor="create-thread-title" className="mb-1 block text-sm font-semibold text-slate-800">
+              Thread title <span className="text-red-600">*</span>
+            </label>
+            <input
+              id="create-thread-title"
+              className="form-control"
+              placeholder="Enter a clear, descriptive title…"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+
+          <DiscussionContentEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={setContent}
+            label="Your post"
             required
+            rows={8}
+            textPlaceholder="Share your thoughts, ideas, or questions about the discussion topic…"
           />
+
           <DocumentFileField
             files={files}
             onChange={setFiles}
             multiple
             helpText="Optional attachments from your computer or Google Drive."
           />
-          <div className="flex justify-end gap-2">
-            <button type="button" className={discBtnMuted} onClick={onClose}>
+
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <button type="button" className={discBtnMuted} onClick={onClose} disabled={busy}>
               Cancel
             </button>
             <button type="submit" className={discBtnPrimary} disabled={busy}>

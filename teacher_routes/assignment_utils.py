@@ -77,7 +77,10 @@ def parse_allow_student_threads(desc, default: bool = True) -> bool:
     m = re.search(r'Students may create threads:\s*(yes|no)', desc, flags=re.IGNORECASE)
     if not m:
         return default
-    return m.group(1).lower() == 'yes'from models import AssignmentExtension
+    return m.group(1).lower() == 'yes'
+
+
+from models import AssignmentExtension
 
 
 def parse_form_datetime_as_school_tz(dt_str, tz_name=None, fmt='%Y-%m-%dT%H:%M'):

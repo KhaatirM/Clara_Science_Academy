@@ -6,6 +6,9 @@ import {
   type DiscussionEditorMode,
 } from '../../utils/discussionContent'
 
+export const discFieldClass =
+  'block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/25 disabled:cursor-not-allowed disabled:bg-slate-50'
+
 type Props = {
   /** Stored content (may include [DISCUSSION_CODE:lang] prefix). */
   value: string
@@ -98,7 +101,7 @@ export function DiscussionContentEditor({
           </label>
           <select
             id={`${fieldId}-lang`}
-            className="form-select form-select-sm w-auto"
+            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/25"
             value={lang}
             disabled={disabled}
             onChange={(e) => {
@@ -119,7 +122,7 @@ export function DiscussionContentEditor({
       {mode === 'text' ? (
         <textarea
           id={fieldId}
-          className="form-control font-sans"
+          className={`${discFieldClass} min-h-[12rem] resize-y leading-relaxed`}
           rows={rows}
           value={draft}
           disabled={disabled}
@@ -142,7 +145,7 @@ export function DiscussionContentEditor({
             </pre>
             <textarea
               id={fieldId}
-              className="min-h-[12rem] flex-1 resize-y border-0 bg-transparent px-3 py-3 text-slate-100 outline-none focus:ring-0"
+              className="block min-h-[16rem] w-full flex-1 resize-y border-0 bg-transparent px-3 py-3 font-mono text-slate-100 outline-none placeholder:text-slate-500 focus:ring-0"
               rows={Math.max(rows, 10)}
               value={draft}
               disabled={disabled}

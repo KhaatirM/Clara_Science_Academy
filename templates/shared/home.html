@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 23, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 24, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,22 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 23, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 24, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 23</strong> (<strong>{{ app_version_display }}</strong>) restores Text/Code paste on discussion Create thread (and replies/edits), and keeps the theme reveal scene when saving a look.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 24</strong> (<strong>{{ app_version_display }}</strong>) makes the student discussion Create thread window full size with a properly styled Text / Code editor.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 24, 2026 - Student Create thread layout -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-chat-square-text me-2"></i>Student Create thread – September 24, 2026</h6>
+                        <ul class="mb-0">
+                            <li>The Create thread window is now wide, with large title and post boxes.</li>
+                            <li>The Text / Code switch, language picker, and line-numbered code box display correctly for students.</li>
+                        </ul>
+                    </div>
+
                     <!-- September 23, 2026 - Discussion code paste -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-code-slash me-2"></i>Discussion Code paste – September 23, 2026</h6>
@@ -2805,11 +2814,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep23_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep24_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep23_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep24_2026_v1', 'true');
         }, 500);
     }
 });

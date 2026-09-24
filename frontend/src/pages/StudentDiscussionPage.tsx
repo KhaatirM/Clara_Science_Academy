@@ -8,7 +8,10 @@ import {
   fetchDiscussionThread,
   replyToDiscussionThread,
 } from '../api/studentDiscussion'
-import { DiscussionContentEditor } from '../components/discussion/DiscussionContentEditor'
+import {
+  DiscussionContentEditor,
+  discFieldClass,
+} from '../components/discussion/DiscussionContentEditor'
 import { DiscussionContentView } from '../components/discussion/DiscussionContentView'
 import { DocumentFileField } from '../components/uploads/DocumentFileField'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
@@ -31,6 +34,9 @@ const discBtnMuted = `${discBtnBase} border border-slate-300 bg-white text-slate
 const discBtnTealOutline = `${discBtnBase} border-2 border-teal-600 bg-white text-teal-800 shadow-sm hover:bg-teal-50`
 
 const discBtnPrimary = `${discBtnBase} border border-teal-700 bg-gradient-to-br from-teal-700 to-teal-600 text-white shadow-md hover:from-teal-800 hover:to-teal-700`
+
+const discErrorClass =
+  'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800'
 
 export function StudentDiscussionPage() {
   const { assignmentId = '' } = useParams()
@@ -69,10 +75,10 @@ export function StudentDiscussionPage() {
       <div className="mgmt-home mgmt-home--teacher container-fluid px-0 px-md-1">
         <div className="mgmt-home-shell">
           {loading && !data ? (
-            <div className="p-5 text-center text-muted">Loading discussion…</div>
+            <div className="p-5 text-center text-hub-muted">Loading discussion…</div>
           ) : error && !data ? (
             <div className="m-3 space-y-3">
-              <div className="alert alert-danger mb-0">{error}</div>
+              <div className={discErrorClass}>{error}</div>
               <Link to="/student/assignments" className={discBtnMuted}>
                 Back to assignments
               </Link>
@@ -92,7 +98,7 @@ export function StudentDiscussionPage() {
                   </button>
                 </div>
               ) : null}
-              {error ? <div className="alert alert-danger">{error}</div> : null}
+              {error ? <div className={discErrorClass}>{error}</div> : null}
 
               <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -295,10 +301,10 @@ export function StudentDiscussionThreadPage() {
       <div className="mgmt-home mgmt-home--teacher container-fluid px-0 px-md-1">
         <div className="mgmt-home-shell">
           {loading && !data ? (
-            <div className="p-5 text-center text-muted">Loading thread…</div>
+            <div className="p-5 text-center text-hub-muted">Loading thread…</div>
           ) : error && !data ? (
             <div className="m-3 space-y-3">
-              <div className="alert alert-danger mb-0">{error}</div>
+              <div className={discErrorClass}>{error}</div>
               <Link
                 to={assignmentId ? `/student/discussion/${assignmentId}` : '/student/assignments'}
                 className={discBtnMuted}
@@ -328,7 +334,7 @@ export function StudentDiscussionThreadPage() {
                   {message}
                 </div>
               ) : null}
-              {error ? <div className="alert alert-danger">{error}</div> : null}
+              {error ? <div className={discErrorClass}>{error}</div> : null}
 
               <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
@@ -370,7 +376,7 @@ export function StudentDiscussionThreadPage() {
                     }}
                   >
                     <input
-                      className="form-control"
+                      className={discFieldClass}
                       value={threadTitle}
                       onChange={(e) => setThreadTitle(e.target.value)}
                       required
@@ -647,13 +653,13 @@ function CreateThreadModal({
   const [err, setErr] = useState<string | null>(null)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[min(92vh,52rem)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl md:p-6">
-        <h2 className="mb-1 text-lg font-bold text-slate-900">Create thread</h2>
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-3 sm:p-6">
+      <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl md:p-7">
+        <h2 className="mb-1 text-xl font-bold text-slate-900">Create thread</h2>
         <p className="mb-4 text-sm text-hub-muted">
           Add a clear title, then write your post in Text or paste code with line numbers.
         </p>
-        {err ? <div className="alert alert-danger py-2">{err}</div> : null}
+        {err ? <div className={discErrorClass}>{err}</div> : null}
         <form
           className="space-y-4"
           onSubmit={async (e) => {
@@ -680,7 +686,7 @@ function CreateThreadModal({
             </label>
             <input
               id="create-thread-title"
-              className="form-control"
+              className={`${discFieldClass} text-base`}
               placeholder="Enter a clear, descriptive title…"
               value={title}
               onChange={(e) => setTitle(e.target.value)}

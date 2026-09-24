@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep23_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep24_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Bigger, properly styled Create thread for students',
+    body: 'The student Create thread window is now wide with a full-size title box and post area. The Text / Code switch, language picker, and code box with line numbers show correctly on student pages.',
+  },
   {
     title: 'Discussion Create thread restores Code paste mode',
     body: 'Create thread, replies, and edits again support Text / Code with language and line numbers. Code posts render properly on the board, thread view, and grading. “Allow students to create threads” is saved and enforced.',
@@ -366,10 +370,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.56'
-  const releaseLabel = version?.release_label || 'September 23, 2026'
+  const display = version?.display || 'v 2.520.57'
+  const releaseLabel = version?.release_label || 'September 24, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2799
+  const updatesEstimate = version?.updates_estimate ?? 2800
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

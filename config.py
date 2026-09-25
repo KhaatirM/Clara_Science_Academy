@@ -23,6 +23,11 @@ class Config:
     # Prioritize the production DATABASE_URL, with SQLite as a fallback.
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'app.db')
+    # SQLAlchemy 2.1+ defaults bare postgres URLs to psycopg (v3); this app ships psycopg2-binary.
+    for _pg_prefix in ('postgres://', 'postgresql://'):
+        if SQLALCHEMY_DATABASE_URI.startswith(_pg_prefix):
+            SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://' + SQLALCHEMY_DATABASE_URI[len(_pg_prefix):]
+            break
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

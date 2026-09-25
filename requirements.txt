@@ -1,6 +1,7 @@
 Flask
 Flask-Login
 Flask-SQLAlchemy
+SQLAlchemy>=2.0.30,<2.1
 Flask-WTF
 Flask-Migrate
 Flask-Mail

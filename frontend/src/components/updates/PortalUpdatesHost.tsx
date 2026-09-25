@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep25_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep25_2026_v2'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   {
@@ -10,7 +10,7 @@ const LATEST_UPDATES: Array<{ title: string; body: string }> = [
   },
   {
     title: 'Quiz fixes',
-    body: 'Timed quizzes now auto-submit correctly when time runs out, and short-answer and essay boxes are properly sized on student pages.',
+    body: 'Timed quizzes now auto-submit correctly when time runs out, students are no longer signed out for inactivity mid-quiz or mid-test, and short-answer and essay boxes are properly sized on student pages.',
   },
   {
     title: 'Bigger, properly styled Create thread for students',
@@ -378,10 +378,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.521.0'
+  const display = version?.display || 'v 2.521.1'
   const releaseLabel = version?.release_label || 'September 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2801
+  const updatesEstimate = version?.updates_estimate ?? 2802
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

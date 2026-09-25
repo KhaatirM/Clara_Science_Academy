@@ -10,6 +10,22 @@ const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   'click',
 ]
 
+let idleHolds = 0
+
+/**
+ * Suspend idle logout (e.g. while a student is taking a quiz or test).
+ * Returns a release function; the page must also keep the server session alive.
+ */
+export function holdIdleLogout(): () => void {
+  idleHolds += 1
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    idleHolds = Math.max(0, idleHolds - 1)
+  }
+}
+
 function logoutForIdle() {
   window.location.href = '/logout?reason=idle'
 }
@@ -36,6 +52,10 @@ export function IdleSessionGuard({ timeoutMinutes }: { timeoutMinutes: number })
     }
 
     const timer = window.setInterval(() => {
+      if (idleHolds > 0) {
+        onActivity()
+        return
+      }
       const idleFor = Date.now() - lastActivityRef.current
       if (idleFor >= timeoutMs) {
         logoutForIdle()

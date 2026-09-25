@@ -8,6 +8,7 @@ import {
   submitStudentQuiz,
 } from '../api/studentQuiz'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import { holdIdleLogout } from '../components/session/IdleSessionGuard'
 import {
   CameraMonitorBadge,
   TestLockdownGate,
@@ -362,20 +363,29 @@ export function StudentTakeQuizPage() {
     }
   }, [data?.mode, timerSeconds == null, doSubmit])
 
-  // Stable autosave + keepalive (do not recreate interval on every answer change).
+  // No idle logout mid-quiz: an idle redirect would lose answers (or lock a test).
+  useEffect(() => {
+    if (data?.mode !== 'take') return
+    const release = holdIdleLogout()
+    const keepAlive = window.setInterval(() => {
+      void quizKeepalive(id).catch(() => undefined)
+    }, 60000)
+    return () => {
+      release()
+      window.clearInterval(keepAlive)
+    }
+  }, [data?.mode, id])
+
+  // Stable autosave (do not recreate interval on every answer change).
   useEffect(() => {
     if (data?.mode !== 'take' || !data.assignment.allow_save_and_continue) return
     const saveInterval = window.setInterval(() => {
       void doSave({ silent: true })
     }, 30000)
-    const keepAlive = window.setInterval(() => {
-      void quizKeepalive(id).catch(() => undefined)
-    }, 60000)
     return () => {
       window.clearInterval(saveInterval)
-      window.clearInterval(keepAlive)
     }
-  }, [data?.mode, data?.assignment.allow_save_and_continue, doSave, id])
+  }, [data?.mode, data?.assignment.allow_save_and_continue, doSave])
 
   // Debounced save shortly after answers change so recent work is not only in memory.
   useEffect(() => {

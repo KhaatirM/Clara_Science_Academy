@@ -374,7 +374,7 @@ def ensure_team_columns() -> bool:
     if _TEAM_COLUMNS_READY:
         return True
     _TEAM_COLUMNS_READY = _add_missing_columns(
-        "cleaning_team", {"days_of_week": "VARCHAR(40)"}
+        "cleaning_team", {"days_of_week": "VARCHAR(40)", "friday_weeks": "VARCHAR(20)"}
     )
     return _TEAM_COLUMNS_READY
 
@@ -392,8 +392,42 @@ def normalize_workdays(days: Any) -> list[int]:
     return sorted(cleaned)
 
 
-def workday_labels(days: list[int]) -> list[str]:
-    return [WEEKDAY_LABELS[d] for d in days if 0 <= d < len(WEEKDAY_LABELS)]
+FRIDAY = 4
+FRIDAY_WEEK_LABELS = {1: "1st", 2: "2nd", 3: "3rd", 4: "4th"}
+
+
+def normalize_friday_weeks(weeks: Any) -> list[int]:
+    """Fridays of the month (1-4) a team works; empty or all four means every Friday."""
+    cleaned: list[int] = []
+    for value in weeks or []:
+        try:
+            week = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= week <= 4 and week not in cleaned:
+            cleaned.append(week)
+    cleaned.sort()
+    return [] if len(cleaned) == 4 else cleaned
+
+
+def workday_labels(days: list[int], friday_weeks: list[int] | None = None) -> list[str]:
+    labels: list[str] = []
+    for d in days:
+        if not 0 <= d < len(WEEKDAY_LABELS):
+            continue
+        if d == FRIDAY and friday_weeks:
+            ordinals = [FRIDAY_WEEK_LABELS[w] for w in friday_weeks]
+            joined = ordinals[0] if len(ordinals) == 1 else ", ".join(ordinals[:-1]) + " & " + ordinals[-1]
+            labels.append(f"{joined} Fri")
+        else:
+            labels.append(WEEKDAY_LABELS[d])
+    return labels
+
+
+def schedule_label(days: list[int], friday_weeks: list[int] | None = None) -> str:
+    if (not days or all(d in days for d in range(5))) and not friday_weeks:
+        return "Every school day"
+    return ", ".join(workday_labels(days or list(range(5)), friday_weeks))
 
 
 def _team_workdays(team: CleaningTeam) -> list[int]:
@@ -401,6 +435,23 @@ def _team_workdays(team: CleaningTeam) -> list[int]:
         return team.get_days_of_week()
     except Exception:
         return []
+
+
+def _team_friday_weeks(team: CleaningTeam) -> list[int]:
+    try:
+        return team.get_friday_weeks()
+    except Exception:
+        return []
+
+
+def _apply_workdays(team: CleaningTeam, days_of_week: Any, friday_weeks: Any) -> None:
+    """An empty weekday list means every school day, so Friday weeks still apply to it."""
+    days = normalize_workdays(days_of_week)
+    weeks = normalize_friday_weeks(friday_weeks)
+    if days and FRIDAY not in days:
+        weeks = []
+    team.set_days_of_week(days)
+    team.set_friday_weeks(weeks)
 
 
 _DUTY_COLUMNS_READY = False
@@ -747,6 +798,7 @@ def create_cleaning_team(
     team_type: str,
     student_ids: list[int] | None = None,
     days_of_week: Any = None,
+    friday_weeks: Any = None,
 ) -> dict[str, Any]:
     ensure_team_columns()
     team_name = (name or "").strip()
@@ -768,7 +820,7 @@ def create_cleaning_team(
         is_active=True,
     )
     try:
-        team.set_days_of_week(normalize_workdays(days_of_week))
+        _apply_workdays(team, days_of_week, friday_weeks)
     except Exception:
         pass
     db.session.add(team)
@@ -821,6 +873,7 @@ def update_cleaning_team(
     description: Any = None,
     team_type: Any = None,
     days_of_week: Any = None,
+    friday_weeks: Any = None,
 ) -> dict[str, Any]:
     """Edit an existing team. Only the fields supplied are touched."""
     ensure_team_columns()
@@ -853,9 +906,13 @@ def update_cleaning_team(
             }
         team.team_type = normalized_type
 
-    if days_of_week is not None:
+    if days_of_week is not None or friday_weeks is not None:
         try:
-            team.set_days_of_week(normalize_workdays(days_of_week))
+            _apply_workdays(
+                team,
+                days_of_week if days_of_week is not None else _team_workdays(team),
+                friday_weeks if friday_weeks is not None else _team_friday_weeks(team),
+            )
         except Exception:
             return {"success": False, "error": "Could not save the working days."}
 
@@ -916,6 +973,7 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
         )
 
         workdays = _team_workdays(team)
+        friday_weeks = _team_friday_weeks(team)
         team_payloads.append(
             {
                 "id": team.id,
@@ -923,7 +981,9 @@ def query_student_jobs_hub(*, user) -> dict[str, Any]:
                 "description": team.team_description or "",
                 "team_type": team_type,
                 "days_of_week": workdays,
-                "day_labels": workday_labels(workdays),
+                "friday_weeks": friday_weeks,
+                "day_labels": workday_labels(workdays, friday_weeks),
+                "schedule_label": schedule_label(workdays, friday_weeks),
                 "lunch_served_count": sum(1 for m in member_list if m["served_lunch"]),
                 "current_score": _team_current_score(team.id, recent_inspections),
                 "stats": _team_stats(team_inspections),

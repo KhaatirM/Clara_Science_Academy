@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep25_2026_v2'
+const SESSION_KEY = 'spaUpdateModalShownSep25_2026_v3'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Student Jobs: pick which Fridays a team works',
+    body: 'When creating or editing a team, Friday is now split into 1st, 2nd, 3rd and 4th Friday, so teams can rotate Fridays. Team cards and the student Jobs page show the schedule, e.g. "Mon, Wed, 1st & 3rd Fri".',
+  },
   {
     title: 'Quiz or Test: new lockdown tests',
     body: 'When creating or editing a quiz, choose Quiz or Test. Tests run in lockdown: students turn on their camera and share their entire screen, and leaving the tab auto-submits and locks the test. Teachers can review screen/camera images and mouse activity, and unlock a student for one retake.',
@@ -378,10 +382,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.521.1'
+  const display = version?.display || 'v 2.521.2'
   const releaseLabel = version?.release_label || 'September 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2802
+  const updatesEstimate = version?.updates_estimate ?? 2803
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

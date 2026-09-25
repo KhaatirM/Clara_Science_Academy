@@ -3340,6 +3340,8 @@ class CleaningTeam(db.Model):
     # Weekdays the team works, as a comma list of ints with Monday=0.
     # Empty means the team works every school day.
     days_of_week = db.Column(db.String(40), nullable=True)
+    # Which Fridays of the month (1-4) the team works; empty means every Friday.
+    friday_weeks = db.Column(db.String(20), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -3372,6 +3374,32 @@ class CleaningTeam(db.Model):
             if 0 <= day <= 6 and day not in cleaned:
                 cleaned.append(day)
         self.days_of_week = ','.join(str(d) for d in sorted(cleaned)) or None
+
+    def get_friday_weeks(self) -> list:
+        raw = (getattr(self, 'friday_weeks', None) or '').strip()
+        weeks = []
+        for chunk in raw.split(','):
+            try:
+                week = int(chunk.strip())
+            except (TypeError, ValueError):
+                continue
+            if 1 <= week <= 4 and week not in weeks:
+                weeks.append(week)
+        return sorted(weeks)
+
+    def set_friday_weeks(self, weeks) -> None:
+        cleaned = []
+        for value in weeks or []:
+            try:
+                week = int(value)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= week <= 4 and week not in cleaned:
+                cleaned.append(week)
+        # All four Fridays is the same as every Friday.
+        if len(cleaned) == 4:
+            cleaned = []
+        self.friday_weeks = ','.join(str(w) for w in sorted(cleaned)) or None
 
     def __repr__(self):
         return f"CleaningTeam('{self.team_name}', '{self.team_description}')"

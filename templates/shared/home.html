@@ -182,6 +182,7 @@
                             <li>Teachers can review screen and camera images, mouse activity, and a timeline, then unlock a student for one retake.</li>
                             <li>Timed quizzes now auto-submit correctly when time runs out.</li>
                             <li>Students are no longer signed out for inactivity while taking a quiz or test, so long quizzes submit without losing answers.</li>
+                            <li>Student Jobs: Friday is now split into 1st, 2nd, 3rd and 4th Friday so cleaning teams can rotate Fridays.</li>
                         </ul>
                     </div>
 
@@ -2827,11 +2828,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep25_2026_v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep25_2026_v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep25_2026_v2', 'true');
+            sessionStorage.setItem('updateModalShownSep25_2026_v3', 'true');
         }, 500);
     }
 });

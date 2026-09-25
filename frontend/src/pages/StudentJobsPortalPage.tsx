@@ -30,6 +30,13 @@ function teamStyle(type: string) {
   return TEAM_TYPE_STYLE[(type || '').toLowerCase()] || TEAM_TYPE_STYLE.other
 }
 
+function teamScheduleLabel(team: StudentJobsTeam) {
+  if (team.schedule_label) return team.schedule_label
+  return team.days_of_week?.length && team.days_of_week.length < 5
+    ? (team.day_labels || []).join(', ')
+    : 'Every school day'
+}
+
 function scoreTone(score: number) {
   if (score < 60) return { chip: 'bg-red-100 text-red-800', bar: 'bg-red-500' }
   if (score < 80) return { chip: 'bg-amber-100 text-amber-900', bar: 'bg-amber-500' }
@@ -141,11 +148,7 @@ function MyDutiesPanel({
             <div key={team.id}>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
                 {team.name}
-                <span className="ml-2 text-teal-800">
-                  {team.days_of_week?.length && team.days_of_week.length < 5
-                    ? (team.day_labels || []).join(', ')
-                    : 'Every school day'}
-                </span>
+                <span className="ml-2 text-teal-800">{teamScheduleLabel(team)}</span>
               </h3>
 
               {team.duties.length === 0 ? (
@@ -221,9 +224,7 @@ function TeamCard({
           </div>
           <h3 className="mb-0 mt-1 truncate text-base font-bold text-hub-text">{team.name}</h3>
           <p className="mb-0 text-[11px] font-bold uppercase tracking-wide text-teal-800">
-            {team.days_of_week?.length && team.days_of_week.length < 5
-              ? (team.day_labels || []).join(', ')
-              : 'Every school day'}
+            {teamScheduleLabel(team)}
           </p>
         </div>
         <span className={`shrink-0 rounded-full px-3 py-1 text-lg font-extrabold ${tone.chip}`}>

@@ -47,73 +47,141 @@ const WEEKDAY_OPTIONS = [
   { value: 1, label: 'Tue' },
   { value: 2, label: 'Wed' },
   { value: 3, label: 'Thu' },
-  { value: 4, label: 'Fri' },
 ]
-const DEFAULT_WORKDAYS = [0, 1, 2, 3, 4]
+const FRIDAY = 4
+const FRIDAY_WEEK_OPTIONS = [
+  { value: 1, label: '1st Fri' },
+  { value: 2, label: '2nd Fri' },
+  { value: 3, label: '3rd Fri' },
+  { value: 4, label: '4th Fri' },
+]
+
+/** Mon–Thu picked directly; Fridays picked per week of the month (all four = every Friday). */
+type Workdays = { weekdays: number[]; fridays: number[] }
+
+const defaultWorkdays = (): Workdays => ({ weekdays: [0, 1, 2, 3], fridays: [1, 2, 3, 4] })
 
 type TeamDraft = {
   name: string
   team_type: string
   description: string
-  days_of_week: number[]
+  workdays: Workdays
 }
 
 const EMPTY_TEAM_DRAFT: TeamDraft = {
   name: '',
   team_type: 'cleaning',
   description: '',
-  days_of_week: [...DEFAULT_WORKDAYS],
+  workdays: defaultWorkdays(),
 }
 
-function toggleDay(days: number[], day: number): number[] {
-  return days.includes(day)
-    ? days.filter((d) => d !== day)
-    : [...days, day].sort((a, b) => a - b)
+function toggleValue(values: number[], value: number): number[] {
+  return values.includes(value)
+    ? values.filter((v) => v !== value)
+    : [...values, value].sort((a, b) => a - b)
 }
 
-/** Teams with every weekday selected are described as working daily. */
-function workdaySummary(days: number[]): string {
-  if (!days.length || days.length >= WEEKDAY_OPTIONS.length) return 'Every school day'
-  return WEEKDAY_OPTIONS.filter((d) => days.includes(d.value))
-    .map((d) => d.label)
-    .join(', ')
+function workdaysFromTeam(team: StudentJobsTeam): Workdays {
+  const days = team.days_of_week?.length ? team.days_of_week : [0, 1, 2, 3, FRIDAY]
+  const fridayWeeks = team.friday_weeks?.length ? team.friday_weeks : [1, 2, 3, 4]
+  return {
+    weekdays: days.filter((d) => d < FRIDAY),
+    fridays: days.includes(FRIDAY) ? [...fridayWeeks] : [],
+  }
+}
+
+function workdaysPayload(workdays: Workdays): { days_of_week: number[]; friday_weeks: number[] } {
+  return {
+    days_of_week: [...workdays.weekdays, ...(workdays.fridays.length ? [FRIDAY] : [])],
+    friday_weeks: workdays.fridays,
+  }
+}
+
+function workdaySummary({ weekdays, fridays }: Workdays): string {
+  const allWeekdays = weekdays.length === WEEKDAY_OPTIONS.length
+  const allFridays = fridays.length === FRIDAY_WEEK_OPTIONS.length
+  if ((allWeekdays && allFridays) || (!weekdays.length && !fridays.length)) return 'Every school day'
+  const parts = WEEKDAY_OPTIONS.filter((d) => weekdays.includes(d.value)).map((d) => d.label)
+  if (allFridays) {
+    parts.push('Fri')
+  } else if (fridays.length) {
+    const ordinals = FRIDAY_WEEK_OPTIONS.filter((f) => fridays.includes(f.value)).map((f) =>
+      f.label.replace(' Fri', ''),
+    )
+    const joined =
+      ordinals.length === 1 ? ordinals[0] : `${ordinals.slice(0, -1).join(', ')} & ${ordinals[ordinals.length - 1]}`
+    parts.push(`${joined} Fri`)
+  }
+  return parts.join(', ')
+}
+
+function DayChip({
+  label,
+  on,
+  disabled,
+  onClick,
+}: {
+  label: string
+  on: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-pressed={on}
+      className={[
+        'rounded-xl border px-3 py-1.5 text-sm font-bold',
+        on
+          ? 'border-teal-600 bg-teal-600 text-white'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+      ].join(' ')}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  )
 }
 
 function WorkdayPicker({
-  days,
+  value,
   onChange,
   disabled,
 }: {
-  days: number[]
-  onChange: (days: number[]) => void
+  value: Workdays
+  onChange: (value: Workdays) => void
   disabled?: boolean
 }) {
+  const nothingPicked = !value.weekdays.length && !value.fridays.length
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        {WEEKDAY_OPTIONS.map((day) => {
-          const on = days.includes(day.value)
-          return (
-            <button
-              key={day.value}
-              type="button"
-              disabled={disabled}
-              aria-pressed={on}
-              className={[
-                'rounded-xl border px-3 py-1.5 text-sm font-bold',
-                on
-                  ? 'border-teal-600 bg-teal-600 text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
-              ].join(' ')}
-              onClick={() => onChange(toggleDay(days, day.value))}
-            >
-              {day.label}
-            </button>
-          )
-        })}
+        {WEEKDAY_OPTIONS.map((day) => (
+          <DayChip
+            key={day.value}
+            label={day.label}
+            on={value.weekdays.includes(day.value)}
+            disabled={disabled}
+            onClick={() => onChange({ ...value, weekdays: toggleValue(value.weekdays, day.value) })}
+          />
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {FRIDAY_WEEK_OPTIONS.map((week) => (
+          <DayChip
+            key={week.value}
+            label={week.label}
+            on={value.fridays.includes(week.value)}
+            disabled={disabled}
+            onClick={() => onChange({ ...value, fridays: toggleValue(value.fridays, week.value) })}
+          />
+        ))}
       </div>
       <p className="mb-0 mt-1.5 text-xs text-hub-muted">
-        {days.length ? `Works ${workdaySummary(days)}.` : 'No days picked — counts as every school day.'}
+        {nothingPicked
+          ? 'No days picked — counts as every school day.'
+          : `Works ${workdaySummary(value)}. A 5th Friday only counts when all four Fridays are picked.`}
       </p>
     </div>
   )
@@ -296,7 +364,7 @@ export function StudentJobsPage() {
   const [newTeamType, setNewTeamType] = useState('cleaning')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamStudentIds, setNewTeamStudentIds] = useState<number[]>([])
-  const [newTeamDays, setNewTeamDays] = useState<number[]>([...DEFAULT_WORKDAYS])
+  const [newTeamDays, setNewTeamDays] = useState<Workdays>(defaultWorkdays)
 
   // Edit team
   const [editTeam, setEditTeam] = useState<StudentJobsTeam | null>(null)
@@ -514,7 +582,7 @@ export function StudentJobsPage() {
         description: newTeamDescription.trim(),
         team_type: newTeamType,
         student_ids: newTeamStudentIds,
-        days_of_week: newTeamDays,
+        ...workdaysPayload(newTeamDays),
       })
       if (result.success) {
         showAppToast(result.message || 'Team created.', 'success')
@@ -522,7 +590,7 @@ export function StudentJobsPage() {
         setNewTeamName('')
         setNewTeamDescription('')
         setNewTeamStudentIds([])
-        setNewTeamDays([...DEFAULT_WORKDAYS])
+        setNewTeamDays(defaultWorkdays())
         await load()
       } else {
         showAppToast(result.error || 'Could not create the team.', 'danger')
@@ -540,7 +608,7 @@ export function StudentJobsPage() {
       name: team.name,
       team_type: team.team_type,
       description: team.description,
-      days_of_week: team.days_of_week?.length ? [...team.days_of_week] : [...DEFAULT_WORKDAYS],
+      workdays: workdaysFromTeam(team),
     })
   }
 
@@ -555,7 +623,7 @@ export function StudentJobsPage() {
         name: editDraft.name.trim(),
         description: editDraft.description.trim(),
         team_type: editDraft.team_type,
-        days_of_week: editDraft.days_of_week,
+        ...workdaysPayload(editDraft.workdays),
       }),
     )
     if (saved) setEditTeam(null)
@@ -831,7 +899,7 @@ export function StudentJobsPage() {
                         </p>
                         <p className="mb-0 mt-1 text-xs font-bold uppercase tracking-wide text-teal-800">
                           <i className="bi bi-calendar-week me-1" aria-hidden />
-                          {workdaySummary(team.days_of_week || [])}
+                          {team.schedule_label || workdaySummary(workdaysFromTeam(team))}
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
@@ -1565,7 +1633,7 @@ export function StudentJobsPage() {
           </label>
           <div>
             <span className={LABEL_CLASS}>Days they work</span>
-            <WorkdayPicker days={newTeamDays} onChange={setNewTeamDays} disabled={busy} />
+            <WorkdayPicker value={newTeamDays} onChange={setNewTeamDays} disabled={busy} />
           </div>
           <div>
             <span className={LABEL_CLASS}>
@@ -1647,8 +1715,8 @@ export function StudentJobsPage() {
           <div>
             <span className={LABEL_CLASS}>Days they work</span>
             <WorkdayPicker
-              days={editDraft.days_of_week}
-              onChange={(days) => setEditDraft((prev) => ({ ...prev, days_of_week: days }))}
+              value={editDraft.workdays}
+              onChange={(workdays) => setEditDraft((prev) => ({ ...prev, workdays }))}
               disabled={busy}
             />
           </div>

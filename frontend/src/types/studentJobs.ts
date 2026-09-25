@@ -50,7 +50,11 @@ export type StudentJobsTeam = {
   team_type: string
   /** Weekday numbers the team works, Mon=0. Empty means every school day. */
   days_of_week: number[]
+  /** Fridays of the month (1-4) the team works. Empty means every Friday. */
+  friday_weeks?: number[]
   day_labels: string[]
+  /** e.g. "Every school day" or "Mon, Wed, 1st & 3rd Fri". */
+  schedule_label?: string
   lunch_served_count: number
   current_score: number
   stats: StudentJobsTeamStats
@@ -111,6 +115,7 @@ export type CreateStudentJobsTeamPayload = {
   team_type: string
   student_ids?: number[]
   days_of_week?: number[]
+  friday_weeks?: number[]
 }
 
 export type UpdateStudentJobsTeamPayload = {
@@ -118,6 +123,7 @@ export type UpdateStudentJobsTeamPayload = {
   description?: string
   team_type?: string
   days_of_week?: number[]
+  friday_weeks?: number[]
 }
 
 export type StudentJobsHubResponse = {

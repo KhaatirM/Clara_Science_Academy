@@ -54,6 +54,7 @@ def student_jobs_create_team():
             team_type=data.get("team_type", "other"),
             student_ids=data.get("student_ids") or data.get("members") or [],
             days_of_week=data.get("days_of_week"),
+            friday_weeks=data.get("friday_weeks"),
         )
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
@@ -73,6 +74,7 @@ def student_jobs_update_team(team_id: int):
             description=data.get("description"),
             team_type=data.get("team_type"),
             days_of_week=data.get("days_of_week"),
+            friday_weeks=data.get("friday_weeks"),
         )
     except Exception as exc:
         db.session.rollback()

@@ -773,6 +773,20 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: assignment.quiz_mode check failed (may already exist): {e}")
 
+        # Student Jobs team workdays (weekday list + which Fridays of the month)
+        try:
+            from sqlalchemy import inspect as sa_inspect
+
+            team_cols = {c['name'] for c in sa_inspect(db.engine).get_columns('cleaning_team')}
+            for col_name, col_type in (('days_of_week', 'VARCHAR(40)'), ('friday_weeks', 'VARCHAR(20)')):
+                if col_name in team_cols:
+                    continue
+                with db.engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE cleaning_team ADD COLUMN {col_name} {col_type}"))
+                print(f"Added cleaning_team.{col_name} column.")
+        except Exception as e:
+            print(f"Note: cleaning_team workday columns check failed (may already exist): {e}")
+
         try:
             from student_routes.test_lockdown_helpers import cleanup_old_test_snapshots
 

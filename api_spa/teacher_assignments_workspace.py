@@ -201,6 +201,71 @@ def teacher_quiz_open_ended_grades(assignment_id: int):
     return jsonify(result), status
 
 
+@spa_api_blueprint.route("/teacher/assignments/individual/<int:assignment_id>/test-sessions/<int:session_id>/monitor")
+@login_required
+@teacher_required
+def teacher_test_session_monitor(assignment_id: int, session_id: int):
+    from management_routes.test_monitor_spa_helpers import query_test_session_monitor
+
+    _, err = _authorized_individual(assignment_id)
+    if err:
+        return err
+    payload, status = query_test_session_monitor(assignment_id, session_id)
+    if not payload:
+        return jsonify({"error": "Test session not found"}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route(
+    "/teacher/assignments/individual/<int:assignment_id>/test-sessions/<int:session_id>/snapshot/<int:snapshot_id>"
+)
+@login_required
+@teacher_required
+def teacher_test_session_snapshot(assignment_id: int, session_id: int, snapshot_id: int):
+    from flask import Response
+
+    from management_routes.test_monitor_spa_helpers import test_snapshot_bytes
+
+    _, err = _authorized_individual(assignment_id)
+    if err:
+        return err
+    data = test_snapshot_bytes(assignment_id, session_id, snapshot_id)
+    if data is None:
+        return jsonify({"error": "Snapshot not found"}), 404
+    return Response(data, mimetype="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+
+@spa_api_blueprint.route(
+    "/teacher/assignments/individual/<int:assignment_id>/test-sessions/<int:session_id>/unlock", methods=["POST"]
+)
+@login_required
+@teacher_required
+def teacher_test_session_unlock(assignment_id: int, session_id: int):
+    from management_routes.test_monitor_spa_helpers import unlock_test_session
+
+    _, err = _authorized_individual(assignment_id)
+    if err:
+        return err
+    result, status = unlock_test_session(assignment_id, session_id)
+    return jsonify(result), status
+
+
+@spa_api_blueprint.route(
+    "/teacher/assignments/individual/<int:assignment_id>/test-sessions/<int:session_id>/recordings",
+    methods=["DELETE"],
+)
+@login_required
+@teacher_required
+def teacher_test_session_delete_recordings(assignment_id: int, session_id: int):
+    from management_routes.test_monitor_spa_helpers import delete_test_session_recordings
+
+    _, err = _authorized_individual(assignment_id)
+    if err:
+        return err
+    result, status = delete_test_session_recordings(assignment_id, session_id)
+    return jsonify(result), status
+
+
 def _parse_assignment_edit_body() -> dict:
     content_type = (request.content_type or "").lower()
     if request.files or "multipart/form-data" in content_type:

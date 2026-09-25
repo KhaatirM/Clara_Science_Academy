@@ -950,6 +950,8 @@ class Assignment(db.Model):
     # Quiz display and behavior settings
     shuffle_questions = db.Column(db.Boolean, default=False, nullable=False)  # Randomize question order
     show_correct_answers = db.Column(db.Boolean, default=True, nullable=False)  # Show correct answers after submission
+    # 'quiz' (normal) or 'test' (lockdown: camera + screen monitoring, leaving the tab auto-submits and locks)
+    quiz_mode = db.Column(db.String(10), default='quiz', nullable=False)
     
     # Google Forms Integration
     google_form_id = db.Column(db.String(255), nullable=True)  # Google Form ID (extracted from URL)
@@ -2666,6 +2668,52 @@ class AssignmentReopening(db.Model):
     
     def __repr__(self):
         return f"AssignmentReopening(Assignment: {self.assignment_id}, Student: {self.student_id}, Additional Attempts: {self.additional_attempts})"
+
+
+class TestSession(db.Model):
+    """One lockdown attempt at a quiz assignment in 'test' mode."""
+    __tablename__ = 'test_session'
+
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False, index=True)
+    submission_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=True)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    consent_at = db.Column(db.DateTime, nullable=True)
+    # active, submitted, locked, unlocked
+    status = db.Column(db.String(20), default='active', nullable=False)
+    lock_reason = db.Column(db.String(100), nullable=True)
+    locked_at = db.Column(db.DateTime, nullable=True)
+    ended_at = db.Column(db.DateTime, nullable=True)
+    unlocked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    unlocked_at = db.Column(db.DateTime, nullable=True)
+    # Latest answers sent with event batches; used to grade the attempt if the final violation request never arrives.
+    last_answers_json = db.Column(db.Text, nullable=True)
+
+    assignment = db.relationship('Assignment', backref=db.backref('test_sessions', lazy='dynamic'))
+    student = db.relationship('Student', backref=db.backref('test_sessions', lazy='dynamic'))
+
+
+class TestMonitorSnapshot(db.Model):
+    """Low-resolution JPEG captured from the student's screen or camera during a test."""
+    __tablename__ = 'test_monitor_snapshot'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('test_session.id', ondelete='CASCADE'), nullable=False, index=True)
+    captured_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    kind = db.Column(db.String(10), nullable=False)  # screen, camera
+    image = db.Column(db.LargeBinary, nullable=False)
+    size_bytes = db.Column(db.Integer, nullable=False, default=0)
+
+
+class TestMonitorEvent(db.Model):
+    """A batch of mouse / focus / visibility events recorded during a test."""
+    __tablename__ = 'test_monitor_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('test_session.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    events_json = db.Column(db.Text, nullable=False)
 
 
 class ExtensionRequest(db.Model):

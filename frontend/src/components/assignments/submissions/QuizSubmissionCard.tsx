@@ -7,6 +7,7 @@ import {
 import type { AssignmentWorkspaceScope } from '../../../utils/assignmentWorkspaceScope'
 import { GRADE_TONES, gradeToneFromPercent } from '../../../utils/gradeDisplay'
 import { StudentAvatar } from './submissionsShared'
+import { TestMonitorReviewModal } from './TestMonitorReviewModal'
 
 function formatSubmissionWhen(iso: string | null | undefined) {
   if (!iso) return '—'
@@ -77,7 +78,12 @@ function statusAccent(status: string) {
   }
 }
 
-export type QuizSubmissionFilter = 'all' | 'submitted' | 'late' | 'not_submitted' | 'graded' | 'pending'
+export type QuizSubmissionFilter = 'all' | 'submitted' | 'late' | 'not_submitted' | 'graded' | 'pending' | 'locked'
+
+export function isTestLocked(row: QuizSubmissionRow) {
+  const sessions = row.test_sessions || []
+  return sessions.length > 0 && sessions[sessions.length - 1].status === 'locked'
+}
 
 export function quizRowMatchesFilter(
   row: QuizSubmissionRow,
@@ -91,6 +97,7 @@ export function quizRowMatchesFilter(
   if (filter === 'not_submitted') return !row.has_submission
   if (filter === 'graded') return isQuizGraded(row, totalPoints) && !row.is_voided
   if (filter === 'pending') return isQuizPendingReview(row, hasOpenEnded)
+  if (filter === 'locked') return isTestLocked(row)
   return true
 }
 
@@ -102,6 +109,7 @@ export function quizFilterCounts(rows: QuizSubmissionRow[], totalPoints: number,
     not_submitted: rows.filter((r) => !r.has_submission).length,
     graded: rows.filter((r) => isQuizGraded(r, totalPoints) && !r.is_voided).length,
     pending: rows.filter((r) => isQuizPendingReview(r, hasOpenEnded)).length,
+    locked: rows.filter((r) => isTestLocked(r)).length,
   }
 }
 
@@ -142,6 +150,9 @@ export function QuizSubmissionCard({
   })
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [monitorSessionId, setMonitorSessionId] = useState<number | null>(null)
+  const testSessions = row.test_sessions || []
+  const testLocked = isTestLocked(row)
 
   const attempts = row.quiz_attempt_details?.length ? row.quiz_attempt_details : []
   const answersAttemptNum =
@@ -242,6 +253,12 @@ export function QuizSubmissionCard({
                 <i className={`bi ${accent.icon}`} />
                 {accent.label}
               </span>
+              {testLocked ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-bold text-white">
+                  <i className="bi bi-lock-fill" />
+                  Locked - {testSessions[testSessions.length - 1].lock_reason_label || 'left the test'}
+                </span>
+              ) : null}
               {row.quiz_attempts > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-900">
                   <i className="bi bi-arrow-repeat" />
@@ -429,6 +446,65 @@ export function QuizSubmissionCard({
           ) : null}
         </div>
       </div>
+
+      {testSessions.length ? (
+        <div className="border-t border-slate-100 px-4 py-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-hub-muted">
+            <i className="bi bi-shield-lock me-1" />
+            Lockdown test attempts
+          </p>
+          <ul className="space-y-1.5">
+            {testSessions.map((ts, i) => (
+              <li
+                key={ts.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              >
+                <span className="flex flex-wrap items-center gap-2">
+                  <strong>Attempt {i + 1}</strong>
+                  <span className="text-hub-muted">{formatSubmissionWhen(ts.started_at)}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                      ts.status === 'locked'
+                        ? 'bg-red-100 text-red-800'
+                        : ts.status === 'unlocked'
+                          ? 'bg-amber-100 text-amber-900'
+                          : ts.status === 'submitted'
+                            ? 'bg-emerald-100 text-emerald-900'
+                            : 'bg-sky-100 text-sky-900'
+                    }`}
+                  >
+                    {ts.status === 'locked'
+                      ? `Locked: ${ts.lock_reason_label || 'left the test'}`
+                      : ts.status === 'unlocked'
+                        ? `Unlocked (${ts.lock_reason_label || 'was locked'})`
+                        : ts.status === 'submitted'
+                          ? 'Submitted normally'
+                          : 'In progress'}
+                  </span>
+                  <span className="text-xs text-hub-muted">{ts.snapshot_count ?? 0} images</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMonitorSessionId(ts.id)}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  <i className="bi bi-camera-reels me-1" />
+                  Review monitoring
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {monitorSessionId != null ? (
+        <TestMonitorReviewModal
+          assignmentId={assignmentId}
+          sessionId={monitorSessionId}
+          scope={workspaceScope}
+          onClose={() => setMonitorSessionId(null)}
+          onChanged={onSaved}
+        />
+      ) : null}
 
       {row.has_submission ? (
         <div className="border-t border-slate-100 px-4 py-3">

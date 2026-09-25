@@ -173,6 +173,7 @@ export interface AssignmentEditForm {
     save_timeout_minutes: number
     google_form_linked?: boolean
     google_form_url?: string
+    quiz_mode?: 'quiz' | 'test'
   }
   discussion?: { allow_student_edit_posts: boolean }
 }
@@ -263,6 +264,70 @@ export interface QuizSubmissionRow {
   /** Official score on file (best attempt for quizzes). */
   grade: SubmissionsGradeInfo | null
   is_voided: boolean
+  /** Lockdown test attempts (only for quiz_mode === 'test'). */
+  test_sessions?: TestSessionRow[] | null
+}
+
+export interface TestSessionRow {
+  id: number
+  status: 'active' | 'submitted' | 'locked' | 'unlocked'
+  lock_reason: string | null
+  lock_reason_label: string | null
+  started_at: string | null
+  ended_at: string | null
+  locked_at: string | null
+  unlocked_at: string | null
+  submission_id: number | null
+  snapshot_count?: number
+}
+
+export type TestMonitorEvent = {
+  t: number
+  type: string
+  x?: number
+  y?: number
+  w?: number
+  h?: number
+  reason?: string
+  state?: string
+}
+
+export interface TestMonitorResponse {
+  session: TestSessionRow
+  student: { id: number | null; name: string }
+  snapshots: { id: number; kind: 'screen' | 'camera'; captured_at: string | null }[]
+  events: TestMonitorEvent[]
+}
+
+function testSessionBase(assignmentId: number, sessionId: number, scope: AssignmentWorkspaceScope) {
+  return `${assignmentWorkspaceApiBase(scope)}/individual/${assignmentId}/test-sessions/${sessionId}`
+}
+
+export function testSnapshotUrl(
+  assignmentId: number,
+  sessionId: number,
+  snapshotId: number,
+  scope: AssignmentWorkspaceScope,
+) {
+  return `${testSessionBase(assignmentId, sessionId, scope)}/snapshot/${snapshotId}`
+}
+
+export async function fetchTestMonitor(assignmentId: number, sessionId: number, scope: AssignmentWorkspaceScope) {
+  return apiFetch<TestMonitorResponse>(`${testSessionBase(assignmentId, sessionId, scope)}/monitor`)
+}
+
+export async function unlockTestSession(assignmentId: number, sessionId: number, scope: AssignmentWorkspaceScope) {
+  return apiFetch<{ success: boolean; message: string }>(`${testSessionBase(assignmentId, sessionId, scope)}/unlock`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
+export async function deleteTestRecordings(assignmentId: number, sessionId: number, scope: AssignmentWorkspaceScope) {
+  return apiFetch<{ success: boolean; message: string }>(
+    `${testSessionBase(assignmentId, sessionId, scope)}/recordings`,
+    { method: 'DELETE' },
+  )
 }
 
 export interface DiscussionSubmissionRow {

@@ -289,6 +289,7 @@ def query_quiz_assignment_form(
             "attempts": str(int(getattr(assignment, "max_attempts", None) or 1)),
             "shuffle_questions": bool(getattr(assignment, "shuffle_questions", False)),
             "show_correct_answers": bool(getattr(assignment, "show_correct_answers", True)),
+            "quiz_mode": getattr(assignment, "quiz_mode", None) or "quiz",
             "link_google_form": bool(getattr(assignment, "google_form_linked", False)),
             "google_form_url": getattr(assignment, "google_form_url", None) or "",
             "allow_save_and_continue": bool(getattr(assignment, "allow_save_and_continue", True)),

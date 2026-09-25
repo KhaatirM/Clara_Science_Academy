@@ -84,6 +84,7 @@ export interface QuizAssignmentFormMeta extends AssignmentFormCommon {
     allow_save_and_continue: boolean
     max_save_attempts: string
     save_timeout_minutes: string
+    quiz_mode?: 'quiz' | 'test'
     blocks: Array<
       | { type: 'section'; title: string }
       | {

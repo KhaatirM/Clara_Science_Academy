@@ -66,6 +66,13 @@ const FILTERS: {
     active: 'bg-amber-600 text-white border-amber-600',
     idle: 'border-amber-300 bg-white text-amber-950 hover:bg-amber-50',
   },
+  {
+    id: 'locked',
+    label: 'Locked',
+    icon: 'bi-lock-fill',
+    active: 'bg-red-700 text-white border-red-700',
+    idle: 'border-red-300 bg-white text-red-800 hover:bg-red-50',
+  },
 ]
 
 export function QuizSubmissionsPanel({
@@ -87,13 +94,24 @@ export function QuizSubmissionsPanel({
     [filter, rows, totalPoints, hasOpenEnded],
   )
 
+  const isLockdownTest = rows.some((r) => Array.isArray(r.test_sessions))
   const filterButtons = useMemo(
-    () => (hasOpenEnded ? FILTERS : FILTERS.filter((f) => f.id !== 'pending')),
-    [hasOpenEnded],
+    () =>
+      FILTERS.filter(
+        (f) => (f.id !== 'pending' || hasOpenEnded) && (f.id !== 'locked' || isLockdownTest),
+      ),
+    [hasOpenEnded, isLockdownTest],
   )
 
   return (
     <div className="space-y-4">
+      {isLockdownTest ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          <i className="bi bi-shield-lock-fill me-2" />
+          Lockdown test. Each student card lists their test attempts. Use Review monitoring to see screen and camera
+          images and activity, and Unlock to give a locked student one more try.
+        </div>
+      ) : null}
       {hasOpenEnded ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <i className="bi bi-pencil-square me-2" />

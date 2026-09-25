@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from flask import jsonify, request
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from decorators import student_required
 from student_routes.discussion_spa_helpers import (
@@ -15,6 +15,13 @@ from student_routes.discussion_spa_helpers import (
     reply_to_thread_spa,
 )
 from student_routes.quiz_spa_helpers import build_student_quiz_payload, submit_student_quiz
+from student_routes.test_lockdown_helpers import (
+    MAX_SNAPSHOT_BYTES,
+    report_violation,
+    save_events,
+    save_snapshot,
+    start_test_session,
+)
 
 from . import spa_api_blueprint
 
@@ -51,6 +58,67 @@ def student_quiz_submit(assignment_id: int):
     )
     if error or not payload:
         return jsonify({"error": error or "Could not submit quiz"}), status
+    return jsonify(payload)
+
+
+def _current_student_id() -> int | None:
+    return getattr(current_user, "student_id", None)
+
+
+@spa_api_blueprint.route("/student/test/<int:assignment_id>/start", methods=["POST"])
+@login_required
+@student_required
+def student_test_start(assignment_id: int):
+    from models import Assignment, Enrollment
+
+    student_id = _current_student_id()
+    assignment = Assignment.query.get(assignment_id)
+    if not student_id or not assignment:
+        return jsonify({"error": "Test not found"}), 404
+    if not Enrollment.query.filter_by(student_id=student_id, class_id=assignment.class_id, is_active=True).first():
+        return jsonify({"error": "You are not enrolled in this class."}), 403
+    payload, error, status = start_test_session(assignment, student_id)
+    if error or not payload:
+        return jsonify({"error": error or "Could not start test"}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route("/student/test/session/<int:session_id>/snapshot", methods=["POST"])
+@login_required
+@student_required
+def student_test_snapshot(session_id: int):
+    student_id = _current_student_id()
+    file = request.files.get("image")
+    data = file.read(MAX_SNAPSHOT_BYTES + 1) if file else b""
+    payload, error, status = save_snapshot(session_id, student_id, request.form.get("kind", ""), data)
+    if error or not payload:
+        return jsonify({"error": error or "Could not save snapshot"}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route("/student/test/session/<int:session_id>/events", methods=["POST"])
+@login_required
+@student_required
+def student_test_events(session_id: int):
+    data = request.get_json(silent=True) or {}
+    payload, error, status = save_events(
+        session_id, _current_student_id(), data.get("events"), data.get("answers")
+    )
+    if error or not payload:
+        return jsonify({"error": error or "Could not save events"}), status
+    return jsonify(payload)
+
+
+@spa_api_blueprint.route("/student/test/session/<int:session_id>/violation", methods=["POST"])
+@login_required
+@student_required
+def student_test_violation(session_id: int):
+    data = request.get_json(silent=True) or {}
+    payload, error, status = report_violation(
+        session_id, _current_student_id(), str(data.get("reason") or ""), data.get("answers")
+    )
+    if error or not payload:
+        return jsonify({"error": error or "Could not record violation"}), status
     return jsonify(payload)
 
 

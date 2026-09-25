@@ -23,6 +23,16 @@ export type QuizQuestion = {
   } | null
 }
 
+export type TestSessionBrief = {
+  id: number
+  status: 'active' | 'submitted' | 'locked' | 'unlocked'
+  lock_reason: string | null
+  lock_reason_label: string | null
+  started_at: string | null
+  locked_at: string | null
+  submission_id: number | null
+}
+
 export type StudentQuizResponse = {
   mode: QuizMode
   assignment: {
@@ -35,6 +45,7 @@ export type StudentQuizResponse = {
     status?: string
     total_points?: number
     time_limit_minutes?: number | null
+    quiz_mode?: 'quiz' | 'test'
     allow_save_and_continue?: boolean
     save_timeout_minutes?: number
     max_attempts?: number | null
@@ -67,6 +78,7 @@ export type StudentQuizResponse = {
     score: number | null
   } | null
   questions?: QuizQuestion[]
+  test_session?: TestSessionBrief | null
   timer_remaining_seconds?: number | null
   closes_at_iso?: string | null
   server_now_iso?: string
@@ -84,4 +96,6 @@ export type QuizSubmitResponse = {
   success: boolean
   message: string
   redirect: string
+  locked?: boolean
+  submission_id?: number
 }

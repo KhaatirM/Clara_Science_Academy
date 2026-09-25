@@ -30,6 +30,7 @@ from teacher_routes.assignment_utils import (
     quiz_authoring_save_action,
     quiz_draft_default_due_date,
     count_quiz_questions_in_request,
+    normalize_quiz_mode,
 )
 from utils.grade_helpers import (
     get_points_earned,
@@ -284,6 +285,7 @@ def create_quiz_assignment():
             
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
+            quiz_mode = normalize_quiz_mode(request.form.get('quiz_mode'), link_google_form)
             
             if is_edit:
                 existing = Assignment.query.get(assignment_id)
@@ -310,6 +312,9 @@ def create_quiz_assignment():
                 existing.google_form_linked = link_google_form
                 existing.assignment_context = assignment_context
                 existing.quiz_authoring_is_draft = is_draft
+                existing.quiz_mode = quiz_mode
+                if quiz_mode == 'test' and not (existing.assignment_category or '').strip():
+                    existing.assignment_category = 'Tests'
                 new_assignment = existing
                 # Clean old quiz graph in FK-safe order before rebuilding questions.
                 from models import QuizProgress
@@ -347,6 +352,8 @@ def create_quiz_assignment():
                     google_form_url=google_form_url if link_google_form else None,
                     google_form_linked=link_google_form,
                     assignment_context=assignment_context,
+                    quiz_mode=quiz_mode,
+                    assignment_category='Tests' if quiz_mode == 'test' else None,
                     created_by=current_user.id
                 )
                 db.session.add(new_assignment)

@@ -3042,6 +3042,9 @@ def submit_quiz(assignment_id):
     if assignment.assignment_type != 'quiz':
         flash("This is not a quiz assignment.", "danger")
         return redirect(url_for('student.student_assignments'))
+    if (getattr(assignment, 'quiz_mode', None) or 'quiz') == 'test':
+        flash("Lockdown tests must be taken from the test page.", "warning")
+        return redirect(f'/app/student/take-quiz/{assignment_id}')
     
     # Check if assignment is open for this student (considering extensions).
     # If the quiz closes while the student is actively taking it, allow a short grace window

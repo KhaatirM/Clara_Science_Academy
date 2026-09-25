@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { AppVersionInfo } from '../../types/session'
 
-const SESSION_KEY = 'spaUpdateModalShownSep24_2026_v1'
+const SESSION_KEY = 'spaUpdateModalShownSep25_2026_v1'
 
 const LATEST_UPDATES: Array<{ title: string; body: string }> = [
+  {
+    title: 'Quiz or Test: new lockdown tests',
+    body: 'When creating or editing a quiz, choose Quiz or Test. Tests run in lockdown: students turn on their camera and share their entire screen, and leaving the tab auto-submits and locks the test. Teachers can review screen/camera images and mouse activity, and unlock a student for one retake.',
+  },
+  {
+    title: 'Quiz fixes',
+    body: 'Timed quizzes now auto-submit correctly when time runs out, and short-answer and essay boxes are properly sized on student pages.',
+  },
   {
     title: 'Bigger, properly styled Create thread for students',
     body: 'The student Create thread window is now wide with a full-size title box and post area. The Text / Code switch, language picker, and code box with line numbers show correctly on student pages.',
@@ -370,10 +378,10 @@ export function PortalUpdatesHost({ version }: { version?: AppVersionInfo | null
   const [open, setOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
 
-  const display = version?.display || 'v 2.520.57'
-  const releaseLabel = version?.release_label || 'September 24, 2026'
+  const display = version?.display || 'v 2.521.0'
+  const releaseLabel = version?.release_label || 'September 25, 2026'
   const origin = version?.origin || '0.0.0'
-  const updatesEstimate = version?.updates_estimate ?? 2800
+  const updatesEstimate = version?.updates_estimate ?? 2801
   const productName = version?.product_name || 'Clara Science Academy Portal'
 
   useEffect(() => {

@@ -153,7 +153,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 24, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated September 25, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -165,13 +165,25 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 24, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – September 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>September 24</strong> (<strong>{{ app_version_display }}</strong>) makes the student discussion Create thread window full size with a properly styled Text / Code editor.</p>
+                        <p class="updates-intro-text mb-0"><strong>September 25</strong> (<strong>{{ app_version_display }}</strong>) adds lockdown Tests: choose Quiz or Test when creating a quiz, with camera and screen monitoring and auto-lock when a student leaves the tab.</p>
                     </div>
                 </div>
 
                 <div class="update-sections">
+                    <!-- September 25, 2026 - Lockdown tests -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-shield-lock me-2"></i>Quiz or Test (lockdown) – September 25, 2026</h6>
+                        <ul class="mb-0">
+                            <li>When creating or editing a quiz, choose <strong>Quiz</strong> or <strong>Test</strong>.</li>
+                            <li>Tests require students to turn on their camera and share their entire screen before starting, with a clear monitoring notice.</li>
+                            <li>Leaving the tab, clicking outside the window, reloading, or stopping sharing auto-submits and locks the test.</li>
+                            <li>Teachers can review screen and camera images, mouse activity, and a timeline, then unlock a student for one retake.</li>
+                            <li>Timed quizzes now auto-submit correctly when time runs out.</li>
+                        </ul>
+                    </div>
+
                     <!-- September 24, 2026 - Student Create thread layout -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-chat-square-text me-2"></i>Student Create thread – September 24, 2026</h6>
@@ -2814,11 +2826,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep24_2026_v1')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownSep25_2026_v1')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownSep24_2026_v1', 'true');
+            sessionStorage.setItem('updateModalShownSep25_2026_v1', 'true');
         }, 500);
     }
 });

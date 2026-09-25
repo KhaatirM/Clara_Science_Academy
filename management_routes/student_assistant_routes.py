@@ -962,7 +962,7 @@ def assistant_add_quiz_assignment(class_id):
 
     from management_routes.student_assistant_utils import ASSISTANT_APPROVAL_PENDING
     from teacher_routes.utils import get_current_quarter
-    from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+    from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz, normalize_quiz_mode
     from models import QuizQuestion, QuizOption, QuizSection
 
     if request.method == 'POST':
@@ -1043,10 +1043,13 @@ def assistant_add_quiz_assignment(class_id):
                 google_form_id=google_form_id,
                 google_form_url=google_form_url if link_google_form else None,
                 google_form_linked=link_google_form,
+                quiz_mode=normalize_quiz_mode(request.form.get('quiz_mode'), link_google_form),
                 created_by=current_user.id,
                 assistant_approval_status=ASSISTANT_APPROVAL_PENDING,
                 proposed_by_student_id=current_user.student_id,
             )
+            if new_assignment.quiz_mode == 'test':
+                new_assignment.assignment_category = 'Tests'
             db.session.add(new_assignment)
             db.session.flush()
 

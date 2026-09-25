@@ -194,6 +194,10 @@ def autosave_quiz_draft():
         assignment.category_weight = category_weight
         assignment.allow_extra_credit = allow_extra_credit
         assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
+        if 'quiz_mode' in meta:
+            from teacher_routes.assignment_utils import normalize_quiz_mode
+
+            assignment.quiz_mode = normalize_quiz_mode(meta.get('quiz_mode'), bool(assignment.google_form_linked))
     else:
         assignment = Assignment(
             title=title,
@@ -213,6 +217,7 @@ def autosave_quiz_draft():
             category_weight=category_weight,
             allow_extra_credit=allow_extra_credit,
             max_extra_credit_points=max_extra_credit_points if allow_extra_credit else 0.0,
+            quiz_mode='test' if str(meta.get('quiz_mode') or '').lower() == 'test' else 'quiz',
             created_by=current_user.id,
         )
         db.session.add(assignment)
@@ -330,7 +335,14 @@ def create_quiz_assignment():
             if match:
                 google_form_id = match.group(1)
 
+        from teacher_routes.assignment_utils import normalize_quiz_mode
+
+        quiz_mode = normalize_quiz_mode(request.form.get('quiz_mode'), link_google_form)
+
         def _apply_quiz_settings(assignment):
+            assignment.quiz_mode = quiz_mode
+            if quiz_mode == 'test' and not (assignment.assignment_category or '').strip():
+                assignment.assignment_category = 'Tests'
             assignment.allow_save_and_continue = allow_save_and_continue
             assignment.max_save_attempts = max_save_attempts
             assignment.save_timeout_minutes = save_timeout_minutes

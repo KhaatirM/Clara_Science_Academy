@@ -1450,6 +1450,7 @@ def query_individual_assignment_edit(assignment_id: int) -> dict[str, Any]:
             "save_timeout_minutes": assignment.save_timeout_minutes or 30,
             "google_form_linked": bool(assignment.google_form_linked),
             "google_form_url": assignment.google_form_url or "",
+            "quiz_mode": assignment.quiz_mode or "quiz",
         }
     if atype == "discussion":
         payload["discussion"] = {
@@ -1798,6 +1799,10 @@ def save_individual_assignment_edit(assignment_id: int, body: dict[str, Any]) ->
             assignment.save_timeout_minutes = int(q.get("save_timeout_minutes") or 30)
         except (TypeError, ValueError):
             pass
+        if "quiz_mode" in q:
+            from teacher_routes.assignment_utils import normalize_quiz_mode
+
+            assignment.quiz_mode = normalize_quiz_mode(q.get("quiz_mode"), bool(assignment.google_form_linked))
     if atype == "discussion" and isinstance(body.get("discussion"), dict):
         assignment.allow_student_edit_posts = bool(body["discussion"].get("allow_student_edit_posts"))
 
@@ -1925,6 +1930,13 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
         for post in all_posts:
             discussion_posts_by_student[post.student_id].append(post)
 
+    is_lockdown_test = ui_mode == "quiz" and (getattr(assignment, "quiz_mode", None) or "quiz") == "test"
+    test_sessions_map: dict[int, list[dict[str, Any]]] = {}
+    if is_lockdown_test:
+        from management_routes.test_monitor_spa_helpers import test_sessions_by_student
+
+        test_sessions_map = test_sessions_by_student(assignment_id)
+
     rows: list[dict[str, Any]] = []
     submitted_count = 0
     late_count = 0
@@ -2021,6 +2033,7 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
                     "questions": questions,
                     "questions_by_submission_id": questions_by_submission,
                     "has_submission": submission is not None,
+                    "test_sessions": test_sessions_map.get(student.id, []) if is_lockdown_test else None,
                 }
             )
         elif ui_mode == "discussion":
@@ -2092,6 +2105,7 @@ def query_individual_assignment_submissions(assignment_id: int) -> dict[str, Any
             "due_date": _iso(assignment.due_date),
             "class_id": class_id,
             "total_points": total_points,
+            "quiz_mode": "test" if is_lockdown_test else "quiz",
         },
         "ui_mode": ui_mode,
         "grading_on_submissions": grading_on_submissions,

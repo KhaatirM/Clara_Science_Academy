@@ -8,7 +8,26 @@ import {
   submitStudentQuiz,
 } from '../api/studentQuiz'
 import { ManagementPageShell } from '../components/layout/ManagementPageShell'
+import {
+  CameraMonitorBadge,
+  TestLockdownGate,
+  TestLockedPanel,
+  type TestStarted,
+} from '../components/quiz/TestLockdownGate'
+import { stopStreams, useTestMonitor, type TestViolationReason } from '../hooks/useTestMonitor'
 import type { QuizQuestion, StudentQuizResponse } from '../types/studentQuiz'
+
+const VIOLATION_LABELS: Record<TestViolationReason, string> = {
+  tab_hidden: 'Left the test tab',
+  window_blur: 'Clicked outside the test window',
+  page_closed: 'Closed or reloaded the test page',
+  screen_share_ended: 'Stopped sharing the screen',
+  camera_ended: 'Turned off the camera',
+}
+
+const quizFieldClass =
+  'block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/25 disabled:cursor-not-allowed disabled:bg-slate-50'
+const quizErrorClass = 'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800'
 
 function optionLetter(index: number) {
   return String.fromCharCode(65 + index)
@@ -55,6 +74,12 @@ export function StudentTakeQuizPage() {
   const savingRef = useRef(false)
   const lastFlushAtRef = useRef(0)
   const debounceTimerRef = useRef<number | null>(null)
+  const [testRun, setTestRun] = useState<TestStarted | null>(null)
+  const [lockedReason, setLockedReason] = useState<string | null>(null)
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
+  const monitorPausedRef = useRef(false)
+  const testRunRef = useRef<TestStarted | null>(null)
+  testRunRef.current = testRun
 
   const storageKey = Number.isFinite(id) && id > 0 ? `clara.quizProgress.${id}` : null
 
@@ -80,7 +105,10 @@ export function StudentTakeQuizPage() {
       }
       setData(payload)
       openedAtRef.current = payload.quiz_opened_at || new Date().toISOString()
-      if (typeof payload.timer_remaining_seconds === 'number') {
+      if (payload.assignment.quiz_mode === 'test' && payload.mode === 'take') {
+        // The test timer starts when the student clicks Start in the lockdown gate.
+        setTimerSeconds(null)
+      } else if (typeof payload.timer_remaining_seconds === 'number') {
         setTimerSeconds(payload.timer_remaining_seconds)
       } else {
         setTimerSeconds(null)
@@ -235,12 +263,18 @@ export function StudentTakeQuizPage() {
     [collectAnswersFrom, id, loading, writeLocalBackup],
   )
 
-  const doSubmit = useCallback(async () => {
-    if (!data || data.mode !== 'take' || submitting || autoSubmittedRef.current) return
+  const doSubmit = useCallback(async (opts?: { auto?: boolean }) => {
+    if (!data || data.mode !== 'take' || submitting) return
+    if (autoSubmittedRef.current && !opts?.auto) return
     setSubmitting(true)
     setError(null)
+    monitorPausedRef.current = true
     try {
       await submitStudentQuiz(id, collectAnswersFrom(answersRef.current), openedAtRef.current)
+      if (testRunRef.current) {
+        stopStreams(testRunRef.current.screenStream, testRunRef.current.cameraStream)
+        setTestRun(null)
+      }
       if (storageKey) {
         try {
           window.localStorage.removeItem(storageKey)
@@ -274,9 +308,38 @@ export function StudentTakeQuizPage() {
       setError(err instanceof Error ? err.message : 'Could not submit quiz')
       autoSubmittedRef.current = false
     } finally {
+      monitorPausedRef.current = false
       setSubmitting(false)
     }
   }, [collectAnswersFrom, data, id, navigate, retake, storageKey, submitting])
+
+  const handleViolation = useCallback(
+    (reason: TestViolationReason) => {
+      const run = testRunRef.current
+      if (run) stopStreams(run.screenStream, run.cameraStream)
+      setTestRun(null)
+      setTimerSeconds(null)
+      setConfirmSubmit(false)
+      setLockedReason(VIOLATION_LABELS[reason] || 'Left the test')
+    },
+    [],
+  )
+
+  useTestMonitor({
+    sessionId: testRun?.sessionId ?? null,
+    screenStream: testRun?.screenStream ?? null,
+    cameraStream: testRun?.cameraStream ?? null,
+    getAnswers: () => collectAnswersFrom(answersRef.current),
+    isPaused: () => monitorPausedRef.current,
+    onViolation: handleViolation,
+  })
+
+  useEffect(() => {
+    return () => {
+      const run = testRunRef.current
+      if (run) stopStreams(run.screenStream, run.cameraStream)
+    }
+  }, [])
 
   useEffect(() => {
     if (data?.mode !== 'take' || timerSeconds == null) return
@@ -287,7 +350,7 @@ export function StudentTakeQuizPage() {
         if (prev <= 1) {
           if (!autoSubmittedRef.current) {
             autoSubmittedRef.current = true
-            void doSubmit()
+            void doSubmit({ auto: true })
           }
           return 0
         }
@@ -352,7 +415,7 @@ export function StudentTakeQuizPage() {
 
   // Warn before discarding unfinished answers when save-and-continue is off.
   useEffect(() => {
-    if (data?.mode !== 'take') return
+    if (data?.mode !== 'take' || data.assignment.quiz_mode === 'test') return
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (submitting || autoSubmittedRef.current) return
       const hasAnswers = Object.values(answersRef.current).some((v) => v != null && String(v).trim() !== '')
@@ -362,7 +425,7 @@ export function StudentTakeQuizPage() {
     }
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [data?.mode, submitting])
+  }, [data?.mode, data?.assignment.quiz_mode, submitting])
 
   const setAnswer = (questionId: number, value: string) => {
     setAnswers((prev) => {
@@ -374,29 +437,61 @@ export function StudentTakeQuizPage() {
   }
 
   const currentQuestion = questions[current] || null
+  const isTest = data?.assignment.quiz_mode === 'test'
+  const testLockedLabel =
+    lockedReason ||
+    (data?.test_session?.status === 'locked' ? data.test_session.lock_reason_label || 'Locked' : null)
+
+  const requestSubmit = () => {
+    if (isTest) {
+      setConfirmSubmit(true)
+      return
+    }
+    if (
+      window.confirm(
+        answeredCount < questions.length
+          ? `You have answered ${answeredCount} of ${questions.length} questions. Submit anyway?`
+          : 'Submit this quiz?',
+      )
+    ) {
+      void doSubmit()
+    }
+  }
 
   return (
     <ManagementPageShell>
       <div className="mgmt-home mgmt-home--teacher container-fluid px-0 px-md-1">
         <div className="mgmt-home-shell">
           {loading && !data ? (
-            <div className="p-5 text-center text-muted">Loading quiz…</div>
+            <div className="p-5 text-center text-hub-muted">Loading quiz…</div>
           ) : error && !data ? (
             <div className="m-3 space-y-3">
-              <div className="alert alert-danger mb-0">{error}</div>
-              <Link to="/student/assignments" className="btn btn-outline-secondary btn-sm">
+              <div className={quizErrorClass}>{error}</div>
+              <Link to="/student/assignments" className={quizBtnMuted}>
                 Back to assignments
               </Link>
             </div>
           ) : data ? (
             <div className="space-y-4 px-1 pb-8 md:px-2">
               <QuizHero data={data} timerSeconds={timerSeconds} />
+              {testRun ? <CameraMonitorBadge stream={testRun.cameraStream} /> : null}
+              {data.mode === 'results' && isTest && data.test_session?.status === 'locked' ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                  <p className="flex items-center gap-2 font-bold">
+                    <i className="bi bi-lock-fill" aria-hidden /> This test was locked
+                  </p>
+                  <p className="mt-1">
+                    Reason: {data.test_session.lock_reason_label || 'Left the test'}. Your answers up to that point were
+                    submitted. Ask your teacher if you think this was a mistake.
+                  </p>
+                </div>
+              ) : null}
               {data.attempt?.prior_review_blocked ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
                   Previous attempt review is turned off for this redo. Complete a new attempt below.
                 </div>
               ) : null}
-              {error ? <div className="alert alert-danger">{error}</div> : null}
+              {error ? <div className={quizErrorClass}>{error}</div> : null}
               {saveMsg ? (
                 <div className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
                   {saveMsg}
@@ -419,6 +514,19 @@ export function StudentTakeQuizPage() {
                     navigate(`/student/take-quiz/${id}?attempt=${submissionId}`)
                   }
                 />
+              ) : isTest && testLockedLabel ? (
+                <TestLockedPanel reasonLabel={testLockedLabel} backTo="/app/student/assignments" />
+              ) : isTest && !testRun ? (
+                <TestLockdownGate
+                  assignmentId={id}
+                  timeLimitMinutes={data.assignment.time_limit_minutes}
+                  onStarted={(started) => {
+                    setLockedReason(null)
+                    autoSubmittedRef.current = false
+                    setTestRun(started)
+                    setTimerSeconds(started.timeLimitSeconds)
+                  }}
+                />
               ) : (
                 <>
                   <QuizActionsBar
@@ -426,6 +534,7 @@ export function StudentTakeQuizPage() {
                     total={questions.length}
                     progressPct={progressPct}
                     allowSave={Boolean(data.assignment.allow_save_and_continue)}
+                    isTest={isTest}
                     submitting={submitting}
                     onSave={() => void doSave()}
                     onExit={() => {
@@ -433,18 +542,33 @@ export function StudentTakeQuizPage() {
                         navigate('/student/assignments'),
                       )
                     }}
-                    onSubmit={() => {
-                      if (
-                        window.confirm(
-                          answeredCount < questions.length
-                            ? `You have answered ${answeredCount} of ${questions.length} questions. Submit anyway?`
-                            : 'Submit this quiz?',
-                        )
-                      ) {
-                        void doSubmit()
-                      }
-                    }}
+                    onSubmit={requestSubmit}
                   />
+                  {confirmSubmit ? (
+                    <div className="rounded-2xl border-2 border-teal-600 bg-teal-50 p-4 text-sm text-teal-950">
+                      <p className="font-bold">
+                        {answeredCount < questions.length
+                          ? `You have answered ${answeredCount} of ${questions.length} questions. Submit anyway?`
+                          : 'Submit this test?'}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className={quizBtnPrimary}
+                          disabled={submitting}
+                          onClick={() => {
+                            setConfirmSubmit(false)
+                            void doSubmit()
+                          }}
+                        >
+                          Yes, submit
+                        </button>
+                        <button type="button" className={quizBtnMuted} onClick={() => setConfirmSubmit(false)}>
+                          Keep working
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                   {currentQuestion ? (
                     <QuizQuestionCard
                       question={currentQuestion}
@@ -529,7 +653,9 @@ function QuizHero({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{a.title}</h1>
-            <p className="mt-1 text-sm text-teal-50/90">Quiz assignment</p>
+            <p className="mt-1 text-sm text-teal-50/90">
+              {a.quiz_mode === 'test' ? 'Lockdown test' : 'Quiz assignment'}
+            </p>
           </div>
           <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold backdrop-blur">
             {data.mode === 'results' ? 'Submitted' : 'In progress'}
@@ -560,6 +686,7 @@ function QuizActionsBar({
   total,
   progressPct,
   allowSave,
+  isTest,
   submitting,
   onSave,
   onExit,
@@ -569,6 +696,7 @@ function QuizActionsBar({
   total: number
   progressPct: number
   allowSave: boolean
+  isTest: boolean
   submitting: boolean
   onSave: () => void
   onExit: () => void
@@ -578,15 +706,17 @@ function QuizActionsBar({
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="mb-0 text-base font-bold text-slate-900">Quiz actions</h2>
+          <h2 className="mb-0 text-base font-bold text-slate-900">{isTest ? 'Test actions' : 'Quiz actions'}</h2>
           <p className="mb-0 text-sm text-hub-muted">
             {answeredCount} of {total} answered
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={quizBtnMuted} onClick={onExit}>
-            Exit
-          </button>
+          {!isTest ? (
+            <button type="button" className={quizBtnMuted} onClick={onExit}>
+              Exit
+            </button>
+          ) : null}
           {allowSave ? (
             <button type="button" className={quizBtnTealOutline} onClick={onSave}>
               Save & continue
@@ -598,11 +728,16 @@ function QuizActionsBar({
             disabled={submitting}
             onClick={onSubmit}
           >
-            {submitting ? 'Submitting…' : 'Submit quiz'}
+            {submitting ? 'Submitting…' : isTest ? 'Submit test' : 'Submit quiz'}
           </button>
         </div>
       </div>
-      {allowSave ? (
+      {isTest ? (
+        <p className="mb-0 mt-3 flex items-center gap-1.5 text-xs font-semibold text-red-700">
+          <i className="bi bi-shield-lock-fill" aria-hidden />
+          Lockdown is on. Leaving this tab or window will submit and lock your test.
+        </p>
+      ) : allowSave ? (
         <div className="mt-3">
           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
             <div
@@ -896,7 +1031,7 @@ function QuizQuestionCard({
         ) : question.question_type === 'short_answer' ? (
           <input
             type="text"
-            className="form-control"
+            className={quizFieldClass}
             value={value}
             disabled={resultsMode}
             onChange={(e) => onChange(e.target.value)}
@@ -904,8 +1039,8 @@ function QuizQuestionCard({
           />
         ) : (
           <textarea
-            className="form-control"
-            rows={5}
+            className={`${quizFieldClass} min-h-[10rem] resize-y leading-relaxed`}
+            rows={6}
             value={value}
             disabled={resultsMode}
             onChange={(e) => onChange(e.target.value)}

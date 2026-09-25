@@ -746,6 +746,43 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Note: assignment.quiz_authoring_is_draft check failed (may already exist): {e}")
 
+        # Quiz vs test (lockdown) mode
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(assignment)"))
+                    columns = [row[1] for row in r]
+                    if 'quiz_mode' not in columns:
+                        conn.execute(text(
+                            "ALTER TABLE assignment ADD COLUMN quiz_mode VARCHAR(10) NOT NULL DEFAULT 'quiz'"
+                        ))
+                        conn.commit()
+                        print("Added assignment.quiz_mode column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'assignment' AND column_name = 'quiz_mode'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text(
+                            "ALTER TABLE \"assignment\" ADD COLUMN quiz_mode VARCHAR(10) NOT NULL DEFAULT 'quiz'"
+                        ))
+                        conn.commit()
+                        print("Added assignment.quiz_mode column.")
+        except Exception as e:
+            print(f"Note: assignment.quiz_mode check failed (may already exist): {e}")
+
+        try:
+            from student_routes.test_lockdown_helpers import cleanup_old_test_snapshots
+
+            removed = cleanup_old_test_snapshots()
+            if removed:
+                print(f"Removed {removed} lockdown test snapshots older than 60 days.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Note: lockdown snapshot cleanup skipped: {e}")
+
         # Add assignment.status_override and status_override_until if missing (for temporary status overrides)
         for table_name in ('assignment', 'group_assignment'):
             try:

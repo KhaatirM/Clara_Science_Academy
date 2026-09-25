@@ -14,6 +14,7 @@ import {
   type QuizBlock,
 } from '../components/assignments/QuizAuthoringBlocksEditor'
 import { QuizCreateSidebar } from '../components/assignments/QuizCreateSidebar'
+import { QuizModeToggle, type QuizMode } from '../components/assignments/QuizModeToggle'
 import { createEmptyQuestion } from '../components/assignments/QuizQuestionsEditor'
 import { appendDatetime, appendIfChecked, postAssignmentForm } from '../api/assignmentCreateActions'
 import { fetchQuizAssignmentForm, type QuizAssignmentFormMeta } from '../api/assignmentCreateForms'
@@ -60,6 +61,7 @@ export function CreateQuizAssignmentPage() {
   const [allowSaveAndContinue, setAllowSaveAndContinue] = useState(true)
   const [maxSaveAttempts, setMaxSaveAttempts] = useState('10')
   const [saveTimeoutMinutes, setSaveTimeoutMinutes] = useState('30')
+  const [quizMode, setQuizMode] = useState<QuizMode>('quiz')
   const [blocks, setBlocks] = useState<QuizBlock[]>([
     { kind: 'question', question: createEmptyQuestion('1') },
   ])
@@ -100,6 +102,7 @@ export function CreateQuizAssignmentPage() {
         setAllowSaveAndContinue(Boolean(e.allow_save_and_continue))
         setMaxSaveAttempts(e.max_save_attempts || '10')
         setSaveTimeoutMinutes(e.save_timeout_minutes || '30')
+        setQuizMode(e.quiz_mode === 'test' ? 'test' : 'quiz')
         if (e.blocks?.length) {
           setBlocks(
             e.blocks.map((block, index) => {
@@ -186,6 +189,7 @@ export function CreateQuizAssignmentPage() {
       appendIfChecked(form, 'allow_save_and_continue', allowSaveAndContinue)
       form.append('max_save_attempts', maxSaveAttempts)
       form.append('save_timeout_minutes', saveTimeoutMinutes)
+      form.append('quiz_mode', linkGoogleForm ? 'quiz' : quizMode)
 
       if (!linkGoogleForm) {
         appendQuizBlocksToForm(
@@ -405,6 +409,19 @@ export function CreateQuizAssignmentPage() {
         </FormSection>
 
         <FormSection title="Quiz Configuration" icon="bi-gear" tone="emerald">
+          <div className="mb-5">
+            <FieldLabel htmlFor="quiz_mode">Quiz or test</FieldLabel>
+            <QuizModeToggle
+              value={linkGoogleForm ? 'quiz' : quizMode}
+              onChange={(mode) => {
+                setQuizMode(mode)
+                if (mode === 'test' && (category === 'Quizzes' || category === '')) setCategory('Tests')
+                if (mode === 'quiz' && category === 'Tests') setCategory('Quizzes')
+              }}
+              disabled={linkGoogleForm}
+              disabledReason="Lockdown tests aren't available for quizzes linked to a Google Form."
+            />
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <FieldLabel htmlFor="time_limit">Time limit (minutes)</FieldLabel>

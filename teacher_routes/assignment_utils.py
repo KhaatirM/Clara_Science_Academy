@@ -80,6 +80,13 @@ def parse_allow_student_threads(desc, default: bool = True) -> bool:
     return m.group(1).lower() == 'yes'
 
 
+def normalize_quiz_mode(value, google_form_linked: bool = False) -> str:
+    """'test' (lockdown) or 'quiz'. Google Form quizzes run outside the app, so they are always 'quiz'."""
+    if google_form_linked:
+        return 'quiz'
+    return 'test' if str(value or '').strip().lower() == 'test' else 'quiz'
+
+
 from models import AssignmentExtension
 
 

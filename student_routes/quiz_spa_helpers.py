@@ -83,6 +83,17 @@ def build_student_quiz_payload(
     if err:
         return None, err, status
 
+    from .test_lockdown_helpers import (
+        is_test_mode,
+        latest_test_session,
+        lock_stale_session_on_load,
+        session_brief,
+    )
+
+    test_mode = is_test_mode(assignment)
+    if test_mode:
+        lock_stale_session_on_load(assignment, student.id)
+
     all_quiz_grades = (
         Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id)
         .order_by(Grade.graded_at.desc(), Grade.id.desc())
@@ -313,6 +324,7 @@ def build_student_quiz_payload(
         assignment.time_limit_minutes
         and assignment.allow_save_and_continue
         and not results_mode
+        and not test_mode
     ):
         now_utc = datetime.utcnow()
         progress = QuizProgress.query.filter_by(
@@ -362,6 +374,10 @@ def build_student_quiz_payload(
         )
     )
 
+    latest_session = latest_test_session(assignment.id, student.id) if test_mode else None
+    if latest_session is not None and latest_session.status == "locked":
+        can_retake = False
+
     return {
         "mode": "results" if results_mode else "take",
         "assignment": {
@@ -374,7 +390,8 @@ def build_student_quiz_payload(
             "status": assignment.status,
             "total_points": assignment.total_points,
             "time_limit_minutes": assignment.time_limit_minutes,
-            "allow_save_and_continue": bool(assignment.allow_save_and_continue),
+            "quiz_mode": "test" if test_mode else "quiz",
+            "allow_save_and_continue": bool(assignment.allow_save_and_continue) and not test_mode,
             "save_timeout_minutes": assignment.save_timeout_minutes or 30,
             "max_attempts": assignment.max_attempts,
             "show_correct_answers": bool(assignment.show_correct_answers),
@@ -404,6 +421,7 @@ def build_student_quiz_payload(
             else None
         ),
         "questions": questions_out,
+        "test_session": session_brief(latest_session),
         "timer_remaining_seconds": timer_remaining_seconds,
         "closes_at_iso": closes_at_utc.isoformat() if closes_at_utc else None,
         "server_now_iso": server_now_utc.isoformat(),
@@ -419,8 +437,14 @@ def build_student_quiz_payload(
 
 
 def submit_student_quiz(
-    assignment_id: int, *, answers: dict[str, Any], quiz_opened_at: str | None = None
+    assignment_id: int,
+    *,
+    answers: dict[str, Any],
+    quiz_opened_at: str | None = None,
+    lockdown_reason: str | None = None,
 ) -> tuple[dict[str, Any] | None, str | None, int]:
+    from .test_lockdown_helpers import active_test_session, is_test_mode, lock_reason_label
+
     student = _student()
     if not student:
         return None, "Student profile required", 403
@@ -432,6 +456,14 @@ def submit_student_quiz(
     err, status = _access_error(assignment, student)
     if err:
         return None, err, status
+
+    test_session = None
+    if is_test_mode(assignment):
+        test_session = active_test_session(assignment_id, student.id)
+        if test_session is None:
+            return None, "This test is not in progress. It may have been locked after leaving the tab.", 409
+        if test_session.started_at:
+            quiz_opened_at = test_session.started_at.replace(tzinfo=timezone.utc).isoformat()
 
     active_reopening = get_active_assignment_reopening(assignment_id, student.id)
     if not is_assignment_open_for_student(assignment, student.id) and not active_reopening:
@@ -488,6 +520,15 @@ def submit_student_quiz(
                 "time_remaining_seconds": remaining,
                 "submitted_due_to_timer": remaining <= 0,
             }
+    if test_session is not None and assignment.time_limit_minutes and test_session.started_at:
+        limit_seconds = int(assignment.time_limit_minutes * 60)
+        elapsed = (datetime.utcnow() - test_session.started_at).total_seconds()
+        remaining = max(0, int(limit_seconds - elapsed))
+        timed_meta = {
+            "time_limit_seconds": limit_seconds,
+            "time_remaining_seconds": remaining,
+            "submitted_due_to_timer": remaining <= 0,
+        }
 
     try:
         questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
@@ -582,6 +623,22 @@ def submit_student_quiz(
         }
         if timed_meta:
             grade_data["timed_quiz"] = timed_meta
+        if test_session is not None:
+            now_naive = datetime.utcnow()
+            test_session.submission_id = submission.id
+            test_session.ended_at = now_naive
+            if lockdown_reason:
+                test_session.status = "locked"
+                test_session.lock_reason = lockdown_reason
+                test_session.locked_at = now_naive
+            else:
+                test_session.status = "submitted"
+            grade_data["test_lockdown"] = {
+                "session_id": test_session.id,
+                "locked": bool(lockdown_reason),
+                "reason": lockdown_reason,
+                "reason_label": lock_reason_label(lockdown_reason) if lockdown_reason else None,
+            }
         db.session.add(
             Grade(
                 student_id=student.id,
@@ -602,7 +659,13 @@ def submit_student_quiz(
         db.session.commit()
         return {
             "success": True,
-            "message": "Quiz submitted successfully!",
+            "message": (
+                "Your test was locked and submitted."
+                if lockdown_reason
+                else "Quiz submitted successfully!"
+            ),
+            "locked": bool(lockdown_reason),
+            "submission_id": submission.id,
             "redirect": f"/app/student/take-quiz/{assignment_id}",
         }, None, 200
     except Exception as exc:

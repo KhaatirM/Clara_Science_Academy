@@ -5,6 +5,7 @@ import {
   type AssignmentEditForm,
 } from '../../api/assignmentWorkspace'
 import { DocumentFileField } from '../uploads/DocumentFileField'
+import { QuizModeToggle } from './QuizModeToggle'
 import { isPdfPaperAssignmentType } from '../../utils/assignmentTypes'
 import type { AssignmentWorkspaceScope } from '../../utils/assignmentWorkspaceScope'
 import { isoToSchoolDatetimeLocal } from '../../utils/schoolTimezone'
@@ -463,6 +464,12 @@ export function EditAssignmentModal({
               {form.assignment_type === 'quiz' && form.quiz ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 space-y-3">
                   <p className="text-sm font-bold text-violet-950">Quiz settings</p>
+                  <QuizModeToggle
+                    value={form.quiz.google_form_linked ? 'quiz' : form.quiz.quiz_mode === 'test' ? 'test' : 'quiz'}
+                    onChange={(mode) => patch({ quiz: { ...form.quiz!, quiz_mode: mode } })}
+                    disabled={Boolean(form.quiz.google_form_linked)}
+                    disabledReason="Lockdown tests aren't available for quizzes linked to a Google Form."
+                  />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <FieldLabel htmlFor="edit-time-limit">Time limit (minutes)</FieldLabel>
